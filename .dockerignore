@@ -1,0 +1,10 @@
+.venv
+node_modules
+dist
+__pycache__
+*.pyc
+.pytest_cache
+.git
+.DS_Store
+/tmp/filesanitizer
+jobs

@@ -1,0 +1,117 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: filesanitizer-frontend
+    ports:
+      - "80:80"
+      - "8080:80"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - NET_BIND_SERVICE
+    networks:
+      - frontend-net
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: filesanitizer-api
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file:
+      - .env
+    volumes:
+      - jobs-data:/jobs
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - frontend-net
+      - internal-net
+    depends_on:
+      - redis
+      - clamav
+      - browser
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: filesanitizer-worker
+    command: ["celery", "-A", "app.workers.celery_worker.celery_app", "worker", "--loglevel=info", "-c", "4"]
+    env_file:
+      - .env
+    volumes:
+      - jobs-data:/jobs
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - internal-net
+    depends_on:
+      - redis
+      - clamav
+
+  redis:
+    image: redis:7-alpine
+    container_name: filesanitizer-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+    networks:
+      - internal-net
+
+  clamav:
+    image: clamav/clamav:latest
+    platform: linux/amd64
+    container_name: filesanitizer-clamav
+    volumes:
+      - clamav-db:/var/lib/clamav
+    restart: unless-stopped
+    networks:
+      - internal-net
+
+  browser:
+    build:
+      context: ./browser
+      dockerfile: Dockerfile
+    container_name: filesanitizer-browser
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal-net
+
+networks:
+  frontend-net:
+    driver: bridge
+  internal-net:
+    driver: bridge
+
+volumes:
+  jobs-data:
+    driver: local
+  clamav-db:
+    driver: local
