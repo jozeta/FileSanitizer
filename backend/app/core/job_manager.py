@@ -179,6 +179,8 @@ class JobManager:
                 img_res = ImageAnalyzer().analyze(original_path, job.filename, job.mime_type)
                 findings.extend(img_res.findings)
                 analysis_data["image"] = img_res.data
+                for u in img_res.data.get("urls", []):
+                    extracted_urls.add(u)
 
             elif job.category in ["svg", "html"]:
                 act_res = ActiveContentAnalyzer().analyze(original_path, job.filename, job.mime_type)

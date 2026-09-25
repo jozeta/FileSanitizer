@@ -1,14 +1,9 @@
 import re
 from pathlib import Path
 from typing import Dict, Any, List, Set
-from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
+from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
 from bs4 import BeautifulSoup
 import defusedxml.minidom as safe_minidom
-
-URL_REGEX = re.compile(
-    r'(?:https?|ftp)://[a-zA-Z0-9\-\._~:/\?#\[\]@!\$&\'\(\)\*\+,;=%]+',
-    re.IGNORECASE
-)
 
 # Common HTML/SVG inline event handler attributes
 EVENT_HANDLERS = [
@@ -51,9 +46,8 @@ class ActiveContentAnalyzer(BaseAnalyzer):
                 data={}
             )
 
-        # Extract all raw URLs
-        for u in URL_REGEX.findall(content):
-            urls.add(u)
+        # Extract all clean URLs
+        urls.update(extract_clean_urls(content))
 
         is_svg = (mime_type == "image/svg+xml" or filename.lower().endswith(".svg") or "<svg" in content.lower())
 

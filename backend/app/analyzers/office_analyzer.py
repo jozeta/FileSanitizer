@@ -2,15 +2,10 @@ import re
 import zipfile
 from pathlib import Path
 from typing import Dict, Any, List, Set, Optional
-from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
+from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
 from app.core.logging_config import logger
 from oletools.olevba import VBA_Parser
 import defusedxml.minidom as safe_minidom
-
-URL_REGEX = re.compile(
-    r'(?:https?|ftp)://[a-zA-Z0-9\-\._~:/\?#\[\]@!\$&\'\(\)\*\+,;=%]+',
-    re.IGNORECASE
-)
 
 class OfficeAnalyzer(BaseAnalyzer):
     @property
@@ -119,7 +114,7 @@ class OfficeAnalyzer(BaseAnalyzer):
                                             "type": rel_type,
                                             "target": target
                                         })
-                                        urls.add(target)
+                                        urls.update(extract_clean_urls(target))
                             except Exception:
                                 pass
 
@@ -130,23 +125,37 @@ class OfficeAnalyzer(BaseAnalyzer):
                             if "<w:ins " in doc_xml or "<w:del " in doc_xml:
                                 data["has_revisions"] = True
                             # Extract text URLs from document.xml
-                            for u in URL_REGEX.findall(doc_xml):
-                                urls.add(u)
+                            urls.update(extract_clean_urls(doc_xml))
                         except Exception:
                             pass
 
-                    # Extract metadata from docProps/core.xml & app.xml
+                    # Extract metadata from docProps/core.xml & custom.xml
                     if "docProps/core.xml" in namelist:
                         try:
                             core_bytes = zf.read("docProps/core.xml")
                             dom = safe_minidom.parseString(core_bytes)
                             meta = {}
-                            for elem in ["dc:creator", "cp:lastModifiedBy", "dcterms:created", "dcterms:modified", "dc:title"]:
+                            for elem in [
+                                "dc:creator", "cp:lastModifiedBy", "dcterms:created",
+                                "dcterms:modified", "dc:title", "dc:description",
+                                "dc:subject", "cp:keywords", "cp:category"
+                            ]:
                                 nodes = dom.getElementsByTagName(elem)
                                 if nodes and nodes[0].firstChild:
                                     field = elem.split(":")[-1]
                                     meta[field] = nodes[0].firstChild.nodeValue
                             data["metadata"] = meta
+
+                            # Extract URLs in metadata
+                            core_text = core_bytes.decode('utf-8', errors='ignore')
+                            urls.update(extract_clean_urls(core_text))
+                        except Exception:
+                            pass
+
+                    if "docProps/custom.xml" in namelist:
+                        try:
+                            custom_text = zf.read("docProps/custom.xml").decode('utf-8', errors='ignore')
+                            urls.update(extract_clean_urls(custom_text))
                         except Exception:
                             pass
 
@@ -186,14 +195,15 @@ class OfficeAnalyzer(BaseAnalyzer):
                     ),
                     details={"relationships": data["external_relationships"]}
                 ))
-            else:
-                findings.append(Finding(
-                    category="url",
-                    severity="medium",
-                    title=f"External Document Relationships Found ({len(data['external_relationships'])})",
-                    description="Document references external resources or links.",
-                    details={"relationships": data["external_relationships"][:10]}
-                ))
+
+        if urls:
+            findings.append(Finding(
+                category="url",
+                severity="medium" if len(urls) > 5 else "low",
+                title=f"{len(urls)} External URL(s) Discovered in Office Document",
+                description=f"Discovered {len(urls)} external links across document markup, relationships, and metadata properties.",
+                details={"urls": list(urls)[:20]}
+            ))
 
         if data["has_comments"]:
             findings.append(Finding(

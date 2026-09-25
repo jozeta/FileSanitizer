@@ -72,10 +72,14 @@ class MetadataExtractor:
         if office_data.get("metadata"):
             doc_meta.update(office_data["metadata"])
 
+        if image_data.get("author_info"):
+            doc_meta.update(image_data["author_info"])
+
         for k, v in doc_meta.items():
             if v and str(v).strip():
                 k_lower = k.lower()
-                is_sens = any(term in k_lower for term in ["author", "creator", "modifier", "lastmodified", "producer"])
+                has_url = "http://" in str(v) or "https://" in str(v)
+                is_sens = any(term in k_lower for term in ["author", "creator", "modifier", "lastmodified", "producer"]) or has_url
                 document.append(MetadataField(
                     name=k.capitalize(),
                     value=str(v),

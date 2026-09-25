@@ -1,9 +1,14 @@
 # FileSanitizer Test Files Suite
 
-This directory contains test files specifically crafted to exercise FileSanitizer's security analyzers, Content Disarm & Reconstruction (CDR) engines, metadata extractors, and antivirus scanners.
+This directory contains test files specifically crafted to exercise FileSanitizer's security analyzers, Content Disarm & Reconstruction (CDR) engines, metadata extractors, URL reputation scanners, and antivirus detection.
 
 | File Name | Intended Security Triggers | Expected App Reaction |
 | :--- | :--- | :--- |
+| `pdf_with_body_and_metadata_links.pdf` | **Links in Body & Metadata**: Contains body plain-text URLs, interactive PDF `/URI` link annotations, and embedded URLs across document metadata properties (`Author`, `Title`, `Subject`, `Keywords`, `Producer`). | All URLs from both document body and metadata are extracted, surfaced in the **URL Explorer**, and assessed for SSRF/reputation. Sanitizer strips metadata and disarms/flattens links. |
+| `office_with_body_and_metadata_links.docx` | **Links in Body & Metadata**: Contains body text URLs, OpenXML external relationship hyperlinks (`rIdHyperlink1`, `rIdHyperlink2`), and metadata URLs in `docProps/core.xml` (`dc:creator`, `dc:title`, `dc:description`, `cp:keywords`). | Discovers external relationships and metadata links. Sanitizer purges external relationships and replaces core metadata with clean values. |
+| `image_with_metadata_links.jpg` | **Links in Metadata**: Contains embedded URLs in EXIF tags (`Artist`, `Copyright`, `ImageDescription`, `UserComment`, `Software`) and image text comments. | URLs extracted to URL Explorer; metadata highlighted as **SENSITIVE**. Sanitization strips EXIF headers and re-encodes pixel buffer. |
+| `svg_with_body_and_metadata_links.svg` | **Links in Body & Metadata**: Contains interactive `<a xlink:href>`, body `<text>` URLs, and `<metadata><rdf:RDF>` embedded Dublin Core URLs. | Detects external references and vector links. Sanitizer strips active links or converts SVG to safe rasterized PNG. |
+| `html_with_body_and_metadata_links.html` | **Links in Body & Metadata**: Contains `<meta name="author">` and `<link rel="canonical">` metadata URLs, plus body anchor hyperlinks (`<a href>`) and text URLs. | Discovers all metadata and DOM URLs. Sanitizer strips links or renders sandboxed image/PDF. |
 | `image_gps_exif_metadata.jpg` | Embedded GPS coordinates (Stockholm: 59°19'45" N, 18°04'07" E), Camera Hardware (Sony Alpha 7 IV), Author (Jane Doe), Software. | Detected in **Location** & **Camera** metadata tabs. Flagged as **SENSITIVE**. Sanitization strips EXIF/GPS and re-encodes. |
 | `clean_image.png` | Standard clean PNG with zero metadata or scripts. | Evaluated as **CLEAN**. |
 | `suspicious_javascript_actions.pdf` | Embedded JavaScript (`app.alert`), `/Launch` command, OpenAction trigger, external URL, and embedded CSV attachment. | Classified as **HIGH RISK**. Flags JS alert, Launch action, and attachments. "Maximum Sanitization" rasterizes pages to pure pixel images. |

@@ -261,14 +261,211 @@ def create_spreadsheet_injection_csv():
     csv_path.write_text(csv_content, encoding="utf-8")
     print(f"Created: {csv_path.name}")
 
+def create_pdf_with_body_and_metadata_links():
+    pdf_path = BASE_DIR / "pdf_with_body_and_metadata_links.pdf"
+    doc = fitz.open()
+
+    page = doc.new_page(width=595, height=842)
+    page.insert_text(
+        (50, 70),
+        "GLOBAL CYBERSECURITY INCIDENT ADVISORY #2026-SEC-09\n\n"
+        "Incident responders have observed credential harvesting and malicious link delivery.\n\n"
+        "1. Main Incident Portal (Body Text Link):\n"
+        "   https://security-portal.internal-defense.org/incident/9842\n\n"
+        "2. Evidence Ingestion Endpoint (Body Text Link):\n"
+        "   https://threat-evidence-drop.secure-vault.net/upload-sample\n\n"
+        "3. Live Threat Telemetry Feed (Clickable Annotation below):\n",
+        fontsize=11
+    )
+
+    # Clickable PDF URI link annotation
+    link_rect = fitz.Rect(50, 210, 420, 235)
+    page.draw_rect(link_rect, color=(0.2, 0.4, 0.8), width=1)
+    page.insert_text((55, 227), ">> Click to Access Cloud Threat Investigation Sandbox <<", fontsize=10, color=(0.1, 0.3, 0.7))
+    page.insert_link({
+        "kind": fitz.LINK_URI,
+        "from": link_rect,
+        "uri": "https://investigation-sandbox.defense-cloud.io/verify-session"
+    })
+
+    # Embedded Metadata containing URLs across standard document properties
+    doc.set_metadata({
+        "title": "Incident Advisory Bulletin - https://bulletin-service.cyber-ops.org/alert/2026",
+        "author": "SecOps Incident Lead - https://security-analyst.identity-provider.io/secops",
+        "subject": "Threat Indicator Intelligence - https://threat-intel.global-registry.net/indicators",
+        "keywords": "incident, advisory, forensics, https://metadata-taxonomy.security-hub.io/catalog",
+        "creator": "Security Incident Engine v3.1",
+        "producer": "PDF Security Toolkit - https://build-tools.document-pipeline.org/engine"
+    })
+
+    doc.save(str(pdf_path))
+    doc.close()
+    print(f"Created: {pdf_path.name}")
+
+def create_office_with_body_and_metadata_links():
+    docx_path = BASE_DIR / "office_with_body_and_metadata_links.docx"
+    with zipfile.ZipFile(docx_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+        # [Content_Types].xml
+        zf.writestr("[Content_Types].xml", (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n'
+            '  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>\n'
+            '  <Default Extension="xml" ContentType="application/xml"/>\n'
+            '  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>\n'
+            '  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>\n'
+            '</Types>'
+        ))
+
+        # _rels/.rels
+        zf.writestr("_rels/.rels", (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+            '  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>\n'
+            '  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>\n'
+            '</Relationships>'
+        ))
+
+        # word/_rels/document.xml.rels with External Hyperlink Relationship
+        zf.writestr("word/_rels/document.xml.rels", (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+            '  <Relationship Id="rIdHyperlink1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" '
+            'Target="https://partner-portal.audit-verification.com/external-review" TargetMode="External"/>\n'
+            '  <Relationship Id="rIdHyperlink2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" '
+            'Target="https://cloud-storage.vendor-intake.net/shared-dossier" TargetMode="External"/>\n'
+            '</Relationships>'
+        ))
+
+        # word/document.xml containing body text URLs and clickable hyperlinks
+        zf.writestr("word/document.xml", (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\n'
+            '  <w:body>\n'
+            '    <w:p><w:r><w:t>Corporate Governance and Compliance Audit 2026</w:t></w:r></w:p>\n'
+            '    <w:p><w:r><w:t>Please review the audited policy guidelines directly at our internal wiki: '
+            'https://compliance-portal.enterprise-network.org/guidelines-2026</w:t></w:r></w:p>\n'
+            '    <w:p><w:r><w:t>Direct data export mirror: https://mirror-export.enterprise-network.org/archive.csv</w:t></w:r></w:p>\n'
+            '    <w:p>\n'
+            '      <w:hyperlink r:id="rIdHyperlink1">\n'
+            '        <w:r><w:t>[Click to Access External Audit Verification Portal]</w:t></w:r>\n'
+            '      </w:hyperlink>\n'
+            '    </w:p>\n'
+            '  </w:body>\n'
+            '</w:document>'
+        ))
+
+        # docProps/core.xml containing metadata URLs in creator, title, description, keywords
+        zf.writestr("docProps/core.xml", (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+            '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+            'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/">\n'
+            '  <dc:title>Annual Compliance Audit - https://audit-reports.enterprise-network.org/2026</dc:title>\n'
+            '  <dc:creator>Chief Compliance Officer - https://executive-directory.enterprise-network.org/cco</dc:creator>\n'
+            '  <dc:description>Audited documentation with remote validation ledger at https://blockchain-ledger.audit-trail.org/tx/8812</dc:description>\n'
+            '  <cp:keywords>compliance, audit, governance, https://regulatory-taxonomy.standards-board.org/rules</cp:keywords>\n'
+            '  <cp:lastModifiedBy>Lead Auditor https://auditors.enterprise-network.org/profile</cp:lastModifiedBy>\n'
+            '</cp:coreProperties>'
+        ))
+    print(f"Created: {docx_path.name}")
+
+def create_image_with_metadata_links():
+    img_path = BASE_DIR / "image_with_metadata_links.jpg"
+    img = Image.new("RGB", (640, 480), color=(52, 73, 94))
+    exif = img.getexif()
+
+    # Hardware, Author, Copyright, and Description with embedded URLs
+    exif[0x010F] = "Nikon Corporation"
+    exif[0x0110] = "NIKON Z8 (Telemetry: https://camera-telemetry.nikon-imaging.net/sync)"
+    exif[0x0131] = "Adobe Photoshop 2026 (Service: https://adobe-cloud.creative-sync.com/plugin)"
+    exif[0x013B] = "Freelance Photojournalist (Portfolio: https://portfolio.visual-journalism.org/profile)"
+    exif[0x8298] = "Copyright (c) 2026 All Rights Reserved - License: https://licensing.creative-media-network.org/commercial-use"
+    exif[0x010E] = "Field capture. Provenance verification: https://asset-provenance.content-authenticity.net/verify/img-9021"
+    exif[0x9286] = "Automated ingestion pipeline by https://photo-ingest.media-pipeline.io/v2"  # UserComment
+
+    # Save with EXIF and comment dictionary
+    img.save(
+        img_path,
+        format="JPEG",
+        exif=exif,
+        quality=95,
+        comment="Direct CDN mirror: https://cdn-mirror.photo-vault.org/originals/2026/img-9021.raw"
+    )
+    print(f"Created: {img_path.name}")
+
+def create_svg_with_body_and_metadata_links():
+    svg_path = BASE_DIR / "svg_with_body_and_metadata_links.svg"
+    svg_content = """<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="350" viewBox="0 0 500 350">
+    <!-- SVG Metadata Block containing URLs -->
+    <metadata>
+        <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                 xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <rdf:Description>
+                <dc:title>Network Topology Diagram - https://diagrams.enterprise-architecture.org/topo-42</dc:title>
+                <dc:creator>Enterprise Architect https://architects.cloud-systems.io/profile</dc:creator>
+                <dc:source>Asset Repository https://design-source.vector-repository.org/asset/881</dc:source>
+            </rdf:Description>
+        </rdf:RDF>
+    </metadata>
+
+    <rect width="100%" height="100%" fill="#f8fafc"/>
+    <text x="50" y="50" font-family="sans-serif" font-size="16" font-weight="bold" fill="#0f172a">Enterprise Infrastructure Topology</text>
+    
+    <!-- Body Text URLs -->
+    <text x="50" y="90" font-family="sans-serif" font-size="12" fill="#475569">Documentation: https://docs.internal-infrastructure.net/topology</text>
+    <text x="50" y="120" font-family="sans-serif" font-size="12" fill="#475569">Metrics Gateway: https://metrics.monitoring-hub.org/dash</text>
+    
+    <!-- Clickable Interactive Vector Link -->
+    <a xlink:href="https://interactive-dashboard.cloud-portal.net/viewer" target="_blank">
+        <rect x="50" y="160" width="320" height="40" rx="6" fill="#2563eb"/>
+        <text x="210" y="185" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#ffffff" font-weight="600">Open Live Interactive Telemetry</text>
+    </a>
+</svg>"""
+    svg_path.write_text(svg_content, encoding="utf-8")
+    print(f"Created: {svg_path.name}")
+
+def create_html_with_body_and_metadata_links():
+    html_path = BASE_DIR / "html_with_body_and_metadata_links.html"
+    html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Software Release Bulletin #490</title>
+    <!-- Metadata URLs in head tags -->
+    <meta name="author" content="Release Engineering Team https://releaseteam.software-systems.org/team">
+    <meta name="description" content="Official release dossier with verification at https://verification-ledger.software-systems.org/v2.4">
+    <meta property="og:url" content="https://announcements.software-systems.org/2026/release-490">
+    <link rel="canonical" href="https://canonical.software-systems.org/articles/release-490">
+</head>
+<body style="font-family: sans-serif; padding: 30px;">
+    <h1>Release Bulletin v2.4.0</h1>
+    <p>The latest build artifacts are now mirrored across global CDNs:</p>
+    
+    <!-- Body Text Links and Hyperlinks -->
+    <ul>
+        <li>Direct Binaries: <a href="https://downloads.developer-portal.org/v2/binaries.tar.gz">https://downloads.developer-portal.org/v2/binaries.tar.gz</a></li>
+        <li>Checksum Manifest: <a href="https://security.developer-portal.org/checksums/v2.4.sha256">https://security.developer-portal.org/checksums/v2.4.sha256</a></li>
+        <li>Changelog: https://github-mirrors.software-systems.org/changelogs/v2.4.md</li>
+    </ul>
+</body>
+</html>"""
+    html_path.write_text(html_content, encoding="utf-8")
+    print(f"Created: {html_path.name}")
+
 def create_readme():
     readme_path = BASE_DIR / "README.md"
     readme_content = """# FileSanitizer Test Files Suite
 
-This directory contains test files specifically crafted to exercise FileSanitizer's security analyzers, Content Disarm & Reconstruction (CDR) engines, metadata extractors, and antivirus scanners.
+This directory contains test files specifically crafted to exercise FileSanitizer's security analyzers, Content Disarm & Reconstruction (CDR) engines, metadata extractors, URL reputation scanners, and antivirus detection.
 
 | File Name | Intended Security Triggers | Expected App Reaction |
 | :--- | :--- | :--- |
+| `pdf_with_body_and_metadata_links.pdf` | **Links in Body & Metadata**: Contains body plain-text URLs, interactive PDF `/URI` link annotations, and embedded URLs across document metadata properties (`Author`, `Title`, `Subject`, `Keywords`, `Producer`). | All URLs from both document body and metadata are extracted, surfaced in the **URL Explorer**, and assessed for SSRF/reputation. Sanitizer strips metadata and disarms/flattens links. |
+| `office_with_body_and_metadata_links.docx` | **Links in Body & Metadata**: Contains body text URLs, OpenXML external relationship hyperlinks (`rIdHyperlink1`, `rIdHyperlink2`), and metadata URLs in `docProps/core.xml` (`dc:creator`, `dc:title`, `dc:description`, `cp:keywords`). | Discovers external relationships and metadata links. Sanitizer purges external relationships and replaces core metadata with clean values. |
+| `image_with_metadata_links.jpg` | **Links in Metadata**: Contains embedded URLs in EXIF tags (`Artist`, `Copyright`, `ImageDescription`, `UserComment`, `Software`) and image text comments. | URLs extracted to URL Explorer; metadata highlighted as **SENSITIVE**. Sanitization strips EXIF headers and re-encodes pixel buffer. |
+| `svg_with_body_and_metadata_links.svg` | **Links in Body & Metadata**: Contains interactive `<a xlink:href>`, body `<text>` URLs, and `<metadata><rdf:RDF>` embedded Dublin Core URLs. | Detects external references and vector links. Sanitizer strips active links or converts SVG to safe rasterized PNG. |
+| `html_with_body_and_metadata_links.html` | **Links in Body & Metadata**: Contains `<meta name="author">` and `<link rel="canonical">` metadata URLs, plus body anchor hyperlinks (`<a href>`) and text URLs. | Discovers all metadata and DOM URLs. Sanitizer strips links or renders sandboxed image/PDF. |
 | `image_gps_exif_metadata.jpg` | Embedded GPS coordinates (Stockholm: 59°19'45" N, 18°04'07" E), Camera Hardware (Sony Alpha 7 IV), Author (Jane Doe), Software. | Detected in **Location** & **Camera** metadata tabs. Flagged as **SENSITIVE**. Sanitization strips EXIF/GPS and re-encodes. |
 | `clean_image.png` | Standard clean PNG with zero metadata or scripts. | Evaluated as **CLEAN**. |
 | `suspicious_javascript_actions.pdf` | Embedded JavaScript (`app.alert`), `/Launch` command, OpenAction trigger, external URL, and embedded CSV attachment. | Classified as **HIGH RISK**. Flags JS alert, Launch action, and attachments. "Maximum Sanitization" rasterizes pages to pure pixel images. |
@@ -296,5 +493,11 @@ if __name__ == "__main__":
     create_dangerous_archive()
     create_eicar_test_file()
     create_spreadsheet_injection_csv()
+    create_pdf_with_body_and_metadata_links()
+    create_office_with_body_and_metadata_links()
+    create_image_with_metadata_links()
+    create_svg_with_body_and_metadata_links()
+    create_html_with_body_and_metadata_links()
     create_readme()
     print("\nAll test files successfully generated!")
+

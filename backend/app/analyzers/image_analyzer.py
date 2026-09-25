@@ -1,6 +1,7 @@
+import re
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
-from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
+from typing import Dict, Any, List, Optional, Tuple, Set
+from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
 from app.core.logging_config import logger
 from PIL import Image, ExifTags
 
@@ -26,6 +27,7 @@ class ImageAnalyzer(BaseAnalyzer):
 
     def analyze(self, file_path: Path, filename: str, mime_type: str) -> AnalyzerResult:
         findings: List[Finding] = []
+        urls: Set[str] = set()
         data: Dict[str, Any] = {
             "format": "",
             "dimensions": [0, 0],
@@ -40,7 +42,8 @@ class ImageAnalyzer(BaseAnalyzer):
             "has_xmp": False,
             "has_iptc": False,
             "comments": [],
-            "raw_metadata": {}
+            "raw_metadata": {},
+            "urls": []
         }
 
         try:
@@ -118,6 +121,23 @@ class ImageAnalyzer(BaseAnalyzer):
                 except Exception as e:
                     logger.debug(f"Error reading EXIF data: {e}")
 
+                # Extract URLs from img.info, comments, author_info, and raw_metadata
+                for k, v in img.info.items():
+                    if isinstance(v, (str, bytes)):
+                        text_val = v.decode('utf-8', errors='ignore') if isinstance(v, bytes) else str(v)
+                        urls.update(extract_clean_urls(text_val))
+
+                for c in data["comments"]:
+                    urls.update(extract_clean_urls(c))
+
+                for v in data["author_info"].values():
+                    urls.update(extract_clean_urls(v))
+
+                for v in data["raw_metadata"].values():
+                    urls.update(extract_clean_urls(v))
+
+                data["urls"] = list(urls)
+
         except Exception as e:
             return AnalyzerResult(
                 analyzer_name=self.name,
@@ -171,6 +191,15 @@ class ImageAnalyzer(BaseAnalyzer):
                 title="Embedded Text Comments Present",
                 description="Image contains text comments or annotation chunks.",
                 details={"comments": data["comments"]}
+            ))
+
+        if urls:
+            findings.append(Finding(
+                category="url",
+                severity="medium" if len(urls) > 5 else "low",
+                title=f"{len(urls)} External URL(s) Discovered in Image Metadata",
+                description=f"Discovered {len(urls)} external web links embedded within image metadata, comments, or EXIF tags.",
+                details={"urls": list(urls)[:20]}
             ))
 
         return AnalyzerResult(

@@ -1,7 +1,33 @@
+import re
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Set
 from pathlib import Path
 from pydantic import BaseModel, Field
+
+URL_REGEX = re.compile(
+    r'(?:https?|ftp)://[a-zA-Z0-9\-\._~:/\?#\[\]@!\$&\'\(\)\*\+,;=%]+',
+    re.IGNORECASE
+)
+
+IGNORED_SCHEMAS = (
+    "http://schemas.openxmlformats.org/",
+    "http://schemas.microsoft.com/",
+    "http://purl.org/dc/",
+    "http://www.w3.org/",
+    "http://ns.adobe.com/",
+    "http://xml.apache.org/",
+)
+
+def extract_clean_urls(text: str) -> Set[str]:
+    """Extract URLs from text, stripping trailing punctuation and filtering XML schema namespaces."""
+    found: Set[str] = set()
+    if not text:
+        return found
+    for match in URL_REGEX.findall(text):
+        cleaned = re.sub(r'[\)\]\>\.,;:\'"]+$', '', match)
+        if cleaned and not any(cleaned.startswith(prefix) for prefix in IGNORED_SCHEMAS):
+            found.add(cleaned)
+    return found
 
 class Finding(BaseModel):
     category: str  # e.g., "malware", "macro", "javascript", "metadata", "url", "archive", "structure"

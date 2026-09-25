@@ -1,15 +1,9 @@
 import re
 from pathlib import Path
 from typing import Dict, Any, List, Set
-from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
+from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
 from app.core.logging_config import logger
-import fitz  # PyMuPDF
-
-# URL regex for extracting links from raw text and streams
-URL_REGEX = re.compile(
-    r'(?:https?|ftp)://[a-zA-Z0-9\-\._~:/\?#\[\]@!\$&\'\(\)\*\+,;=%]+',
-    re.IGNORECASE
-)
+import fitz
 
 class PDFAnalyzer(BaseAnalyzer):
     @property
@@ -84,14 +78,19 @@ class PDFAnalyzer(BaseAnalyzer):
                     annot_count += len(annots)
                     # Extract text URLs
                     page_text = page.get_text()
-                    for found_url in URL_REGEX.findall(page_text):
-                        urls.add(found_url)
+                    urls.update(extract_clean_urls(page_text))
                 except Exception:
                     pass
 
             # Also find raw URI actions in PDF bytes
             for raw_uri in re.findall(r'/URI\s*\(([^)]+)\)', raw_text):
-                urls.add(raw_uri)
+                urls.update(extract_clean_urls(raw_uri))
+
+            # Also extract URLs embedded within document metadata
+            if metadata:
+                for m_val in metadata.values():
+                    if m_val and isinstance(m_val, str):
+                        urls.update(extract_clean_urls(m_val))
 
             # 4. Generate Security Findings
             if is_encrypted:
