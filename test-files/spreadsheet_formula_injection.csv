@@ -1,0 +1,6 @@
+Employee_ID,Full_Name,Department,Salary,Notes
+E-1001,John Smith,Engineering,95000,Approved promotion
+=cmd|'/C calc.exe'!A0,Alice Johnson,Finance,120000,DDE Execution Injection Test Cell
++powershell.exe -enc ZWNobyAnaGVsbG8n,Bob Miller,Security,110000,Formula Prefix Plus Command
+@SUM(1+1)*cmd|'/C notepad.exe'!A0,Carol White,Human Resources,85000,Formula Prefix At Command
+E-1005,David Brown,Marketing,78000,Standard benign row

