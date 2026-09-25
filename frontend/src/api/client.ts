@@ -19,6 +19,25 @@ export const apiClient = {
     return res.json();
   },
 
+  async fetchUrl(url: string): Promise<{ uploaded: number; jobs: { job_id: string; filename: string; file_size: number; state: string }[]; source_url: string; reputation: any }> {
+    const res = await fetch(`${API_BASE}/files/fetch-url`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'URL fetch failed' }));
+      throw new Error(err.detail || 'URL fetch failed');
+    }
+    return res.json();
+  },
+
+  async getSupportedFormats(): Promise<{ total_categories: number; categories: any[] }> {
+    const res = await fetch(`${API_BASE}/files/supported-formats`);
+    if (!res.ok) throw new Error('Failed to fetch supported formats');
+    return res.json();
+  },
+
   async getJobStatus(jobId: string): Promise<JobDetail> {
     const res = await fetch(`${API_BASE}/jobs/${jobId}`);
     if (!res.ok) throw new Error('Failed to fetch job status');
