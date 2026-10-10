@@ -197,6 +197,9 @@ class ScriptAnalyzer(BaseAnalyzer):
             patterns_to_test.extend(SUSPICIOUS_PATTERNS[script_type])
 
         # Also test general LOLBins & Base64 decoding across all scripts
+        patterns_to_test.append(("Log4Shell JNDI Lookup (CVE-2021-44228)", r"(?i)\$\{(?:jndi:(?:ldap|rmi|dns|nis|iiop|corba|nds|http):|\$\{[^}]+\})", "critical", "Log4j JNDI remote code execution exploit string (CVE-2021-44228)"))
+        patterns_to_test.append(("Spring4Shell ClassLoader Exploit (CVE-2022-22965)", r"(?i)class\.module\.classLoader", "critical", "Spring Framework data binding classloader RCE exploit string (CVE-2022-22965)"))
+        patterns_to_test.append(("Text4Shell Remote Code Execution (CVE-2022-42889)", r"(?i)\$\{(?:script|dns|url):", "critical", "Apache Commons Text dynamic interpolation RCE string (CVE-2022-42889)"))
         patterns_to_test.append(("Generic Base64 Decode", r"(?i)(frombase64string|base64_decode|base64\s+-d)", "medium", "Base64 decoding function detected"))
 
         lines = content.splitlines()

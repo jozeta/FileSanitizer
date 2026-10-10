@@ -61,6 +61,37 @@ class ArchiveAnalyzer(BaseAnalyzer):
             "file_list": []
         }
 
+        # Check for Archive Polyglots (preceding bytes before archive header)
+        try:
+            with open(file_path, "rb") as af:
+                header_bytes = af.read(1024)
+            if header_bytes.startswith(b"GIF89a") and (b"PK\x03\x04" in header_bytes or b"Rar!" in header_bytes):
+                findings.append(Finding(
+                    category="evasion",
+                    severity="critical",
+                    title="GIF/Archive Polyglot Container Detected",
+                    description="File starts with a valid GIF image header but embeds a functional ZIP/RAR archive payload.",
+                    details={"mitre_technique": "T1036"}
+                ))
+            elif header_bytes.startswith(b"\xff\xd8\xff") and (b"PK\x03\x04" in header_bytes or b"Rar!" in header_bytes):
+                findings.append(Finding(
+                    category="evasion",
+                    severity="critical",
+                    title="JPEG/Archive Polyglot Container Detected",
+                    description="File starts with a valid JPEG header but embeds a functional ZIP/RAR archive payload.",
+                    details={"mitre_technique": "T1036"}
+                ))
+            elif header_bytes.startswith(b"%PDF-") and (b"PK\x03\x04" in header_bytes or b"Rar!" in header_bytes):
+                findings.append(Finding(
+                    category="evasion",
+                    severity="critical",
+                    title="PDF/Archive Polyglot Container Detected",
+                    description="File starts with a valid PDF header but embeds a functional ZIP/RAR archive payload.",
+                    details={"mitre_technique": "T1036"}
+                ))
+        except Exception:
+            pass
+
         # Check for ZIP archive
         if zipfile.is_zipfile(file_path):
             self._inspect_zip(file_path, data, findings, provided_password=provided_password)
@@ -520,16 +551,71 @@ class ArchiveAnalyzer(BaseAnalyzer):
         return False
 
     def _record_findings(self, data: Dict[str, Any], findings: List[Finding]) -> None:
+        # Check for CVE-2023-38831 WinRAR File / Folder Name Collision Vulnerability
+        winrar_collisions = []
+        all_filenames = [f["filename"] for f in data.get("file_list", [])]
+        for f in all_filenames:
+            if " " in f and any(f.lower().endswith(ext) or (ext + " ") in f.lower() for ext in [".cmd", ".bat", ".exe", ".ps1", ".vbs", ".scr", ".pif"]):
+                winrar_collisions.append(f)
+            parts = f.replace("\\", "/").split("/")
+            for p in parts[:-1]:
+                if p.endswith(" ") and "." in p:
+                    winrar_collisions.append(f)
+                    break
+        if winrar_collisions:
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="WinRAR File/Folder Collision Code Execution Exploit (CVE-2023-38831)",
+                description=(
+                    f"Archive contains spoofed directory entries with trailing spaces ({', '.join(winrar_collisions[:2])}) "
+                    "containing executable scripts alongside decoy files. Exploits CVE-2023-38831 to trick WinRAR into launching "
+                    "the nested executable instead of the benign file when opened by the user."
+                ),
+                details={"collisions": winrar_collisions[:10], "cve": "CVE-2023-38831", "mitre_technique": "T1204.002"}
+            ))
+
+        # Check for Zip Slip (CVE-2018-1002200) Path Traversal
         if data["has_path_traversal"]:
             findings.append(Finding(
-                category="archive",
+                category="exploit",
                 severity="critical",
-                title="Path Traversal Vulnerability Detected in Archive",
+                title="Path Traversal / Zip Slip Directory Traversal Vulnerability (CVE-2018-1002200)",
                 description=(
                     "Archive contains file entries with directory traversal characters ('..' or absolute paths). "
-                    "Extracting this archive could overwrite arbitrary system files."
+                    "Extracting this archive without strict path validation can overwrite arbitrary system files (Zip Slip)."
                 ),
-                details={"entries": data["traversal_files"][:10]}
+                details={"entries": data["traversal_files"][:10], "cve": "CVE-2018-1002200", "mitre_technique": "T1059"}
+            ))
+
+        # Check for Unicode Right-to-Left Override (RTLO) Extension Spoofing
+        rtlo_files = [f["filename"] for f in data.get("file_list", []) if "\u202e" in f["filename"] or "\u202d" in f["filename"]]
+        if rtlo_files:
+            findings.append(Finding(
+                category="social_engineering",
+                severity="critical",
+                title=f"Unicode Right-to-Left Override (RTLO) Spoofing Detected ({len(rtlo_files)} file(s))",
+                description=(
+                    "File entries utilize hidden Unicode Right-to-Left Override characters (U+202E) to reverse filename display order, "
+                    "disguising dangerous executable extensions (.exe, .scr) as innocent file formats (.pdf, .docx)."
+                ),
+                details={"spoofed_files": rtlo_files, "mitre_technique": "T1036.002"}
+            ))
+
+        # Check for Mark-of-the-Web (MotW) Container Bypass (ISO/VHD/IMG container)
+        container_extensions = {".iso", ".vhd", ".vhdx", ".img"}
+        has_container = any(Path(f["filename"]).suffix.lower() in container_extensions for f in data.get("file_list", []))
+        has_scripts = any(Path(f["filename"]).suffix.lower() in {".lnk", ".bat", ".cmd", ".vbs", ".js", ".ps1", ".exe"} for f in data.get("file_list", []))
+        if has_container and has_scripts:
+            findings.append(Finding(
+                category="evasion",
+                severity="high",
+                title="Mark-of-the-Web (MotW) Container Smuggling Indicator",
+                description=(
+                    "Archive pairs virtual disk images (ISO/VHD/IMG) with Windows shortcut (.lnk) or script droppers. "
+                    "Attackers distribute ISO/VHD images to bypass Windows Mark-of-the-Web (MotW) security controls."
+                ),
+                details={"mitre_technique": "T1553.005"}
             ))
 
         if data["has_executables"]:

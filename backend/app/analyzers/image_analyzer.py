@@ -447,6 +447,74 @@ class ImageAnalyzer(BaseAnalyzer):
                         title="Truncated WebP Header",
                         description="WebP image file header is truncated or malformed."
                     ))
+                else:
+                    # Check for CVE-2023-4863 libwebp Lossless VP8L Chunk Buffer Overflow
+                    vp8l_idx = raw_bytes.find(b"VP8L")
+                    if vp8l_idx != -1 and vp8l_idx + 8 <= len(raw_bytes):
+                        vp8l_len = struct.unpack("<I", raw_bytes[vp8l_idx + 4 : vp8l_idx + 8])[0]
+                        if vp8l_idx + 8 + vp8l_len > len(raw_bytes) + 1:
+                            findings.append(Finding(
+                                category="exploit",
+                                severity="critical",
+                                title="libwebp Lossless Chunk Overflow Indicator (CVE-2023-4863)",
+                                description=(
+                                    f"WebP file contains a VP8L lossless compression chunk with declared size {vp8l_len} bytes "
+                                    "exceeding container bounds. Exploited in libwebp heap buffer overflow zero-days (CVE-2023-4863)."
+                                ),
+                                details={"chunk": "VP8L", "length": vp8l_len, "cve": "CVE-2023-4863", "mitre_technique": "T1055"}
+                            ))
+
+            # SVG / XML Image Security Auditing & ImageTragick (CVE-2016-3714)
+            is_svg = raw_bytes.strip().startswith(b"<svg") or b"<svg" in raw_bytes[:1024] or file_path.suffix.lower() == ".svg"
+            if is_svg or b"image/svg+xml" in raw_bytes[:256]:
+                svg_text = raw_bytes.decode('latin-1', errors='ignore')
+
+                # ImageTragick command injection
+                if re.search(r'(?i)(?:fill|image)\s+["\']?url\([^\)]*\|[^\)]*\)', svg_text) or \
+                   re.search(r'(?i)\|.*?(?:/bin/|cmd\.exe|powershell)', svg_text):
+                    findings.append(Finding(
+                        category="exploit",
+                        severity="critical",
+                        title="ImageTragick Command Injection Exploit (CVE-2016-3714)",
+                        description=(
+                            "Image contains pipe character '|' or shell invocation directives within URL specifications. "
+                            "Exploits ImageMagick / GraphicsMagick (CVE-2016-3714) to achieve arbitrary command execution."
+                        ),
+                        details={"cve": "CVE-2016-3714", "mitre_technique": "T1059"}
+                    ))
+
+                # SVG XXE Injection
+                if re.search(r'(?i)<!ENTITY[^>]+SYSTEM', svg_text) or re.search(r'(?i)<!DOCTYPE[^>]*\[', svg_text):
+                    findings.append(Finding(
+                        category="exploit",
+                        severity="critical",
+                        title="SVG XML External Entity (XXE) Injection",
+                        description="SVG vector graphics image contains external entity definitions capable of file exfiltration or SSRF.",
+                        details={"mitre_technique": "T1190"}
+                    ))
+
+                # SVG Embedded JavaScript / Active Content
+                if re.search(r'(?i)<script\b', svg_text) or re.search(r'(?i)\bon[a-z]+\s*=', svg_text) or re.search(r'(?i)href=["\']javascript:', svg_text):
+                    findings.append(Finding(
+                        category="active_content",
+                        severity="critical",
+                        title="Active JavaScript / Script Elements in SVG Graphic",
+                        description="SVG image contains interactive <script> tags or inline event handlers executing client-side scripts.",
+                        details={"mitre_technique": "T1059.007"}
+                    ))
+
+            # Check for Web Shell / Script code hidden in image (Polyglot Web Shell)
+            if re.search(rb'(?i)<\?php|\bbase64_decode\s*\(|\beval\s*\(|<\%@\s*page|system\s*\(\s*\$_', raw_bytes):
+                findings.append(Finding(
+                    category="malware",
+                    severity="critical",
+                    title="Web Shell Script Payload Embedded in Image (Image Polyglot)",
+                    description=(
+                        "Image contains server-side script execution syntax (PHP/ASPX/eval/system). "
+                        "Attackers disguise web shells as images to bypass file upload filters and achieve remote command execution."
+                    ),
+                    details={"mitre_technique": "T1505.003"}
+                ))
         except Exception as chk_err:
             logger.debug(f"Chunk audit note: {chk_err}")
 

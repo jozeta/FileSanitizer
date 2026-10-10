@@ -1046,4 +1046,110 @@ class PDFAnalyzer(BaseAnalyzer):
                 description="Document defines auto-executing scripts registered within the catalog /Names /JavaScript dictionary tree."
             ))
 
+        # 24. Ghostscript Pipe Device & Format String Sandbox Escapes (CVE-2023-36664 / CVE-2024-29510)
+        if re.search(r'(?i)(?:%pipe%|\|\s*\/bin\/|\|\s*cmd\.exe|\|\s*powershell|\(\s*%pipe%[^)]+\))', raw_text) or \
+           (b"%pipe%" in raw_bytes) or \
+           re.search(r'(?i)\/uniprint[^\n\r]*%(?:d%n|[0-9]*[a-zA-Z]%[a-zA-Z])', raw_text):
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Ghostscript Pipe Device Command Execution / Format String Sandbox Escape (CVE-2023-36664 / CVE-2024-29510)",
+                description=(
+                    "PostScript stream contains Ghostscript '%pipe%' device invocation or uniprint format string parameters. "
+                    "Exploits CVE-2023-36664 or CVE-2024-29510 to bypass Ghostscript -dSAFER sandbox policies and achieve remote command execution."
+                ),
+                details={"cve": "CVE-2023-36664", "cve_secondary": "CVE-2024-29510", "mitre_technique": "T1059"}
+            ))
+
+        # 25. Adobe Acrobat Out-of-Bounds Write via TrueType Font Bitmap Tables (CVE-2023-26369)
+        if re.search(r'(?i)/(?:CIDFontType2|FontFile2|FontFile3)\b', raw_text) and \
+           (re.search(r'(?i)\b(?:EBDT|CBLC|bdat|bloc|EBLC)\b', raw_text) or b"EBDT" in raw_bytes or b"CBLC" in raw_bytes):
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Adobe Acrobat TrueType Font Table Corruption Exploit (CVE-2023-26369)",
+                description=(
+                    "Document embeds TrueType/CIDFont streams referencing EBDT/CBLC embedded bitmap tables. "
+                    "In vulnerable Adobe Acrobat and Reader versions, malformed bitmap table lengths trigger an out-of-bounds write (CVE-2023-26369) "
+                    "leading to arbitrary code execution in the wild."
+                ),
+                details={"cve": "CVE-2023-26369", "mitre_technique": "T1055"}
+            ))
+
+        # 26. JavaScript ES TypedArray Heap Spraying & Use-After-Free (CVE-2021-28550 / CVE-2020-9715)
+        if re.search(r'(?i)new\s+(?:Uint8Array|ArrayBuffer|Float64Array|BigUint64Array)\s*\(\s*(?:0x[0-9a-f]{4,}|[0-9]{5,})\s*\)', raw_text) or \
+           (re.search(r'(?i)(?:Uint8Array|ArrayBuffer)\b', raw_text) and re.search(r'(?i)(?:while|for)\s*\([^\)]*<[^\)]*(?:100|0x|1000)', raw_text) and re.search(r'(?i)spray\b', raw_text)):
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="JavaScript TypedArray Heap Spraying & Memory Corruption (CVE-2021-28550 / CVE-2020-9715)",
+                description=(
+                    "JavaScript allocates multiple large ES TypedArray buffers (Uint8Array/ArrayBuffer/Float64Array) indicative of heap grooming "
+                    "and memory spraying. Weaponized in Acrobat Reader zero-days to achieve reliable use-after-free exploitation."
+                ),
+                details={"cve": "CVE-2021-28550", "mitre_technique": "T1055"}
+            ))
+
+        # 27. PDF Polyglot Attack (Prepended ZIP / RAR / PE / HTML Container)
+        is_polyglot = False
+        poly_type = ""
+        if raw_bytes.startswith(b"PK\x03\x04"):
+            is_polyglot = True
+            poly_type = "ZIP / JAR Archive"
+        elif raw_bytes.startswith(b"Rar!\x1a\x07"):
+            is_polyglot = True
+            poly_type = "RAR Archive"
+        elif raw_bytes.startswith(b"MZ"):
+            is_polyglot = True
+            poly_type = "Windows PE Executable"
+        elif raw_bytes.startswith(b"\x7fELF"):
+            is_polyglot = True
+            poly_type = "Linux ELF Binary"
+        elif re.match(rb'^\s*<(!DOCTYPE\s+html|html)', raw_bytes, re.IGNORECASE):
+            is_polyglot = True
+            poly_type = "HTML / Web Document"
+
+        if is_polyglot:
+            findings.append(Finding(
+                category="evasion",
+                severity="critical",
+                title=f"PDF Polyglot Dual-Format Structure ({poly_type} + PDF)",
+                description=(
+                    f"File begins with a valid {poly_type} binary header while containing a functional PDF document structure. "
+                    "Polyglot files can be detonated by multiple distinct interpreters (e.g. executed as an archive or binary, "
+                    "or opened as a PDF), completely confusing file validation filters and sandboxes."
+                ),
+                details={"polyglot_header": poly_type, "mitre_technique": "T1036"}
+            ))
+
+        # 28. PDF Incremental Shadow Attack (Hide-and-Replace / Hide-and-Overlay)
+        eof_count = len(re.findall(r'%%EOF', raw_text))
+        if eof_count > 1 and (re.search(r'(?i)/Perms\b', raw_text) or re.search(r'(?i)/Sig\b', raw_text)):
+            # Check if incremental update overrides catalog or dictionary objects
+            xref_offsets = [m.start() for m in re.finditer(r'xref\b', raw_text)]
+            if len(xref_offsets) > 1:
+                findings.append(Finding(
+                    category="exploit",
+                    severity="high",
+                    title="PDF Incremental Shadow Attack Indicator (Signed Document Manipulation)",
+                    description=(
+                        f"Document features {len(xref_offsets)} xref revision tables and digital signature (/Sig) / permissions (/Perms) markers. "
+                        "Incremental shadow attacks exploit signature validation loopholes by modifying underlying content objects without invalidating existing cryptographic signatures."
+                    ),
+                    details={"revision_count": len(xref_offsets), "mitre_technique": "T1565.001"}
+                ))
+
+        # 29. Foxit Reader launchURL Arbitrary Command Execution (CVE-2023-38836)
+        if re.search(r'(?i)app\.launchURL\s*\(\s*["\'](?:cmd|powershell|ms-msdt|file|cscript|wscript|\\\\)', raw_text):
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Foxit Reader Arbitrary Command Execution via launchURL (CVE-2023-38836)",
+                description=(
+                    "JavaScript invokes app.launchURL() with protocol handlers (cmd:, powershell:, ms-msdt:, or UNC paths). "
+                    "Exploits CVE-2023-38836 to bypass URL scheme restrictions and trigger external process execution in Foxit Reader."
+                ),
+                details={"cve": "CVE-2023-38836", "mitre_technique": "T1204"}
+            ))
+
         return findings

@@ -347,6 +347,54 @@ class EmailAnalyzer(BaseAnalyzer):
             "has_executable": any(n["is_executable"] for n in attachment_nodes)
         }
 
+        # Check for CVE-2023-23397 (Outlook Elevation of Privilege / NetNTLM Leak)
+        cve_unc = getattr(msg, "_cve_2023_23397_unc", None)
+        if not cve_unc:
+            unc_m = re.search(r'(?i)\\\\([a-zA-Z0-9_\.\-]+(?:\\[a-zA-Z0-9_\.\-]+)+)', raw_email)
+            if unc_m and any(k in raw_email for k in ["PidLidReminder", "851F", "ReminderFileParameter"]):
+                cve_unc = unc_m.group(0)
+
+        if cve_unc:
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Microsoft Outlook NetNTLM Hash Leak via Reminder (CVE-2023-23397)",
+                description=(
+                    f"Message defines PidLidReminderFileParameter pointing to remote UNC path '{cve_unc}'. "
+                    "When processed by Microsoft Outlook, this automatically forces SMB negotiation to the attacker server "
+                    "without user interaction, leaking NetNTLM credentials."
+                ),
+                details={"unc_path": cve_unc, "cve": "CVE-2023-23397", "mitre_technique": "T1187"}
+            ))
+
+        # Check for CVE-2024-21378 (Outlook Synced Forms RCE)
+        custom_form = getattr(msg, "_cve_2024_21378_custom_form", None)
+        if custom_form:
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title=f"Microsoft Outlook Synced Form RCE Indicator (CVE-2024-21378 / {custom_form})",
+                description=(
+                    f"Message specifies non-standard custom form class '{custom_form}'. "
+                    "Exploited via Microsoft Outlook sync features (CVE-2024-21378) to install malicious form code and achieve remote execution."
+                ),
+                details={"message_class": custom_form, "cve": "CVE-2024-21378", "mitre_technique": "T1204"}
+            ))
+
+        # Check for CVE-2024-38021 / CVE-2024-21413 (Moniker Link in Email Body / Preview)
+        moniker_in_body = re.findall(r'(?i)(?:file://|\\\\)[^\s"\'><]+![a-zA-Z0-9_\-\./]*', raw_email)
+        if moniker_in_body:
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Outlook Moniker Link Remote Code Execution (CVE-2024-38021 / CVE-2024-21413)",
+                description=(
+                    f"Email contains MonikerLink exclamation mark bypass targets ({', '.join(moniker_in_body[:2])}). "
+                    "Bypasses Outlook Protected View / security restrictions and triggers remote code execution upon preview or click."
+                ),
+                details={"targets": moniker_in_body[:5], "cve": "CVE-2024-38021", "mitre_technique": "T1204.002"}
+            ))
+
         return AnalyzerResult(
             analyzer_name=self.name,
             success=True,
@@ -1029,6 +1077,20 @@ class EmailAnalyzer(BaseAnalyzer):
             is_dangerous = att_ext in DANGEROUS_ATTACHMENT_EXTENSIONS
             has_macro_ext = att_ext in OFFICE_MACRO_EXTENSIONS
 
+            # Check for Unicode Right-to-Left Override (RTLO) Extension Spoofing
+            if "\u202e" in att_name or "\u202d" in att_name or "\u202b" in att_name:
+                is_dangerous = True
+                findings.append(Finding(
+                    category="social_engineering",
+                    severity="critical",
+                    title=f"Unicode Right-to-Left Override (RTLO) Attachment Spoofing: '{att_name}'",
+                    description=(
+                        f"Attachment '{att_name}' contains invisible Unicode Right-to-Left Override characters (U+202E). "
+                        "This reverses the visual display order in email clients to disguise malicious executable files as benign document types."
+                    ),
+                    details={"filename": att_name, "mitre_technique": "T1036.002"}
+                ))
+
             # Query hash reputation across CIRCL, ThreatFox, VirusTotal
             reputation = self._query_attachment_reputation(att_sha256)
 
@@ -1401,18 +1463,38 @@ class EmailAnalyzer(BaseAnalyzer):
                                 "addrtype": "SMTP"
                             })
 
-                # Attach rich OLE metadata directly onto msg for downstream consumption
-                setattr(msg, "_ole_raw_headers", text_h)
-                setattr(msg, "_ole_body_text", body_text)
-                setattr(msg, "_ole_recipients", recipients_list)
-                setattr(msg, "_ole_metadata", {
-                    "sender_name": sender_name,
-                    "sender_email": sender_email,
-                    "x_mailer": x_mailer,
-                    "recipients": recipients_list,
-                    "subject": clean_subj if 'clean_subj' in locals() else "",
-                    "has_transport_headers": bool(text_h)
-                })
+                # Check for CVE-2023-23397 (PidLidReminderFileParameter UNC Path)
+                cve_2023_23397_unc = None
+                for st in ole.listdir(streams=True, storages=False):
+                    s_name = "/".join(st)
+                    if "851F001F" in s_name or "851F001E" in s_name or "851F" in s_name:
+                        try:
+                            val = ole.openstream(st).read().decode('utf-16le', errors='ignore').strip('\x00 \t\r\n')
+                            if val.startswith("\\\\") or "smb://" in val.lower():
+                                cve_2023_23397_unc = val
+                                break
+                        except Exception:
+                            pass
+
+                if not cve_2023_23397_unc:
+                    unc_m = re.search(rb'(?i)\\\\([a-zA-Z0-9_\.\-]+(?:\\[a-zA-Z0-9_\.\-]+)+)', raw_bytes)
+                    if unc_m and (b"851F" in raw_bytes or b"PidLidReminder" in raw_bytes or b"ReminderFile" in raw_bytes):
+                        cve_2023_23397_unc = unc_m.group(0).decode('latin-1', errors='ignore')
+
+                if cve_2023_23397_unc:
+                    setattr(msg, "_cve_2023_23397_unc", cve_2023_23397_unc)
+
+                # Check for CVE-2024-21378 (Outlook Custom Synced Forms RCE)
+                for st in ole.listdir(streams=True, storages=False):
+                    s_name = "/".join(st)
+                    if "001A001F" in s_name:  # Message Class
+                        try:
+                            msg_class = ole.openstream(st).read().decode('utf-16le', errors='ignore').strip('\x00 \t\r\n')
+                            if msg_class.startswith("IPM.Note.") and len(msg_class) > 9:
+                                setattr(msg, "_cve_2024_21378_custom_form", msg_class)
+                                break
+                        except Exception:
+                            pass
 
                 return msg
         except Exception as e:

@@ -391,6 +391,64 @@ class LnkAnalyzer(BaseAnalyzer):
                 details={"sample": full_command[:200]}
             ))
 
+        # Check for CVE-2024-38217 / CVE-2024-21412 SmartScreen MotW Bypass
+        is_motw_bypass = False
+        motw_reasons = []
+        if relative_path_str.startswith((".\\", "./", "..\\", "../")) or full_command.strip().startswith((".\\", "./")):
+            is_motw_bypass = True
+            motw_reasons.append("Relative path begins with dot-slash (.\\) or traversal (..\\)")
+        if re.search(r'\s{100,}', arguments_str) or (len(arguments_str) > 200 and len(arguments_str) - len(arguments_str.lstrip()) > 100):
+            is_motw_bypass = True
+            motw_reasons.append("Arguments contain extreme leading whitespace padding to conceal command-line in Explorer properties")
+        if "\x00" in arguments_str or "\x00" in relative_path_str:
+            is_motw_bypass = True
+            motw_reasons.append("Null-byte injection in path or arguments")
+
+        if is_motw_bypass:
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Windows SmartScreen Mark-of-the-Web (MotW) Bypass (CVE-2024-38217 / CVE-2024-21412)",
+                description=(
+                    "Shortcut incorporates dot-slash traversal or excessive argument padding designed to bypass Windows SmartScreen "
+                    "Mark-of-the-Web security warnings and conceal execution parameters from the user interface."
+                ),
+                details={"reasons": motw_reasons, "cve": "CVE-2024-38217", "mitre_technique": "T1553.005"}
+            ))
+
+        # Check for CVE-2017-8464 / CVE-2010-2568 (Control Panel Shortcut Remote Code Execution)
+        cpl_guid = "ED7BA470-8E54-465E-825C-99712043E01C"
+        cpl_binary_guid = b"\x70\xba\x7b\xed\x54\x8e\x5e\x46\x82\x5c\x99\x71\x20\x43\xe0\x1c"
+        has_cpl = (cpl_guid.lower() in str(id_list_items).lower()) or (cpl_binary_guid in raw_bytes) or (cpl_guid.lower() in raw_bytes.decode('latin-1', errors='ignore').lower())
+        if has_cpl:
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Control Panel Shortcut Remote Code Execution (CVE-2017-8464 / CVE-2010-2568)",
+                description=(
+                    "Shortcut targets the Control Panel Special Folder GUID {ED7BA470-8E54-465E-825C-99712043E01C}. "
+                    "In vulnerable Windows systems (Stuxnet vector), rendering this shortcut triggers automatic loading "
+                    "and execution of arbitrary DLL payloads without requiring user clicks."
+                ),
+                details={"guid": cpl_guid, "cve": "CVE-2017-8464", "cve_legacy": "CVE-2010-2568", "mitre_technique": "T1204.002"}
+            ))
+
+        # Check for Forced NTLM Authentication via UNC Icon or Target
+        unc_icon = icon_location_str.startswith(("\\\\", "//"))
+        unc_target = full_command.strip().startswith(("\\\\", "//")) or relative_path_str.startswith(("\\\\", "//"))
+        if unc_icon or unc_target:
+            unc_source = icon_location_str if unc_icon else (relative_path_str or full_command)
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Forced NetNTLM Authentication via UNC Shortcut Target/Icon (NTLM Relay)",
+                description=(
+                    f"Shortcut references remote UNC network path '{unc_source[:60]}' for its target or display icon. "
+                    "Opening the folder containing this shortcut in Windows Explorer immediately transmits NetNTLM authentication hashes to the remote SMB server."
+                ),
+                details={"unc_path": unc_source, "mitre_technique": "T1187"}
+            ))
+
         data = {
             "header": {
                 "header_size": header_size,

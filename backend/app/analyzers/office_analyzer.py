@@ -70,6 +70,11 @@ class OfficeAnalyzer(BaseAnalyzer):
             "has_external_relationships": False,
             "external_relationships": [],
             "remote_templates": [],
+            "moniker_links": [],
+            "follina_exploits": [],
+            "mshtml_exploits": [],
+            "romcom_links": [],
+            "dde_injections": [],
             "has_embedded_files": False,
             "embedded_files": [],
             "has_comments": False,
@@ -270,8 +275,12 @@ class OfficeAnalyzer(BaseAnalyzer):
                         if "comments" in lower_name:
                             data["has_comments"] = True
 
-                    # Inspect relationship files for external links and remote template injection
+                    # Inspect relationship files for external links, remote template injection, and CVEs
                     remote_templates = []
+                    moniker_links = []
+                    follina_links = []
+                    mshtml_links = []
+                    romcom_links = []
                     for name in namelist:
                         if name.endswith(".rels"):
                             try:
@@ -281,6 +290,22 @@ class OfficeAnalyzer(BaseAnalyzer):
                                     target_mode = rel.getAttribute("TargetMode")
                                     target = rel.getAttribute("Target")
                                     rel_type = rel.getAttribute("Type")
+
+                                    # Check CVE-2024-21413 MonikerLink (file://...! or \\...!)
+                                    if re.search(r'(?i)(?:file://|\\\\)[^\s"\'>]+!', target):
+                                        moniker_links.append({"source": name, "target": target, "type": rel_type})
+
+                                    # Check CVE-2022-30190 Follina MSDT
+                                    if "ms-msdt:" in target.lower():
+                                        follina_links.append({"source": name, "target": target, "type": rel_type})
+
+                                    # Check CVE-2021-40444 MSHTML CAB / INF
+                                    if target.lower().startswith("mhtml:") or any(target.lower().endswith(ext) for ext in [".cab", ".inf"]):
+                                        mshtml_links.append({"source": name, "target": target, "type": rel_type})
+
+                                    # Check CVE-2023-36884 RomCom / Search-MS
+                                    if any(p in target.lower() for p in ["search-ms:", "search:"]) or target.lower().endswith(".url"):
+                                        romcom_links.append({"source": name, "target": target, "type": rel_type})
 
                                     is_external = target_mode == "External" or target.startswith(("http://", "https://", "\\\\", "smb://"))
                                     if is_external:
@@ -302,6 +327,26 @@ class OfficeAnalyzer(BaseAnalyzer):
                             except Exception:
                                 pass
                     data["remote_templates"] = remote_templates
+                    data["moniker_links"] = moniker_links
+                    data["follina_exploits"] = follina_links
+                    data["mshtml_exploits"] = mshtml_links
+                    data["romcom_links"] = romcom_links
+
+                    # Check for DDE / DDEAUTO command injection across all XML parts
+                    dde_injections = []
+                    for xml_part in [n for n in namelist if n.endswith(".xml")]:
+                        try:
+                            part_text = zf.read(xml_part).decode('utf-8', errors='ignore')
+                            if re.search(r'(?i)(?:=\s*(?:cmd|powershell|mshta|certutil|rundll32|regsvr32)\b|\bDDEAUTO\b|\bDDE\s+)', part_text):
+                                dde_injections.append(xml_part)
+                            # Also check for inline Follina or MonikerLink inside document XML
+                            if "ms-msdt:" in part_text.lower() and not follina_links:
+                                follina_links.append({"source": xml_part, "target": "ms-msdt: protocol reference in XML", "type": "Inline XML"})
+                            if re.search(r'(?i)(?:file://|\\\\)[^\s"\'><]+![a-zA-Z0-9_\-\./]*', part_text) and not moniker_links:
+                                moniker_links.append({"source": xml_part, "target": "MonikerLink ! syntax in XML", "type": "Inline XML"})
+                        except Exception:
+                            pass
+                    data["dde_injections"] = dde_injections
 
                     # Check for tracked changes / revisions in Word
                     if "word/document.xml" in namelist:
@@ -585,13 +630,25 @@ class OfficeAnalyzer(BaseAnalyzer):
                 if re.search(rb"(?i)00000316-0000-0000-C000-000000000046|00000315-0000-0000-C000-000000000046", rtf_full):
                     rtf_findings.append("Composite Moniker / HTA Remote Code Execution (CVE-2017-0199 / CVE-2017-8570)")
 
+                # MonikerLink Outlook / Office NTLM Relay & Code Execution (CVE-2024-21413)
+                if re.search(rb"(?i)(?:file://|\\\\)[^\r\n\"\'><\s]+![a-zA-Z0-9_\-\./]*", rtf_full):
+                    rtf_findings.append("MonikerLink Security Feature Bypass (CVE-2024-21413)")
+
+                # Follina MSDT Protocol Handler (CVE-2022-30190)
+                if re.search(rb"(?i)ms-msdt:", rtf_full):
+                    rtf_findings.append("Follina MSDT Remote Code Execution (CVE-2022-30190)")
+
                 # VBScript Engine Corrupted Moniker (CVE-2018-8174)
                 if re.search(rb"(?i)F414C260-6AC0-11CF-B6D1-00AA00BBBB58", rtf_full):
                     rtf_findings.append("VBScript Engine Use-After-Free CLSID (CVE-2018-8174)")
 
-                # MSHTML container (CVE-2021-40444)
-                if re.search(rb"(?i)(mhtml:|ms-msdt:|search-ms:)", rtf_full):
-                    rtf_findings.append("MSHTML / Protocol Handler Remote Exploit Trigger (CVE-2021-40444)")
+                # MSHTML CAB / ActiveX container (CVE-2021-40444)
+                if re.search(rb"(?i)mhtml:", rtf_full) or re.search(rb"(?i)\.cab\b", rtf_full):
+                    rtf_findings.append("MSHTML / CAB Remote Exploit Trigger (CVE-2021-40444)")
+
+                # RomCom Search-MS Protocol Handler (CVE-2023-36884)
+                if re.search(rb"(?i)search-ms:", rtf_full):
+                    rtf_findings.append("RomCom Search-MS Protocol Handler Exploit (CVE-2023-36884)")
 
                 # Automatic OLE object update links
                 if re.search(rb"(?i)\\objautlink", rtf_full):
@@ -665,6 +722,68 @@ class OfficeAnalyzer(BaseAnalyzer):
                     "Attackers use remote template injection to dynamically retrieve weaponized dotm macros when opened."
                 ),
                 details={"templates": data["remote_templates"]}
+            ))
+
+        if data.get("moniker_links"):
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="MonikerLink Remote Code Execution / NTLM Relay (CVE-2024-21413)",
+                description=(
+                    "Document contains external relationship targets utilizing the MonikerLink exclamation mark ('!') bypass "
+                    "(e.g. file://host/share/doc.docx!payload). In Microsoft Office/Outlook, this bypasses Protected View "
+                    "restrictions and triggers automatic NTLM hash exfiltration or arbitrary code execution."
+                ),
+                details={"targets": data["moniker_links"], "cve": "CVE-2024-21413", "mitre_technique": "T1204.002"}
+            ))
+
+        if data.get("follina_exploits"):
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Follina MSDT Protocol Handler Remote Code Execution (CVE-2022-30190)",
+                description=(
+                    "Document contains relationship targets or XML references referencing the 'ms-msdt:' URL protocol handler. "
+                    "Exploits Microsoft Support Diagnostic Tool (CVE-2022-30190) to execute arbitrary PowerShell commands "
+                    "without requiring macros to be enabled."
+                ),
+                details={"targets": data["follina_exploits"], "cve": "CVE-2022-30190", "mitre_technique": "T1218"}
+            ))
+
+        if data.get("mshtml_exploits"):
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="MSHTML Remote ActiveX / CAB Execution (CVE-2021-40444)",
+                description=(
+                    "Document relationships reference mhtml: protocol or remote CAB/INF archives. "
+                    "Exploits CVE-2021-40444 in the MSHTML browser engine to deploy and execute weaponized ActiveX controls."
+                ),
+                details={"targets": data["mshtml_exploits"], "cve": "CVE-2021-40444", "mitre_technique": "T1204"}
+            ))
+
+        if data.get("romcom_links"):
+            findings.append(Finding(
+                category="exploit",
+                severity="critical",
+                title="Office RomCom / Search-MS HTML Remote Code Execution (CVE-2023-36884)",
+                description=(
+                    "Document links to external search-ms: or active HTML handler targets. "
+                    "Exploited by RomCom threat actors (CVE-2023-36884) to trigger remote code execution via search connector files."
+                ),
+                details={"targets": data["romcom_links"], "cve": "CVE-2023-36884", "mitre_technique": "T1204"}
+            ))
+
+        if data.get("dde_injections"):
+            findings.append(Finding(
+                category="active_content",
+                severity="critical",
+                title=f"Office DDE / DDEAUTO Command Injection Detected ({len(data['dde_injections'])} part(s))",
+                description=(
+                    f"Document contains Dynamic Data Exchange (DDE) formula execution syntax in {', '.join(data['dde_injections'][:3])}. "
+                    "DDE formulas execute local processes (e.g. cmd.exe, powershell.exe) directly from document formulas without VBA macros."
+                ),
+                details={"parts": data["dde_injections"], "mitre_technique": "T1204.002"}
             ))
 
         if urls:
