@@ -125,6 +125,31 @@ class ActiveContentAnalyzer(BaseAnalyzer):
                         details={"resources": data["external_resources"][:10]}
                     ))
 
+                # 3. ImageMagick MSL & Shell Injection Exploit Detection (CVE-2016-3714 / ImageTragick)
+                if re.search(r'(?i)authenticate\s*=\s*[\'"][^\'"]*[`\|$;&]', content):
+                    findings.append(Finding(
+                        category="exploit",
+                        severity="critical",
+                        title="ImageMagick Shell Injection via Authenticate Attribute (CVE-2016-3714)",
+                        description=(
+                            "SVG file contains an ImageMagick authenticate attribute with shell command execution characters (` or |). "
+                            "This leverages parser vulnerabilities to execute arbitrary shell commands during image processing."
+                        ),
+                        details={"cve": "CVE-2016-3714", "mitre_technique": "T1059.004"}
+                    ))
+
+                if "msl:" in content.lower() or "<read filename=" in content.lower():
+                    findings.append(Finding(
+                        category="exploit",
+                        severity="critical",
+                        title="ImageMagick MSL Polyglot / Local File Read Exploit",
+                        description=(
+                            "SVG contains ImageMagick Magick Scripting Language (MSL) directives or local file read requests (/etc/passwd). "
+                            "Attackers abuse MSL polyglots to read arbitrary server files or execute commands."
+                        ),
+                        details={"cve": "CVE-2016-3714", "mitre_technique": "T1005"}
+                    ))
+
             except Exception as e:
                 # Malformed XML or parser issue
                 findings.append(Finding(

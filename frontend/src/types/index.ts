@@ -1271,6 +1271,52 @@ export interface OfficeTriageInfo {
   };
 }
 
+export interface PdfTokenOccurrence {
+  token: string;
+  raw_token: string;
+  is_obfuscated: boolean;
+  snippet: string;
+  extracted_value?: string;
+  threat_summary?: string;
+  xref?: number | null;
+}
+
+export interface PdfTokenDetail {
+  token: string;
+  count: number;
+  obfuscated_count: number;
+  obfuscated_samples?: string[];
+  threat_summary?: string;
+  occurrences: PdfTokenOccurrence[];
+}
+
+export interface PdfObjectItem {
+  xref: number;
+  type: string;
+  is_stream: boolean;
+  filter: string;
+  size: number;
+  is_suspicious: boolean;
+  suspicious_reason?: string;
+  raw_dict?: string;
+  stream_text?: string;
+  stream_hex?: string;
+  is_text?: boolean;
+  tokens?: string[];
+}
+
+export interface PdfStreamInspection {
+  job_id: string;
+  xref: number;
+  is_stream: boolean;
+  size: number;
+  raw_dict: string;
+  is_text: boolean;
+  text_content: string;
+  b64_content: string;
+  hex_dump: string;
+}
+
 export interface PdfTriageInfo {
   is_password_protected?: boolean;
   is_unlocked?: boolean;
@@ -1278,7 +1324,10 @@ export interface PdfTriageInfo {
   page_count?: number;
   pdfid?: Record<string, number>;
   pdfid_counts?: Record<string, number>;
+  pdfid_tags?: Record<string, number>;
+  pdfid_token_details?: Record<string, PdfTokenDetail>;
   obfuscated_tags?: Record<string, number>;
+  obfuscated_samples?: Record<string, string[]>;
   has_javascript?: boolean;
   has_launch?: boolean;
   has_open_action?: boolean;
@@ -1289,6 +1338,12 @@ export interface PdfTriageInfo {
   javascript_streams?: Array<{ stream_id: number; size: number; code: string }>;
   extracted_code?: ExtractedCode;
   metadata?: Record<string, any>;
+  pdf_objects?: PdfObjectItem[];
+  total_objects?: number;
+  total_streams?: number;
+  filter_counts?: Record<string, number>;
+  pdf_version?: string;
+  is_linearized?: boolean;
 }
 
 export interface ImageTriageInfo {

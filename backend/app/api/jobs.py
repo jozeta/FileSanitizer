@@ -914,6 +914,61 @@ def export_job_timeline(job_id: str, format: str = "json"):
             headers={"Content-Disposition": f'attachment; filename="forensic_timeline_{safe_name}.json"'}
         )
 
+@router.get("/{job_id}/pdf/streams/{xref}")
+def get_pdf_object_stream(job_id: str, xref: int):
+    """Retrieve decompressed stream content, dictionary header, and hex representation for a specific PDF XRef object."""
+    job = job_manager.get_job(job_id)
+    ws = job_manager.get_workspace(job_id)
+    if not job or not ws:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    original_path = ws.original_file_path(job.filename)
+    if not original_path.exists():
+        raise HTTPException(status_code=404, detail="Original file not found on disk.")
+
+    try:
+        import fitz
+        from app.analyzers.pdf_analyzer import _format_hex_preview
+        doc = fitz.open(original_path)
+        if xref < 1 or xref >= doc.xref_length():
+            doc.close()
+            raise HTTPException(status_code=404, detail=f"XRef {xref} out of bounds.")
+
+        raw_dict = doc.xref_object(xref)
+        is_stream = doc.xref_is_stream(xref)
+        stream_bytes = doc.xref_stream(xref) if is_stream else b""
+        doc.close()
+
+        is_text = False
+        text_content = ""
+        if stream_bytes:
+            try:
+                text_content = stream_bytes.decode('utf-8')
+                is_text = True
+            except Exception:
+                try:
+                    text_content = stream_bytes.decode('latin-1')
+                    is_text = True
+                except Exception:
+                    text_content = ""
+
+        import base64
+        return {
+            "job_id": job_id,
+            "xref": xref,
+            "is_stream": is_stream,
+            "size": len(stream_bytes),
+            "raw_dict": raw_dict,
+            "is_text": is_text,
+            "text_content": text_content,
+            "b64_content": base64.b64encode(stream_bytes).decode('ascii') if stream_bytes else "",
+            "hex_dump": _format_hex_preview(stream_bytes, max_len=4096) if stream_bytes else ""
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to inspect PDF object #{xref}: {e}")
+
 @router.delete("/{job_id}")
 def delete_job(job_id: str):
     """Immediately and securely purge job workspace and all temporary files."""

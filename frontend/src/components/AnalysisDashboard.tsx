@@ -1191,6 +1191,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                   return (
                     <ErrorBoundary fallbackTitle="PDF Triage Error" onReset={() => setActiveTab('security')}>
                       <PdfTriageCard
+                        jobId={job.job_id}
                         pdfInfo={job.pdf_info}
                         filename={job.filename}
                         findings={job.findings}

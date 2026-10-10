@@ -1,4 +1,4 @@
-import { JobDetail, StructuredMetadata, UrlItem, SanitizationOptions, ValidationComparison, DetectionRules, IncidentCorrelationData } from '../types';
+import { JobDetail, StructuredMetadata, UrlItem, SanitizationOptions, ValidationComparison, DetectionRules, IncidentCorrelationData, PdfStreamInspection } from '../types';
 
 const API_BASE = '/api';
 
@@ -115,6 +115,15 @@ export const apiClient = {
   }> {
     const res = await fetch(`${API_BASE}/jobs/${jobId}/raw-content?offset=${offset}&length=${length}`);
     if (!res.ok) throw new Error('Failed to fetch raw file content');
+    return res.json();
+  },
+
+  async getPdfStreamContent(jobId: string, xref: number): Promise<PdfStreamInspection> {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/pdf/streams/${xref}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to inspect PDF object stream' }));
+      throw new Error(err.detail || 'Failed to inspect PDF object stream');
+    }
     return res.json();
   },
 
