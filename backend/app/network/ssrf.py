@@ -64,7 +64,10 @@ def validate_url_for_ssrf(url_str: str) -> Tuple[bool, Optional[str], Optional[L
             return False, f"Forbidden local destination '{hostname}'.", None
 
         # Resolve DNS addresses
-        port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+        try:
+            port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+        except ValueError:
+            return False, f"Invalid port in URL '{url_str}'.", None
         try:
             addr_info = socket.getaddrinfo(hostname, port, proto=socket.IPPROTO_TCP)
         except socket.gaierror as e:

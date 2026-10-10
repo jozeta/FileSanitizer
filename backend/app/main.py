@@ -7,6 +7,7 @@ from app.core.retention import retention_cleaner
 from app.api.files import router as files_router
 from app.api.jobs import router as jobs_router
 from app.api.health import router as health_router
+from app.api.settings import router as settings_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,6 +39,7 @@ app.add_middleware(
 app.include_router(files_router, prefix=settings.API_PREFIX)
 app.include_router(jobs_router, prefix=settings.API_PREFIX)
 app.include_router(health_router, prefix=settings.API_PREFIX)
+app.include_router(settings_router, prefix=settings.API_PREFIX)
 
 @app.get("/")
 def root():

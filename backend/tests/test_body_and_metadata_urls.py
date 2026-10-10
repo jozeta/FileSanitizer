@@ -125,3 +125,39 @@ def test_image_metadata_url_extraction(temp_dir):
     assert any("artist-portfolio.example.org" in u for u in urls)
     assert any("license-terms.media-rights.org" in u for u in urls)
     assert any("telemetry-analytics.tracker-server.xyz" in u for u in urls)
+
+def test_word_macro_with_google_links_file():
+    p = Path("test-files/word_macro_with_google_links.docm")
+    if not p.exists():
+        pytest.skip("Test file not found")
+    analyzer = OfficeAnalyzer()
+    res = analyzer.analyze(p, p.name, "application/vnd.ms-word.document.macroEnabled.main+xml")
+    assert res.success is True
+    assert res.data["has_macros"] is True
+    assert any("MACROS DETECTED" in f.title for f in res.findings)
+    assert any("google.com" in u for u in res.data["urls"])
+    assert res.data.get("extracted_code") is not None
+    assert "AutoOpen" in res.data["extracted_code"]["code"]
+
+def test_pdf_autorun_javascript_sunet_link_file():
+    p = Path("test-files/pdf_autorun_javascript_sunet_link.pdf")
+    if not p.exists():
+        pytest.skip("Test file not found")
+    analyzer = PDFAnalyzer()
+    res = analyzer.analyze(p, p.name, "application/pdf")
+    assert res.success is True
+    assert res.data["has_javascript"] is True
+    assert res.data["has_open_action"] is True
+    assert any("sunet.se" in u for u in res.data["urls"])
+    assert res.data.get("extracted_code") is not None
+
+def test_pdf_with_image_containing_sunet_url_file():
+    p = Path("test-files/pdf_with_image_containing_sunet_url.pdf")
+    if not p.exists():
+        pytest.skip("Test file not found")
+    analyzer = PDFAnalyzer()
+    res = analyzer.analyze(p, p.name, "application/pdf")
+    assert res.success is True
+    assert res.data["image_count"] >= 1
+    assert any("sunet.se" in u for u in res.data["urls"])
+

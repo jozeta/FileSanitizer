@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -15,6 +16,9 @@ export default {
           muted: '#64748b',    // Slate 500
           accent: '#2563eb',   // Nordic crisp blue
         }
+      },
+      maxWidth: {
+        '8xl': '80rem',
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],

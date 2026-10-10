@@ -24,7 +24,11 @@ class ImageSanitizer(BaseSanitizer):
                 orig_format = (img.format or "PNG").upper()
 
                 # Determine target extension and format
-                if options.convert_to_jpg:
+                if options.convert_to_pdf or output_path.suffix.lower() == ".pdf":
+                    target_format = "PDF"
+                    target_ext = "pdf"
+                    removed_items.append("Converted image to sanitized standalone PDF document")
+                elif options.convert_to_jpg:
                     target_format = "JPEG"
                     target_ext = "jpg"
                     if orig_format != "JPEG":
@@ -38,9 +42,9 @@ class ImageSanitizer(BaseSanitizer):
                     target_format = orig_format
                     target_ext = original_filename.rsplit(".", 1)[-1].lower() if "." in original_filename else "png"
 
-                # Check if flattening is required (or converting RGBA to JPEG)
+                # Check if flattening is required (or converting RGBA to JPEG/PDF)
                 is_rgba = img.mode in ("RGBA", "LA", "P")
-                flatten = options.flatten_image or (target_format == "JPEG" and is_rgba)
+                flatten = options.flatten_image or (target_format in ("JPEG", "PDF") and is_rgba)
 
                 if flatten:
                     # Create white background canvas and composite
@@ -84,6 +88,9 @@ class ImageSanitizer(BaseSanitizer):
                     save_kwargs["optimize"] = True
                 elif target_format == "PNG":
                     save_kwargs["optimize"] = True
+                elif target_format == "PDF":
+                    if clean_img.mode != "RGB":
+                        clean_img = clean_img.convert("RGB")
 
                 clean_img.save(output_path, format=target_format, **save_kwargs)
 

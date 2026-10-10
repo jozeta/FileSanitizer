@@ -1,0 +1,22 @@
+From: CEO Office <executive@trusted-bank.com>
+To: treasury@target-corp.com
+Subject: Confidential Wire Transfer Authorization
+Date: Sat, 26 Sep 2026 08:45:00 +0000
+Message-ID: <wire-transfer-confidential@spoofed-host.net>
+Received-SPF: fail (domain of trusted-bank.com does not designate
+ 198.51.100.22 as permitted sender)
+Authentication-Results: mx.google.com; spf=fail (google.com: domain of
+ executive@trusted-bank.com does not designate 198.51.100.22 as permitted
+ sender) smtp.mailfrom=executive@trusted-bank.com; dkim=fail
+ header.i=@trusted-bank.com
+Received:
+ from mail.spoofed-c2-network.net ([198.51.100.22]) by mx.target-corp.com
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+Please execute urgent wire transfer to the account specified in our previous =
+discussion.
+
+Account: SE4550000000058398257466
+Amount: $250,000

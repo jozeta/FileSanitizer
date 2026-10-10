@@ -36,8 +36,8 @@ def sanitize_filename(filename: str, max_length: int = 120) -> str:
     parts = clean.rsplit(".", 1)
     if len(parts) == 2:
         base, ext = parts[0], parts[1]
-        # Sanitize extension: only letters, digits, max 10 chars
-        ext_clean = re.sub(r'[^a-zA-Z0-9]', '', ext)[:10]
+        # Sanitize extension: only letters, digits, max 20 chars
+        ext_clean = re.sub(r'[^a-zA-Z0-9]', '', ext)[:20]
     else:
         base, ext_clean = parts[0], ""
 
@@ -66,6 +66,10 @@ class JobWorkspace:
         self.analysis_dir = self.base_dir / "analysis"
         self.sanitized_dir = self.base_dir / "sanitized"
         self.screenshots_dir = self.base_dir / "screenshots"
+
+    @property
+    def workspace_dir(self) -> Path:
+        return self.base_dir
 
     def create(self) -> "JobWorkspace":
         """Create the directory structure with secure permissions."""

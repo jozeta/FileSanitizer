@@ -34,6 +34,46 @@ class PDFSanitizer(BaseSanitizer):
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
+            # MODE 0: Convert PDF directly to Clean PNG Image (Universal PNG Export)
+            if options.convert_to_png or output_path.suffix.lower() == ".png":
+                from PIL import Image
+                png_path = output_path.with_suffix(".png")
+                page_images = []
+                total_height = 0
+                max_width = 0
+                for p in doc:
+                    pix = p.get_pixmap(dpi=150)
+                    img = Image.open(io.BytesIO(pix.tobytes("png")))
+                    page_images.append(img)
+                    total_height += img.height
+                    max_width = max(max_width, img.width)
+
+                combined = Image.new("RGB", (max(1, max_width), max(1, total_height)), (255, 255, 255))
+                y_offset = 0
+                for img in page_images:
+                    combined.paste(img, (0, y_offset))
+                    y_offset += img.height
+                combined.save(str(png_path), format="PNG")
+                doc.close()
+
+                base_name = original_filename.rsplit(".", 1)[0]
+                return SanitizationResult(
+                    success=True,
+                    output_path=png_path,
+                    sanitized_filename=f"{base_name}_sanitized.png",
+                    target_extension="png",
+                    removed_items=[
+                        "Rendered document pages into flattened, sanitized PNG pixel image",
+                        "Completely stripped all embedded JavaScript and active triggers",
+                        "Neutralized all hyperlinks, forms, and embedded attachments",
+                        "Purged all metadata and hidden structure tags"
+                    ],
+                    warnings=[
+                        "Converted PDF to static PNG image. Interactive text, searchability, and links were converted to pixels."
+                    ],
+                    details={"pages_rendered": len(page_images)}
+                )
+
             # MODE 1: Aggressive CDR / Full Page Rasterization (Maximum Sanitization)
             if options.rasterize_pages:
                 logger.info(f"Performing Full Page Rasterization CDR on {original_filename}")

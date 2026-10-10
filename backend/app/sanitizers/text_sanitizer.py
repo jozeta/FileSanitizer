@@ -53,9 +53,57 @@ class TextSanitizer(BaseSanitizer):
                 removed_items.append("Stripped unprintable binary control characters")
 
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(clean_text, encoding="utf-8")
-
             base_name = original_filename.rsplit(".", 1)[0]
+
+            if options.convert_to_pdf or output_path.suffix.lower() == ".pdf":
+                import fitz
+                pdf_path = output_path.with_suffix(".pdf")
+                doc = fitz.open()
+                page = doc.new_page(width=595, height=842)
+                page.insert_text((50, 50), f"FileSanitizer Text Document: {base_name}", fontsize=14, fontname="helv")
+                page.draw_line((50, 60), (545, 60), color=(0.8, 0.8, 0.8), width=1)
+                y = 80
+                for line in clean_text.splitlines()[:200]:
+                    if y > 800:
+                        page = doc.new_page(width=595, height=842)
+                        y = 50
+                    page.insert_text((50, y), line[:85], fontsize=10, fontname="courier")
+                    y += 14
+                doc.save(str(pdf_path), garbage=4, deflate=True)
+                doc.close()
+                return SanitizationResult(
+                    success=True,
+                    output_path=pdf_path,
+                    sanitized_filename=f"{base_name}_sanitized.pdf",
+                    target_extension="pdf",
+                    removed_items=removed_items + ["Converted text document into clean PDF document"],
+                    warnings=warnings
+                )
+
+            if options.convert_to_png or output_path.suffix.lower() == ".png":
+                import fitz
+                png_path = output_path.with_suffix(".png")
+                doc = fitz.open()
+                page = doc.new_page(width=595, height=842)
+                page.insert_text((50, 50), f"FileSanitizer Text Document: {base_name}", fontsize=14, fontname="helv")
+                page.draw_line((50, 60), (545, 60), color=(0.8, 0.8, 0.8), width=1)
+                y = 80
+                for line in clean_text.splitlines()[:50]:
+                    page.insert_text((50, y), line[:85], fontsize=10, fontname="courier")
+                    y += 14
+                pix = page.get_pixmap(dpi=150)
+                pix.save(str(png_path))
+                doc.close()
+                return SanitizationResult(
+                    success=True,
+                    output_path=png_path,
+                    sanitized_filename=f"{base_name}_sanitized.png",
+                    target_extension="png",
+                    removed_items=removed_items + ["Converted text document into clean PNG image"],
+                    warnings=warnings
+                )
+
+            output_path.write_text(clean_text, encoding="utf-8")
             ext = original_filename.rsplit(".", 1)[-1].lower() if "." in original_filename else "txt"
             clean_filename = f"{base_name}_sanitized.{ext}"
 

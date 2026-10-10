@@ -61,3 +61,33 @@ def test_image_flattening_and_conversion(temp_dir):
     with Image.open(clean_path) as clean_img:
         assert clean_img.mode == "RGB"
         assert clean_img.format == "JPEG"
+
+def test_image_gps_resolution():
+    from pathlib import Path
+    from app.analyzers.metadata_extractor import MetadataExtractor
+
+    test_file = Path("test-files/image_gps_exif_metadata.jpg")
+    if not test_file.exists():
+        pytest.skip("Test file not found")
+
+    analyzer = ImageAnalyzer()
+    res = analyzer.analyze(test_file, test_file.name, "image/jpeg")
+
+    assert res.data["has_gps"] is True
+    coords = res.data["gps_coordinates"]
+    assert coords is not None
+    assert coords["city"] == "Stockholm"
+    assert coords["country"] == "Sweden"
+
+    # Verify structured metadata consolidation
+    meta = MetadataExtractor.consolidate(
+        test_file.name, test_file.stat().st_size, "image/jpeg", {}, {"image": res.data}
+    )
+    location_names = {f.name: f.value for f in meta.location}
+    assert "GPS Coordinates" in location_names
+    assert "City" in location_names
+    assert location_names["City"] == "Stockholm"
+    assert "Country" in location_names
+    assert location_names["Country"] == "Sweden"
+    assert "Resolved Location" in location_names
+

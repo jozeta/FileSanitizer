@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api"
 
     # Storage and Job Isolation
-    JOBS_DIR: str = Field(default_factory=lambda: os.getenv("JOBS_DIR", "/jobs" if os.path.exists("/jobs") and os.access("/jobs", os.W_OK) else "/tmp/filesanitizer/jobs"))
+    JOBS_DIR: str = Field(default_factory=lambda: "/jobs" if os.path.exists("/jobs") and os.access("/jobs", os.W_OK) else "/tmp/filesanitizer/jobs")
     MAX_FILE_SIZE_MB: int = 100
     FILE_RETENTION_MINUTES: int = 30
     CLEANUP_INTERVAL_SECONDS: int = 300
@@ -21,13 +21,22 @@ class Settings(BaseSettings):
     MAX_RECURSION_DEPTH: int = 5
     MAX_PROCESSING_TIME: int = 300
 
-    # ClamAV Antivirus
+    # Admin Authentication
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "admin"
+    ADMIN_SECRET_KEY: str = "filesanitizer-jwt-secret-key-32byte-minimum-secure-2026"
+
+    # YARA Rule Engine
+    YARA_ENABLED: bool = True
+
+    # ClamAV Antivirus & Definitions
     CLAMAV_ENABLED: bool = True
     CLAMAV_HOST: str = "clamav"
     CLAMAV_PORT: int = 3310
     CLAMAV_TIMEOUT: int = 30
+    CLAMAV_DB_DIR: str = "/var/lib/clamav"
 
-    # URL Reputation Providers
+    # URL & IP Reputation Providers
     VIRUSTOTAL_ENABLED: bool = False
     VIRUSTOTAL_API_KEY: Optional[str] = None
 
@@ -36,6 +45,12 @@ class Settings(BaseSettings):
 
     URLHAUS_ENABLED: bool = False
     URLHAUS_API_KEY: Optional[str] = None
+
+    ABUSEIPDB_ENABLED: bool = False
+    ABUSEIPDB_API_KEY: Optional[str] = None
+
+    ALIENVAULT_OTX_ENABLED: bool = False
+    ALIENVAULT_OTX_API_KEY: Optional[str] = None
 
     # Screenshot Sandbox Service
     SCREENSHOT_ENABLED: bool = True
@@ -50,4 +65,19 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         extra = "ignore"
 
+def get_effective_jobs_dir() -> str:
+    path = settings.JOBS_DIR
+    if os.path.exists(path) and os.access(path, os.W_OK):
+        return path
+    try:
+        os.makedirs(path, exist_ok=True)
+        return path
+    except OSError:
+        fallback = "/tmp/filesanitizer/jobs"
+        os.makedirs(fallback, exist_ok=True)
+        return fallback
+
 settings = Settings()
+# Ensure JOBS_DIR is actually writable
+settings.JOBS_DIR = get_effective_jobs_dir()
+

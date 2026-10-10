@@ -62,6 +62,18 @@ class ActiveContentAnalyzer(BaseAnalyzer):
                 if scripts:
                     data["has_javascript"] = True
                     data["scripts_count"] = len(scripts)
+                    svg_modules = []
+                    for idx, s in enumerate(scripts):
+                        s_text = "".join(node.nodeValue for node in s.childNodes if node.nodeValue).strip()
+                        if s_text:
+                            svg_modules.append({"name": f"SVG Script #{idx+1}", "code": s_text})
+                    if svg_modules:
+                        data["extracted_code"] = {
+                            "type": "javascript",
+                            "language": "javascript",
+                            "code": "\n\n// --- Next Script ---\n\n".join(m["code"] for m in svg_modules),
+                            "modules": svg_modules
+                        }
                     findings.append(Finding(
                         category="javascript",
                         severity="high",
@@ -132,12 +144,51 @@ class ActiveContentAnalyzer(BaseAnalyzer):
                 if scripts:
                     data["has_javascript"] = True
                     data["scripts_count"] = len(scripts)
-                    findings.append(Finding(
-                        category="javascript",
-                        severity="high",
-                        title=f"JavaScript Code Detected in HTML ({len(scripts)} tags)",
-                        description="Document contains script tags. Active execution poses XSS and client-side exploit risks."
-                    ))
+                    html_modules = []
+                    for idx, s in enumerate(scripts):
+                        s_text = (s.string or s.get_text() or "").strip()
+                        if s_text:
+                            html_modules.append({"name": f"HTML Script #{idx+1}", "code": s_text})
+                    if html_modules:
+                        data["extracted_code"] = {
+                            "type": "javascript",
+                            "language": "javascript",
+                            "code": "\n\n// --- Next Script ---\n\n".join(m["code"] for m in html_modules),
+                            "modules": html_modules
+                        }
+                    has_dangerous_js = False
+                    dangerous_reasons = []
+                    combined_code = "\n".join(m["code"] for m in html_modules)
+
+                    if re.search(r'(?:addEventListener|attachEvent)\s*\(\s*["\']key(?:down|press|up)["\']', combined_code, re.I):
+                        has_dangerous_js = True
+                        dangerous_reasons.append("Keystroke logging listener")
+                    if re.search(r'document\.cookie\b', combined_code, re.I):
+                        has_dangerous_js = True
+                        dangerous_reasons.append("Access to document.cookie session tokens")
+                    if re.search(r'new\s+ActiveXObject|require\s*\(\s*["\']child_process', combined_code, re.I):
+                        has_dangerous_js = True
+                        dangerous_reasons.append("ActiveX / OS process execution")
+                    if re.search(r'input\[type=["\']password["\']\]', combined_code, re.I):
+                        has_dangerous_js = True
+                        dangerous_reasons.append("Password DOM field targeting")
+
+                    if has_dangerous_js:
+                        findings.append(Finding(
+                            category="javascript",
+                            severity="high",
+                            title=f"Dangerous JavaScript Activity in HTML ({', '.join(dangerous_reasons)})",
+                            description=f"HTML script contains high-risk actions: {', '.join(dangerous_reasons)}.",
+                            details={"script_tags": len(scripts), "reasons": dangerous_reasons}
+                        ))
+                    else:
+                        findings.append(Finding(
+                            category="javascript",
+                            severity="informational",
+                            title=f"Client-Side JavaScript Present in HTML ({len(scripts)} tags)",
+                            description="Document contains client-side script tags (normal for web pages and applications).",
+                            details={"script_tags": len(scripts)}
+                        ))
 
                 # 2. Iframes
                 iframes = soup.find_all("iframe")

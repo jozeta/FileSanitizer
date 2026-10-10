@@ -26,11 +26,11 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
   const steps = [
     {
       num: "01",
-      title: "Safe Ingestion & SSRF Protection",
+      title: "Safe Ingestion, Domain & SSRF Protection",
       icon: GlobeLock,
-      tag: "Ingestion",
+      tag: "Ingestion & Intel",
       tagColor: "bg-blue-50 text-blue-700 border-blue-200",
-      description: "Upload local files or enter a remote URL. Remote URLs pass through recursive DNS resolution and strict SSRF filters, blocking loopback, cloud metadata (169.254.169.254), and private RFC 1918 subnets. Pre-download reputation checks query watchlists (URLhaus, VirusTotal) for active malware or scam indicators."
+      description: "Upload local files or enter a remote URL, domain, or IP address. Submitting a domain or IP captures a live sandboxed browser screenshot as thumbnail, resolves full DNS records, and performs WHOIS/RDAP registration, reverse IP co-hosting, and visual Punycode homograph analysis. Remote download URLs pass through recursive DNS resolution and strict SSRF filters, blocking cloud metadata (169.254.169.254), loopback, and private RFC 1918 subnets."
     },
     {
       num: "02",
@@ -91,7 +91,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
   ];
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-12">
+    <div className="max-w-[80rem] mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-12">
       {/* Hero Section */}
       <div className="text-center max-w-3xl mx-auto space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-700 border border-slate-200">
@@ -199,55 +199,55 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
       </div>
 
       {/* Security Architecture Guarantees */}
-      <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-10 shadow-lg space-y-6">
+      <div className="bg-slate-50 border border-slate-200 text-slate-800 rounded-3xl p-8 sm:p-10 shadow-sm space-y-6">
         <div className="max-w-2xl space-y-2">
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-white/10 rounded-full text-xs font-mono text-slate-300">
-            <Lock className="w-3.5 h-3.5 text-blue-400" />
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-white border border-slate-200 rounded-full text-xs font-mono text-slate-600">
+            <Lock className="w-3.5 h-3.5 text-blue-600" />
             <span>Hardened Docker Architecture</span>
           </div>
-          <h2 className="text-2xl font-bold tracking-tight">Security & Isolation Guarantees</h2>
-          <p className="text-sm text-slate-300 leading-relaxed">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Security & Isolation Guarantees</h2>
+          <p className="text-sm text-slate-600 leading-relaxed">
             Designed from day one for self-hosted deployment in high-security, air-gapped, or regulated environments.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <Server className="w-4 h-4" />
             </div>
-            <h4 className="text-sm font-semibold text-white">Non-Root & Zero Caps</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Containers run under unprivileged UIDs with Linux capabilities dropped (<code className="font-mono text-slate-300">cap_drop: ALL</code>).
+            <h4 className="text-sm font-semibold text-slate-900">Non-Root & Zero Caps</h4>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Containers run under unprivileged UIDs with Linux capabilities dropped (<code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">cap_drop: ALL</code>).
             </p>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <Lock className="w-4 h-4" />
             </div>
-            <h4 className="text-sm font-semibold text-white">Immutable Originals</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h4 className="text-sm font-semibold text-slate-900">Immutable Originals</h4>
+            <p className="text-xs text-slate-500 leading-relaxed">
               Original files are stored in isolated UUID directories and never overwritten. Clean files are completely new artifacts.
             </p>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
               <GlobeLock className="w-4 h-4" />
             </div>
-            <h4 className="text-sm font-semibold text-white">Anti-SSRF Protection</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h4 className="text-sm font-semibold text-slate-900">Anti-SSRF Protection</h4>
+            <p className="text-xs text-slate-500 leading-relaxed">
               Strict DNS checking blocks requests to localhost, AWS/GCP cloud metadata, Docker internal networks, and private IP blocks.
             </p>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <Clock className="w-4 h-4" />
             </div>
-            <h4 className="text-sm font-semibold text-white">30-Min Auto-Purge</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h4 className="text-sm font-semibold text-slate-900">30-Min Auto-Purge</h4>
+            <p className="text-xs text-slate-500 leading-relaxed">
               Background cleanup daemon permanently purges job workspaces, original samples, and screenshots every 30 minutes.
             </p>
           </div>

@@ -1,0 +1,35 @@
+From: Support Team <support@company.com>
+To: analyst@enterprise.org
+Subject: Welcome to the New Security Portal
+Date: Sat, 26 Sep 2026 08:00:00 +0000
+Message-ID: <welcome-20260926@company.com>
+Received-SPF:
+ pass (domain of company.com designates 192.0.2.1 as permitted sender)
+Authentication-Results:
+ spf=pass dkim=pass (signature verified) header.i=@company.com
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="===============1463410497400227019=="
+
+--===============1463410497400227019==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Hello Analyst,
+
+Welcome to your new enterprise security portal. Access your dashboard at http=
+s://example.com/dashboard.
+
+Best regards,
+Security Team
+
+--===============1463410497400227019==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><h3>Welcome to FileSanitizer Portal</h3><p>Access your dashboard =
+at <a href=3D'https://example.com/dashboard'>example.com/dashboard</a>.</p></=
+body></html>
+
+--===============1463410497400227019==--

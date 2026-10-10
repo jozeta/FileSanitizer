@@ -1,36 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Clock, Info, BookOpen, FileCheck2, Shield } from 'lucide-react';
+import { ShieldCheck, Clock, Info, BookOpen, FileCheck2, Shield, Settings, Lock } from 'lucide-react';
 import { apiClient } from '../api/client';
 
-export type ViewTab = 'sanitizer' | 'how-it-works' | 'supported-formats';
+export type ViewTab = 'sanitizer' | 'how-it-works' | 'supported-formats' | 'settings';
 
 interface HeaderProps {
   currentView: ViewTab;
   onNavigate: (view: ViewTab) => void;
   onOpenDisclaimer: () => void;
-  onReset: () => void;
+  onReset?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   currentView, 
   onNavigate, 
-  onOpenDisclaimer, 
-  onReset 
+  onOpenDisclaimer,
 }) => {
   const [health, setHealth] = useState<any>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!localStorage.getItem('fs_admin_token'));
 
   useEffect(() => {
     apiClient.getHealth().then(setHealth).catch(() => {});
+
+    const checkAuth = () => {
+      setIsLoggedIn(!!localStorage.getItem('fs_admin_token'));
+    };
+    window.addEventListener('storage', checkAuth);
+    window.addEventListener('auth_changed', checkAuth);
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+      window.removeEventListener('auth_changed', checkAuth);
+    };
   }, []);
 
   const clamavOnline = health?.clamav?.reachable ?? false;
 
   return (
     <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Logo and Brand */}
         <button 
-          onClick={onReset} 
+          onClick={() => onNavigate('sanitizer')} 
           className="flex items-center gap-3 text-left focus:outline-none group cursor-pointer shrink-0"
         >
           <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm group-hover:bg-blue-600 transition-colors">
@@ -82,6 +92,27 @@ export const Header: React.FC<HeaderProps> = ({
             <FileCheck2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Supported Formats</span>
             <span className="sm:hidden">Formats</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('settings')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              currentView === 'settings'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            {isLoggedIn ? (
+              <>
+                <Settings className="w-3.5 h-3.5" />
+                <span>Settings</span>
+              </>
+            ) : (
+              <>
+                <Lock className="w-3.5 h-3.5" />
+                <span>Login</span>
+              </>
+            )}
           </button>
         </nav>
 

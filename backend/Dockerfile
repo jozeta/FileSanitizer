@@ -7,7 +7,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     mailcap \
     libmagic1 \
     curl \
+    gcc \
+    libc6-dev \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    binutils \
     && rm -rf /var/lib/apt/lists/*
+
+# Install checksec v3 (slimm609/checksec) — binary security analysis tool
+ARG TARGETARCH=arm64
+RUN ARCH="${TARGETARCH}" && \
+    curl -fsSL "https://github.com/slimm609/checksec/releases/download/3.2.0/checksec_3.2.0_${ARCH}.deb" -o /tmp/checksec.deb && \
+    dpkg -i /tmp/checksec.deb && \
+    rm /tmp/checksec.deb
 
 # Create non-root user
 RUN groupadd -g 1001 appgroup && \

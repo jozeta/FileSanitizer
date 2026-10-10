@@ -47,17 +47,28 @@ async function getBrowser() {
 }
 
 app.post('/screenshot', async (req, res) => {
-  const { url } = req.body;
+  let { url } = req.body;
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  try {
-    const parsed = new URL(url);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return res.status(400).json({ error: 'Invalid protocol' });
-    }
+  url = url.trim();
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
 
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (e) {
+    return res.status(400).json({ error: 'Malformed URL format' });
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return res.status(400).json({ error: 'Invalid protocol' });
+  }
+
+  try {
     // SSRF DNS check
     const lookup = await dns.lookup(parsed.hostname, { all: true });
     for (const item of lookup) {
@@ -65,14 +76,22 @@ app.post('/screenshot', async (req, res) => {
         return res.status(403).json({ error: 'Destination IP blocked (SSRF violation)' });
       }
     }
+  } catch (dnsErr) {
+    return res.status(400).json({ error: `DNS resolution failed: ${dnsErr.message}` });
+  }
 
+  let context = null;
+  let page = null;
+
+  try {
     const browser = await getBrowser();
-    const context = await browser.newContext({
+    context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
+      ignoreHTTPSErrors: true,
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 FileSanitizer-Preview/1.0'
     });
 
-    const page = await context.newPage();
+    page = await context.newPage();
 
     // Prevent navigation to private networks on redirects
     page.on('response', async (response) => {
@@ -81,21 +100,23 @@ app.post('/screenshot', async (req, res) => {
         const ips = await dns.lookup(respUrl.hostname, { all: true });
         for (const i of ips) {
           if (isPrivateIp(i.address)) {
-            await page.close();
+            if (page) await page.close().catch(() => {});
           }
         }
       } catch (e) {}
     });
 
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 8000 });
-    const buffer = await page.screenshot({ type: 'png', timeout: 5000 });
-    await page.close();
-    await context.close();
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 });
+    await page.waitForTimeout(600).catch(() => {});
 
+    const buffer = await page.screenshot({ type: 'png', timeout: 6000 });
     res.setHeader('Content-Type', 'image/png');
-    res.send(buffer);
+    return res.send(buffer);
   } catch (err) {
-    res.status(500).json({ error: `Screenshot generation failed: ${err.message}` });
+    return res.status(500).json({ error: `Screenshot generation failed: ${err.message}` });
+  } finally {
+    if (page) await page.close().catch(() => {});
+    if (context) await context.close().catch(() => {});
   }
 });
 

@@ -1,13 +1,94 @@
-.venv/
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+*.crt
+
+# Python & Virtual Environments
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+ENV/
+env/
+
+# Testing & Code Quality
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
-dist/
+.hypothesis/
+.tox/
+.nox/
+.ruff_cache/
+.mypy_cache/
+
+# Node & Frontend
 node_modules/
-.DS_Store
-.env
-/tmp/filesanitizer/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+frontend/dist/
+frontend/.vite/
+frontend/node_modules/
+
+# Runtime Storage & Logs
 jobs/
+/tmp/filesanitizer/
+logs/
+*.log
+celerybeat-schedule*
+
+# IDE & Editor Configuration
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Temporary Artifacts & Recordings
+recordings/
+*.mp4
+*.webm
+*.mov
+
+# Test Fixtures & Large Generated Artifacts
+test-files/ultimate_files/
+test-files/ultimate_detection_80mb.pdf
+test-files/Gemini_image.jpeg
+backend/ultimate_files/
+

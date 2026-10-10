@@ -3,9 +3,10 @@ import { AlertOctagon, Terminal } from 'lucide-react';
 
 interface MacroWarningBannerProps {
   macroDetails?: any[];
+  onViewCode?: () => void;
 }
 
-export const MacroWarningBanner: React.FC<MacroWarningBannerProps> = ({ macroDetails = [] }) => {
+export const MacroWarningBanner: React.FC<MacroWarningBannerProps> = ({ macroDetails = [], onViewCode }) => {
   return (
     <div className="bg-rose-500/10 border-2 border-rose-500/30 rounded-2xl p-5 text-rose-950 mb-6 shadow-sm">
       <div className="flex items-start gap-4">
@@ -13,13 +14,25 @@ export const MacroWarningBanner: React.FC<MacroWarningBannerProps> = ({ macroDet
           <AlertOctagon className="w-8 h-8" />
         </div>
         <div className="flex-1">
-          <div className="flex items-center gap-3 mb-1">
-            <h3 className="text-lg font-bold tracking-tight text-rose-700 uppercase">
-              MACROS DETECTED
-            </h3>
-            <span className="px-2 py-0.5 bg-rose-100 text-rose-800 text-xs font-semibold rounded border border-rose-200">
-              CRITICAL EXECUTION RISK
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-bold tracking-tight text-rose-700 uppercase">
+                MACROS DETECTED
+              </h3>
+              <span className="px-2 py-0.5 bg-rose-100 text-rose-800 text-xs font-semibold rounded border border-rose-200">
+                CRITICAL EXECUTION RISK
+              </span>
+            </div>
+
+            {onViewCode && (
+              <button
+                onClick={onViewCode}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>📜</span>
+                Inspect Extracted VBA Code
+              </button>
+            )}
           </div>
           <p className="text-sm text-rose-900 leading-relaxed font-medium">
             This document contains embedded <strong>Visual Basic for Applications (VBA) macros</strong> or auto-executing scripts. 

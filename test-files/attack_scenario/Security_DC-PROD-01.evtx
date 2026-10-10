@@ -1,0 +1,945 @@
+<Events>
+  <!-- ===================================================================== -->
+  <!-- SECTION A: Domain Controller Background Services, Replication & Logons -->
+  <!-- ===================================================================== -->
+
+  <!-- 1. System Boot: Event Log Service Started (6005) at 09:20:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="EventLog" />
+      <EventID>6005</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:20:00.000Z" />
+      <EventRecordID>7901</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="Binary">00000000</Data>
+    </EventData>
+  </Event>
+
+  <!-- 2. System Boot: Windows Server 2022 Datacenter (6009) at 09:20:02Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="EventLog" />
+      <EventID>6009</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:20:02.000Z" />
+      <EventRecordID>7902</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="MajorVersion">10</Data>
+      <Data Name="MinorVersion">0</Data>
+      <Data Name="BuildNumber">20348</Data>
+      <Data Name="ServicePack">Server Datacenter</Data>
+    </EventData>
+  </Event>
+
+  <!-- 3. Service Control Manager: Active Directory Domain Services running (7036) at 09:20:05Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Service Control Manager" />
+      <EventID>7036</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:20:05.000Z" />
+      <EventRecordID>7903</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="param1">Active Directory Domain Services</Data>
+      <Data Name="param2">running</Data>
+    </EventData>
+  </Event>
+
+  <!-- 4. Service Control Manager: Kerberos Key Distribution Center running (7036) at 09:20:06Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Service Control Manager" />
+      <EventID>7036</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:20:06.000Z" />
+      <EventRecordID>7904</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="param1">Kerberos Key Distribution Center</Data>
+      <Data Name="param2">running</Data>
+    </EventData>
+  </Event>
+
+  <!-- 5. Service Control Manager: DNS Server running (7036) at 09:20:07Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Service Control Manager" />
+      <EventID>7036</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:20:07.000Z" />
+      <EventRecordID>7905</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="param1">DNS Server</Data>
+      <Data Name="param2">running</Data>
+    </EventData>
+  </Event>
+
+  <!-- 6. Service Control Manager: Netlogon running (7036) at 09:20:08Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Service Control Manager" />
+      <EventID>7036</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:20:08.000Z" />
+      <EventRecordID>7906</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="param1">Netlogon</Data>
+      <Data Name="param2">running</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7. Service Control Manager: DFS Replication running (7036) at 09:20:09Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Service Control Manager" />
+      <EventID>7036</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:20:09.000Z" />
+      <EventRecordID>7907</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="param1">DFS Replication</Data>
+      <Data Name="param2">running</Data>
+    </EventData>
+  </Event>
+
+  <!-- 8. Active Directory Replica Sync Begun (4932) at 09:25:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4932</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:25:00.000Z" />
+      <EventRecordID>7908</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="DestinationNamingContext">DC=target,DC=local</Data>
+      <Data Name="SourceDsaAddress">DC-DR-02.target.local</Data>
+    </EventData>
+  </Event>
+
+  <!-- 9. Active Directory Replica Sync Ended (4933) at 09:25:05Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4933</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:25:05.000Z" />
+      <EventRecordID>7909</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="DestinationNamingContext">DC=target,DC=local</Data>
+      <Data Name="SourceDsaAddress">DC-DR-02.target.local</Data>
+      <Data Name="StatusCode">0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 10. Service Logon for SYSTEM (4624) at 09:28:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4624</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:28:00.000Z" />
+      <EventRecordID>7910</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">SYSTEM</Data>
+      <Data Name="TargetDomainName">NT AUTHORITY</Data>
+      <Data Name="LogonType">5</Data>
+      <Data Name="WorkstationName">DC-PROD-01</Data>
+      <Data Name="IpAddress">127.0.0.1</Data>
+    </EventData>
+  </Event>
+
+  <!-- 11. Normal Admin Morning Logon: target_admin (4624) at 09:30:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4624</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:30:00.000Z" />
+      <EventRecordID>7911</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">target_admin</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="LogonType">2</Data>
+      <Data Name="WorkstationName">DC-PROD-01</Data>
+      <Data Name="IpAddress">127.0.0.1</Data>
+      <Data Name="ProcessName">C:\Windows\System32\winlogon.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 12. Special Privileges Assigned to target_admin (4672) at 09:30:05Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4672</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:30:05.000Z" />
+      <EventRecordID>7912</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">target_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="PrivilegeList">SeSecurityPrivilege SeBackupPrivilege SeRestorePrivilege</Data>
+    </EventData>
+  </Event>
+
+  <!-- 13. Process Creation: Active Directory Users and Computers (4688) at 09:32:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:32:00.000Z" />
+      <EventRecordID>7913</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">target_admin</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\mmc.exe</Data>
+      <Data Name="CommandLine">"C:\Windows\System32\mmc.exe" "C:\Windows\System32\dsa.msc"</Data>
+      <Data Name="ParentProcessName">C:\Windows\explorer.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14. Account Logoff for target_admin (4634) at 09:34:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4634</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:34:00.000Z" />
+      <EventRecordID>7914</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">target_admin</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="LogonType">2</Data>
+    </EventData>
+  </Event>
+
+  <!-- 15. Kerberos TGT Request for WKSTN-FIN-01$ (4768) at 09:35:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4768</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:35:00.000Z" />
+      <EventRecordID>7915</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">WKSTN-FIN-01$</Data>
+      <Data Name="TargetDomainName">TARGET.LOCAL</Data>
+      <Data Name="ServiceName">krbtgt</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+    </EventData>
+  </Event>
+
+  <!-- 16. Kerberos Service Ticket for HOST/dc-prod-01 (4769) at 09:35:02Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:35:02.000Z" />
+      <EventRecordID>7916</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">WKSTN-FIN-01$@TARGET.LOCAL</Data>
+      <Data Name="ServiceName">HOST/dc-prod-01.target.local</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+    </EventData>
+  </Event>
+
+  <!-- 17. Kerberos TGT Request for WKSTN-ENG-03$ (4768) at 09:36:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4768</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:36:00.000Z" />
+      <EventRecordID>7917</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">WKSTN-ENG-03$</Data>
+      <Data Name="TargetDomainName">TARGET.LOCAL</Data>
+      <Data Name="ServiceName">krbtgt</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.22</Data>
+    </EventData>
+  </Event>
+
+  <!-- 18. Kerberos TGT Request for WKSTN-HR-02$ (4768) at 09:37:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4768</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:37:00.000Z" />
+      <EventRecordID>7918</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">WKSTN-HR-02$</Data>
+      <Data Name="TargetDomainName">TARGET.LOCAL</Data>
+      <Data Name="ServiceName">krbtgt</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.31</Data>
+    </EventData>
+  </Event>
+
+  <!-- 19. Service Control Manager: Software Protection service stopped (7036) at 09:40:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Service Control Manager" />
+      <EventID>7036</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:40:00.000Z" />
+      <EventRecordID>7919</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="param1">Software Protection</Data>
+      <Data Name="param2">stopped</Data>
+    </EventData>
+  </Event>
+
+  <!-- ===================================================================== -->
+  <!-- SECTION B: Kerberoasting, Spraying, Compromise, Persistence & Ransom  -->
+  <!-- ===================================================================== -->
+
+  <!-- 20. Kerberoasting: Kerberos Service Ticket Request with weak RC4 (4769) at 10:00:26Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:26.000Z" />
+      <EventRecordID>8001</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe@TARGET.LOCAL</Data>
+      <Data Name="ServiceName">MSSQLSvc/dc-prod-01.target.local:1433</Data>
+      <Data Name="TicketOptions">0x40810000</Data>
+      <Data Name="TicketEncryptionType">0x17</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="IpPort">49822</Data>
+      <Data Name="Status">0x0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 21. Password Spray Failed Logon: backup_admin (4625) at 10:00:30Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" Guid="{54849625-5478-4994-A5BA-3E3B0328C30D}" />
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:30.000Z" />
+      <EventRecordID>8002</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">backup_admin</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+    </EventData>
+  </Event>
+
+  <!-- 22. Password Spray Failed Logon: sql_svc (4625) at 10:00:31Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:31.000Z" />
+      <EventRecordID>8003</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">sql_svc</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+    </EventData>
+  </Event>
+
+  <!-- 23. Password Spray Failed Logon: adm_john (4625) at 10:00:32Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:32.000Z" />
+      <EventRecordID>8004</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">adm_john</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+    </EventData>
+  </Event>
+
+  <!-- 24. Password Spray Failed Logon: backup_admin retry 2 (4625) at 10:00:33Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:33.000Z" />
+      <EventRecordID>8005</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">backup_admin</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+    </EventData>
+  </Event>
+
+  <!-- 25. Password Spray Failed Logon: backup_admin retry 3 (4625) at 10:00:34Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:34.000Z" />
+      <EventRecordID>8006</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">backup_admin</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+    </EventData>
+  </Event>
+
+  <!-- 26. User Account Locked Out: backup_admin (4740) at 10:00:34.5Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4740</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:34.500Z" />
+      <EventRecordID>8007</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">backup_admin</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="SubjectUserName">DC-PROD-01$</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
+    </EventData>
+  </Event>
+
+  <!-- 27. NTLM Authentication Attempt Validated: svc_admin (4776) at 10:00:37Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4776</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:37.000Z" />
+      <EventRecordID>8008</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="PackageName">MICROSOFT_AUTHENTICATION_PACKAGE_V1_0</Data>
+      <Data Name="TargetUserName">svc_admin</Data>
+      <Data Name="Workstation">WKSTN-FIN-01</Data>
+      <Data Name="Status">0x0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 28. Successful Network Logon with Stolen Credentials svc_admin (4624) at 10:00:38Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4624</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:38.000Z" />
+      <EventRecordID>8009</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">svc_admin</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="LogonProcessName">NtLmSsp</Data>
+    </EventData>
+  </Event>
+
+  <!-- 29. Sensitive Privilege Assignment SeDebugPrivilege (4672) at 10:00:39Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4672</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:39.000Z" />
+      <EventRecordID>8010</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="PrivilegeList">SeSecurityPrivilege SeBackupPrivilege SeRestorePrivilege SeTakeOwnershipPrivilege SeDebugPrivilege</Data>
+    </EventData>
+  </Event>
+
+  <!-- 30. Special Group Assigned to Logon: Domain Admins (4964) at 10:00:39.5Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4964</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:39.500Z" />
+      <EventRecordID>8011</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">svc_admin</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="SpecialGroupName">Domain Admins</Data>
+      <Data Name="SpecialGroupSid">S-1-5-21-397955417-626881126-188441454-512</Data>
+    </EventData>
+  </Event>
+
+  <!-- 31. Network Share Object Accessed: ADMIN$ (5140) at 10:00:40Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5140</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:40.000Z" />
+      <EventRecordID>8012</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="ShareName">\\*\ADMIN$</Data>
+    </EventData>
+  </Event>
+
+  <!-- 32. Network Share Detailed Access Check: beacon_updater.exe (5145) at 10:00:41Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5145</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:41.000Z" />
+      <EventRecordID>8013</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="ShareName">\\*\ADMIN$</Data>
+      <Data Name="RelativeTargetName">System32\beacon_updater.exe</Data>
+      <Data Name="AccessMask">0x12019F</Data>
+    </EventData>
+  </Event>
+
+  <!-- 33. Network Share Object Accessed: C$ (5140) at 10:00:42Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5140</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:42.000Z" />
+      <EventRecordID>8014</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="ShareName">\\*\C$</Data>
+    </EventData>
+  </Event>
+
+  <!-- 34. Network Share Detailed Access Check: PSEXESVC.exe (5145) at 10:00:43Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5145</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:43.000Z" />
+      <EventRecordID>8015</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="ShareName">\\*\ADMIN$</Data>
+      <Data Name="RelativeTargetName">System32\PSEXESVC.exe</Data>
+      <Data Name="AccessMask">0x12019F</Data>
+    </EventData>
+  </Event>
+
+  <!-- 35. Lateral Movement Persistence: Remote Service Installed (7045) at 10:00:45Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Service Control Manager" Guid="{555908d1-a6d7-4695-8e1e-26931d2012f4}" />
+      <EventID>7045</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:45.000Z" />
+      <EventRecordID>8016</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="ServiceName">WindowsDefendUpdateSvc</Data>
+      <Data Name="ImagePath">C:\Windows\System32\beacon_updater.exe --service</Data>
+      <Data Name="ServiceType">user mode service</Data>
+      <Data Name="StartType">auto start</Data>
+      <Data Name="AccountName">LocalSystem</Data>
+    </EventData>
+  </Event>
+
+  <!-- 36. Lateral Movement Service Installed: PSEXESVC (7045) at 10:00:46Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Service Control Manager" />
+      <EventID>7045</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:46.000Z" />
+      <EventRecordID>8017</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="ServiceName">PSEXESVC</Data>
+      <Data Name="ImagePath">%SystemRoot%\PSEXESVC.exe</Data>
+      <Data Name="ServiceType">user mode service</Data>
+      <Data Name="StartType">demand start</Data>
+      <Data Name="AccountName">LocalSystem</Data>
+    </EventData>
+  </Event>
+
+  <!-- 37. Process Creation (4688) of beacon_updater.exe on DC-PROD-01 at 10:00:50Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:50.000Z" />
+      <EventRecordID>8018</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">SYSTEM</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\beacon_updater.exe</Data>
+      <Data Name="CommandLine">"C:\Windows\System32\beacon_updater.exe" --service</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\services.exe</Data>
+      <Data Name="Hashes">MD5=4ffdc2a3c88a8396fdf1367eec6d2a8b,SHA256=b002241ff8da0fd372dc9736bf2e4be970fb89792d6df5fac28de3eaa5b4f982</Data>
+    </EventData>
+  </Event>
+
+  <!-- 38. Process Creation: Reconnaissance whoami /priv (4688) at 10:00:52Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:52.000Z" />
+      <EventRecordID>8019</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">SYSTEM</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\cmd.exe</Data>
+      <Data Name="CommandLine">cmd.exe /c whoami /priv</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\beacon_updater.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 39. Active Directory Backdoor: User Account Created svc_backdoor (4720) at 10:00:54Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4720</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:54.000Z" />
+      <EventRecordID>8020</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">svc_backdoor</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="SamAccountName">svc_backdoor</Data>
+    </EventData>
+  </Event>
+
+  <!-- 40. Active Directory Backdoor: User Account Enabled (4722) at 10:00:55Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4722</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:55.000Z" />
+      <EventRecordID>8021</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">svc_backdoor</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="SubjectUserName">svc_admin</Data>
+    </EventData>
+  </Event>
+
+  <!-- 41. Active Directory Backdoor: Password Set to Never Expire (4738) at 10:00:56Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4738</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:56.000Z" />
+      <EventRecordID>8022</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">svc_backdoor</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="UserAccountControl">%%2089</Data>
+    </EventData>
+  </Event>
+
+  <!-- 42. Active Directory Backdoor: Added to Domain Admins (4728) at 10:00:57Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4728</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:57.000Z" />
+      <EventRecordID>8023</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="MemberName">CN=svc_backdoor,CN=Users,DC=target,DC=local</Data>
+      <Data Name="MemberSid">S-1-5-21-397955417-626881126-188441454-1105</Data>
+      <Data Name="TargetUserName">Domain Admins</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="TargetSid">S-1-5-21-397955417-626881126-188441454-512</Data>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+    </EventData>
+  </Event>
+
+  <!-- 43. Active Directory Backdoor: Added to Local Administrators (4732) at 10:00:58Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4732</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:58.000Z" />
+      <EventRecordID>8024</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="MemberName">CN=svc_backdoor,CN=Users,DC=target,DC=local</Data>
+      <Data Name="MemberSid">S-1-5-21-397955417-626881126-188441454-1105</Data>
+      <Data Name="TargetUserName">Administrators</Data>
+      <Data Name="TargetDomainName">Builtin</Data>
+      <Data Name="TargetSid">S-1-5-32-544</Data>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+    </EventData>
+  </Event>
+
+  <!-- 44. Scheduled Task Persistence: UpdateTask Created (4698) at 10:01:05Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4698</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:01:05.000Z" />
+      <EventRecordID>8025</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="TaskName">\Microsoft\Windows\Maintenance\UpdateTask</Data>
+      <Data Name="TaskContent">&lt;Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"&gt;&lt;Actions&gt;&lt;Exec&gt;&lt;Command&gt;C:\Windows\System32\beacon_updater.exe&lt;/Command&gt;&lt;Arguments&gt;--periodic&lt;/Arguments&gt;&lt;/Exec&gt;&lt;/Actions&gt;&lt;/Task&gt;</Data>
+    </EventData>
+  </Event>
+
+  <!-- 45. Ransomware Activity: Volume Shadow Copies Deletion (4688) at 10:01:20Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:01:20.000Z" />
+      <EventRecordID>8026</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\vssadmin.exe</Data>
+      <Data Name="CommandLine">vssadmin.exe delete shadows /all /quiet</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\cmd.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 46. Ransomware Activity: WMIC Shadowcopy Delete (4688) at 10:01:21Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:01:21.000Z" />
+      <EventRecordID>8027</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\wbem\wmic.exe</Data>
+      <Data Name="CommandLine">wmic.exe shadowcopy delete</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\cmd.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 47. Ransomware Activity: Disaster Recovery Disabled (4688) at 10:01:22Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:01:22.000Z" />
+      <EventRecordID>8028</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\bcdedit.exe</Data>
+      <Data Name="CommandLine">bcdedit.exe /set {default} recoveryenabled No</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\cmd.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 48. Ransomware Activity: Boot Status Policy Ignore Failures (4688) at 10:01:23Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:01:23.000Z" />
+      <EventRecordID>8029</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\bcdedit.exe</Data>
+      <Data Name="CommandLine">bcdedit.exe /set {default} bootstatuspolicy ignoreallfailures</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\cmd.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 49. Ransomware Activity: System State Backup Deletion via wbadmin (4688) at 10:01:24Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:01:24.000Z" />
+      <EventRecordID>8030</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">svc_admin</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\wbadmin.exe</Data>
+      <Data Name="CommandLine">wbadmin.exe delete systemstatebackup -keepVersions:0</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\cmd.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 50. Process Terminated: beacon_updater.exe (4689) at 10:01:28Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4689</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:01:28.000Z" />
+      <EventRecordID>8031</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">SYSTEM</Data>
+      <Data Name="ProcessName">C:\Windows\System32\beacon_updater.exe</Data>
+      <Data Name="Status">0x0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 51. Anti-Forensics: Security Audit Log Cleared (1102) at 10:01:30Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>1102</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:01:30.000Z" />
+      <EventRecordID>8032</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <UserData>
+      <LogFileCleared xmlns="http://manifests.microsoft.com/win/2004/08/windows/eventlog">
+        <SubjectUserName>svc_admin</SubjectUserName>
+        <SubjectDomainName>TARGET</SubjectDomainName>
+      </LogFileCleared>
+    </UserData>
+  </Event>
+</Events>

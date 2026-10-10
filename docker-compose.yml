@@ -32,6 +32,7 @@ services:
       - .env
     volumes:
       - jobs-data:/jobs
+      - clamav-db:/var/lib/clamav
     ports:
       - "8000:8000"
     restart: unless-stopped

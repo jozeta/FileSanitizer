@@ -1,0 +1,43 @@
+From: Accounts Payable <billing@invoicing-services.net>
+To: finance@target-corp.com
+Subject: Overdue Invoice #INV-2026-994 (Final Notice)
+Date: Sat, 26 Sep 2026 08:30:00 +0000
+Message-ID: <invoice-overdue-994@invoicing-services.net>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============4727935741976421298=="
+
+--===============4727935741976421298==
+Content-Type: multipart/alternative;
+ boundary="===============2365663655887375461=="
+
+--===============2365663655887375461==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+Please find attached your overdue invoice. Open the attached document and ena=
+ble content to review payment terms.
+
+--===============2365663655887375461==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+<html><body><p>Please review the attached invoice. Note: You must <b>Enable C=
+ontent / Enable Macros</b> to view invoice line items.</p></body></html>
+
+--===============2365663655887375461==--
+
+--===============4727935741976421298==
+Content-Type: application/vnd.ms-word.document.macroEnabled.12
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="Invoice_Sep2026.docm"
+MIME-Version: 1.0
+
+UEsDBBQAAAAIAHdvcmQvdmJhUHJvamVjdC5iaW6QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQ
+kJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQ
+kJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQ
+kJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQ
+kJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQ
+U3ViIEF1dG9PcGVuKCkKU2hlbGwoJ2NhbGMuZXhlJykKRW5kIFN1Yg==
+
+--===============4727935741976421298==--

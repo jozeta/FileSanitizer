@@ -18,8 +18,9 @@ class ClamAVScanner(BaseAnalyzer):
             return None
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(settings.CLAMAV_TIMEOUT)
+            s.settimeout(min(float(settings.CLAMAV_TIMEOUT), 5.0))
             s.connect((settings.CLAMAV_HOST, settings.CLAMAV_PORT))
+            s.settimeout(float(settings.CLAMAV_TIMEOUT))
             return s
         except Exception as e:
             logger.debug(f"Unable to connect to ClamAV daemon at {settings.CLAMAV_HOST}:{settings.CLAMAV_PORT}: {e}")
@@ -38,11 +39,11 @@ class ClamAVScanner(BaseAnalyzer):
                 if not chunk:
                     break
                 response += chunk
-            text = response.decode('utf-8', errors='ignore').strip()
+            text = response.decode('utf-8', errors='ignore').replace('\x00', '').strip()
             # Format typically: ClamAV 1.0.0/26000/Fri Sep 24 ...
             parts = text.split("/")
-            engine = parts[0] if len(parts) > 0 else text
-            db_date = parts[2] if len(parts) > 2 else "Current"
+            engine = parts[0].strip() if len(parts) > 0 else text
+            db_date = parts[2].strip() if len(parts) > 2 else "Current"
             return engine, db_date
         except Exception:
             return "Unknown", "Unknown"
@@ -85,7 +86,7 @@ class ClamAVScanner(BaseAnalyzer):
                     break
                 response += chunk
 
-            resp_str = response.decode("utf-8", errors="ignore").strip()
+            resp_str = response.decode("utf-8", errors="ignore").replace("\x00", "").strip()
             # Typical responses:
             # "stream: OK"
             # "stream: Eicar-Test-Signature FOUND"

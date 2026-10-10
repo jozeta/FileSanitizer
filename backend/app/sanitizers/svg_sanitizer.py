@@ -29,6 +29,30 @@ class SVGSanitizer(BaseSanitizer):
         try:
             svg_bytes = input_path.read_bytes()
 
+            # Direct PDF Export from SVG
+            if options.convert_to_pdf or output_path.suffix.lower() == ".pdf":
+                pdf_path = output_path.with_suffix(".pdf")
+                pdf_path.parent.mkdir(parents=True, exist_ok=True)
+                svg_doc = fitz.open(stream=svg_bytes, filetype="svg")
+                pdf_bytes = svg_doc.convert_to_pdf()
+                clean_pdf = fitz.open("pdf", pdf_bytes)
+                clean_pdf.save(str(pdf_path), garbage=4, deflate=True)
+                clean_pdf.close()
+                svg_doc.close()
+                base_name = original_filename.rsplit(".", 1)[0]
+                return SanitizationResult(
+                    success=True,
+                    output_path=pdf_path,
+                    sanitized_filename=f"{base_name}_sanitized.pdf",
+                    target_extension="pdf",
+                    removed_items=[
+                        "Converted vector SVG into secure PDF document",
+                        "Stripped all DOM scripts and active events",
+                        "Sanitized XML namespaces and external references"
+                    ],
+                    warnings=warnings
+                )
+
             # SAFEST OPTION: Rasterize SVG -> PNG
             if options.rasterize_pages or options.convert_to_png or options.profile == "maximum":
                 logger.info(f"Rasterizing SVG {original_filename} to PNG (Maximum CDR)")

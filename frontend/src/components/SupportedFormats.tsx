@@ -9,9 +9,16 @@ import {
   ShieldCheck, 
   Wrench, 
   Search, 
-  ArrowRight,
-  ShieldAlert,
-  Sparkles
+  ArrowRight, 
+  ShieldAlert, 
+  Sparkles,
+  Mail,
+  Binary,
+  Cpu,
+  Puzzle,
+  Terminal,
+  Globe,
+  Activity
 } from 'lucide-react';
 
 interface SupportedFormatsProps {
@@ -22,34 +29,122 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
+  const analysisEngines = [
+    { name: "Didier Stevens oledump.py", desc: "Deep OLE stream hierarchy & XLM macro sheet analysis" },
+    { name: "pefile & pyelftools", desc: "PE, ELF & Mach-O executable structural & import analysis" },
+    { name: "ClamAV Multi-Engine", desc: "Core engine + SecuriteInfo & Sanesecurity community feeds" },
+    { name: "YARA Rules Engine", desc: "Office DDE, XLM Macros, LOLBins, & CVE pattern rules" },
+    { name: "CIRCL Hashlookup", desc: "NSRL trusted operating system benign hash verification" },
+    { name: "ThreatFox by Abuse.ch", desc: "Malware payload hashes and command-and-control IOCs" },
+    { name: "urlscan.io", desc: "Automated URL reputation, DOM scanner & threat profiling" },
+    { name: "VirusTotal & URLhaus", desc: "Multi-scanner file hashes and malicious host reputation" },
+  ];
+
   const formatCategories = [
     {
-      id: "images",
-      category: "Images & Photographs",
-      icon: ImageIcon,
-      iconColor: "text-blue-600 bg-blue-50 border-blue-200",
-      extensions: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif"],
-      description: "Standard digital imagery and photographs frequently leak device fingerprints, exact physical location, and embedded tracking pixels.",
-      threats: ["Physical Geolocation Stalking", "Hardware Device Fingerprinting", "Hidden Steganographic Payloads", "Embedded Tracking Beacons"],
+      id: "email",
+      category: "Email Messages & Mailboxes",
+      icon: Mail,
+      iconColor: "text-indigo-600 bg-indigo-50 border-indigo-200",
+      extensions: [".eml", ".msg", ".mbox"],
+      description: "Internet message RFC 822/5322 containers and Microsoft Outlook Compound File (.msg) objects harboring tracking beacons, phishing links, or payload attachments.",
+      threats: [
+        "Phishing & Credential Theft Forms", 
+        "Display Name & Header Spoofing", 
+        "Zero-Pixel Invisible Web Beacons", 
+        "Dangerous Executable & Script Droppers", 
+        "Macro-Enabled Office Containers", 
+        "SPF / DKIM / DMARC Authentication Failures"
+      ],
       checks: [
-        "EXIF metadata (Camera Make, Model, Body Serial Number, Lens Model, Software)",
-        "GPS geographic coordinates (Latitude, Longitude, Altitude, Geodetic Datum)",
-        "Author, photographer, artist, and copyright attribution tags",
-        "Creation, camera shutter, and software digitization timestamps",
-        "Embedded text comments, annotation chunks, and caption packets",
-        "XMP (Extensible Metadata Platform) and IPTC core photo structures",
-        "Embedded thumbnails, preview icons, and auxiliary image streams",
-        "Embedded URLs within EXIF string headers or comment chunks",
-        "ICC color profiles and alpha channel transparency masks"
+        "Received-SPF authentication validation headers and SPF failure detection",
+        "DKIM cryptographic signature verification status and spoofing indicators",
+        "Sender Display Name spoofing (mismatched display names vs. envelope addresses)",
+        "Mismatched From address domain vs. Reply-To destination domain routing",
+        "Hidden 1x1 zero-pixel tracking beacons and CSS hidden image telemetry",
+        "Active executable HTML elements (<script>, <form>, <iframe>, <object>, <embed>)",
+        "Dangerous executable attachment extensions (.exe, .scr, .vbs, .ps1, .bat, .cmd, .js)",
+        "Macro-enabled Office attachment containers (.docm, .xlsm, .pptm, .dotm)",
+        "Direct Microsoft Outlook Compound File (.msg) OLE stream inspection via olefile",
+        "Embedded hyperlink extraction with VirusTotal, URLhaus, and urlscan.io cross-checks"
       ],
       sanitizations: [
-        "Strip all EXIF, XMP, IPTC, and comment metadata packets",
-        "Remove GPS geographic location coordinates permanently",
-        "Eradicate photographer, artist, and copyright tags",
-        "Strip creation and digitization timestamps",
-        "Re-encode raw pixel data (purges slack space & hidden payloads)",
-        "Lossless format conversion (Convert to PNG or JPG)",
-        "Flatten image: composite transparency channels onto a pure white background"
+        "Decompose and disarm into clean, sanitized Plain Text or secure HTML",
+        "Strip all 1x1 tracking pixels, hidden web beacons, and external telemetry URLs",
+        "Neutralize active HTML code (<script>, dynamic forms, interactive iframes)",
+        "Extract, quarantine, and isolate all file attachments into triage storage",
+        "Defang clickable URLs and display explicit threat warning banners"
+      ]
+    },
+    {
+      id: "executables",
+      category: "Executable Binaries & Libraries",
+      icon: Binary,
+      iconColor: "text-violet-600 bg-violet-50 border-violet-200",
+      extensions: [".exe", ".dll", ".sys", ".elf", ".so", ".dylib", ".bin"],
+      description: "Compiled native binary executables across Windows (PE/COFF), Linux (ELF), and macOS (Mach-O) analyzed for malware implants, unpackers, and suspicious system API imports.",
+      threats: [
+        "Ransomware & Trojan Droppers",
+        "Living-off-the-Land (LOLBins) Execution",
+        "UPX & Custom Anti-Analysis Packers",
+        "Process Injection & Memory Hooking",
+        "Unsigned or Invalid Authenticode Signatures",
+        "Dynamic Syscall Evasion (ptrace / memfd_create)"
+      ],
+      checks: [
+        "Windows PE parsing via pefile (COFF Headers, Optional Header, Subsystem, Target Architecture)",
+        "Linux ELF inspection via pyelftools (ELF Headers, PT_LOAD segments, DT_NEEDED shared libraries)",
+        "macOS Mach-O parsing (Fat binary multi-architecture slices, LC_LOAD_DYLIB, Code Signatures)",
+        "Shannon section entropy calculation (detects UPX, Themida, and encrypted payloads)",
+        "Suspicious API import heuristic matching (VirtualAlloc, WriteProcessMemory, CreateRemoteThread)",
+        "Linux dynamic execution indicators (ptrace anti-debugging, memfd_create fileless execution)",
+        "Authenticode digital signature verification (checks for signed vs. unsigned executables)",
+        "Living-off-the-Land (LOLBins) YARA rule detection (CertUtil, PowerShell, MSBuild, Bitsadmin)",
+        "CIRCL Hashlookup NSRL database lookup (identifies known-good operating system files)",
+        "ThreatFox & VirusTotal malware reputation queries against SHA-256 and MD5 hashes"
+      ],
+      sanitizations: [
+        "Executable Disarmament: nullifies executable entry point and clears PE optional header",
+        "Generates comprehensive Forensic Triage PDF Dossier detailing headers, sections, and imports",
+        "Extracts benign strings, decompiled resource metadata, and safe triage summary"
+      ]
+    },
+    {
+      id: "office",
+      category: "Microsoft Office Documents",
+      icon: FileSpreadsheet,
+      iconColor: "text-amber-600 bg-amber-50 border-amber-200",
+      extensions: [".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt", ".rtf", ".odt", ".ods", ".odp"],
+      description: "Word processing, spreadsheet, and presentation documents inspected with Didier Stevens oledump.py for macro streams, Excel 4.0 XLM formulas, and external injection.",
+      threats: [
+        "VBA Macro Droppers / Ransomware", 
+        "Excel 4.0 (XLM) Macro Sheet Hijacking",
+        "Dynamic Data Exchange (DDE) Exploits",
+        "Remote Template Injection Attacks", 
+        "ActiveX Remote Code Execution", 
+        "Tracked Change Information Leakage"
+      ],
+      checks: [
+        "Didier Stevens oledump stream analysis (identifies VBA macro indicators M/m, stream sizes)",
+        "Excel 4.0 (XLM) macro sheet detection and auto-execute formulas (Auto_Open / CALL / EXEC)",
+        "Dynamic Data Exchange (DDE) remote process execution fields and links",
+        "Visual Basic for Applications (VBA) macro binary streams (vbaProject.bin)",
+        "ActiveX controls and embedded OLE storage objects",
+        "Remote template injection (attachedTemplate relationships in .rels)",
+        "External relationships and remote web resource references",
+        "Tracked changes (revisions, deletions, insertions, author timestamps)",
+        "Internal author comments, reviewer remarks, and unresolved notes",
+        "Core metadata (dc:creator, cp:lastModifiedBy, dc:title, dc:description, cp:keywords)",
+        "Hyperlinks and URLs embedded in document text or relationship targets"
+      ],
+      sanitizations: [
+        "Purge all VBA macro binary streams (vbaProject.bin) without executing them",
+        "Strip Excel 4.0 (XLM) macro sheets and neutralize DDE formulas",
+        "Strip embedded ActiveX controls and OLE storage objects",
+        "Neutralize external relationships and remote attached template targets",
+        "Scrub personal author and modifier metadata from docProps/core.xml",
+        "Permanently delete tracked revisions and internal reviewer comments",
+        "Downgrade macroEnabled container types (.docm/.xlsm) to standard safe formats (.docx/.xlsx)"
       ]
     },
     {
@@ -82,31 +177,43 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
       ]
     },
     {
-      id: "office",
-      category: "Microsoft Office Documents",
-      icon: FileSpreadsheet,
-      iconColor: "text-amber-600 bg-amber-50 border-amber-200",
-      extensions: [".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt", ".rtf", ".odt", ".ods", ".odp"],
-      description: "Word processing, spreadsheet, and presentation documents containing rich macros, dynamic relationships, and revision markup.",
-      threats: ["VBA Macro Droppers / Ransomware", "Remote Template Injection Attacks", "ActiveX Remote Code Execution", "Tracked Change Information Leakage"],
+      id: "images",
+      category: "Images & Photographs",
+      icon: ImageIcon,
+      iconColor: "text-blue-600 bg-blue-50 border-blue-200",
+      extensions: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif"],
+      description: "Standard digital imagery and photographs frequently leak device fingerprints, exact physical location, and embedded tracking pixels.",
+      threats: [
+        "Physical Geolocation Stalking", 
+        "Hardware Device Fingerprinting", 
+        "Hidden Steganographic Payloads", 
+        "Embedded Tracking Beacons",
+        "AI Deepfakes & Synthetic Media Impersonation"
+      ],
       checks: [
-        "Visual Basic for Applications (VBA) macro binary streams (vbaProject.bin)",
-        "ActiveX controls and embedded OLE storage objects",
-        "Remote template injection (attachedTemplate relationships in .rels)",
-        "External relationships and remote web resource references",
-        "Tracked changes (revisions, deletions, insertions, author timestamps)",
-        "Internal author comments, reviewer remarks, and unresolved notes",
-        "Core metadata (dc:creator, cp:lastModifiedBy, dc:title, dc:description, cp:keywords)",
-        "Custom document properties in docProps/custom.xml",
-        "Hyperlinks and URLs embedded in document text or relationship targets"
+        "EXIF metadata (Camera Make, Model, Body Serial Number, Lens Model, Software)",
+        "GPS geographic coordinates (Latitude, Longitude, Altitude, Geodetic Datum)",
+        "AI Image Provenance & C2PA Content Credentials inspection (Coalition for Content Provenance)",
+        "IPTC digitalSourceType trainedAlgorithmicMedia and claim generator metadata (DALL-E, Firefly)",
+        "Stable Diffusion, Midjourney, and NovelAI prompt & model hyperparameter extraction",
+        "Physical camera hardware tag verification vs synthetic software generation markers",
+        "Error Level Analysis (ELA) for image compression disparity and local modification",
+        "Author, photographer, artist, and copyright attribution tags",
+        "Creation, camera shutter, and software digitization timestamps",
+        "Embedded text comments, annotation chunks, and caption packets",
+        "XMP (Extensible Metadata Platform) and IPTC core photo structures",
+        "Embedded thumbnails, preview icons, and auxiliary image streams",
+        "Embedded URLs within EXIF string headers or comment chunks",
+        "ICC color profiles and alpha channel transparency masks"
       ],
       sanitizations: [
-        "Purge all VBA macro binary streams (vbaProject.bin) without executing them",
-        "Strip embedded ActiveX controls and OLE storage objects",
-        "Neutralize external relationships and remote attached template targets",
-        "Scrub personal author and modifier metadata from docProps/core.xml",
-        "Permanently delete tracked revisions and internal reviewer comments",
-        "Downgrade macroEnabled container types (.docm/.xlsm) to standard safe formats (.docx/.xlsx)"
+        "Strip all EXIF, XMP, IPTC, and comment metadata packets",
+        "Remove GPS geographic location coordinates permanently",
+        "Eradicate photographer, artist, and copyright tags",
+        "Strip creation and digitization timestamps",
+        "Re-encode raw pixel data (purges slack space, hidden payloads, and synthetic markers)",
+        "Lossless format conversion (Convert to PNG or JPG)",
+        "Flatten image: composite transparency channels onto a pure white background"
       ]
     },
     {
@@ -114,11 +221,18 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
       category: "Compressed Archives",
       icon: Archive,
       iconColor: "text-purple-600 bg-purple-50 border-purple-200",
-      extensions: [".zip", ".7z", ".tar", ".gz", ".tgz"],
-      description: "Compressed packages that can bundle dangerous nested scripts, directory traversal paths, or excessive decompression payloads.",
-      threats: ["Path Traversal Arbitrary File Overwrite", "Zip Bombs / Decompression Denial of Service", "Executable Droppers (.exe, .ps1, .bat)", "Hidden Nested Archives"],
+      extensions: [".zip", ".jar", ".7z", ".tar", ".gz", ".tgz"],
+      description: "Compressed packages and Java archives (.jar) analyzed for directory traversal, decompression bombs, Main-Class droppers, and dangerous APIs.",
+      threats: [
+        "Path Traversal Arbitrary File Overwrite",
+        "Zip Bombs / Decompression Denial of Service",
+        "Executable Droppers (.exe, .ps1, .bat)",
+        "Dangerous Java Applet / JAR Droppers (all-permissions)",
+        "Hidden Nested Archives"
+      ],
       checks: [
         "Directory traversal filenames (../../etc/passwd, ..\\windows\\system32)",
+        "Java Archive (.jar) manifest inspection (Main-Class, all-permissions) and bytecode execution API scanning (ProcessBuilder, Runtime.exec, URLClassLoader, Unsafe)",
         "Executable and script members (.exe, .dll, .bat, .cmd, .ps1, .vbs, .sh, .py)",
         "Excessive compression ratios / zip bombs (>100:1 ratio against uncompressed size)",
         "Recursive nested archives exceeding extraction limits",
@@ -159,12 +273,18 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
     },
     {
       id: "data",
-      category: "Plain Text & Spreadsheets",
+      category: "Plain Text, Scripts & Tabular Data",
       icon: FileCheck2,
       iconColor: "text-slate-600 bg-slate-100 border-slate-200",
-      extensions: [".txt", ".csv", ".json", ".xml", ".yaml", ".yml", ".md"],
-      description: "Structured and tabular data susceptible to formula injection (DDE), encoding attacks, or embedded remote dropper links.",
-      threats: ["CSV Formula Execution / DDE Injection", "Arbitrary Command Execution (=cmd|...)", "Encoding Confusables & BOM Tricks", "Phishing URLs in Data Columns"],
+      extensions: [".txt", ".csv", ".json", ".xml", ".yaml", ".yml", ".md", ".py", ".sh", ".ps1"],
+      description: "Source code, shell scripts, and structured tabular data susceptible to formula injection (DDE), encoding attacks, or embedded remote dropper links.",
+      threats: [
+        "CSV Formula Execution / DDE Injection", 
+        "Arbitrary Command Execution (=cmd|...)", 
+        "Shell & PowerShell Downloader Payloads",
+        "Encoding Confusables & BOM Tricks", 
+        "Phishing URLs in Data Columns"
+      ],
       checks: [
         "CSV Formula / Dynamic Data Exchange (DDE) prefixes (=cmd|..., +powershell..., @SUM...)",
         "Character encoding identification (UTF-8, UTF-16LE, UTF-16BE) and BOM presence",
@@ -176,6 +296,120 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
         "Escape dangerous spreadsheet formula execution prefixes with safe leading single quote (')",
         "Normalize character encoding to standard UTF-8",
         "Strip dangerous Byte Order Mark (BOM) bytes"
+      ]
+    },
+    {
+      id: "extensions",
+      category: "Browser Extensions & Store Packages",
+      icon: Puzzle,
+      iconColor: "text-indigo-600 bg-indigo-50 border-indigo-200",
+      extensions: [".crx", ".zip"],
+      description: "Chrome and Microsoft Edge extension packages (.crx / unpacked .zip) inspected for excessive permissions, background surveillance, and malicious JavaScript telemetry.",
+      threats: [
+        "Broad Web Hijacking (<all_urls> / *://*/*)",
+        "Credential & Session Cookie Harvesting",
+        "Persistent Background Surveillance Workers",
+        "Weak Content Security Policy (unsafe-eval)",
+        "Hidden Keystroke Logging & DOM Exfiltration"
+      ],
+      checks: [
+        "CRX2 and CRX3 header verification, public key extraction, and signature validation",
+        "Manifest V2 & V3 permission risk audit (webRequestBlocking, cookies, debugger, proxy)",
+        "Broad host scope identification (<all_urls>, *://*/*, http://*/*)",
+        "Content Security Policy (CSP) parsing (unsafe-eval, unsafe-inline, remote script origins)",
+        "Background service workers and persistent script execution inspection",
+        "Content script match rules and DOM injection points",
+        "Static JavaScript AST & regex heuristics (eval, new Function, keydown listeners, sendBeacon)"
+      ],
+      sanitizations: [
+        "Package Disarmament: generates isolated, sanitized manifest with elevated permissions stripped",
+        "Comprehensive Extension Forensic Triage dossier with permission risk weights and heuristic warnings",
+        "Deobfuscation and static reporting of high-risk background scripts and injected content scripts"
+      ]
+    },
+    {
+      id: "applescript",
+      category: "macOS AppleScript & Applications",
+      icon: Terminal,
+      iconColor: "text-sky-600 bg-sky-50 border-sky-200",
+      extensions: [".applescript", ".scpt", ".app"],
+      description: "macOS Open Scripting Architecture (OSA) source and compiled bytecode scripts, as well as .app application bundles analyzed for privilege escalation and phishing triggers.",
+      threats: [
+        "Root Privilege Escalation (with administrator privileges)",
+        "Fake System Password Dialog Phishing",
+        "Background Keystroke Logging (System Events)",
+        "Stealthy Shell Command Droppers (do shell script)",
+        "Unsigned Mach-O Application Bundles"
+      ],
+      checks: [
+        "OSA header identification for compiled bytecode scripts (.scpt) and plain text source (.applescript)",
+        "Heuristic detection of 'with administrator privileges' root escalation requests",
+        "Credential harvesting prompts ('display dialog with hidden answer')",
+        "Keystroke and accessibility interception ('tell application \"System Events\" to keystroke')",
+        "Embedded network IOC extraction (curl/wget download cradles inside do shell script)",
+        "macOS .app bundle Info.plist entitlement auditing and Mach-O binary triage"
+      ],
+      sanitizations: [
+        "Defangs privilege escalation hooks and credential prompt calls",
+        "Generates clean, sanitized vector PDF review dossier of the script logic",
+        "Quarantines remote download URLs and marks non-executable permissions (0o644)"
+      ]
+    },
+    {
+      id: "network",
+      category: "Network Infrastructure & Domain/IP Targets",
+      icon: Globe,
+      iconColor: "text-blue-600 bg-blue-50 border-blue-200",
+      extensions: ["Domains (e.g. google.com)", "IP Addresses (e.g. 8.8.8.8)", "Remote URLs"],
+      description: "Direct infrastructure and target intelligence profiling for web domains, IPv4 addresses, and active hyperlinks with passive WHOIS, DNS records, and sandboxed screenshots.",
+      threats: [
+        "Punycode / Homograph Impersonation Attacks",
+        "Newly Registered Malicious C2 Domains (<30 days)",
+        "Co-Hosted Malware Distribution IP Nodes",
+        "SSRF (Server-Side Request Forgery) Intranet Probing",
+        "Invalid or Expired TLS / SSL Certificates"
+      ],
+      checks: [
+        "Passive WHOIS registration data (Registrar, Created Date, Expiration, Domain Age in days)",
+        "DNS multi-record resolution (A IPv4 records, MX mail exchangers, NS authoritative nameservers, TXT SPF/verification)",
+        "Reverse DNS & PTR hostname lookup and co-hosted domain enumerations",
+        "Punycode homograph impersonation detection with visual user appearance spoofing rendering",
+        "Sandboxed browser headless screenshot capture for visual domain preview",
+        "Multi-source threat reputation lookups across VirusTotal, AbuseIPDB, and AlienVault OTX"
+      ],
+      sanitizations: [
+        "Pure infrastructure analysis (CDR sanitization automatically bypassed for network infrastructure targets)",
+        "Quarantines hostile URLs and neutralizes tracking beacons in downstream reports",
+        "Provides exportable JSON / HTML incident response dossiers"
+      ]
+    },
+    {
+      id: "pcap",
+      category: "Network Packet Captures (PCAP / PCAPNG)",
+      icon: Activity,
+      iconColor: "text-indigo-600 bg-indigo-50 border-indigo-200",
+      extensions: [".pcap", ".pcapng", ".cap"],
+      description: "Network packet capture traces dissected for protocol conversations, unencrypted credentials, TLS Server Name Indications (SNI), DNS queries, and malicious payloads.",
+      threats: [
+        "Plaintext Credential Theft (HTTP Basic Auth, FTP, Telnet)",
+        "Malware Command-and-Control (C2) Communication",
+        "Data Exfiltration & Covert Channel Transfers",
+        "High-Entropy DGA & Dynamic DNS Telemetry",
+        "Unencrypted Dangerous Executable/Script Downloads"
+      ],
+      checks: [
+        "Deep packet inspection of Ethernet, IPv4, IPv6, TCP, UDP, and ICMP frames",
+        "Application protocol dissection: HTTP, TLS/HTTPS, DNS, FTP, SSH, SMTP",
+        "TLS Client Hello parsing for Server Name Indication (SNI) host extraction",
+        "DNS question and answer decoding with DGA and suspicious TLD heuristics",
+        "Cleartext credential scanner for HTTP basic auth and FTP USER/PASS commands",
+        "Flow conversation aggregation with byte volumes, packet counts, and durations",
+        "Transferred file payload extraction and dangerous extension verification"
+      ],
+      sanitizations: [
+        "Anonymize internal IP subnet ranges and device MAC addresses",
+        "Scrub cleartext passwords and authentication bearer tokens",
+        "Strip dangerous executable payload transfers from PCAP packet data stream"
       ]
     }
   ];
@@ -192,12 +426,12 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
   });
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-10">
+    <div className="max-w-[80rem] mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-10">
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-700 border border-slate-200">
           <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-          <span>Complete Format Inspection Matrix</span>
+          <span>Complete Multi-Engine Format Inspection Matrix</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
           Supported Files & Security Checks
@@ -206,6 +440,25 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
           Explore the exact security indicators, active threats, and Content Disarm & Reconstruction 
           transformations applied to each file format.
         </p>
+      </div>
+
+      {/* Integrated Analysis Engines Bar */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-6 text-white shadow-md">
+        <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-blue-300">
+          <Cpu className="w-4 h-4 text-blue-400" />
+          <span>Integrated Security Engines & Threat Intelligence Services</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {analysisEngines.map((engine, idx) => (
+            <div key={idx} className="bg-white/10 hover:bg-white/15 backdrop-blur-xs rounded-xl p-3 border border-white/10 transition-colors">
+              <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                {engine.name}
+              </p>
+              <p className="text-[11px] text-slate-300 mt-1 leading-snug">{engine.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -259,7 +512,7 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
             <p className="text-sm text-slate-500">No formats match your search query "{searchTerm}".</p>
             <button
               onClick={() => { setActiveCategory('all'); setSearchTerm(''); }}
-              className="mt-3 text-xs text-blue-600 font-semibold hover:underline"
+              className="mt-3 text-xs text-blue-600 font-semibold hover:underline cursor-pointer"
             >
               Reset filters
             </button>
