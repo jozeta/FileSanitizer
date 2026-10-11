@@ -1016,14 +1016,30 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       return true;
     }
 
-    // 4. "no detections", "0 detection", "0 results", "0 found"
+    // 4. "no detections", "0 detection", "0 results", "0 found", "not found"
     if (
       label.includes('no detection') ||
       label.includes('0 detection') ||
       label.includes('0 result') ||
       label.includes('0 found') ||
+      label.includes('not_found') ||
+      label.includes('not found') ||
       fullLabel.includes('no detection') ||
-      fullLabel.includes('0 detection')
+      fullLabel.includes('0 detection') ||
+      fullLabel.includes('not_found') ||
+      fullLabel.includes('not found')
+    ) {
+      return true;
+    }
+
+    // 5. Scanner or Sandbox with clean verdict / not_found
+    if (
+      details.verdict === 'not_found' ||
+      details.verdict === 'clean' ||
+      details.threat_score === 0 ||
+      ((node.type === 'vulnerability' || node.type === 'threat_intel' || node.type === 'threat_signature') &&
+        (node.risk === 'clean' || node.risk === 'benign') &&
+        (!details.positives || details.positives === 0))
     ) {
       return true;
     }
@@ -1052,34 +1068,38 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     });
 
     return nodes.filter((n) => {
+      // Base files are preserved as reference anchors (if not filtered out by sharedOnlyFilter)
+      if (n.type === 'file') {
+        if (sharedOnlyFilter && !fileIdsWithShared.has(n.id)) return false;
+        return true;
+      }
+
       // Show Empty Nodes filter constraint:
       // When unchecked (default false), hide nodes that do not contain any results or data (e.g. VirusTotal with 0 detections)
       if (!showEmptyNodes && isEmptyNode(n)) {
         return false;
       }
+
+      // If user explicitly checked Show Empty Nodes, guarantee it is shown (unless blocked by sharedOnlyFilter)
+      if (showEmptyNodes && isEmptyNode(n)) {
+        if (sharedOnlyFilter && !n.is_shared) return false;
+        return true;
+      }
+
       // Shared Only toggle constraint:
       // When active, strictly show only nodes that are shared between submitted files and the files that share them
-      if (sharedOnlyFilter) {
-        if (n.type === 'file') {
-          if (!fileIdsWithShared.has(n.id)) return false;
-        } else if (!n.is_shared) {
-          return false;
-        }
+      if (sharedOnlyFilter && !n.is_shared) {
+        return false;
       }
 
       // Hide isolated/leaf nodes constraint (degree <= 1), keeping file hubs
-      if (hideIsolatedNodes && n.type !== 'file' && (nodeDegreeMap[n.id] || 0) <= 1) {
+      if (hideIsolatedNodes && (nodeDegreeMap[n.id] || 0) <= 1) {
         return false;
       }
 
       // Hide benign / low-severity informational entities
-      if (hideBenignNodes && n.type !== 'file' && !n.is_shared && ['timestamp', 'user'].includes(n.type)) {
+      if (hideBenignNodes && !n.is_shared && ['timestamp', 'user'].includes(n.type)) {
         return false;
-      }
-
-      // Base files are preserved as reference anchors (if not filtered out by sharedOnlyFilter)
-      if (n.type === 'file') {
-        return true;
       }
 
       // If no category filters are selected, non-file entities are filtered out
@@ -1092,16 +1112,16 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         if (f === 'hosts') return n.type === 'host';
         if (f === 'hashes') return n.type === 'hash';
         if (f === 'timestamps') return n.type === 'timestamp';
-        if (f === 'vulns') return n.type === 'vulnerability';
+        if (f === 'vulns') return n.type === 'vulnerability' || n.type === 'threat_intel' || n.type === 'threat_signature';
         if (f === 'geo') return n.type === 'geolocation';
         if (f === 'network') return ['ip', 'domain', 'url'].includes(n.type);
         if (f === 'identity') return n.type === 'user';
         if (f === 'ttps') return n.type === 'technique';
-        if (f === 'artifacts') return n.type === 'artifact';
+        if (f === 'artifacts') return ['artifact', 'embedded_file'].includes(n.type);
         return false;
       });
     });
-  }, [data, selectedFilters, sharedOnlyFilter, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap]);
+  }, [data, selectedFilters, sharedOnlyFilter, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap, showEmptyNodes]);
 
   const selectAllOfType = (typeKey: string) => {
     if (typeKey === 'all') {

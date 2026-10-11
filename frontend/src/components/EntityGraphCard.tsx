@@ -213,14 +213,30 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       return true;
     }
 
-    // 4. "no detections", "0 detection", "0 results", "0 found"
+    // 4. "no detections", "0 detection", "0 results", "0 found", "not found"
     if (
       label.includes('no detection') ||
       label.includes('0 detection') ||
       label.includes('0 result') ||
       label.includes('0 found') ||
+      label.includes('not_found') ||
+      label.includes('not found') ||
       fullLabel.includes('no detection') ||
-      fullLabel.includes('0 detection')
+      fullLabel.includes('0 detection') ||
+      fullLabel.includes('not_found') ||
+      fullLabel.includes('not found')
+    ) {
+      return true;
+    }
+
+    // 5. Scanner or Sandbox with clean verdict / not_found
+    if (
+      details.verdict === 'not_found' ||
+      details.verdict === 'clean' ||
+      details.threat_score === 0 ||
+      ((node.type === 'threat_intel' || node.type === 'threat_signature' || node.type === 'vulnerability') &&
+        (node.risk === 'clean' || node.risk === 'benign') &&
+        (!details.positives || details.positives === 0))
     ) {
       return true;
     }
@@ -236,12 +252,17 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   const filteredNodes = useMemo(() => {
     const nodes = graphData?.nodes || [];
     return nodes.filter(n => {
-      const isRoot = n.id === 'root' || n.type === 'root';
+      const isRoot = n.id === 'root' || n.type === 'root' || n.type === 'file';
       if (isRoot) return true; // Always keep root file anchor
 
       // Hide empty nodes constraint (e.g. VirusTotal with 0 detections)
       if (!showEmptyNodes && isEmptyNode(n)) {
         return false;
+      }
+
+      // If user enabled Show Empty Nodes, guarantee empty node is shown
+      if (showEmptyNodes && isEmptyNode(n)) {
+        return true;
       }
 
       // Hide leaves (degree <= 1)
@@ -268,7 +289,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
         return cat ? cat.types.includes(n.type) : false;
       });
     });
-  }, [graphData?.nodes, selectedFilters, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap]);
+  }, [graphData?.nodes, selectedFilters, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap, showEmptyNodes]);
 
   const visibleNodeIds = useMemo(() => new Set(filteredNodes.map(n => n.id)), [filteredNodes]);
 
