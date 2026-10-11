@@ -398,5 +398,36 @@ def test_clamav_days_old_and_update_check():
     assert data["update_check"]["newer_available"] is True
     assert "Newer definition files exist" in data["update_check"]["message"]
 
+def test_ui_preferences_endpoints_and_defaults():
+    # Public endpoint check: default show_telemetry_diagnostics must be False
+    res_pub = client.get("/api/settings/ui-preferences")
+    assert res_pub.status_code == 200
+    data_pub = res_pub.json()
+    assert data_pub["success"] is True
+    assert "ui_preferences" in data_pub
+    assert data_pub["ui_preferences"].get("show_telemetry_diagnostics") is False
+
+    # Unauthorized PUT should fail with 401
+    res_unauth = client.put("/api/settings/ui-preferences", json={"show_telemetry_diagnostics": True})
+    assert res_unauth.status_code == 401
+
+    # Authorized admin update
+    token = create_admin_token("admin")
+    headers = {"Authorization": f"Bearer {token}"}
+    res_update = client.put("/api/settings/ui-preferences", json={"show_telemetry_diagnostics": True}, headers=headers)
+    assert res_update.status_code == 200
+    data_up = res_update.json()
+    assert data_up["ui_preferences"]["show_telemetry_diagnostics"] is True
+
+    # Verify public endpoint reflects change
+    res_verify = client.get("/api/settings/ui-preferences")
+    assert res_verify.status_code == 200
+    assert res_verify.json()["ui_preferences"]["show_telemetry_diagnostics"] is True
+
+    # Restore default: False
+    res_reset = client.put("/api/settings/ui-preferences", json={"show_telemetry_diagnostics": False}, headers=headers)
+    assert res_reset.status_code == 200
+    assert res_reset.json()["ui_preferences"]["show_telemetry_diagnostics"] is False
+
 
 

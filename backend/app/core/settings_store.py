@@ -316,6 +316,10 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
         "show_timezone_suffix": True,  # e.g. "(UTC)"
         "show_milliseconds": False     # e.g. ".123"
     },
+    # UI and Dashboard Display Preferences
+    "ui_preferences": {
+        "show_telemetry_diagnostics": False,  # Hidden by default
+    },
     # Pluggable Service API Keys
     "api_keys": {
         "virustotal_api_key": "",
@@ -951,6 +955,13 @@ class SettingsStore:
                 else:
                     merged["time_display"] = dict(DEFAULT_SETTINGS.get("time_display", {}))
 
+                if "ui_preferences" in saved and isinstance(saved["ui_preferences"], dict):
+                    merged_ui = dict(DEFAULT_SETTINGS.get("ui_preferences", {}))
+                    merged_ui.update(saved["ui_preferences"])
+                    merged["ui_preferences"] = merged_ui
+                else:
+                    merged["ui_preferences"] = dict(DEFAULT_SETTINGS.get("ui_preferences", {}))
+
                 # One-time migration: if upload_history.json does not exist yet, migrate any saved history
                 hist_file = self._get_history_file()
                 if not hist_file.exists() and "upload_history" in saved and isinstance(saved["upload_history"], list) and saved["upload_history"]:
@@ -1008,6 +1019,7 @@ class SettingsStore:
         copy_data["evtx_timeline_event_ids"] = list(self._data.get("evtx_timeline_event_ids", DEFAULT_SETTINGS["evtx_timeline_event_ids"]))
         copy_data["evtx_severity_rules"] = dict(self._data.get("evtx_severity_rules", DEFAULT_SETTINGS.get("evtx_severity_rules", {})))
         copy_data["time_display"] = dict(self._data.get("time_display", DEFAULT_SETTINGS.get("time_display", {})))
+        copy_data["ui_preferences"] = dict(self._data.get("ui_preferences", DEFAULT_SETTINGS.get("ui_preferences", {})))
         return copy_data
 
     def get_time_display(self) -> Dict[str, Any]:
@@ -1027,6 +1039,19 @@ class SettingsStore:
             if "show_milliseconds" in config:
                 current["show_milliseconds"] = bool(config["show_milliseconds"])
             self._data["time_display"] = current
+            self._save()
+
+    def get_ui_preferences(self) -> Dict[str, Any]:
+        self._check_reload()
+        with self._lock:
+            return dict(self._data.get("ui_preferences", DEFAULT_SETTINGS.get("ui_preferences", {})))
+
+    def set_ui_preferences(self, config: Dict[str, Any]) -> None:
+        with self._lock:
+            current = dict(self._data.get("ui_preferences", DEFAULT_SETTINGS.get("ui_preferences", {})))
+            if "show_telemetry_diagnostics" in config:
+                current["show_telemetry_diagnostics"] = bool(config["show_telemetry_diagnostics"])
+            self._data["ui_preferences"] = current
             self._save()
 
     def get_evtx_timeline_event_ids(self) -> List[int]:
@@ -1084,6 +1109,9 @@ class SettingsStore:
 
         if "time_display" in updates and isinstance(updates["time_display"], dict):
             self.set_time_display(updates["time_display"])
+
+        if "ui_preferences" in updates and isinstance(updates["ui_preferences"], dict):
+            self.set_ui_preferences(updates["ui_preferences"])
 
         if "upload_history_enabled" in updates:
             self._data["upload_history_enabled"] = bool(updates["upload_history_enabled"])

@@ -267,6 +267,32 @@ export const apiClient = {
     return res.json();
   },
 
+  async getUiPreferences(): Promise<{ success: boolean; ui_preferences: { show_telemetry_diagnostics: boolean } }> {
+    try {
+      const res = await fetch(`${API_BASE}/settings/ui-preferences`);
+      if (!res.ok) return { success: false, ui_preferences: { show_telemetry_diagnostics: false } };
+      return res.json();
+    } catch {
+      return { success: false, ui_preferences: { show_telemetry_diagnostics: false } };
+    }
+  },
+
+  async updateUiPreferences(token: string, preferences: Record<string, any>): Promise<any> {
+    const res = await fetch(`${API_BASE}/settings/ui-preferences`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(preferences),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update UI preferences' }));
+      throw new Error(err.detail || 'Failed to update UI preferences');
+    }
+    return res.json();
+  },
+
   async getClamavStatus(token: string): Promise<any> {
     const res = await fetch(`${API_BASE}/settings/clamav`, {
       headers: { Authorization: `Bearer ${token}` },

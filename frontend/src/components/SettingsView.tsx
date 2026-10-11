@@ -36,7 +36,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
   const [evtxGroupTab, setEvtxGroupTab] = useState<'both' | 'curated' | 'extended'>('both');
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'checks' | 'keys' | 'external' | 'clamav' | 'yara' | 'warninglist' | 'hex_patterns' | 'statistics' | 'history' | 'audit_logs' | 'api_docs' | 'archive_passwords' | 'cache' | 'cdr_policies' | 'evtx' | 'time'>('checks');
+  const [activeTab, setActiveTab] = useState<'checks' | 'ui_preferences' | 'keys' | 'external' | 'clamav' | 'yara' | 'warninglist' | 'hex_patterns' | 'statistics' | 'history' | 'audit_logs' | 'api_docs' | 'archive_passwords' | 'cache' | 'cdr_policies' | 'evtx' | 'time'>('checks');
+
+  // UI Preferences State (Telemetry & Diagnostics Tab Visibility - Hidden by default)
+  const [showTelemetryDiagnostics, setShowTelemetryDiagnostics] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('fs_show_telemetry_diagnostics') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Time & Localization State
   const [timeSettings, setTimeSettings] = useState<any>({
@@ -654,6 +663,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     try {
       const res = await apiClient.getSettings(token);
       setSettingsData(res.settings);
+      if (res.settings?.ui_preferences?.show_telemetry_diagnostics !== undefined) {
+        setShowTelemetryDiagnostics(Boolean(res.settings.ui_preferences.show_telemetry_diagnostics));
+        localStorage.setItem('fs_show_telemetry_diagnostics', String(res.settings.ui_preferences.show_telemetry_diagnostics));
+      }
     } catch (e: any) {
       if (e.message?.includes('401') || e.message?.includes('auth') || e.message?.includes('Unauthorized')) {
         handleLogout('Session expired. Please log in again.');
@@ -1243,6 +1256,50 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     }
   };
 
+  const fetchUiPreferences = async () => {
+    try {
+      const res = await apiClient.getUiPreferences();
+      if (res?.ui_preferences?.show_telemetry_diagnostics !== undefined) {
+        setShowTelemetryDiagnostics(Boolean(res.ui_preferences.show_telemetry_diagnostics));
+        localStorage.setItem('fs_show_telemetry_diagnostics', String(res.ui_preferences.show_telemetry_diagnostics));
+      }
+    } catch {
+      // fallback
+    }
+  };
+
+  const handleToggleTelemetryDiagnostics = async (enable: boolean) => {
+    setShowTelemetryDiagnostics(enable);
+    try {
+      localStorage.setItem('fs_show_telemetry_diagnostics', String(enable));
+    } catch (e) {
+      console.warn('Failed to save to localStorage', e);
+    }
+    window.dispatchEvent(new CustomEvent('fs-settings-changed', {
+      detail: { show_telemetry_diagnostics: enable }
+    }));
+
+    if (token) {
+      try {
+        await apiClient.updateUiPreferences(token, { show_telemetry_diagnostics: enable });
+        if (settingsData) {
+          setSettingsData({
+            ...settingsData,
+            ui_preferences: {
+              ...(settingsData.ui_preferences || {}),
+              show_telemetry_diagnostics: enable,
+            }
+          });
+        }
+        showNotification(`Telemetry & Diagnostics tab ${enable ? 'is now visible' : 'is now hidden'} in file analysis dashboards.`);
+      } catch (err: any) {
+        console.warn('Backend UI preferences update error:', err);
+      }
+    } else {
+      showNotification(`Telemetry & Diagnostics tab ${enable ? 'is now visible' : 'is now hidden'} in file analysis dashboards.`);
+    }
+  };
+
   const handleToggleEvtxTimelineId = async (id: number) => {
     if (!settingsData) return;
     const currentIds: number[] = settingsData.evtx_timeline_event_ids || DEFAULT_EVTX_BASELINE_IDS;
@@ -1795,7 +1852,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           </button>
         </form>
 
-        <div className="mt-8 pt-5 border-t border-slate-100 text-center">
+        <div className="mt-6 pt-5 border-t border-slate-100">
+          <div className="flex items-center justify-between gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+            <div className="text-left">
+              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <span>📊</span> Telemetry &amp; Diagnostics Tab
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {showTelemetryDiagnostics ? 'Currently Visible in workspace' : 'Currently Hidden (Default)'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleToggleTelemetryDiagnostics(!showTelemetryDiagnostics)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                showTelemetryDiagnostics
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700'
+                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+              }`}
+            >
+              {showTelemetryDiagnostics ? 'Hide Tab' : 'Show Tab'}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-slate-100 text-center">
           <button
             onClick={onBack}
             className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors inline-flex items-center gap-1 cursor-pointer"
@@ -1867,6 +1948,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
         {[
           { id: 'checks', label: '🛡️ Inspection Checks' },
+          { id: 'ui_preferences', label: '🖥️ UI & Display' },
           { id: 'keys', label: '🔑 API Keys' },
           { id: 'external', label: '🌐 External Network Policies' },
           {
@@ -1891,6 +1973,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
             key={tab.id}
             onClick={() => {
               setActiveTab(tab.id as any);
+              if (tab.id === 'ui_preferences') fetchUiPreferences();
               if (tab.id === 'time') fetchTimeSettings();
               if (tab.id === 'clamav') fetchClamav();
               if ((tab.id === 'checks' || tab.id === 'keys' || tab.id === 'evtx') && !settingsData) fetchSettings();
@@ -1943,6 +2026,49 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           </div>
         ) : (
         <div className="space-y-6">
+          {/* Analysis Dashboard & Telemetry Display Card */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📊</span>
+                  <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                    Telemetry &amp; Pipeline Diagnostics Tab
+                  </h2>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono ${
+                      showTelemetryDiagnostics
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                    }`}
+                  >
+                    {showTelemetryDiagnostics ? 'VISIBLE' : 'HIDDEN (DEFAULT)'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 max-w-3xl leading-relaxed">
+                  Controls the visibility of the "Telemetry &amp; Diagnostics" tab in the file analysis dashboard.
+                  When <strong>hidden (default)</strong>, the tab is concealed to prioritize analyst triage of security findings, threat intelligence, and IOC forensic graphs.
+                  When <strong>visible</strong>, operators can inspect granular sub-step latency breakdown, Celery worker dispatch metrics, and pipeline execution durations.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleToggleTelemetryDiagnostics(!showTelemetryDiagnostics)}
+                  className={`px-4 py-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2.5 cursor-pointer shadow-sm ${
+                    showTelemetryDiagnostics
+                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700 shadow-indigo-600/20'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${showTelemetryDiagnostics ? 'bg-emerald-300 animate-pulse' : 'bg-slate-400'}`} />
+                  <span>{showTelemetryDiagnostics ? '✓ Telemetry Tab: Visible' : '○ Telemetry Tab: Hidden'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Global Scanners */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -2293,6 +2419,86 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           </div>
         </div>
         )
+      )}
+
+      {/* TAB: UI & Display Preferences */}
+      {activeTab === 'ui_preferences' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>🖥️</span> User Interface &amp; Dashboard Display Preferences
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Customize the visibility of analysis dashboard views, diagnostic telemetry, and analyst presentation modules.
+                </p>
+              </div>
+            </div>
+
+            {/* Telemetry & Diagnostics Toggle Card */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5 max-w-2xl">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs text-slate-900">
+                    Telemetry &amp; Pipeline Diagnostics Tab
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono ${
+                      showTelemetryDiagnostics
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {showTelemetryDiagnostics ? 'ENABLED (VISIBLE)' : 'DISABLED (HIDDEN BY DEFAULT)'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Controls whether the <strong>Telemetry &amp; Diagnostics</strong> tab is rendered inside the file analysis workspace.
+                  When disabled (default), the diagnostics tab is hidden to maintain a streamlined security and threat-hunting interface.
+                  When enabled, analysts can inspect pipeline execution timings, Celery background worker dispatches, and step-by-step latency diagnostics.
+                </p>
+              </div>
+
+              <div className="shrink-0 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleToggleTelemetryDiagnostics(!showTelemetryDiagnostics)}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
+                    showTelemetryDiagnostics
+                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700 shadow-indigo-600/20'
+                      : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                  }`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full ${showTelemetryDiagnostics ? 'bg-emerald-400' : 'bg-slate-400'}`} />
+                  <span>{showTelemetryDiagnostics ? '✓ Diagnostics Tab Visible (Click to Hide)' : '○ Diagnostics Tab Hidden (Click to Show)'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Navigation to Time & Localization */}
+            <div className="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/40 flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                  <span>🕒</span> Time &amp; Timestamp Normalization
+                </span>
+                <p className="text-xs text-indigo-700">
+                  Configure 24-hour / 12-hour clock, UTC / local timezone offset, and timestamp precision across all event timelines.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('time');
+                  fetchTimeSettings();
+                }}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 shadow-sm"
+              >
+                Configure Time Settings →
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* TAB 2: API Keys */}

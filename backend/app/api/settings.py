@@ -44,6 +44,7 @@ class SettingsUpdateRequest(BaseModel):
     evtx_timeline_event_ids: Optional[List[int]] = None
     evtx_severity_rules: Optional[Dict[str, str]] = None
     time_display: Optional[Dict[str, Any]] = None
+    ui_preferences: Optional[Dict[str, Any]] = None
 
 class YaraRuleCreateRequest(BaseModel):
     name: str
@@ -109,6 +110,23 @@ def update_time_display_settings(config: Dict[str, Any], admin=Depends(require_a
     return {
         "success": True,
         "time_display": settings_store.get_time_display()
+    }
+
+@router.get("/ui-preferences")
+def get_ui_preferences_settings():
+    """Public endpoint to get server-configured UI display preferences."""
+    return {
+        "success": True,
+        "ui_preferences": settings_store.get_ui_preferences()
+    }
+
+@router.put("/ui-preferences")
+def update_ui_preferences_settings(config: Dict[str, Any], admin=Depends(require_admin)):
+    """Admin endpoint to update UI display preferences."""
+    settings_store.set_ui_preferences(config)
+    return {
+        "success": True,
+        "ui_preferences": settings_store.get_ui_preferences()
     }
 
 # 2. General Settings

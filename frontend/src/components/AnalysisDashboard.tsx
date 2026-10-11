@@ -248,6 +248,60 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
     }
   });
 
+  // UI preferences: Telemetry & Diagnostics tab visibility (hidden by default)
+  const [showTelemetryDiagnostics, setShowTelemetryDiagnostics] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('fs_show_telemetry_diagnostics') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Sync UI preferences from backend and listen for settings change events
+  useEffect(() => {
+    const syncUiPrefs = async () => {
+      try {
+        const res = await apiClient.getUiPreferences();
+        if (res?.ui_preferences?.show_telemetry_diagnostics !== undefined) {
+          const stored = localStorage.getItem('fs_show_telemetry_diagnostics');
+          if (stored === null) {
+            setShowTelemetryDiagnostics(Boolean(res.ui_preferences.show_telemetry_diagnostics));
+            localStorage.setItem('fs_show_telemetry_diagnostics', String(res.ui_preferences.show_telemetry_diagnostics));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    syncUiPrefs();
+
+    const handleSettingsChanged = (e: any) => {
+      try {
+        if (e?.detail?.show_telemetry_diagnostics !== undefined) {
+          setShowTelemetryDiagnostics(Boolean(e.detail.show_telemetry_diagnostics));
+        } else {
+          setShowTelemetryDiagnostics(localStorage.getItem('fs_show_telemetry_diagnostics') === 'true');
+        }
+      } catch {
+        setShowTelemetryDiagnostics(false);
+      }
+    };
+
+    window.addEventListener('fs-settings-changed', handleSettingsChanged);
+    window.addEventListener('storage', handleSettingsChanged);
+    return () => {
+      window.removeEventListener('fs-settings-changed', handleSettingsChanged);
+      window.removeEventListener('storage', handleSettingsChanged);
+    };
+  }, []);
+
+  // If telemetry diagnostics tab is hidden and currently selected, fallback to security analysis
+  useEffect(() => {
+    if (!showTelemetryDiagnostics && activeTab === 'diagnostics') {
+      setActiveTab('security');
+    }
+  }, [showTelemetryDiagnostics, activeTab]);
+
   const crossReferences = useMemo(() => {
     if (!job) return [];
     return detectCrossArtifactReferences(job, workspaceJobs || []);
@@ -1028,25 +1082,27 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
           </button>
         )}
 
-        {/* Telemetry & Pipeline Diagnostics Tab */}
-        <button
-          onClick={() => setActiveTab('diagnostics')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'diagnostics'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
-          }`}
-        >
-          <Activity className="w-4 h-4 text-cyan-500" />
-          <span>Telemetry &amp; Diagnostics</span>
-          {job.telemetry?.total_duration_ms !== undefined && (
-            <span className="px-1.5 py-0.2 bg-cyan-100 text-cyan-800 rounded-full text-[10px] font-mono font-bold">
-              {job.telemetry.total_duration_ms > 1000
-                ? `${(job.telemetry.total_duration_ms / 1000).toFixed(1)}s`
-                : `${job.telemetry.total_duration_ms.toFixed(0)}ms`}
-            </span>
-          )}
-        </button>
+        {/* Telemetry & Pipeline Diagnostics Tab (Hidden by default, configurable in Settings) */}
+        {showTelemetryDiagnostics && (
+          <button
+            onClick={() => setActiveTab('diagnostics')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'diagnostics'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
+            }`}
+          >
+            <Activity className="w-4 h-4 text-cyan-500" />
+            <span>Telemetry &amp; Diagnostics</span>
+            {job.telemetry?.total_duration_ms !== undefined && (
+              <span className="px-1.5 py-0.2 bg-cyan-100 text-cyan-800 rounded-full text-[10px] font-mono font-bold">
+                {job.telemetry.total_duration_ms > 1000
+                  ? `${(job.telemetry.total_duration_ms / 1000).toFixed(1)}s`
+                  : `${job.telemetry.total_duration_ms.toFixed(0)}ms`}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Consolidated Sanitization & CDR Tab (Hidden for PCAP, EVTX, Binaries, etc.) */}
         {isCdrSupported && (
@@ -1348,7 +1404,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
           </ErrorBoundary>
         )}
 
-        {activeTab === 'diagnostics' && (
+        {showTelemetryDiagnostics && activeTab === 'diagnostics' && (
           <ErrorBoundary fallbackTitle="Diagnostics Display Error" onReset={() => setActiveTab('security')}>
             <JobDiagnosticsCard
               telemetry={job.telemetry}
