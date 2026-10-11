@@ -240,16 +240,6 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
   onNavigateToPcap,
   onSelectJob,
 }) => {
-  if (!evtxInfo) {
-    return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">
-        <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-4" />
-        <h3 className="text-base font-bold text-slate-800">Processing Windows Event Log Data</h3>
-        <p className="text-xs text-slate-500 font-mono mt-1">Extracting security events, timelines, and threat vectors...</p>
-      </div>
-    );
-  }
-
   const [activeTab, setActiveTab] = useState<
     | 'timeline'
     | 'storyline'
@@ -873,6 +863,16 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
     selectedSeverity,
     searchFilter,
   ]);
+
+  if (!evtxInfo) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">
+        <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-4" />
+        <h3 className="text-base font-bold text-slate-800">Processing Windows Event Log Data</h3>
+        <p className="text-xs text-slate-500 font-mono mt-1">Extracting security events, timelines, and threat vectors...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

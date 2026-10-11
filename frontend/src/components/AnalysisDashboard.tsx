@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Copy, Check, ArrowLeft, RefreshCw, FileText, Globe, Shield, Sparkles, AlertCircle, ZoomIn, X, Lock, Unlock, Mail, Download, ChevronDown, Cpu, Layers, Terminal, ShieldAlert, BarChart3, Clock, FileCode, FileSpreadsheet, Coffee, Image as ImageIcon, Network, Activity } from 'lucide-react';
 import { JobDetail, SanitizationOptions } from '../types';
 import { apiClient } from '../api/client';
@@ -242,6 +242,11 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
       return false;
     }
   });
+
+  const crossReferences = useMemo(() => {
+    if (!job) return [];
+    return detectCrossArtifactReferences(job, workspaceJobs || []);
+  }, [job, workspaceJobs]);
 
   // Fetch CDR policies once on mount
   useEffect(() => {
@@ -534,11 +539,6 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
 
   const formatSections = getFormatSections(job);
   const formatTabConfig = getFormatTabConfig(formatSections, job);
-
-  const crossReferences = React.useMemo(() => {
-    if (!job) return [];
-    return detectCrossArtifactReferences(job, workspaceJobs || []);
-  }, [job, workspaceJobs]);
 
   return (
     <div className="max-w-[96rem] mx-auto py-8 px-4 sm:px-6">

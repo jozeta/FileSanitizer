@@ -1193,7 +1193,50 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
     }
   };
 
-  if (!bindiff || !bindiff.available || !bindiff.pairs || bindiff.pairs.length === 0) {
+  const activePair: BinaryDiffPair | null = (bindiff?.pairs && bindiff.pairs[selectedPairIndex]) || bindiff?.pairs?.[0] || null;
+  const flowGraph = useMemo(() => activePair ? getOrSynthesizeFlowGraph(activePair) : null, [activePair]);
+
+  const discoveredFunctions = useMemo(() => {
+    if (!flowGraph || !activePair) return [];
+    const set = new Set<string>();
+    flowGraph.sample_a_cfg.blocks.forEach((b) => set.add(b.label));
+    flowGraph.sample_b_cfg.blocks.forEach((b) => set.add(b.label));
+    (activePair.disassembly_diff?.instructions || []).forEach((row) => {
+      [row.inst_a, row.inst_b].forEach((inst) => {
+        if (inst && (inst.mnemonic?.startsWith('j') || inst.mnemonic === 'call')) {
+          if (inst.op_str && /^(loc_|sub_|0x[0-9a-fA-F]+|[a-zA-Z_][a-zA-Z0-9_]*)/.test(inst.op_str)) {
+            set.add(inst.op_str);
+          }
+        }
+      });
+    });
+    return Array.from(set);
+  }, [flowGraph, activePair]);
+
+  const discoveredVariables = useMemo(() => {
+    if (!activePair) return [];
+    const set = new Set<string>();
+    (activePair.disassembly_diff?.instructions || []).forEach((row) => {
+      [row.inst_a, row.inst_b].forEach((inst) => {
+        if (inst?.op_str) {
+          const matches = inst.op_str.match(/\b(var_\w+|arg_\w+|[re]?[abcd]x|[re]?[si]p|[re]?[sb]p|r\d+)\b/g);
+          if (matches) matches.forEach((m: string) => set.add(m));
+        }
+      });
+    });
+    return Array.from(set);
+  }, [activePair]);
+
+  const discoveredStrings = useMemo(() => {
+    if (!activePair) return [];
+    const set = new Set<string>();
+    (activePair.imports_diff?.matched || []).forEach((i) => { if (i.name) set.add(i.name); });
+    (activePair.imports_diff?.unique_a || []).forEach((i) => { if (i.name) set.add(i.name); });
+    (activePair.imports_diff?.unique_b || []).forEach((i) => { if (i.name) set.add(i.name); });
+    return Array.from(set);
+  }, [activePair]);
+
+  if (!bindiff || !bindiff.available || !bindiff.pairs || bindiff.pairs.length === 0 || !activePair || !flowGraph) {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-2xl mx-auto my-6 shadow-sm">
         <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto mb-4 text-indigo-600">
@@ -1212,46 +1255,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
     );
   }
 
-  const activePair: BinaryDiffPair = bindiff.pairs[selectedPairIndex] || bindiff.pairs[0];
   const { metrics, sections_diff, imports_diff, rich_header_diff, disassembly_diff } = activePair;
-  const flowGraph = useMemo(() => getOrSynthesizeFlowGraph(activePair), [activePair]);
-
-  const discoveredFunctions = useMemo(() => {
-    const set = new Set<string>();
-    flowGraph.sample_a_cfg.blocks.forEach((b) => set.add(b.label));
-    flowGraph.sample_b_cfg.blocks.forEach((b) => set.add(b.label));
-    (disassembly_diff?.instructions || []).forEach((row) => {
-      [row.inst_a, row.inst_b].forEach((inst) => {
-        if (inst && (inst.mnemonic?.startsWith('j') || inst.mnemonic === 'call')) {
-          if (inst.op_str && /^(loc_|sub_|0x[0-9a-fA-F]+|[a-zA-Z_][a-zA-Z0-9_]*)/.test(inst.op_str)) {
-            set.add(inst.op_str);
-          }
-        }
-      });
-    });
-    return Array.from(set);
-  }, [flowGraph, disassembly_diff]);
-
-  const discoveredVariables = useMemo(() => {
-    const set = new Set<string>();
-    (disassembly_diff?.instructions || []).forEach((row) => {
-      [row.inst_a, row.inst_b].forEach((inst) => {
-        if (inst?.op_str) {
-          const matches = inst.op_str.match(/\b(var_\w+|arg_\w+|[re]?[abcd]x|[re]?[si]p|[re]?[sb]p|r\d+)\b/g);
-          if (matches) matches.forEach((m: string) => set.add(m));
-        }
-      });
-    });
-    return Array.from(set);
-  }, [disassembly_diff]);
-
-  const discoveredStrings = useMemo(() => {
-    const set = new Set<string>();
-    (imports_diff?.matched || []).forEach((i) => { if (i.name) set.add(i.name); });
-    (imports_diff?.unique_a || []).forEach((i) => { if (i.name) set.add(i.name); });
-    (imports_diff?.unique_b || []).forEach((i) => { if (i.name) set.add(i.name); });
-    return Array.from(set);
-  }, [imports_diff]);
 
   // Filter imports based on search and selected filter
   const filteredMatched = (imports_diff.matched || []).filter(item => {

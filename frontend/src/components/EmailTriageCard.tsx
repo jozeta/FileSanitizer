@@ -50,15 +50,6 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
   const [rawSearch, setRawSearch] = useState('');
   const [wrapRawLines, setWrapRawLines] = useState(true);
 
-  if (!emailInfo) {
-    return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
-        <Mail className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-        <p className="text-sm text-slate-500 font-medium">No email metadata available for this job.</p>
-      </div>
-    );
-  }
-
   const emailFindings = findings.filter(
     (f) =>
       f.category === 'structure' ||
@@ -75,7 +66,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
   );
 
   const handleCopyPlaintext = () => {
-    if (emailInfo.body_plain) {
+    if (emailInfo?.body_plain) {
       navigator.clipboard.writeText(emailInfo.body_plain);
       setCopiedText(true);
       setTimeout(() => setCopiedText(false), 2000);
@@ -94,20 +85,23 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
     }
   };
 
-  const filteredHeaders = Object.entries(emailInfo.headers).filter(
-    ([k, v]) =>
-      !headerSearch ||
-      k.toLowerCase().includes(headerSearch.toLowerCase()) ||
-      v.toLowerCase().includes(headerSearch.toLowerCase())
-  );
+  const filteredHeaders = emailInfo?.headers
+    ? Object.entries(emailInfo.headers).filter(
+        ([k, v]) =>
+          !headerSearch ||
+          k.toLowerCase().includes(headerSearch.toLowerCase()) ||
+          v.toLowerCase().includes(headerSearch.toLowerCase())
+      )
+    : [];
 
   const rawEmailContent = useMemo(() => {
+    if (!emailInfo) return '';
     if (emailInfo.raw_email && emailInfo.raw_email.trim().length > 0) {
       return emailInfo.raw_email;
     }
     const headerLines = emailInfo.raw_headers || (emailInfo.all_headers && emailInfo.all_headers.length > 0
       ? emailInfo.all_headers.map(h => `${h.name}: ${h.value}`).join('\n')
-      : Object.entries(emailInfo.headers).map(([k, v]) => `${k}: ${v}`).join('\n'));
+      : Object.entries(emailInfo.headers || {}).map(([k, v]) => `${k}: ${v}`).join('\n'));
     const body = emailInfo.body_plain || emailInfo.body_html_sanitized || '';
     return `${headerLines}\n\n${body}`;
   }, [emailInfo]);
@@ -129,6 +123,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
   };
 
   const handleDownloadRawEml = () => {
+    if (!emailInfo) return;
     const blob = new Blob([rawEmailContent], { type: 'message/rfc822' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -143,6 +138,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
 
   // Neutralize any links in email preview: keep visual layout & styling intact, but point strictly to '#'
   const safePreviewHtml = useMemo(() => {
+    if (!emailInfo) return '';
     const raw = emailInfo.body_html_sanitized || '<p class="text-slate-400 italic">No message body present</p>';
     if (!emailInfo.body_html_sanitized) return raw;
 
@@ -154,7 +150,16 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
       const cleanedAfter = after.replace(/\s*(?:target|rel)=(["']).*?\1/gi, '');
       return `<${tag}${cleanedBefore}href="#" data-original-href=${quote}${cleanHref}${quote}${titleAttr}${cleanedAfter}>`;
     });
-  }, [emailInfo.body_html_sanitized]);
+  }, [emailInfo?.body_html_sanitized]);
+
+  if (!emailInfo) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+        <Mail className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <p className="text-sm text-slate-500 font-medium">No email metadata available for this job.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

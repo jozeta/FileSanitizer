@@ -149,35 +149,26 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedToken, inspectedObject]);
 
-  if (!pdfInfo) {
-    return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
-        <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-        <p className="text-sm text-slate-500 font-medium">No PDF triage metadata available for this file.</p>
-      </div>
-    );
-  }
-
   const {
     page_count = 0,
     pdfid = {},
     pdfid_counts = {},
     obfuscated_tags = {},
-    has_javascript,
-    has_launch,
-    has_open_action,
+    has_javascript = false,
+    has_launch = false,
+    has_open_action = false,
     embedded_files = [],
     eof_count = 1,
     incremental_updates = 0,
     javascript_streams = [],
     extracted_code,
     pdfid_token_details = {}
-  } = pdfInfo;
+  } = pdfInfo || {};
 
   const rawCounts = {
     ...pdfid,
     ...pdfid_counts,
-    ...((pdfInfo as any).pdfid_tags || {})
+    ...((pdfInfo as any)?.pdfid_tags || {})
   };
 
   const standardTags = [
@@ -194,11 +185,11 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
     }
   }
 
-  const pdfObjects: PdfObjectItem[] = (pdfInfo as any).pdf_objects || [];
-  const totalObjects = (pdfInfo as any).total_objects || pdfObjects.length;
-  const totalStreams = (pdfInfo as any).total_streams || pdfObjects.filter((o: any) => o.is_stream).length;
-  const filterCounts: Record<string, number> = (pdfInfo as any).filter_counts || {};
-  const isLinearized = Boolean((pdfInfo as any).is_linearized);
+  const pdfObjects: PdfObjectItem[] = (pdfInfo as any)?.pdf_objects || [];
+  const totalObjects = (pdfInfo as any)?.total_objects || pdfObjects.length;
+  const totalStreams = (pdfInfo as any)?.total_streams || pdfObjects.filter((o: any) => o.is_stream).length;
+  const filterCounts: Record<string, number> = (pdfInfo as any)?.filter_counts || {};
+  const isLinearized = Boolean((pdfInfo as any)?.is_linearized);
 
   const currentStream = javascript_streams[selectedStreamIdx] || (extracted_code ? { stream_id: 1, size: extracted_code.code.length, code: extracted_code.code } : null);
 
@@ -260,7 +251,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
         token: tag,
         count: count,
         obfuscated_count: obfuscated_tags[tag] || 0,
-        obfuscated_samples: (pdfInfo.obfuscated_samples || {})[tag] || [],
+        obfuscated_samples: ((pdfInfo as any)?.obfuscated_samples || {})[tag] || [],
         threat_summary: getTagDescription(tag),
         occurrences: occurrences.length > 0 ? occurrences : [
           {
@@ -349,6 +340,15 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
   const activeStreamText = remoteStreamData?.text_content || inspectedObject?.stream_text || '';
   const activeStreamHex = remoteStreamData?.hex_dump || inspectedObject?.stream_hex || (activeStreamText ? formatHexDumpFallback(activeStreamText) : '');
   const activeRawDict = remoteStreamData?.raw_dict || inspectedObject?.raw_dict || '';
+
+  if (!pdfInfo) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+        <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <p className="text-sm text-slate-500 font-medium">No PDF triage metadata available for this file.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">

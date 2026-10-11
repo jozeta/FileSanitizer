@@ -41,17 +41,8 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
   const [selectedModuleIdx, setSelectedModuleIdx] = useState<number>(0);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
-  if (!officeInfo) {
-    return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
-        <FileSpreadsheet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-        <p className="text-sm text-slate-500 font-medium">No Office format triage metadata available for this file.</p>
-      </div>
-    );
-  }
-
   const {
-    has_macros,
+    has_macros = false,
     macro_details = [],
     macro_modules = [],
     vba_capabilities = {},
@@ -61,16 +52,16 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
     ole_objects = [],
     remote_templates = [],
     urls = []
-  } = officeInfo;
+  } = officeInfo || {};
 
-  const excelAnalysis = officeInfo.excel_analysis;
-  const powerpointAnalysis = officeInfo.powerpoint_analysis;
+  const excelAnalysis = officeInfo?.excel_analysis;
+  const powerpointAnalysis = officeInfo?.powerpoint_analysis;
 
   const malwareFindings = findings.filter(f => f.category === 'malware' || f.category === 'yara');
   const embeddedFindings = findings.filter(f => f.title.toLowerCase().includes('payload') || f.title.toLowerCase().includes('embedded ole'));
   const ddeFindings = findings.filter(f => f.title.toLowerCase().includes('dde') || f.title.toLowerCase().includes('dynamic data exchange'));
   const xlmFindings = findings.filter(f => f.title.toLowerCase().includes('xlm') || f.title.toLowerCase().includes('excel 4.0'));
-  const oledumpData = (officeInfo as any).oledump || null;
+  const oledumpData = (officeInfo as any)?.oledump || null;
 
   const currentModule = macro_modules[selectedModuleIdx];
 
@@ -119,6 +110,15 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
 
     return matched;
   }, [workspaceJobs, macro_modules, remote_templates, urls, ole_objects]);
+
+  if (!officeInfo) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+        <FileSpreadsheet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <p className="text-sm text-slate-500 font-medium">No Office format triage metadata available for this file.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">

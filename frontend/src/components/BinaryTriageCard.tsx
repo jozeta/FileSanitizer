@@ -109,33 +109,25 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
     return Array.from(set);
   }, [binaryInfo]);
 
-  if (!binaryInfo || typeof binaryInfo !== 'object') {
-    return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
-        <Cpu className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-        <p className="text-sm text-slate-500 font-medium">No executable binary data available for this file.</p>
-      </div>
-    );
-  }
-
   // Format indicators
   const isPE = Boolean(
-    (binaryInfo.format && binaryInfo.format.toUpperCase().includes('PE')) ||
-    (binaryInfo.dos_header && Object.keys(binaryInfo.dos_header).length > 0) ||
-    Boolean(binaryInfo.optional_header)
+    (binaryInfo?.format && binaryInfo.format.toUpperCase().includes('PE')) ||
+    (binaryInfo?.dos_header && Object.keys(binaryInfo.dos_header).length > 0) ||
+    Boolean(binaryInfo?.optional_header)
   );
-  const isELF = Boolean(binaryInfo.format && binaryInfo.format.toUpperCase().includes('ELF'));
-  const isMachO = Boolean(binaryInfo.format && binaryInfo.format.toUpperCase().includes('MACH-O'));
+  const isELF = Boolean(binaryInfo?.format && binaryInfo.format.toUpperCase().includes('ELF'));
+  const isMachO = Boolean(binaryInfo?.format && binaryInfo.format.toUpperCase().includes('MACH-O'));
 
   // Digital Signature Check
   const hasAuthenticode = Boolean(
-    typeof binaryInfo.digital_signature === 'string' &&
+    typeof binaryInfo?.digital_signature === 'string' &&
     binaryInfo.digital_signature.toUpperCase().includes('SIGNED') &&
     !binaryInfo.digital_signature.toUpperCase().includes('UNSIGNED')
   );
 
   // Packer & Protection Detection
   const packersList = useMemo(() => {
+    if (!binaryInfo) return [];
     if (Array.isArray(binaryInfo.packers) && binaryInfo.packers.length > 0) {
       return binaryInfo.packers.filter((p) => typeof p === 'string' && p.trim().length > 0);
     }
@@ -148,16 +140,17 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
       return [pcPacker];
     }
     return [];
-  }, [binaryInfo.packers, (binaryInfo as any).packers, binaryInfo.packers_and_compilers]);
+  }, [binaryInfo?.packers, (binaryInfo as any)?.packers, binaryInfo?.packers_and_compilers]);
 
   const isPacked = Boolean(
-    binaryInfo.is_packed ||
-    binaryInfo.packers_and_compilers?.is_packed ||
+    binaryInfo?.is_packed ||
+    binaryInfo?.packers_and_compilers?.is_packed ||
     packersList.length > 0
   );
 
   // Compilers & Toolchains Detection
   const compilersList = useMemo(() => {
+    if (!binaryInfo) return [];
     if (Array.isArray(binaryInfo.compilers) && binaryInfo.compilers.length > 0) {
       return binaryInfo.compilers.filter((c) => typeof c === 'string' && c.trim().length > 0);
     }
@@ -170,10 +163,11 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
       return [pcComp];
     }
     return [];
-  }, [binaryInfo.compilers, (binaryInfo as any).compiler, binaryInfo.packers_and_compilers]);
+  }, [binaryInfo?.compilers, (binaryInfo as any)?.compiler, binaryInfo?.packers_and_compilers]);
 
   // Detected Tools (Rich Header)
   const detectedTools = useMemo(() => {
+    if (!binaryInfo) return [];
     if (Array.isArray(binaryInfo.detected_tools) && binaryInfo.detected_tools.length > 0) {
       return binaryInfo.detected_tools;
     }
@@ -187,16 +181,16 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
       }));
     }
     return [];
-  }, [binaryInfo.detected_tools, (binaryInfo as any).rich_header]);
+  }, [binaryInfo?.detected_tools, (binaryInfo as any)?.rich_header]);
 
   // Filtered imports
   const dllNames = useMemo(() => {
-    if (!binaryInfo.imports || typeof binaryInfo.imports !== 'object') return [];
+    if (!binaryInfo?.imports || typeof binaryInfo.imports !== 'object') return [];
     return Object.keys(binaryInfo.imports);
-  }, [binaryInfo.imports]);
+  }, [binaryInfo?.imports]);
 
   const filteredImports = useMemo(() => {
-    if (!binaryInfo.imports || typeof binaryInfo.imports !== 'object') return [];
+    if (!binaryInfo?.imports || typeof binaryInfo.imports !== 'object') return [];
     let list: Array<{
       dll: string;
       name: string;
@@ -245,11 +239,11 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
       }
     }
     return list;
-  }, [binaryInfo.imports, selectedDll, importSearch, dllNames]);
+  }, [binaryInfo?.imports, selectedDll, importSearch, dllNames]);
 
   // Filtered strings
   const filteredStrings = useMemo(() => {
-    if (!binaryInfo.strings || typeof binaryInfo.strings !== 'object') return [];
+    if (!binaryInfo?.strings || typeof binaryInfo.strings !== 'object') return [];
     let pool: string[] = [];
     if (stringCategory === 'network') pool = Array.isArray(binaryInfo.strings.network) ? binaryInfo.strings.network : [];
     else if (stringCategory === 'file_paths') pool = Array.isArray(binaryInfo.strings.file_paths) ? binaryInfo.strings.file_paths : [];
@@ -269,11 +263,11 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
       if (query && !s.toLowerCase().includes(query)) return false;
       return true;
     });
-  }, [binaryInfo.strings, stringCategory, stringSearch, minStrLength, maxStrLength]);
+  }, [binaryInfo?.strings, stringCategory, stringSearch, minStrLength, maxStrLength]);
 
   // Characteristics flags for File Header
   const fileHeaderCharFlags: string[] = useMemo(() => {
-    if (!binaryInfo.file_header) return [];
+    if (!binaryInfo?.file_header) return [];
     if (Array.isArray(binaryInfo.file_header.characteristics)) {
       return binaryInfo.file_header.characteristics;
     }
@@ -281,7 +275,16 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
       return (binaryInfo.file_header as any).characteristics_flags;
     }
     return [];
-  }, [binaryInfo.file_header]);
+  }, [binaryInfo?.file_header]);
+
+  if (!binaryInfo || typeof binaryInfo !== 'object') {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+        <Cpu className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <p className="text-sm text-slate-500 font-medium">No executable binary data available for this file.</p>
+      </div>
+    );
+  }
 
   const fileHeaderCharHex = binaryInfo.file_header
     ? binaryInfo.file_header.characteristics_hex ||
