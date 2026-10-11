@@ -75,6 +75,9 @@ class IncidentCorrelator:
         # 10. Multi-PCAP Fleet Network Intelligence & Cross-Capture Correlation
         pcap_fleet = cls._build_pcap_fleet_correlation(jobs)
 
+        # 11. Cross-File Reference Matrix (Explicit Linked Navigation Graph)
+        cross_references = cls._build_cross_file_references(jobs, hash_comp)
+
         return {
             "success": True,
             "total_jobs": len(jobs),
@@ -88,6 +91,7 @@ class IncidentCorrelator:
             "mitre_campaign": mitre_campaign,
             "evtx_fleet_forensics": evtx_fleet,
             "pcap_fleet_intelligence": pcap_fleet,
+            "cross_file_references": cross_references,
         }
 
     # =========================================================================
@@ -2803,6 +2807,225 @@ class IncidentCorrelator:
             "lateral_network_flows": lateral_network_flows[:50],
             "all_transferred_files": all_transferred_files,
             "unified_protocols": dict(unified_proto_counter),
+        }
+
+    @classmethod
+    def _build_cross_file_references(cls, jobs: List[JobModel], hash_comp: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Builds an interconnected cross-artifact reference matrix.
+        Detects whenever an artifact (e.g. Email, PCAP, EVTX, Office document, Script, Archive)
+        directly references, embeds, drops, carves, or executes another analyzed artifact in the workspace.
+        """
+        job_names: Dict[str, Set[str]] = {}
+        job_hashes: Dict[str, Set[str]] = {}
+        for j in jobs:
+            fn = (getattr(j, "original_filename", None) or j.filename or "").lower()
+            names = {fn, Path(fn).stem.lower()}
+            hashes = {str(h).lower() for h in (getattr(j, "hashes", {}) or {}).values() if h and len(str(h)) >= 32}
+
+            # Check shared components: assign carved/embedded alias if this job is the root payload or shares hash
+            for comp in (hash_comp.get("shared_components") or []):
+                c_hash = str(comp.get("hash", "")).lower()
+                if c_hash in hashes:
+                    for s in comp.get("sightings", []):
+                        cname = (s.get("component_name") or "").lower()
+                        if cname and not cname.startswith("evtx") and not cname.startswith("root"):
+                            names.add(cname)
+                            names.add(Path(cname).stem.lower())
+            job_names[j.job_id] = {n for n in names if len(n) > 3}
+            job_hashes[j.job_id] = hashes
+
+        raw_refs: List[Dict[str, Any]] = []
+
+        for src in jobs:
+            src_fn = getattr(src, "original_filename", None) or src.filename
+            for tgt in jobs:
+                if src.job_id == tgt.job_id:
+                    continue
+                tgt_fn = getattr(tgt, "original_filename", None) or tgt.filename
+                tgt_n = job_names.get(tgt.job_id, set())
+                tgt_h = job_hashes.get(tgt.job_id, set())
+
+                # 1. Email Attachments
+                einfo = getattr(src, "email_info", None) or (getattr(src, "analysis_data", {}) or {}).get("email") or {}
+                if isinstance(einfo, dict):
+                    for att in einfo.get("attachments", []):
+                        an = (att.get("filename") or "").lower()
+                        ah = {str(att.get("sha256", "")).lower(), str(att.get("md5", "")).lower()}
+                        if (ah & tgt_h) or (an and any(n == an or n in an for n in tgt_n)):
+                            raw_refs.append({
+                                "source_job_id": src.job_id,
+                                "source_filename": src_fn,
+                                "target_job_id": tgt.job_id,
+                                "target_filename": tgt_fn,
+                                "reference_type": "EMAIL_ATTACHMENT",
+                                "confidence": "HIGH",
+                                "label": "Email Attachment",
+                                "detail": f"Email message embeds attachment '{att.get('filename')}' matching target artifact",
+                                "matched_by": "hash" if (ah & tgt_h) else "filename",
+                                "matched_value": att.get("filename") or (list(ah & tgt_h)[0] if (ah & tgt_h) else "")
+                            })
+
+                # 2. PCAP Carved Files & HTTP Requests
+                pinfo = getattr(src, "pcap_info", None) or (getattr(src, "analysis_data", {}) or {}).get("pcap") or {}
+                if isinstance(pinfo, dict):
+                    carved = pinfo.get("carved_files") or pinfo.get("extracted_files") or []
+                    for cf in carved:
+                        cn = (cf.get("filename") or cf.get("name") or "").lower()
+                        ch = {str(cf.get("sha256", "")).lower(), str(cf.get("md5", "")).lower()}
+                        if (ch & tgt_h) or (cn and any(n == cn or n in cn for n in tgt_n)):
+                            raw_refs.append({
+                                "source_job_id": src.job_id,
+                                "source_filename": src_fn,
+                                "target_job_id": tgt.job_id,
+                                "target_filename": tgt_fn,
+                                "reference_type": "CARVED_PAYLOAD",
+                                "confidence": "HIGH",
+                                "label": "Network Carved Payload",
+                                "detail": f"PCAP stream extracted carved file '{cf.get('filename')}' matching target artifact",
+                                "matched_by": "hash" if (ch & tgt_h) else "filename",
+                                "matched_value": cf.get("filename") or (list(ch & tgt_h)[0] if (ch & tgt_h) else "")
+                            })
+                    for req in (pinfo.get("http_transactions") or pinfo.get("http_requests") or []):
+                        uri = (req.get("uri") or req.get("url") or "").lower()
+                        if any(n in uri for n in tgt_n):
+                            raw_refs.append({
+                                "source_job_id": src.job_id,
+                                "source_filename": src_fn,
+                                "target_job_id": tgt.job_id,
+                                "target_filename": tgt_fn,
+                                "reference_type": "NETWORK_DOWNLOAD",
+                                "confidence": "HIGH",
+                                "label": "HTTP Payload Transfer",
+                                "detail": f"HTTP session transferred '{req.get('uri') or req.get('url')}' corresponding to target artifact",
+                                "matched_by": "uri",
+                                "matched_value": req.get("uri") or req.get("url") or ""
+                            })
+
+                # 3. EVTX Windows Event Logs
+                evinfo = getattr(src, "evtx_info", None) or (getattr(src, "analysis_data", {}) or {}).get("evtx") or {}
+                if isinstance(evinfo, dict):
+                    events = evinfo.get("timeline") or evinfo.get("timeline_events") or []
+                    for ev in events:
+                        eid = str(ev.get("event_id") or "")
+                        details = ev.get("details") or {}
+                        raw_hashes = str(details.get("Hashes") or ev.get("hashes") or "").lower()
+                        cmd = str(ev.get("command_line") or details.get("CommandLine") or "").lower()
+                        target_fn = str(details.get("TargetFilename") or "").lower()
+                        img = str(details.get("ImagePath") or details.get("NewProcessName") or "").lower()
+
+                        matched_h = None
+                        for h in tgt_h:
+                            if h in raw_hashes:
+                                matched_h = h
+                                break
+                        if matched_h:
+                            raw_refs.append({
+                                "source_job_id": src.job_id,
+                                "source_filename": src_fn,
+                                "target_job_id": tgt.job_id,
+                                "target_filename": tgt_fn,
+                                "reference_type": "EVTX_TELEMETRY_HASH",
+                                "confidence": "HIGH",
+                                "label": f"Event {eid} (Hash Match)",
+                                "detail": f"Host {ev.get('computer', 'Workstation')} logged event {eid} with matching hash ({matched_h[:12]}...)",
+                                "matched_by": "hash",
+                                "matched_value": matched_h,
+                                "event_id": eid,
+                                "computer": ev.get("computer")
+                            })
+                        elif any(n in cmd or n in target_fn or n in img for n in tgt_n):
+                            raw_refs.append({
+                                "source_job_id": src.job_id,
+                                "source_filename": src_fn,
+                                "target_job_id": tgt.job_id,
+                                "target_filename": tgt_fn,
+                                "reference_type": "EVTX_PROCESS_EXECUTION",
+                                "confidence": "HIGH",
+                                "label": f"Event {eid} Execution / Drop",
+                                "detail": f"Host {ev.get('computer', 'Workstation')} executed or created target artifact via Event {eid}",
+                                "matched_by": "filename",
+                                "matched_value": tgt_fn,
+                                "event_id": eid,
+                                "computer": ev.get("computer")
+                            })
+
+                # 4. Office VBA Macros & Documents
+                off_info = getattr(src, "office_info", None) or (getattr(src, "analysis_data", {}) or {}).get("office") or {}
+                if isinstance(off_info, dict):
+                    macro_txt = str(off_info.get("macro_details") or off_info.get("macro_modules") or "").lower()
+                    if any(n in macro_txt for n in tgt_n):
+                        raw_refs.append({
+                            "source_job_id": src.job_id,
+                            "source_filename": src_fn,
+                            "target_job_id": tgt.job_id,
+                            "target_filename": tgt_fn,
+                            "reference_type": "MACRO_DROPPER_CRADLE",
+                            "confidence": "HIGH",
+                            "label": "Macro Dropper Cradle",
+                            "detail": f"Office macro code executes download or drop cradle referencing '{tgt_fn}'",
+                            "matched_by": "code",
+                            "matched_value": tgt_fn
+                        })
+
+                # 5. Generic Code / Script Dropper
+                code_raw = getattr(src, "extracted_code", "") or ""
+                if isinstance(code_raw, dict):
+                    code_raw = " ".join(str(v) for v in code_raw.values())
+                code_lower = str(code_raw).lower()
+                if code_lower and any(n in code_lower for n in tgt_n):
+                    raw_refs.append({
+                        "source_job_id": src.job_id,
+                        "source_filename": src_fn,
+                        "target_job_id": tgt.job_id,
+                        "target_filename": tgt_fn,
+                        "reference_type": "SCRIPT_DROPPER",
+                        "confidence": "HIGH",
+                        "label": "Script Execution Cradle",
+                        "detail": f"Extracted script payload directly references target artifact '{tgt_fn}'",
+                        "matched_by": "code",
+                        "matched_value": tgt_fn
+                    })
+
+                # 6. Embedded Files (Archives / Documents / PDFs)
+                for emb in (getattr(src, "embedded_files", []) or []):
+                    emb_n = (emb.get("name") or emb.get("filename") or "").lower()
+                    emb_h = {str(emb.get("sha256", "")).lower(), str(emb.get("md5", "")).lower()}
+                    if (emb_h & tgt_h) or (emb_n and any(n == emb_n or n in emb_n for n in tgt_n)):
+                        raw_refs.append({
+                            "source_job_id": src.job_id,
+                            "source_filename": src_fn,
+                            "target_job_id": tgt.job_id,
+                            "target_filename": tgt_fn,
+                            "reference_type": "EMBEDDED_ARTIFACT",
+                            "confidence": "HIGH",
+                            "label": "Embedded Artifact",
+                            "detail": f"Contains embedded file member '{emb.get('name')}' matching target artifact",
+                            "matched_by": "hash" if (emb_h & tgt_h) else "filename",
+                            "matched_value": emb.get("name") or ""
+                        })
+
+        # Deduplicate references by (source_job_id, target_job_id, reference_type)
+        dedup_refs: List[Dict[str, Any]] = []
+        seen_keys: Set[Tuple[str, str, str]] = set()
+        by_job: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
+            j.job_id: {"outgoing": [], "incoming": []} for j in jobs
+        }
+
+        for r in raw_refs:
+            key = (r["source_job_id"], r["target_job_id"], r["reference_type"])
+            if key not in seen_keys:
+                seen_keys.add(key)
+                dedup_refs.append(r)
+                if r["source_job_id"] in by_job:
+                    by_job[r["source_job_id"]]["outgoing"].append(r)
+                if r["target_job_id"] in by_job:
+                    by_job[r["target_job_id"]]["incoming"].append(r)
+
+        return {
+            "total_references": len(dedup_refs),
+            "references": dedup_refs,
+            "by_job": by_job
         }
 
 

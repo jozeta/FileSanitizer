@@ -8,23 +8,30 @@ import {
   Code,
   Layers,
   Globe,
-  Zap
+  Zap,
+  ExternalLink
 } from 'lucide-react';
 import { ScriptTriageInfo, AntiAnalysisInfo } from '../types';
 import { AntiAnalysisInspectorCard } from './AntiAnalysisInspectorCard';
+import { findReferencedJob } from '../utils/crossFileReferences';
+import { ReferencedText } from './ReferencedFileLink';
 
 interface ScriptTriageCardProps {
   scriptTriage?: ScriptTriageInfo;
   filename?: string;
   category?: string;
   antiAnalysis?: AntiAnalysisInfo;
+  workspaceJobs?: any[];
+  onSelectJob?: (newJobId: string) => void;
 }
 
 export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
   scriptTriage,
   filename = 'script',
   category: _category,
-  antiAnalysis
+  antiAnalysis,
+  workspaceJobs,
+  onSelectJob,
 }) => {
   const isHta = Boolean(
     scriptTriage?.hta_details?.is_hta ||
@@ -346,7 +353,11 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
                       <div className="flex items-center gap-2 pt-0.5 font-mono text-[11px]">
                         <span className="text-slate-400">Match:</span>
                         <code className="text-indigo-600 bg-indigo-50/70 px-1.5 py-0.5 rounded border border-indigo-200 font-bold">
-                          {api.matched_sample}
+                          {workspaceJobs && workspaceJobs.length > 0 ? (
+                            <ReferencedText text={api.matched_sample} workspaceJobs={workspaceJobs} onSelectJob={onSelectJob} />
+                          ) : (
+                            api.matched_sample
+                          )}
                         </code>
                         {api.lines && api.lines.length > 0 && (
                           <span className="text-slate-500">
@@ -401,7 +412,11 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
                       </span>
                     </div>
                     <code className="text-slate-800 whitespace-pre-wrap break-all text-[11px]">
-                      {ml.match}
+                      {workspaceJobs && workspaceJobs.length > 0 ? (
+                        <ReferencedText text={ml.match} workspaceJobs={workspaceJobs} onSelectJob={onSelectJob} />
+                      ) : (
+                        ml.match
+                      )}
                     </code>
                   </div>
                 </div>
@@ -498,16 +513,38 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
       {activeTab === 'urls' && (
         <div className="space-y-3">
           <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden bg-white">
-            {urls.map((u, idx) => (
-              <div key={idx} className="p-3 bg-white hover:bg-slate-50 transition-colors flex items-center justify-between text-xs gap-3">
-                <span className="font-mono text-indigo-600 break-all select-all">
-                  {u}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium shrink-0">
-                  Defanged
-                </span>
-              </div>
-            ))}
+            {urls.map((u, idx) => {
+              const matchedJob = (() => {
+                if (!workspaceJobs || workspaceJobs.length === 0) return null;
+                return findReferencedJob(u, workspaceJobs);
+              })();
+
+              return (
+                <div key={idx} className="p-3 bg-white hover:bg-slate-50 transition-colors flex items-center justify-between text-xs gap-3">
+                  {matchedJob ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectJob && onSelectJob(matchedJob.jobId)}
+                      className="font-mono text-indigo-600 hover:text-indigo-800 break-all select-all font-semibold flex items-center gap-1.5 cursor-pointer text-left hover:underline"
+                      title={`Click to open analyzed file '${matchedJob.filename}'`}
+                    >
+                      <span>{u}</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 font-sans">
+                        Linked ({matchedJob.filename})
+                      </span>
+                    </button>
+                  ) : (
+                    <span className="font-mono text-indigo-600 break-all select-all">
+                      {u}
+                    </span>
+                  )}
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium shrink-0">
+                    Defanged
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -2734,6 +2734,26 @@ export interface IncidentCorrelationData {
   mitre_campaign: CampaignMitreData;
   evtx_fleet_forensics?: EVTXFleetForensics;
   pcap_fleet_intelligence?: PCAPFleetIntelligence;
+  cross_file_references?: {
+    total_references: number;
+    references: CrossFileReference[];
+    by_job: Record<string, { outgoing: CrossFileReference[]; incoming: CrossFileReference[] }>;
+  };
+}
+
+export interface CrossFileReference {
+  source_job_id: string;
+  source_filename: string;
+  target_job_id: string;
+  target_filename: string;
+  reference_type: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  label: string;
+  detail: string;
+  matched_by: 'filename' | 'hash' | 'uri' | 'code' | 'component';
+  matched_value: string;
+  event_id?: string;
+  computer?: string;
 }
 
 export interface HostTelemetrySummary {

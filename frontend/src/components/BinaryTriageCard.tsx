@@ -23,6 +23,7 @@ import { BinaryDecompilerCard } from './BinaryDecompilerCard';
 import { AntiAnalysisInspectorCard } from './AntiAnalysisInspectorCard';
 import { useSymbolRenames, SymbolCategory } from '../context/SymbolRenameContext';
 import { SymbolRenameModal } from './SymbolRenameModal';
+import { ReferencedText } from './ReferencedFileLink';
 
 interface BinaryTriageCardProps {
   jobId: string;
@@ -30,6 +31,8 @@ interface BinaryTriageCardProps {
   filename?: string;
   findings?: Array<{ category: string; severity: string; title: string; description: string; details?: any }>;
   antiAnalysis?: AntiAnalysisInfo;
+  workspaceJobs?: any[];
+  onSelectJob?: (newJobId: string) => void;
 }
 
 export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
@@ -37,7 +40,9 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
   binaryInfo,
   filename: _filename,
   findings: _findings = [],
-  antiAnalysis
+  antiAnalysis,
+  workspaceJobs,
+  onSelectJob,
 }) => {
   const isShellcodeFile = Boolean(
     (binaryInfo as any)?.shellcode?.is_shellcode ||
@@ -1530,7 +1535,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                         {idx + 1}
                       </span>
                       <span className={hasRename ? 'text-slate-400 line-through opacity-75' : 'text-slate-800'}>
-                        {s}
+                        <ReferencedText text={s} workspaceJobs={workspaceJobs} onSelectJob={onSelectJob} />
                       </span>
                       {hasRename && (
                         <span className="text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 text-[11px] shrink-0">

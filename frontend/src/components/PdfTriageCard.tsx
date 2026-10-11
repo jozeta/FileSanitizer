@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   X,
   Info,
-  ArrowRight
+  ArrowRight,
+  ExternalLink
 } from 'lucide-react';
 import {
   PdfTriageInfo,
@@ -28,6 +29,7 @@ import {
 } from '../types';
 import { AntiAnalysisInspectorCard } from './AntiAnalysisInspectorCard';
 import { apiClient } from '../api/client';
+import { findReferencedJob } from '../utils/crossFileReferences';
 
 interface PdfTriageCardProps {
   jobId?: string;
@@ -35,6 +37,8 @@ interface PdfTriageCardProps {
   filename?: string;
   findings?: Finding[];
   antiAnalysis?: AntiAnalysisInfo;
+  workspaceJobs?: any[];
+  onSelectJob?: (newJobId: string) => void;
 }
 
 const getTagDescription = (tag: string): string => {
@@ -104,7 +108,9 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
   pdfInfo,
   filename = 'document.pdf',
   findings: _findings,
-  antiAnalysis
+  antiAnalysis,
+  workspaceJobs,
+  onSelectJob,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'tokens' | 'internals' | 'javascript' | 'actions' | 'embedded' | 'anti_analysis'>('tokens');
   const [selectedStreamIdx, setSelectedStreamIdx] = useState<number>(0);
@@ -854,14 +860,32 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                 Embedded Attachments (/EmbeddedFiles)
               </div>
               <div className="divide-y divide-slate-100 font-mono text-xs">
-                {embedded_files.map((f, i) => (
-                  <div key={i} className="p-3 flex items-center justify-between hover:bg-slate-50">
-                    <span className="text-slate-800 font-semibold">{f}</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 font-sans">
-                      Attachment
-                    </span>
-                  </div>
-                ))}
+                {embedded_files.map((f, i) => {
+                  const matchedJob = workspaceJobs && workspaceJobs.length > 0 ? findReferencedJob(f, workspaceJobs) : null;
+                  return (
+                    <div key={i} className="p-3 flex items-center justify-between hover:bg-slate-50 gap-2">
+                      {matchedJob ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectJob && onSelectJob(matchedJob.jobId)}
+                          className="text-indigo-600 hover:text-indigo-800 font-semibold truncate hover:underline flex items-center gap-1.5 cursor-pointer text-left"
+                          title={`Click to open analyzed file '${matchedJob.filename}'`}
+                        >
+                          <span className="truncate">{f}</span>
+                          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 font-sans">
+                            Linked ({matchedJob.filename})
+                          </span>
+                        </button>
+                      ) : (
+                        <span className="text-slate-800 font-semibold">{f}</span>
+                      )}
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 font-sans shrink-0">
+                        Attachment
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

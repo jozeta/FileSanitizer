@@ -36,6 +36,8 @@ import { LnkCard } from './LnkCard';
 import { AntiAnalysisInspectorCard } from './AntiAnalysisInspectorCard';
 import { DetectionRulesModal } from './DetectionRulesModal';
 import { ErrorBoundary } from './ErrorBoundary';
+import { CrossArtifactNavigator } from './CrossArtifactNavigator';
+import { detectCrossArtifactReferences } from '../utils/crossFileReferences';
 
 type TabType =
   | 'security'
@@ -533,6 +535,11 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
   const formatSections = getFormatSections(job);
   const formatTabConfig = getFormatTabConfig(formatSections, job);
 
+  const crossReferences = React.useMemo(() => {
+    if (!job) return [];
+    return detectCrossArtifactReferences(job, workspaceJobs || []);
+  }, [job, workspaceJobs]);
+
   return (
     <div className="max-w-[96rem] mx-auto py-8 px-4 sm:px-6">
       {/* Back Button */}
@@ -880,6 +887,16 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
         </div>
       )}
 
+      {/* Cross-Artifact Connected Incident Navigator */}
+      {crossReferences.length > 0 && (
+        <div className="mb-6">
+          <CrossArtifactNavigator
+            references={crossReferences}
+            onSelectJob={onSelectJob}
+          />
+        </div>
+      )}
+
       {/* Section Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto">
         <button
@@ -1150,6 +1167,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         emailInfo={job.email_info}
                         findings={job.findings}
                         onSelectJob={onSelectJob}
+                        workspaceJobs={workspaceJobs}
                       />
                     </ErrorBoundary>
                   );
@@ -1162,6 +1180,8 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         filename={job.filename}
                         findings={job.findings}
                         antiAnalysis={job.anti_analysis}
+                        workspaceJobs={workspaceJobs}
+                        onSelectJob={onSelectJob}
                       />
                     </ErrorBoundary>
                   );
@@ -1173,6 +1193,8 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         filename={job.filename}
                         category={job.category}
                         antiAnalysis={job.anti_analysis}
+                        workspaceJobs={workspaceJobs}
+                        onSelectJob={onSelectJob}
                       />
                     </ErrorBoundary>
                   );
@@ -1184,6 +1206,8 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         filename={job.filename}
                         findings={job.findings}
                         antiAnalysis={job.anti_analysis}
+                        workspaceJobs={workspaceJobs}
+                        onSelectJob={onSelectJob}
                       />
                     </ErrorBoundary>
                   );
@@ -1196,6 +1220,8 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         filename={job.filename}
                         findings={job.findings}
                         antiAnalysis={job.anti_analysis}
+                        workspaceJobs={workspaceJobs}
+                        onSelectJob={onSelectJob}
                       />
                     </ErrorBoundary>
                   );
@@ -1224,6 +1250,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         jobId={jobId}
                         embeddedFiles={job.embedded_files || []}
                         onSelectJob={onSelectJob}
+                        workspaceJobs={workspaceJobs}
                       />
                     </ErrorBoundary>
                   );
@@ -1251,6 +1278,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         filename={job.filename}
                         antiAnalysis={job.anti_analysis}
                         workspaceJobs={workspaceJobs}
+                        onSelectJob={onSelectJob}
                         onNavigateToPcap={(pcapJobId?: string, _targetIp?: string) => {
                           if (onSelectJob && pcapJobId) {
                             onSelectJob(pcapJobId);

@@ -12,23 +12,30 @@ import {
   MousePointer,
   EyeOff,
   Lock,
-  Table
+  Table,
+  ExternalLink
 } from 'lucide-react';
 import { OfficeTriageInfo, Finding, AntiAnalysisInfo } from '../types';
 import { AntiAnalysisInspectorCard } from './AntiAnalysisInspectorCard';
+import { findReferencedJob } from '../utils/crossFileReferences';
+import { ReferencedText } from './ReferencedFileLink';
 
 interface OfficeTriageCardProps {
   officeInfo?: OfficeTriageInfo;
   filename?: string;
   findings?: Finding[];
   antiAnalysis?: AntiAnalysisInfo;
+  workspaceJobs?: any[];
+  onSelectJob?: (newJobId: string) => void;
 }
 
 export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
   officeInfo,
   filename = 'document',
   findings = [],
-  antiAnalysis
+  antiAnalysis,
+  workspaceJobs,
+  onSelectJob,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'macros' | 'capabilities' | 'stomping' | 'ole' | 'relationships' | 'excel' | 'powerpoint' | 'anti_analysis'>('macros');
   const [selectedModuleIdx, setSelectedModuleIdx] = useState<number>(0);
@@ -74,6 +81,44 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
   };
 
   const capabilitiesCount = Object.values(vba_capabilities).reduce((acc, curr) => acc + (curr?.length || 0), 0);
+
+  const referencedJobsInOffice = React.useMemo(() => {
+    if (!workspaceJobs || workspaceJobs.length === 0) return [];
+    const matched: any[] = [];
+    const seen = new Set<string>();
+
+    const checkToken = (token?: string) => {
+      if (!token) return;
+      const ref = findReferencedJob(token, workspaceJobs);
+      if (ref && !seen.has(ref.jobId)) {
+        seen.add(ref.jobId);
+        matched.push(ref);
+      }
+    };
+
+    // Check macro module codes
+    macro_modules.forEach(m => {
+      if (m.code) {
+        workspaceJobs.forEach(wj => {
+          if (wj.filename && m.code.toLowerCase().includes(wj.filename.toLowerCase())) {
+            checkToken(wj.filename);
+          }
+        });
+      }
+    });
+
+    // Check remote templates & URLs
+    remote_templates.forEach(t => {
+      const tgt = typeof t === 'string' ? t : t?.target;
+      if (tgt) checkToken(tgt);
+    });
+    urls.forEach(u => checkToken(u));
+
+    // Check ole objects
+    ole_objects.forEach(o => checkToken(o));
+
+    return matched;
+  }, [workspaceJobs, macro_modules, remote_templates, urls, ole_objects]);
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
@@ -302,56 +347,86 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
               No VBA macro modules detected in this document.
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-              {/* Module Selector Sidebar */}
-              <div className="lg:col-span-1 space-y-1.5 border border-slate-200 rounded-2xl p-2 bg-slate-50/50">
-                <span className="text-[10px] uppercase font-bold text-slate-400 px-2 block">
-                  Macro Modules ({macro_modules.length})
-                </span>
-                {macro_modules.map((m, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedModuleIdx(idx)}
-                    className={`w-full text-left p-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-between cursor-pointer ${
-                      selectedModuleIdx === idx
-                        ? 'bg-white shadow-xs text-indigo-700 font-bold border border-indigo-200'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="truncate">
-                      <div>{m.name}</div>
-                      <div className="text-[10px] text-slate-400 font-normal truncate">{m.stream}</div>
-                    </div>
-                    <FileCode className="w-3.5 h-3.5 shrink-0 opacity-60" />
-                  </button>
-                ))}
-              </div>
-
-              {/* Code Viewer */}
-              <div className="lg:col-span-3 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50 text-slate-800 font-mono text-xs">
-                <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-800">{currentModule?.name}</span>
-                    <span className="text-[11px] text-slate-500">({currentModule?.stream})</span>
+            <div className="space-y-4">
+              {referencedJobsInOffice.length > 0 && (
+                <div className="p-4 bg-indigo-50/80 border border-indigo-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
+                  <div className="flex items-center gap-2.5 text-indigo-950 font-bold">
+                    <Zap className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>Referenced Dropper / C2 Artifacts in Workspace:</span>
                   </div>
-                  <button
-                    onClick={() => currentModule && handleCopyCode(currentModule.code)}
-                    className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-[11px] font-sans font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedCode ? 'Copied' : 'Copy VBA'}</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {referencedJobsInOffice.map((rj, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => onSelectJob && onSelectJob(rj.job_id || rj.jobId)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-300 hover:border-indigo-500 text-indigo-700 hover:text-indigo-900 rounded-xl font-bold font-mono shadow-2xs transition-colors cursor-pointer"
+                        title={`Jump to analyzed file ${rj.filename}`}
+                      >
+                        <span>{rj.filename}</span>
+                        <ExternalLink className="w-3 h-3 text-indigo-500" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                {/* Module Selector Sidebar */}
+                <div className="lg:col-span-1 space-y-1.5 border border-slate-200 rounded-2xl p-2 bg-slate-50/50">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 px-2 block">
+                    Macro Modules ({macro_modules.length})
+                  </span>
+                  {macro_modules.map((m, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedModuleIdx(idx)}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-between cursor-pointer ${
+                        selectedModuleIdx === idx
+                          ? 'bg-white shadow-xs text-indigo-700 font-bold border border-indigo-200'
+                          : 'text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="truncate">
+                        <div>{m.name}</div>
+                        <div className="text-[10px] text-slate-400 font-normal truncate">{m.stream}</div>
+                      </div>
+                      <FileCode className="w-3.5 h-3.5 shrink-0 opacity-60" />
+                    </button>
+                  ))}
                 </div>
 
-                <div className="p-4 max-h-[500px] overflow-y-auto space-y-0.5 bg-white">
-                  {(currentModule?.code || '').split('\n').map((line, lIdx) => (
-                    <div key={lIdx} className="flex hover:bg-slate-50 leading-5">
-                      <span className="w-10 select-none text-slate-400 text-right pr-3 shrink-0">
-                        {lIdx + 1}
-                      </span>
-                      <span className="whitespace-pre text-slate-800">{line || ' '}</span>
+                {/* Code Viewer */}
+                <div className="lg:col-span-3 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50 text-slate-800 font-mono text-xs">
+                  <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-800">{currentModule?.name}</span>
+                      <span className="text-[11px] text-slate-500">({currentModule?.stream})</span>
                     </div>
-                  ))}
+                    <button
+                      onClick={() => currentModule && handleCopyCode(currentModule.code)}
+                      className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-[11px] font-sans font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedCode ? 'Copied' : 'Copy VBA'}</span>
+                    </button>
+                  </div>
+
+                  <div className="p-4 max-h-[500px] overflow-y-auto space-y-0.5 bg-white">
+                    {(currentModule?.code || '').split('\n').map((line, lIdx) => (
+                      <div key={lIdx} className="flex hover:bg-slate-50 leading-5">
+                        <span className="w-10 select-none text-slate-400 text-right pr-3 shrink-0">
+                          {lIdx + 1}
+                        </span>
+                        <span className="whitespace-pre text-slate-800">
+                          {workspaceJobs && workspaceJobs.length > 0 ? (
+                            <ReferencedText text={line} workspaceJobs={workspaceJobs} onSelectJob={onSelectJob} />
+                          ) : (
+                            line || ' '
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -661,12 +736,32 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                 const target = typeof tpl === 'string' ? tpl : tpl?.target || 'Unknown Target';
                 const source = typeof tpl === 'object' ? tpl?.source : null;
                 const relType = typeof tpl === 'object' ? tpl?.type : null;
+                const matchedJob = (() => {
+                  if (!workspaceJobs || workspaceJobs.length === 0) return null;
+                  return findReferencedJob(target, workspaceJobs);
+                })();
+
                 return (
                   <div key={`tpl-${i}`} className="p-3 flex items-center justify-between hover:bg-slate-50 gap-2">
                     <div className="min-w-0">
-                      <span className="text-rose-600 font-semibold block truncate" title={target}>
-                        {target}
-                      </span>
+                      {matchedJob ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectJob && onSelectJob(matchedJob.jobId)}
+                          className="text-rose-600 hover:text-rose-800 font-semibold truncate hover:underline flex items-center gap-1.5 cursor-pointer text-left"
+                          title={`Click to open analyzed file '${matchedJob.filename}'`}
+                        >
+                          <span className="truncate">{target}</span>
+                          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 font-sans">
+                            Linked ({matchedJob.filename})
+                          </span>
+                        </button>
+                      ) : (
+                        <span className="text-rose-600 font-semibold block truncate" title={target}>
+                          {target}
+                        </span>
+                      )}
                       {source && (
                         <span className="text-[10px] text-slate-500 font-sans block truncate" title={source}>
                           Source: {source} {relType ? `(${relType.split('/').pop()})` : ''}
@@ -679,14 +774,36 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                   </div>
                 );
               })}
-              {urls.map((u, i) => (
-                <div key={`u-${i}`} className="p-3 flex items-center justify-between hover:bg-slate-50">
-                  <span className="text-slate-800 truncate mr-2">{u}</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 font-sans shrink-0">
-                    Relationship URL
-                  </span>
-                </div>
-              ))}
+              {urls.map((u, i) => {
+                const matchedJob = (() => {
+                  if (!workspaceJobs || workspaceJobs.length === 0) return null;
+                  return findReferencedJob(u, workspaceJobs);
+                })();
+
+                return (
+                  <div key={`u-${i}`} className="p-3 flex items-center justify-between hover:bg-slate-50">
+                    {matchedJob ? (
+                      <button
+                        type="button"
+                        onClick={() => onSelectJob && onSelectJob(matchedJob.jobId)}
+                        className="text-slate-800 hover:text-indigo-600 truncate mr-2 hover:underline flex items-center gap-1.5 cursor-pointer font-semibold text-left"
+                        title={`Click to open analyzed file '${matchedJob.filename}'`}
+                      >
+                        <span className="truncate">{u}</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 font-sans">
+                          Linked ({matchedJob.filename})
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="text-slate-800 truncate mr-2">{u}</span>
+                    )}
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 font-sans shrink-0">
+                      Relationship URL
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

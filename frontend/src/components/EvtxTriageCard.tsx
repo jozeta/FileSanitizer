@@ -54,6 +54,7 @@ import {
   setTimeDisplayConfig,
   TimeDisplayConfig,
 } from '../utils/formatters';
+import { ReferencedText } from './ReferencedFileLink';
 
 interface EvtxTriageCardProps {
   evtxInfo?: EvtxInfo | null;
@@ -61,6 +62,7 @@ interface EvtxTriageCardProps {
   antiAnalysis?: AntiAnalysisInfo;
   workspaceJobs?: any[];
   onNavigateToPcap?: (pcapJobId?: string, targetIp?: string) => void;
+  onSelectJob?: (newJobId: string) => void;
 }
 
 // Logon Type descriptive names
@@ -236,6 +238,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
   antiAnalysis,
   workspaceJobs,
   onNavigateToPcap,
+  onSelectJob,
 }) => {
   if (!evtxInfo) {
     return (
@@ -1830,19 +1833,32 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                                 <div>
                                   <span className="text-slate-400">Executable: </span>
                                   <strong className="text-slate-900 break-all">
-                                    {ev.process_name || ev.details?.NewProcessName || ev.details?.Image || 'N/A'}
+                                    <ReferencedText
+                                      text={ev.process_name || ev.details?.NewProcessName || ev.details?.Image || 'N/A'}
+                                      workspaceJobs={workspaceJobs}
+                                      onSelectJob={onSelectJob}
+                                    />
                                   </strong>
                                 </div>
                                 <div>
                                   <span className="text-slate-400">Parent Process: </span>
                                   <strong className="break-all">
-                                    {ev.parent_process || ev.details?.ParentProcessName || 'N/A'}
+                                    <ReferencedText
+                                      text={ev.parent_process || ev.details?.ParentProcessName || 'N/A'}
+                                      workspaceJobs={workspaceJobs}
+                                      onSelectJob={onSelectJob}
+                                    />
                                   </strong>
                                 </div>
                               </div>
                               {(ev.command_line || ev.details?.CommandLine) && (
                                 <div className="mt-1.5 p-2.5 bg-slate-100 text-slate-900 border border-slate-200 rounded-xl text-[11px] break-all select-all font-mono font-medium">
-                                  cmd: {ev.command_line || ev.details?.CommandLine}
+                                  <span className="text-slate-400 select-none mr-1">cmd:</span>
+                                  <ReferencedText
+                                    text={ev.command_line || ev.details?.CommandLine}
+                                    workspaceJobs={workspaceJobs}
+                                    onSelectJob={onSelectJob}
+                                  />
                                 </div>
                               )}
                             </div>
@@ -2029,11 +2045,25 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                       {threat.details && (
                         <div className="p-2.5 bg-white border border-slate-200 rounded-xl font-mono text-[11px] text-slate-600 overflow-x-auto space-y-1">
                           {threat.command_line && (
-                            <div className="text-rose-700 font-bold break-all select-all">
-                              cmd: {threat.command_line}
+                            <div className="text-rose-700 font-bold break-all select-all flex items-start gap-1">
+                              <span className="text-rose-400 select-none">cmd:</span>
+                              <ReferencedText
+                                text={threat.command_line}
+                                workspaceJobs={workspaceJobs}
+                                onSelectJob={onSelectJob}
+                              />
                             </div>
                           )}
-                          {threat.image && <div>Image: {threat.image}</div>}
+                          {threat.image && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-slate-400">Image:</span>
+                              <ReferencedText
+                                text={threat.image}
+                                workspaceJobs={workspaceJobs}
+                                onSelectJob={onSelectJob}
+                              />
+                            </div>
+                          )}
                           {threat.user && <div>Account: {threat.user}</div>}
                           {threat.details.ShareName && (
                             <div>
@@ -2691,12 +2721,21 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                       </div>
 
                       <p className="text-xs text-slate-600 font-mono break-all">
-                        {image || proc.description}
+                        <ReferencedText
+                          text={image || proc.description}
+                          workspaceJobs={workspaceJobs}
+                          onSelectJob={onSelectJob}
+                        />
                       </p>
 
                       {cmdLine && (
                         <div className="p-2.5 bg-slate-100 text-slate-900 border border-slate-200 rounded-xl font-mono text-xs break-all select-all font-medium">
-                          cmd: {cmdLine}
+                          <span className="text-slate-400 select-none mr-1">cmd:</span>
+                          <ReferencedText
+                            text={cmdLine}
+                            workspaceJobs={workspaceJobs}
+                            onSelectJob={onSelectJob}
+                          />
                         </div>
                       )}
 

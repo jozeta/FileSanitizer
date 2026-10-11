@@ -19,17 +19,20 @@ import {
 import { EmbeddedFileItem } from '../types';
 import { apiClient } from '../api/client';
 import { formatBytes, truncateHash } from '../utils/formatters';
+import { findReferencedJob } from '../utils/crossFileReferences';
 
 interface EmbeddedFilesCardProps {
   jobId: string;
   embeddedFiles: EmbeddedFileItem[];
   onSelectJob?: (newJobId: string) => void;
+  workspaceJobs?: any[];
 }
 
 export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
   jobId,
   embeddedFiles = [],
   onSelectJob,
+  workspaceJobs,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'dangerous' | 'safe'>('all');
@@ -229,6 +232,12 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
         {filteredFiles.map((file) => {
           const isAnalyzing = Boolean(analyzingIds[file.id]);
           const analyzedInfo = analyzedSuccess[file.id];
+          const matchedJob = (() => {
+            if (!workspaceJobs || workspaceJobs.length === 0) return null;
+            return findReferencedJob(file.name, workspaceJobs, jobId) ||
+              (file.sha256 ? findReferencedJob(file.sha256, workspaceJobs, jobId) : null) ||
+              (file.md5 ? findReferencedJob(file.md5, workspaceJobs, jobId) : null);
+          })();
 
           return (
             <div
@@ -248,9 +257,24 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h4 className="text-sm font-bold text-slate-900 truncate font-mono">
-                        {file.name}
-                      </h4>
+                      {matchedJob ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectJob && onSelectJob(matchedJob.jobId)}
+                          className="text-sm font-bold text-indigo-700 hover:text-indigo-900 hover:underline truncate font-mono flex items-center gap-1.5 cursor-pointer text-left"
+                          title={`Click to open analyzed file '${matchedJob.filename}'`}
+                        >
+                          <span>{file.name}</span>
+                          <ExternalLink className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 font-sans">
+                            Analyzed ({matchedJob.filename})
+                          </span>
+                        </button>
+                      ) : (
+                        <h4 className="text-sm font-bold text-slate-900 truncate font-mono">
+                          {file.name}
+                        </h4>
+                      )}
 
                       {file.is_dangerous ? (
                         <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-200 rounded-full text-[10px] font-bold flex items-center gap-1">
@@ -334,8 +358,18 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
                     <span>Download</span>
                   </a>
 
-                  {/* Analyze as New Job Button */}
-                  {analyzedInfo ? (
+                  {/* Analyze as New Job Button or View Analyzed File */}
+                  {matchedJob ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectJob && onSelectJob(matchedJob.jobId)}
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      title={`Switch to analyzed workspace file '${matchedJob.filename}'`}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>View Analyzed File ({matchedJob.filename})</span>
+                    </button>
+                  ) : analyzedInfo ? (
                     <button
                       type="button"
                       onClick={() => onSelectJob && onSelectJob(analyzedInfo.jobId)}

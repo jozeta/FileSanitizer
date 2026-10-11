@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { WorkspaceJob } from '../types';
 import { getEventName } from '../utils/knownEvtxEvents';
+import { findReferencedJob } from '../utils/crossFileReferences';
+import { ReferencedText } from './ReferencedFileLink';
 
 interface MultiEvtxSwimlaneViewProps {
   jobs: WorkspaceJob[];
@@ -903,7 +905,13 @@ export const MultiEvtxSwimlaneView: React.FC<MultiEvtxSwimlaneViewProps> = ({
                                           {ev.commandLine && (
                                             <div className="mt-1 p-1.5 rounded-lg bg-slate-100/90 border border-slate-200 text-[10px] font-mono text-slate-800 truncate flex items-center gap-1.5">
                                               <Terminal className="w-3 h-3 text-slate-500 shrink-0" />
-                                              <span className="truncate">{ev.commandLine}</span>
+                                              <span className="truncate">
+                                                <ReferencedText
+                                                  text={ev.commandLine}
+                                                  workspaceJobs={jobs}
+                                                  onSelectJob={onSelectJob}
+                                                />
+                                              </span>
                                             </div>
                                           )}
                                         </div>
@@ -999,9 +1007,18 @@ export const MultiEvtxSwimlaneView: React.FC<MultiEvtxSwimlaneViewProps> = ({
                   <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">
                     Log Source File
                   </span>
-                  <span className="text-xs text-slate-800 truncate block">
-                    {selectedEventForModal.filename}
-                  </span>
+                  <button
+                    onClick={() => {
+                      const jId = selectedEventForModal.jobId;
+                      setSelectedEventForModal(null);
+                      if (onSelectJob && jId) onSelectJob(jId);
+                    }}
+                    className="text-xs font-bold text-indigo-700 hover:text-indigo-900 truncate flex items-center gap-1 hover:underline cursor-pointer"
+                    title={`Click to open ${selectedEventForModal.filename}`}
+                  >
+                    <span className="truncate">{selectedEventForModal.filename}</span>
+                    <ExternalLink className="w-3 h-3 text-indigo-500 shrink-0" />
+                  </button>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">
@@ -1013,6 +1030,43 @@ export const MultiEvtxSwimlaneView: React.FC<MultiEvtxSwimlaneViewProps> = ({
                 </div>
               </div>
 
+              {/* Linked Artifact in Incident Badge */}
+              {(() => {
+                const linkedJob = (() => {
+                  if (!jobs || jobs.length === 0) return null;
+                  return findReferencedJob(selectedEventForModal.commandLine || '', jobs, selectedEventForModal.jobId) ||
+                    findReferencedJob(selectedEventForModal.description || '', jobs, selectedEventForModal.jobId) ||
+                    (selectedEventForModal.processName ? findReferencedJob(selectedEventForModal.processName, jobs, selectedEventForModal.jobId) : null);
+                })();
+
+                if (!linkedJob) return null;
+
+                return (
+                  <div className="p-3.5 bg-indigo-50 border border-indigo-200 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <span className="text-xs font-bold text-indigo-950">
+                        Referenced Incident Artifact:
+                      </span>
+                      <span className="font-mono text-xs font-bold text-indigo-800">
+                        {linkedJob.filename}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const targetId = linkedJob.jobId;
+                        setSelectedEventForModal(null);
+                        if (onSelectJob && targetId) onSelectJob(targetId);
+                      }}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors shrink-0"
+                    >
+                      <span>Jump to Artifact</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })()}
+
               {/* Event Summary */}
               {selectedEventForModal.description && (
                 <div className="space-y-1">
@@ -1020,7 +1074,11 @@ export const MultiEvtxSwimlaneView: React.FC<MultiEvtxSwimlaneViewProps> = ({
                     Narrative Summary
                   </span>
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl leading-relaxed text-slate-700">
-                    {selectedEventForModal.description}
+                    <ReferencedText
+                      text={selectedEventForModal.description}
+                      workspaceJobs={jobs}
+                      onSelectJob={onSelectJob}
+                    />
                   </div>
                 </div>
               )}
@@ -1053,7 +1111,11 @@ export const MultiEvtxSwimlaneView: React.FC<MultiEvtxSwimlaneViewProps> = ({
                     Executed Command Line
                   </span>
                   <div className="p-3 bg-slate-900 text-slate-100 rounded-xl text-xs font-mono break-all selection:bg-indigo-500 selection:text-white">
-                    {selectedEventForModal.commandLine}
+                    <ReferencedText
+                      text={selectedEventForModal.commandLine}
+                      workspaceJobs={jobs}
+                      onSelectJob={onSelectJob}
+                    />
                   </div>
                 </div>
               )}

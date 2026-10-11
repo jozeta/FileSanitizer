@@ -38,6 +38,7 @@ import { apiClient } from '../api/client';
 import { BinDiffViewer } from './BinDiffViewer';
 import { EvtxTriageCard } from './EvtxTriageCard';
 import { MultiEvtxSwimlaneView } from './MultiEvtxSwimlaneView';
+import { ReferencedText } from './ReferencedFileLink';
 
 interface RelationshipMappingViewProps {
   jobs: WorkspaceJob[];
@@ -46,7 +47,7 @@ interface RelationshipMappingViewProps {
   onSelectJob: (jobId: string) => void;
 }
 
-type SubViewType = 'graph' | 'bindiff' | 'evtx_fleet' | 'pcap_fleet' | 'timeline' | 'hashes' | 'infrastructure' | 'mitre';
+type SubViewType = 'graph' | 'bindiff' | 'evtx_fleet' | 'pcap_fleet' | 'timeline' | 'hashes' | 'infrastructure' | 'mitre' | 'cross_refs';
 
 export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = ({
   jobs,
@@ -1078,6 +1079,49 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         )}
       </div>
 
+      {/* Interactive Cross-Artifact Reference Chain Banner */}
+      {Boolean(data.cross_file_references && data.cross_file_references.total_references > 0) && (
+        <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-200 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-xs text-indigo-950 uppercase tracking-wider">
+                  Cross-Artifact Evidence Chain Active
+                </h4>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-indigo-200 text-indigo-900 font-mono">
+                  {data.cross_file_references?.total_references || 0} Intertwined Links
+                </span>
+              </div>
+              <p className="text-xs text-indigo-900/80 mt-1 max-w-3xl leading-relaxed">
+                Correlated evidence chain connects analyzed emails, dropper macros, C2 implants, endpoint event logs, network traffic, and exfiltration archives. Click any file tag below or navigate to the <strong>Cross-Artifact Links</strong> tab to inspect the complete chain.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                {jobs.map((j) => (
+                  <button
+                    key={j.jobId}
+                    onClick={() => onSelectJob(j.jobId)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-indigo-600 text-indigo-900 hover:text-white border border-indigo-200 rounded-lg text-[11px] font-mono font-medium shadow-2xs transition-colors cursor-pointer"
+                  >
+                    <span>{j.filename}</span>
+                    <ExternalLink className="w-3 h-3 opacity-60" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveSubView('cross_refs')}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold font-sans shadow-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer self-start md:self-center"
+          >
+            <span>Inspect Linked Chain</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* 2. SUB-VIEW NAVIGATION TABS */}
       <div className="bg-white rounded-xl border border-slate-200 p-1.5 shadow-sm flex items-center gap-1 overflow-x-auto">
         <button
@@ -1216,6 +1260,29 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           <ShieldAlert className="w-4 h-4" />
           <span>Campaign ATT&CK Matrix</span>
         </button>
+
+        {Boolean(data.cross_file_references && data.cross_file_references.total_references > 0) && (
+          <button
+            onClick={() => setActiveSubView('cross_refs')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+              activeSubView === 'cross_refs'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span>Cross-Artifact Links</span>
+            <span
+              className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                activeSubView === 'cross_refs'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-indigo-200/80 text-indigo-950'
+              }`}
+            >
+              {data.cross_file_references?.total_references}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* 3. TAB VIEW CONTENT */}
@@ -3121,8 +3188,12 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                             <span className="text-slate-400 text-[10px] font-mono">-</span>
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-600 max-w-sm truncate" title={ev.description}>
-                          {ev.description}
+                        <td className="py-2.5 px-3 text-slate-600 max-w-sm">
+                          <ReferencedText
+                            text={ev.description}
+                            workspaceJobs={jobs}
+                            onSelectJob={onSelectJob}
+                          />
                         </td>
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-1">
@@ -3234,9 +3305,39 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                 {hash_comparison.pairwise_matrix.map((p, idx) => (
                   <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
                     <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
-                      <span className="truncate max-w-[160px]">{p.file_a}</span>
-                      <GitCompare className="w-3.5 h-3.5 text-slate-400 shrink-0 mx-2" />
-                      <span className="truncate max-w-[160px]">{p.file_b}</span>
+                      {(() => {
+                        const jobA = jobs.find(j => (p as any).job_id_a ? (j.jobId === (p as any).job_id_a) : j.filename.toLowerCase() === p.file_a.toLowerCase());
+                        const jobB = jobs.find(j => (p as any).job_id_b ? (j.jobId === (p as any).job_id_b) : j.filename.toLowerCase() === p.file_b.toLowerCase());
+                        return (
+                          <>
+                            {jobA ? (
+                              <button
+                                onClick={() => onSelectJob(jobA.jobId)}
+                                className="truncate max-w-[160px] text-left font-bold text-indigo-700 hover:text-indigo-900 hover:underline flex items-center gap-1 cursor-pointer"
+                                title={`Open analysis for ${p.file_a}`}
+                              >
+                                <span className="truncate">{p.file_a}</span>
+                                <ExternalLink className="w-3 h-3 text-indigo-500 shrink-0" />
+                              </button>
+                            ) : (
+                              <span className="truncate max-w-[160px]">{p.file_a}</span>
+                            )}
+                            <GitCompare className="w-3.5 h-3.5 text-slate-400 shrink-0 mx-2" />
+                            {jobB ? (
+                              <button
+                                onClick={() => onSelectJob(jobB.jobId)}
+                                className="truncate max-w-[160px] text-right font-bold text-indigo-700 hover:text-indigo-900 hover:underline flex items-center justify-end gap-1 cursor-pointer"
+                                title={`Open analysis for ${p.file_b}`}
+                              >
+                                <span className="truncate">{p.file_b}</span>
+                                <ExternalLink className="w-3 h-3 text-indigo-500 shrink-0" />
+                              </button>
+                            ) : (
+                              <span className="truncate max-w-[160px]">{p.file_b}</span>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <div className="flex items-center justify-between pt-1">
@@ -3273,11 +3374,26 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     <div className="font-bold text-slate-800 mb-1">Hash: {comp.hash}</div>
                     <div className="text-[11px] text-slate-600">Found inside:</div>
                     <ul className="list-disc list-inside mt-1 space-y-0.5 text-slate-700">
-                      {comp.sightings.map((s, sIdx) => (
-                        <li key={sIdx}>
-                          <strong>{s.filename}</strong> (as '{s.component_name}')
-                        </li>
-                      ))}
+                      {comp.sightings.map((s, sIdx) => {
+                        const sJob = jobs.find(j => (s as any).job_id ? (j.jobId === (s as any).job_id) : j.filename.toLowerCase() === s.filename.toLowerCase());
+                        return (
+                          <li key={sIdx}>
+                            {sJob ? (
+                              <button
+                                onClick={() => onSelectJob(sJob.jobId)}
+                                className="font-bold text-indigo-700 hover:text-indigo-900 hover:underline cursor-pointer inline-flex items-center gap-1"
+                                title={`Open analysis for ${s.filename}`}
+                              >
+                                <span>{s.filename}</span>
+                                <ExternalLink className="w-3 h-3 text-indigo-500 inline" />
+                              </button>
+                            ) : (
+                              <strong>{s.filename}</strong>
+                            )}{' '}
+                            (as '{s.component_name}')
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ))}
@@ -3452,9 +3568,14 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       </div>
                       <div className="pt-1 flex flex-wrap gap-1">
                         {tech.seen_in_files.map((f, fIdx) => (
-                          <span key={fIdx} className="text-[9px] font-mono bg-slate-100 text-slate-600 px-1 py-0.2 rounded">
+                          <button
+                            key={fIdx}
+                            onClick={() => onSelectJob(f.job_id)}
+                            className="text-[9px] font-mono bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                            title={`Jump to ${f.filename}`}
+                          >
                             {f.filename}
-                          </span>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -3462,6 +3583,104 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* VIEW G: CROSS-ARTIFACT LINKED EVIDENCE & INCIDENT CHAIN */}
+      {activeSubView === 'cross_refs' && data.cross_file_references && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-indigo-600" />
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                  Cross-Artifact Linked References &amp; Attack Chain Navigations
+                </h4>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Interactive bidirectional evidence links detected across emails, documents, scripts, executables, event logs, network captures, and archives. Click any artifact to navigate directly into its dedicated triage dashboard.
+              </p>
+            </div>
+            <span className="text-xs font-mono text-indigo-600 font-bold px-3 py-1 bg-indigo-50 border border-indigo-200 rounded-full shrink-0">
+              {data.cross_file_references.total_references} Active Reference{data.cross_file_references.total_references === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          {/* Table of all cross-artifact references */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 text-slate-600 font-mono text-[11px] border-b border-slate-200">
+                  <th className="py-3 px-4">Source Artifact</th>
+                  <th className="py-3 px-3 text-center">Direction</th>
+                  <th className="py-3 px-4">Referenced Target Artifact</th>
+                  <th className="py-3 px-3">Reference Category</th>
+                  <th className="py-3 px-4">Indicator / Matched Value</th>
+                  <th className="py-3 px-4">Forensic Context &amp; Evidence Snippet</th>
+                  <th className="py-3 px-3 text-right">Quick Navigation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-mono">
+                {data.cross_file_references.references.map((ref, idx) => (
+                  <tr key={idx} className="hover:bg-indigo-50/40 transition-colors">
+                    <td className="py-3 px-4 font-semibold text-slate-900 whitespace-nowrap">
+                      <button
+                        onClick={() => onSelectJob(ref.source_job_id)}
+                        className="text-left font-bold text-slate-800 hover:text-indigo-600 hover:underline flex items-center gap-1.5 cursor-pointer"
+                        title={`Navigate to source file: ${ref.source_filename}`}
+                      >
+                        <span className="truncate max-w-[160px]">{ref.source_filename}</span>
+                        <ExternalLink className="w-3 h-3 text-slate-400 shrink-0" />
+                      </button>
+                    </td>
+
+                    <td className="py-3 px-3 text-center text-slate-400">
+                      <ArrowRight className="w-4 h-4 mx-auto text-indigo-500" />
+                    </td>
+
+                    <td className="py-3 px-4 font-semibold text-indigo-950 whitespace-nowrap">
+                      <button
+                        onClick={() => onSelectJob(ref.target_job_id)}
+                        className="text-left font-bold text-indigo-700 hover:text-indigo-900 hover:underline flex items-center gap-1.5 cursor-pointer"
+                        title={`Navigate to target file: ${ref.target_filename}`}
+                      >
+                        <span className="truncate max-w-[160px]">{ref.target_filename}</span>
+                        <ExternalLink className="w-3 h-3 text-indigo-600 shrink-0" />
+                      </button>
+                    </td>
+
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                        {ref.reference_type.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+
+                    <td className="py-3 px-4 text-slate-800 font-bold max-w-xs truncate" title={ref.matched_value}>
+                      {ref.matched_value}
+                    </td>
+
+                    <td className="py-3 px-4 text-slate-600 font-sans text-xs max-w-md">
+                      <ReferencedText
+                        text={ref.detail}
+                        workspaceJobs={jobs}
+                        onSelectJob={onSelectJob}
+                      />
+                    </td>
+
+                    <td className="py-3 px-3 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => onSelectJob(ref.target_job_id)}
+                        className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold font-sans flex items-center gap-1 cursor-pointer transition-colors shadow-2xs ml-auto"
+                      >
+                        <span>Open Target</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

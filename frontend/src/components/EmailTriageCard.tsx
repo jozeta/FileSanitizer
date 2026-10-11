@@ -17,24 +17,29 @@ import {
   Search,
   Network,
   FileCode,
-  AlignLeft
+  AlignLeft,
+  ExternalLink,
+  ArrowRight
 } from 'lucide-react';
 import { formatBytes } from '../utils/formatters';
 import { EmailInfo } from '../types';
 import { apiClient } from '../api/client';
+import { findReferencedJob } from '../utils/crossFileReferences';
 
 interface EmailTriageCardProps {
   jobId: string;
   emailInfo?: EmailInfo;
   findings?: Array<{ category: string; severity: string; title: string; description: string; details?: any }>;
   onSelectJob?: (newJobId: string) => void;
+  workspaceJobs?: any[];
 }
 
 export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
   jobId,
   emailInfo,
   findings = [],
-  onSelectJob
+  onSelectJob,
+  workspaceJobs = []
 }) => {
   const [activeTab, setActiveTab] = useState<'preview' | 'plaintext' | 'phishing' | 'transit' | 'headers' | 'raw' | 'graph'>('preview');
   const [analyzingAttIndex, setAnalyzingAttIndex] = useState<number | null>(null);
@@ -1053,6 +1058,8 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
               const tfRep = att.reputation?.threatfox;
               const vtRep = att.reputation?.virustotal;
               const haRep = att.reputation?.hybrid_analysis;
+              const matchedWorkspaceJob = findReferencedJob(att.filename, workspaceJobs, jobId) || (att.sha256 ? findReferencedJob(att.sha256, workspaceJobs, jobId) : null);
+              const targetJobId = analyzedJobs[att.index] || matchedWorkspaceJob?.jobId;
 
               return (
                 <div
@@ -1068,9 +1075,25 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="font-bold text-xs text-slate-900 truncate" title={att.filename}>
-                          {att.filename}
-                        </span>
+                        {targetJobId && onSelectJob ? (
+                          <button
+                            onClick={() => onSelectJob(targetJobId)}
+                            className="font-bold text-xs text-indigo-700 hover:text-indigo-900 hover:underline inline-flex items-center gap-1 cursor-pointer truncate max-w-[320px]"
+                            title={`Navigate to analyzed workspace file: ${matchedWorkspaceJob?.filename || att.filename}`}
+                          >
+                            <span>{att.filename}</span>
+                            <ExternalLink className="w-3 h-3 text-indigo-500 shrink-0" />
+                          </button>
+                        ) : (
+                          <span className="font-bold text-xs text-slate-900 truncate" title={att.filename}>
+                            {att.filename}
+                          </span>
+                        )}
+                        {matchedWorkspaceJob && (
+                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[10px] font-bold uppercase tracking-wider shrink-0 border border-indigo-200">
+                            Workspace Artifact
+                          </span>
+                        )}
                         {att.is_dangerous && (
                           <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-bold uppercase tracking-wider shrink-0">
                             Dangerous Executable
@@ -1212,13 +1235,15 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                         <span>Download</span>
                       </a>
 
-                      {analyzedJobs[att.index] ? (
+                      {targetJobId ? (
                         <button
-                          onClick={() => onSelectJob && onSelectJob(analyzedJobs[att.index])}
+                          onClick={() => onSelectJob && onSelectJob(targetJobId)}
                           className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                          title="Open this file's full analysis dashboard"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>View Analysis Job</span>
+                          <span>View Analyzed File ({matchedWorkspaceJob?.filename || att.filename})</span>
+                          <ArrowRight className="w-3 h-3 ml-0.5" />
                         </button>
                       ) : (
                         <button

@@ -38,6 +38,7 @@ import {
 } from '../types';
 import { formatBytes, truncateHash } from '../utils/formatters';
 import { CarvedFilePreviewModal } from './CarvedFilePreviewModal';
+import { findReferencedJob } from '../utils/crossFileReferences';
 
 interface PcapTriageCardProps {
   pcapInfo?: PcapInfo | null;
@@ -1076,6 +1077,11 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                       const vt = cf.threat_intel?.virustotal;
                       const tf = cf.threat_intel?.threatfox;
                       const mb = cf.threat_intel?.malwarebazaar;
+                      const matchedWorkspaceJob = workspaceJobs ? (
+                        findReferencedJob(cf.filename, workspaceJobs, jobId) ||
+                        (cf.sha256 ? findReferencedJob(cf.sha256, workspaceJobs, jobId) : null) ||
+                        (cf.md5 ? findReferencedJob(cf.md5, workspaceJobs, jobId) : null)
+                      ) : null;
 
                       return (
                         <tr key={cf.id} className="hover:bg-slate-50/80 transition-colors">
@@ -1083,7 +1089,23 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                             <div className="flex items-center gap-2">
                               <FileCode className={`w-4 h-4 shrink-0 ${cf.is_dangerous ? 'text-rose-500' : 'text-slate-400'}`} />
                               <div>
-                                <span className="font-bold">{cf.filename}</span>
+                                {matchedWorkspaceJob && onSelectJob ? (
+                                  <button
+                                    onClick={() => onSelectJob(matchedWorkspaceJob.jobId)}
+                                    className="font-bold text-indigo-700 hover:text-indigo-900 hover:underline flex items-center gap-1 cursor-pointer text-left"
+                                    title={`Navigate to analyzed workspace file: ${matchedWorkspaceJob.filename}`}
+                                  >
+                                    <span>{cf.filename}</span>
+                                    <ExternalLink className="w-3 h-3 text-indigo-500 shrink-0" />
+                                  </button>
+                                ) : (
+                                  <span className="font-bold">{cf.filename}</span>
+                                )}
+                                {matchedWorkspaceJob && (
+                                  <span className="inline-block mt-0.5 px-1.5 py-0.2 bg-indigo-50 text-indigo-700 rounded text-[9px] font-bold uppercase tracking-wider border border-indigo-200">
+                                    Linked: {matchedWorkspaceJob.filename}
+                                  </span>
+                                )}
                                 {cf.threat_reason && (
                                   <div className="text-[10px] text-slate-400 font-sans">{cf.threat_reason}</div>
                                 )}
@@ -1169,19 +1191,30 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                                 <span>Download</span>
                               </button>
 
-                              <button
-                                onClick={() => handleAnalyzeCarvedFile(cf)}
-                                disabled={analyzingFileId === cf.id}
-                                className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer transition-colors inline-flex items-center gap-1 shadow-2xs disabled:opacity-50"
-                                title="Queue this carved file as a new analysis job"
-                              >
-                                {analyzingFileId === cf.id ? (
-                                  <Activity className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                  <Play className="w-3.5 h-3.5" />
-                                )}
-                                <span>Send to Analyzing</span>
-                              </button>
+                              {matchedWorkspaceJob && onSelectJob ? (
+                                <button
+                                  onClick={() => onSelectJob(matchedWorkspaceJob.jobId)}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer transition-colors inline-flex items-center gap-1 shadow-2xs"
+                                  title={`Open analysis tab for ${matchedWorkspaceJob.filename}`}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <span>View Analyzed File ({matchedWorkspaceJob.filename})</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleAnalyzeCarvedFile(cf)}
+                                  disabled={analyzingFileId === cf.id}
+                                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer transition-colors inline-flex items-center gap-1 shadow-2xs disabled:opacity-50"
+                                  title="Queue this carved file as a new analysis job"
+                                >
+                                  {analyzingFileId === cf.id ? (
+                                    <Activity className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Play className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>Send to Analyzing</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
