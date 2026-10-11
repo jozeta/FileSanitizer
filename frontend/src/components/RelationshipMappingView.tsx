@@ -95,7 +95,8 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   // Graph state & interaction
   const [selectedNode, setSelectedNode] = useState<any | null>(null);
   const ALL_THREAT_FILTER_KEYS = useMemo(() => ['hosts', 'hashes', 'timestamps', 'vulns', 'geo', 'network', 'identity', 'ttps', 'artifacts'], []);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>(['hosts', 'hashes', 'timestamps', 'vulns', 'geo', 'network', 'identity', 'ttps', 'artifacts']);
+  const DEFAULT_THREAT_FILTER_KEYS = useMemo(() => ['hosts', 'hashes', 'timestamps', 'geo', 'network', 'identity'], []);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>(['hosts', 'hashes', 'timestamps', 'geo', 'network', 'identity']);
   const [sharedOnlyFilter, setSharedOnlyFilter] = useState<boolean>(false);
   const [layoutMode, setLayoutMode] = useState<'radial' | 'category' | 'sample' | 'format' | 'hierarchical' | 'grid'>('sample');
   const [sortMode, setSortMode] = useState<'connectivity' | 'threat_severity' | 'alpha' | 'reverse_alpha' | 'type' | 'shared_first'>('connectivity');
@@ -1102,13 +1103,20 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   };
 
   const handleResetFilters = () => {
-    setSelectedFilters([...ALL_THREAT_FILTER_KEYS]);
+    setSelectedFilters([...DEFAULT_THREAT_FILTER_KEYS]);
     setSharedOnlyFilter(false);
     setHideIsolatedNodes(false);
     setHideBenignNodes(false);
     setShowEmptyNodes(false);
     setIncludedFileIds(new Set(allFileNodeIds));
   };
+
+  const isFiltersModified = useMemo(() => {
+    if (sharedOnlyFilter || hideIsolatedNodes || hideBenignNodes || showEmptyNodes) return true;
+    if (!isAllFilesSelected) return true;
+    if (selectedFilters.length !== DEFAULT_THREAT_FILTER_KEYS.length) return true;
+    return !DEFAULT_THREAT_FILTER_KEYS.every((k) => selectedFilters.includes(k));
+  }, [sharedOnlyFilter, hideIsolatedNodes, hideBenignNodes, showEmptyNodes, isAllFilesSelected, selectedFilters, DEFAULT_THREAT_FILTER_KEYS]);
 
   const nodeDegreeMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -1355,7 +1363,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     );
   }, [data, visibleNodeIds]);
 
-  // Select all nodes connected to a node (excluding files), restoring filters if necessary, and close the inspector
+  // Select all visible nodes connected to a node (excluding files), and close the inspector
   const handleSelectConnectedNodes = (nodeId: string) => {
     const connectedIds = new Set<string>();
     const allEdges = data?.campaign_graph?.edges || [];
@@ -1368,30 +1376,23 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       else if (edge.target === nodeId) otherId = edge.source;
 
       if (otherId) {
+        // Only select currently visible nodes; if a node is hidden, do NOT select it
+        if (!visibleNodeIds.has(otherId)) return;
+
         const otherNode = nodeMap.get(otherId);
         // Exclude file nodes as requested: "when clicking select connected nodes i dont want a file to be selected"
         if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && !otherId.startsWith('job_')) {
-          const otherFiles = nodeToFileIdsMap.get(otherId);
-          if (otherFiles && otherFiles.size > 0 && !Array.from(otherFiles).some((fid) => includedFileIds.has(fid))) {
-            return;
-          }
           connectedIds.add(otherId);
         }
       }
     });
 
-    // If any connected nodes are currently hidden by active category filters or sharedOnly, restore them so they become visible
-    const hasHiddenConnected = Array.from(connectedIds).some((id) => !visibleNodeIds.has(id));
-    if (hasHiddenConnected) {
-      setSelectedFilters([...ALL_THREAT_FILTER_KEYS]);
-      if (sharedOnlyFilter) setSharedOnlyFilter(false);
-    }
-
+    // Do NOT alter or restore category filters - strictly select only the visible connected nodes
     setSelectedNodeIds(connectedIds);
     setSelectedNode(null);
   };
 
-  // Connected node count for selectedNode (excluding files)
+  // Connected visible node count for selectedNode (excluding files)
   const selectedNodeConnectedCount = useMemo(() => {
     if (!selectedNode || !data?.campaign_graph?.edges) return 0;
     const allNodes = data?.campaign_graph?.nodes || [];
@@ -1403,7 +1404,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       if (edge.source === selectedNode.id) otherId = edge.target;
       else if (edge.target === selectedNode.id) otherId = edge.source;
 
-      if (otherId) {
+      if (otherId && visibleNodeIds.has(otherId)) {
         const otherNode = nodeMap.get(otherId);
         if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && !otherId.startsWith('job_')) {
           connected.add(otherId);
@@ -1411,7 +1412,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       }
     });
     return connected.size;
-  }, [selectedNode, data?.campaign_graph?.edges, data?.campaign_graph?.nodes]);
+  }, [selectedNode, data?.campaign_graph?.edges, data?.campaign_graph?.nodes, visibleNodeIds]);
 
   // Re-layout & redraw graph automatically when visible nodes, edges, layout mode, sort mode, canvas size, or proximity changes
   useEffect(() => {
@@ -1938,7 +1939,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   })}
                 </div>
 
-                {(!isAllFilesSelected || !isAllSelected || sharedOnlyFilter) && (
+                {isFiltersModified && (
                   <button
                     onClick={handleResetFilters}
                     className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 cursor-pointer transition-colors ml-auto"
@@ -2008,7 +2009,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                 })}
               </div>
 
-              {(!isAllSelected || sharedOnlyFilter || !isAllFilesSelected) && (
+              {isFiltersModified && (
                 <button
                   onClick={handleResetFilters}
                   className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 cursor-pointer transition-colors ml-auto"

@@ -299,7 +299,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     );
   }, [graphData?.edges, visibleNodeIds]);
 
-  // Select all nodes connected to a node (excluding root/file nodes), restoring filters if necessary, and close the inspector
+  // Select all visible nodes connected to a node (excluding root/file nodes), and close the inspector
   const handleSelectConnectedNodes = (nodeId: string) => {
     const connectedIds = new Set<string>();
     const allEdges = graphData?.edges || [];
@@ -312,6 +312,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       else if (edge.target === nodeId) otherId = edge.source;
 
       if (otherId) {
+        if (!visibleNodeIds.has(otherId)) return;
         const otherNode = nodeMap.get(otherId);
         if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && otherId !== 'root') {
           connectedIds.add(otherId);
@@ -319,16 +320,11 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       }
     });
 
-    const hasHiddenConnected = Array.from(connectedIds).some((id) => !visibleNodeIds.has(id));
-    if (hasHiddenConnected) {
-      setSelectedFilters([...activeCategoryKeys]);
-    }
-
     setSelectedNodeIds(connectedIds);
     setSelectedNode(null);
   };
 
-  // Connected node count for selectedNode (excluding root/file nodes)
+  // Connected visible node count for selectedNode (excluding root/file nodes)
   const selectedNodeConnectedCount = useMemo(() => {
     if (!selectedNode || !graphData?.edges) return 0;
     const allNodes = graphData?.nodes || [];
@@ -340,7 +336,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       if (edge.source === selectedNode.id) otherId = edge.target;
       else if (edge.target === selectedNode.id) otherId = edge.source;
 
-      if (otherId) {
+      if (otherId && visibleNodeIds.has(otherId)) {
         const otherNode = nodeMap.get(otherId);
         if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && otherId !== 'root') {
           connected.add(otherId);
@@ -348,7 +344,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       }
     });
     return connected.size;
-  }, [selectedNode, graphData?.edges, graphData?.nodes]);
+  }, [selectedNode, graphData?.edges, graphData?.nodes, visibleNodeIds]);
 
   // Smooth mouse scroll wheel & trackpad pinch-zoom centered on cursor
   useEffect(() => {
