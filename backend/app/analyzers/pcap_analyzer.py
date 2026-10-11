@@ -1748,7 +1748,7 @@ class PcapAnalyzer(BaseAnalyzer):
                 s_id = f"term_{session_idx}"
                 cmd_cnt = sum(1 for e in events if e.get("is_command"))
                 exec_cmds = [e["text"] for e in events if e.get("is_command")]
-                dialogue_list = [{"direction": e["sender"], "message": e["text"], "timestamp": e.get("time_iso") or ""} for e in events]
+                dialogue_list = [{"direction": e["sender"], "message": e["text"], "text": e["text"], "timestamp": e.get("time_iso") or ""} for e in events]
                 all_text = " ".join(e["text"] for e in events).lower()
                 r_level = "CRITICAL" if any(k in all_text for k in ["shadow", "passwd", "root", "stor", "dump", "nc -e", "/bin/sh", "mimikatz"]) else "HIGH" if cmd_cnt > 0 else "INFO"
 

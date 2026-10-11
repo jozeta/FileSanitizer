@@ -2218,7 +2218,14 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                           </div>
                           <button
                             onClick={() => {
-                              const allText = activeSession.dialogue.map(d => `${d.direction === 'client' ? '$ ' : ''}${d.text}`).join('\n');
+                              const dialogueItems = (activeSession.dialogue && activeSession.dialogue.length > 0)
+                                ? activeSession.dialogue
+                                : ((activeSession as any).events || []);
+                              const allText = dialogueItems.map((d: any) => {
+                                const isClient = d.direction === 'client' || (d as any).sender === 'client' || (d as any).is_command;
+                                const textVal = d.text || (d as any).message || '';
+                                return `${isClient ? '$ ' : ''}${textVal}`;
+                              }).join('\n');
                               copyToClipboard(allText, 'term_all');
                             }}
                             className="text-slate-400 hover:text-white text-[11px] flex items-center gap-1 cursor-pointer"
@@ -2228,22 +2235,40 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                           </button>
                         </div>
 
-                        <div className="p-5 text-xs text-slate-200 space-y-2 max-h-[500px] overflow-y-auto leading-relaxed">
-                          {activeSession.dialogue.map((item, idx) => (
-                            <div key={idx} className="whitespace-pre-wrap break-all">
-                              {item.direction === 'client' ? (
-                                <div className="text-cyan-300 font-bold flex items-start gap-1">
-                                  <span className="text-emerald-400 select-none">$</span>
-                                  <span>{item.text}</span>
+                        {(() => {
+                          const dialogueItems = (activeSession.dialogue && activeSession.dialogue.length > 0)
+                            ? activeSession.dialogue
+                            : ((activeSession as any).events || []);
+
+                          return (
+                            <div className="p-5 text-xs text-slate-200 space-y-2 max-h-[500px] overflow-y-auto leading-relaxed">
+                              {dialogueItems.length === 0 ? (
+                                <div className="text-slate-500 italic py-8 text-center font-mono">
+                                  No console stream dialogue text recorded for this session.
                                 </div>
                               ) : (
-                                <div className="text-emerald-400/90 pl-3">
-                                  {item.text}
-                                </div>
+                                dialogueItems.map((item: any, idx: number) => {
+                                  const isClient = item.direction === 'client' || (item as any).sender === 'client' || (item as any).is_command;
+                                  const textVal = item.text || (item as any).message || '';
+                                  return (
+                                    <div key={idx} className="whitespace-pre-wrap break-all">
+                                      {isClient ? (
+                                        <div className="text-cyan-300 font-bold flex items-start gap-1">
+                                          <span className="text-emerald-400 select-none">$</span>
+                                          <span>{textVal}</span>
+                                        </div>
+                                      ) : (
+                                        <div className="text-emerald-400/90 pl-3">
+                                          {textVal}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })
                               )}
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })()}
 
                         {activeSession.file_operations && activeSession.file_operations.length > 0 && (
                           <div className="p-3 bg-slate-900/90 border-t border-slate-800 text-[11px]">

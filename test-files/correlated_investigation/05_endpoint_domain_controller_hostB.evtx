@@ -128,6 +128,110 @@
     </EventData>
   </Event>
 
+  <!-- 7a. Group Policy Share Access: SYSVOL Accessed by WKSTN-FIN-01 (5140) at 09:15:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5140</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:15:00.000Z" />
+      <EventRecordID>7908</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="ShareName">\\DC-PROD-01.target.local\SYSVOL</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="IpPort">51120</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7b. Detailed Share Access: Group Policy Template Read (5145) at 09:15:02Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5145</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:15:02.000Z" />
+      <EventRecordID>7909</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="ShareName">\\DC-PROD-01.target.local\SYSVOL</Data>
+      <Data Name="RelativeTargetName">target.local\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\gpt.ini</Data>
+      <Data Name="AccessMask">0x120089</Data>
+      <Data Name="AccessList">%%1614 %%4416 %%4419 %%4423</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="IpPort">51120</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7c. Kerberos Ticket for RDP to APPSRV-01 (4769) at 09:49:58Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:49:58.000Z" />
+      <EventRecordID>7910</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe@TARGET.LOCAL</Data>
+      <Data Name="ServiceName">TERMSRV/APPSRV-01.target.local</Data>
+      <Data Name="TicketOptions">0x40810000</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Port">52480</Data>
+      <Data Name="Status">0x0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7d. Kerberos Ticket for RDP to SQL-PROD-02 (4769) at 09:53:08Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:53:08.000Z" />
+      <EventRecordID>7911</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe@TARGET.LOCAL</Data>
+      <Data Name="ServiceName">TERMSRV/SQL-PROD-02.target.local</Data>
+      <Data Name="TicketOptions">0x40810000</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Port">52512</Data>
+      <Data Name="Status">0x0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7e. Kerberos Ticket for RDP to BACKUP-VAULT (4769) at 09:55:58Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:55:58.000Z" />
+      <EventRecordID>7912</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe@TARGET.LOCAL</Data>
+      <Data Name="ServiceName">TERMSRV/BACKUP-VAULT.target.local</Data>
+      <Data Name="TicketOptions">0x40810000</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Port">52544</Data>
+      <Data Name="Status">0x0</Data>
+    </EventData>
+  </Event>
+
   <!-- ===================================================================== -->
   <!-- SECTION B: Attacker Attack & Lateral Movement Telemetry (10:00 - 10:01) -->
   <!-- ===================================================================== -->

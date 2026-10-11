@@ -28,7 +28,10 @@ import {
   Radio,
   Search,
   RefreshCw,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Eye,
+  EyeOff,
+  CheckSquare
 } from 'lucide-react';
 import {
   IncidentCorrelationData,
@@ -88,8 +91,13 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const [selectedNode, setSelectedNode] = useState<any | null>(null);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [sharedOnlyFilter, setSharedOnlyFilter] = useState<boolean>(false);
-  const [layoutMode, setLayoutMode] = useState<'radial' | 'category' | 'sample' | 'hierarchical' | 'grid'>('radial');
-  const [sortMode, setSortMode] = useState<'connectivity' | 'threat_severity' | 'alpha' | 'type'>('connectivity');
+  const [layoutMode, setLayoutMode] = useState<'radial' | 'category' | 'sample' | 'format' | 'hierarchical' | 'grid'>('radial');
+  const [sortMode, setSortMode] = useState<'connectivity' | 'threat_severity' | 'alpha' | 'reverse_alpha' | 'type' | 'shared_first'>('connectivity');
+  const [nodeProximity, setNodeProximity] = useState<'close' | 'middle' | 'far' | 'very_far'>('middle');
+  const [hideIsolatedNodes, setHideIsolatedNodes] = useState<boolean>(false);
+  const [hideBenignNodes, setHideBenignNodes] = useState<boolean>(false);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
+
   const [graphZoom, setGraphZoom] = useState<number>(1);
   const [graphPan, setGraphPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState<boolean>(false);
@@ -99,11 +107,13 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Draggable nodes mechanics (identical to EntityGraphCard)
+  // Draggable nodes mechanics (multi-node group dragging supported)
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const nodeDragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const nodeMouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
   const hasDraggedNodeRef = useRef<boolean>(false);
+  const dragInitialPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const dragOriginWorldRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const clientToWorld = (clientX: number, clientY: number) => {
     const svgEl = svgRef.current;
@@ -121,11 +131,28 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     hasDraggedNodeRef.current = false;
     nodeMouseDownPosRef.current = { x: e.clientX, y: e.clientY };
     const worldPos = clientToWorld(e.clientX, e.clientY);
+    dragOriginWorldRef.current = worldPos;
+    dragInitialPositionsRef.current = { ...nodePositions };
+
     const nodePos = nodePositions[nodeId] || { x: 0, y: 0 };
     nodeDragOffsetRef.current = {
       x: worldPos.x - nodePos.x,
       y: worldPos.y - nodePos.y,
     };
+
+    if (e.shiftKey) {
+      setSelectedNodeIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(nodeId)) {
+          next.delete(nodeId);
+        } else {
+          next.add(nodeId);
+        }
+        return next;
+      });
+    } else if (!selectedNodeIds.has(nodeId)) {
+      setSelectedNodeIds(new Set([nodeId]));
+    }
   };
 
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
@@ -141,6 +168,25 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         if (dist > 3) hasDraggedNodeRef.current = true;
       }
       const worldPos = clientToWorld(e.clientX, e.clientY);
+
+      // Multi-node simultaneous drag
+      if (selectedNodeIds.has(draggingNodeId) && selectedNodeIds.size > 1) {
+        const dx = worldPos.x - dragOriginWorldRef.current.x;
+        const dy = worldPos.y - dragOriginWorldRef.current.y;
+        setNodePositions((prev) => {
+          const next = { ...prev };
+          selectedNodeIds.forEach((id) => {
+            const initPos = dragInitialPositionsRef.current[id] || prev[id];
+            if (initPos) {
+              next[id] = { x: initPos.x + dx, y: initPos.y + dy };
+            }
+          });
+          return next;
+        });
+        return;
+      }
+
+      // Single node drag
       const newX = worldPos.x - nodeDragOffsetRef.current.x;
       const newY = worldPos.y - nodeDragOffsetRef.current.y;
       setNodePositions((prev) => ({
@@ -268,14 +314,23 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const calculateLayout = (
     nodes: any[],
     edges: any[],
-    layout: 'radial' | 'category' | 'sample' | 'hierarchical' | 'grid',
-    sort: 'connectivity' | 'threat_severity' | 'alpha' | 'type',
+    layout: 'radial' | 'category' | 'sample' | 'format' | 'hierarchical' | 'grid',
+    sort: 'connectivity' | 'threat_severity' | 'alpha' | 'reverse_alpha' | 'type' | 'shared_first',
     cWidth?: number,
-    cHeight?: number
+    cHeight?: number,
+    proximity: 'close' | 'middle' | 'far' | 'very_far' = 'middle'
   ): { positions: Record<string, { x: number; y: number }>; clusterLabels: { key: string; label: string; count: number; x: number; y: number }[] } => {
     const positions: Record<string, { x: number; y: number }> = {};
     const clusterLabels: { key: string; label: string; count: number; x: number; y: number }[] = [];
     if (!nodes || nodes.length === 0) return { positions, clusterLabels };
+
+    const proximityMultipliers: Record<string, number> = {
+      close: 0.65,
+      middle: 1.0,
+      far: 1.6,
+      very_far: 2.4,
+    };
+    const prox = proximityMultipliers[proximity || 'middle'] || 1.0;
 
     const width = Math.max(1200, cWidth || 1300);
     const height = Math.max(620, cHeight || 650);
@@ -314,10 +369,18 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         if (sort === 'alpha') {
           return (a.label || '').localeCompare(b.label || '');
         }
+        if (sort === 'reverse_alpha') {
+          return (b.label || '').localeCompare(a.label || '');
+        }
         if (sort === 'type') {
           const typeComp = (a.type || '').localeCompare(b.type || '');
           if (typeComp !== 0) return typeComp;
           return (a.label || '').localeCompare(b.label || '');
+        }
+        if (sort === 'shared_first') {
+          const sharedDiff = (b.is_shared ? 1 : 0) - (a.is_shared ? 1 : 0);
+          if (sharedDiff !== 0) return sharedDiff;
+          return (degreeMap[b.id] || 0) - (degreeMap[a.id] || 0);
         }
         return 0;
       });
@@ -336,10 +399,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       if (fileNodes.length === 1) {
         positions[fileNodes[0].id] = { x: centerX, y: centerY };
       } else if (fileNodes.length === 2) {
-        positions[fileNodes[0].id] = { x: centerX - 120, y: centerY };
-        positions[fileNodes[1].id] = { x: centerX + 120, y: centerY };
+        const offset = Math.round(120 * prox);
+        positions[fileNodes[0].id] = { x: centerX - offset, y: centerY };
+        positions[fileNodes[1].id] = { x: centerX + offset, y: centerY };
       } else {
-        const fileRadius = Math.max(110, fileNodes.length * 48);
+        const fileRadius = Math.max(110 * prox, fileNodes.length * 48 * prox);
         fileNodes.forEach((node, idx) => {
           const angle = (idx / (fileNodes.length || 1)) * 2 * Math.PI - Math.PI / 2;
           positions[node.id] = {
@@ -352,8 +416,8 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       // Shared entities in intermediate orbit
       const sharedCount = sharedEntities.length;
       if (sharedCount > 0) {
-        const sharedRx = Math.min(width * 0.28, Math.max(220, sharedCount * 36));
-        const sharedRy = Math.min(height * 0.26, Math.max(150, sharedCount * 24));
+        const sharedRx = Math.min(width * 0.38, Math.max(220 * prox, sharedCount * 36 * prox));
+        const sharedRy = Math.min(height * 0.34, Math.max(150 * prox, sharedCount * 24 * prox));
         sharedEntities.forEach((node, idx) => {
           const angle = (idx / sharedCount) * 2 * Math.PI - Math.PI / 2;
           positions[node.id] = {
@@ -363,11 +427,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         });
       }
 
-      // Unique entities in outer orbit (with dual-orbit staggering if count > 8 to expand node spacing!)
+      // Unique entities in outer orbit (with dual-orbit staggering)
       const uniqueCount = uniqueEntities.length;
       if (uniqueCount <= 8) {
-        const outerRx = Math.min(width * 0.44, 460);
-        const outerRy = Math.min(height * 0.38, 235);
+        const outerRx = Math.min(width * 0.46, 460 * prox);
+        const outerRy = Math.min(height * 0.40, 235 * prox);
         uniqueEntities.forEach((node, idx) => {
           const angle = (idx / (uniqueCount || 1)) * 2 * Math.PI - Math.PI / 2;
           positions[node.id] = {
@@ -376,11 +440,10 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           };
         });
       } else {
-        // Stagger into two concentric orbits to dramatically increase distance between nodes
-        const orbit1Rx = Math.min(width * 0.36, 380);
-        const orbit1Ry = Math.min(height * 0.30, 190);
-        const orbit2Rx = Math.min(width * 0.46, 510);
-        const orbit2Ry = Math.min(height * 0.39, 245);
+        const orbit1Rx = Math.min(width * 0.40, 380 * prox);
+        const orbit1Ry = Math.min(height * 0.34, 190 * prox);
+        const orbit2Rx = Math.min(width * 0.48, 510 * prox);
+        const orbit2Ry = Math.min(height * 0.42, 245 * prox);
 
         uniqueEntities.forEach((node, idx) => {
           const isOuter = idx % 2 === 1;
@@ -394,7 +457,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         });
       }
     } else if (layout === 'category') {
-      // 2. GROUP BY CATEGORY (Clusters per artifact category)
+      // 2. GROUP BY CATEGORY / ENTITY TYPE (Clusters per entity category)
       const groups: Record<string, any[]> = {};
       sortedNodes.forEach((n) => {
         const key = ['ip', 'domain', 'url'].includes(n.type) ? 'network' : n.type;
@@ -412,14 +475,13 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
       const totalOther = otherKeys.length;
       if (totalOther === 1) {
-        clusterCenters[otherKeys[0]] = { x: centerX, y: centerY + 180 };
+        clusterCenters[otherKeys[0]] = { x: centerX, y: centerY + 180 * prox };
       } else if (totalOther === 2) {
-        clusterCenters[otherKeys[0]] = { x: centerX - 360, y: centerY };
-        clusterCenters[otherKeys[1]] = { x: centerX + 360, y: centerY };
+        clusterCenters[otherKeys[0]] = { x: centerX - 360 * prox, y: centerY };
+        clusterCenters[otherKeys[1]] = { x: centerX + 360 * prox, y: centerY };
       } else {
-        // Generous elliptical radius for cluster centers
-        const clusterRadiusX = Math.min(width * 0.42, Math.max(340, totalOther * 65));
-        const clusterRadiusY = Math.min(height * 0.33, Math.max(150, totalOther * 30));
+        const clusterRadiusX = Math.min(width * 0.44, Math.max(340 * prox, totalOther * 65 * prox));
+        const clusterRadiusY = Math.min(height * 0.36, Math.max(150 * prox, totalOther * 30 * prox));
         otherKeys.forEach((key, idx) => {
           const angle = (idx / totalOther) * 2 * Math.PI - Math.PI / 2;
           clusterCenters[key] = {
@@ -434,12 +496,12 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         const groupNodes = groups[key];
         const count = groupNodes.length;
 
-        let maxSubRadius = 40;
+        let maxSubRadius = 40 * prox;
 
         if (count === 1) {
           positions[groupNodes[0].id] = { x: center.x, y: center.y };
         } else if (count <= 4) {
-          const subRadius = 65;
+          const subRadius = 65 * prox;
           maxSubRadius = subRadius;
           groupNodes.forEach((node, nIdx) => {
             const angle = (nIdx / count) * 2 * Math.PI;
@@ -449,7 +511,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
             };
           });
         } else if (count <= 7) {
-          const subRadius = 95;
+          const subRadius = 95 * prox;
           maxSubRadius = subRadius;
           groupNodes.forEach((node, nIdx) => {
             const angle = (nIdx / count) * 2 * Math.PI;
@@ -459,11 +521,10 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
             };
           });
         } else {
-          // Multi-ring distribution for large clusters (e.g. Hashes with 9+ nodes)
           const innerCount = Math.min(3, Math.floor(count / 3));
           const outerCount = count - innerCount;
-          const innerRadius = 55;
-          const outerRadius = 120;
+          const innerRadius = 55 * prox;
+          const outerRadius = 120 * prox;
           maxSubRadius = outerRadius;
 
           groupNodes.forEach((node, nIdx) => {
@@ -485,7 +546,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         }
 
         let label = key.toUpperCase();
-        if (key === 'file') label = 'FILE HUBS';
+        if (key === 'file') label = 'FILE SAMPLES';
         if (key === 'hash') label = 'HASHES';
         if (key === 'timestamp') label = 'TIMESTAMPS';
         if (key === 'vulnerability') label = 'VULNERABILITIES';
@@ -497,7 +558,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         clusterLabels.push({ key, label, count: groupNodes.length, x: center.x, y: center.y - maxSubRadius - 20 });
       });
     } else if (layout === 'sample') {
-      // 3. GROUP BY SAMPLE (Evidence Files on Left/Right, Shared in Center Corridor)
+      // 3. GROUP BY ANALYZED FILE (All artifacts that belong to each file cluster tightly around that file)
       const fileNodes = sortedNodes.filter((n) => n.type === 'file');
       const nonFileNodes = sortedNodes.filter((n) => n.type !== 'file');
       const sharedEntities = nonFileNodes.filter((n) => n.is_shared);
@@ -507,18 +568,18 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         const leftFile = fileNodes[0];
         const rightFile = fileNodes[1] || null;
 
-        const fileOffset = Math.min(width * 0.32, 380);
+        const fileOffset = Math.min(width * 0.34, 380 * prox);
         if (leftFile) positions[leftFile.id] = { x: centerX - fileOffset, y: centerY };
         if (rightFile) positions[rightFile.id] = { x: centerX + fileOffset, y: centerY };
 
         // Shared nodes centered vertically in corridor
         const sharedCount = sharedEntities.length;
         if (sharedCount > 0) {
-          const ySpan = Math.min(height - 180, Math.max(140, sharedCount * 65));
+          const ySpan = Math.min(height - 180, Math.max(140 * prox, sharedCount * 65 * prox));
           const startY = centerY - ySpan / 2;
           const stepY = sharedCount > 1 ? ySpan / (sharedCount - 1) : 0;
           sharedEntities.forEach((node, idx) => {
-            const xOffset = sharedCount > 5 ? (idx % 2 === 0 ? -40 : 40) : 0;
+            const xOffset = sharedCount > 5 ? (idx % 2 === 0 ? -40 * prox : 40 * prox) : 0;
             positions[node.id] = {
               x: centerX + xOffset,
               y: sharedCount === 1 ? centerY : startY + idx * stepY,
@@ -526,67 +587,42 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           });
         }
 
-        // Left sample unique entities
+        // Left & right unique entities placed directly around their parent file
         const leftEntities = nonSharedEntities.filter((n) =>
           edges.some((e) => (e.source === leftFile?.id && e.target === n.id) || (e.target === leftFile?.id && e.source === n.id))
         );
         const rightEntities = nonSharedEntities.filter((n) => !leftEntities.includes(n));
 
-        const placeSampleEntities = (entities: any[], originX: number, isLeft: boolean) => {
+        const placeSampleEntities = (entities: any[], originX: number, isLeft: boolean, fileNode: any) => {
           const count = entities.length;
-          if (count === 0) return;
-
-          if (count <= 6) {
-            entities.forEach((node, idx) => {
-              const startAngle = isLeft ? Math.PI / 2 : -Math.PI / 2;
-              const angle = startAngle + ((idx + 0.5) / count) * Math.PI;
-              const rad = 175 + (idx % 2) * 45;
-              positions[node.id] = {
-                x: originX + rad * Math.cos(angle),
-                y: centerY + rad * Math.sin(angle),
-              };
-            });
-          } else {
-            // Multi-tier fan layout for large numbers of artifacts (prevents crowding)
-            const tier1Count = Math.min(6, Math.ceil(count * 0.35));
-            const tier2Count = Math.min(7, Math.ceil(count * 0.40));
-            const tier3Count = count - tier1Count - tier2Count;
-
-            entities.forEach((node, idx) => {
-              let tierRadius = 160;
-              let tIdx = idx;
-              let tTotal = tier1Count;
-
-              if (idx < tier1Count) {
-                tierRadius = 160;
-                tIdx = idx;
-                tTotal = tier1Count;
-              } else if (idx < tier1Count + tier2Count) {
-                tierRadius = 260;
-                tIdx = idx - tier1Count;
-                tTotal = tier2Count;
-              } else {
-                tierRadius = 360;
-                tIdx = idx - tier1Count - tier2Count;
-                tTotal = Math.max(1, tier3Count);
-              }
-
-              const startAngle = isLeft ? Math.PI / 2 : -Math.PI / 2;
-              const angle = startAngle + ((tIdx + 0.5) / tTotal) * Math.PI;
-              positions[node.id] = {
-                x: originX + tierRadius * Math.cos(angle),
-                y: centerY + tierRadius * 0.9 * Math.sin(angle),
-              };
+          if (fileNode) {
+            clusterLabels.push({
+              key: fileNode.id,
+              label: (fileNode.label || 'FILE').toUpperCase(),
+              count: count + 1,
+              x: originX,
+              y: centerY - 150 * prox,
             });
           }
+          if (count === 0) return;
+
+          entities.forEach((node, idx) => {
+            const startAngle = isLeft ? Math.PI / 2 : -Math.PI / 2;
+            const angle = startAngle + ((idx + 0.5) / count) * Math.PI;
+            const rad = (110 + (idx % 3) * 35) * prox;
+            positions[node.id] = {
+              x: originX + rad * Math.cos(angle),
+              y: centerY + rad * Math.sin(angle),
+            };
+          });
         };
 
-        placeSampleEntities(leftEntities, centerX - fileOffset, true);
-        placeSampleEntities(rightEntities, rightFile ? centerX + fileOffset : centerX, false);
+        placeSampleEntities(leftEntities, centerX - fileOffset, true, leftFile);
+        placeSampleEntities(rightEntities, rightFile ? centerX + fileOffset : centerX, false, rightFile);
       } else {
-        // Multi-sample (> 2 files)
+        // Multi-sample (> 2 files): Each file is an anchor hub, with all artifacts clustering close around it!
         const numFiles = fileNodes.length;
-        const fileRadius = Math.min(width * 0.32, 340);
+        const fileRadius = Math.min(width * 0.36, Math.max(220 * prox, numFiles * 65 * prox));
         fileNodes.forEach((fn, fIdx) => {
           const fileAngle = (fIdx / numFiles) * 2 * Math.PI - Math.PI / 2;
           const fx = centerX + fileRadius * Math.cos(fileAngle);
@@ -596,25 +632,131 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           const fileArtifacts = nonSharedEntities.filter((n) =>
             edges.some((e) => (e.source === fn.id && e.target === n.id) || (e.target === fn.id && e.source === n.id))
           );
+
           fileArtifacts.forEach((art, aIdx) => {
             const aAngle = fileAngle + ((aIdx - fileArtifacts.length / 2) / (fileArtifacts.length || 1)) * 1.5;
+            const artDist = (65 + (aIdx % 3) * 28) * prox;
             positions[art.id] = {
-              x: fx + 120 * Math.cos(aAngle),
-              y: fy + 120 * Math.sin(aAngle),
+              x: fx + artDist * Math.cos(aAngle),
+              y: fy + artDist * Math.sin(aAngle),
             };
+          });
+
+          clusterLabels.push({
+            key: fn.id,
+            label: (fn.label || 'FILE').toUpperCase(),
+            count: fileArtifacts.length + 1,
+            x: fx,
+            y: fy - Math.round(35 * prox) - 18,
           });
         });
 
+        // Shared correlation entities in center nexus
         sharedEntities.forEach((node, idx) => {
           const angle = (idx / (sharedEntities.length || 1)) * 2 * Math.PI;
           positions[node.id] = {
-            x: centerX + 110 * Math.cos(angle),
-            y: centerY + 90 * Math.sin(angle),
+            x: centerX + (90 * prox) * Math.cos(angle),
+            y: centerY + (75 * prox) * Math.sin(angle),
           };
         });
       }
+    } else if (layout === 'format') {
+      // 4. GROUP BY FILE FORMAT (Groups files by Office, Exe, EVTX, PCAP, Archive, Email)
+      const formatBuckets: Record<string, { label: string; nodes: any[] }> = {
+        office: { label: 'OFFICE & MACROS', nodes: [] },
+        executable: { label: 'BINARIES & PE', nodes: [] },
+        log: { label: 'EVENT LOGS (EVTX)', nodes: [] },
+        pcap: { label: 'NETWORK PCAPS', nodes: [] },
+        archive: { label: 'ARCHIVES (ZIP)', nodes: [] },
+        email: { label: 'EMAILS (MSG/EML)', nodes: [] },
+        shared: { label: 'SHARED THREAT BRIDGE', nodes: [] },
+        other: { label: 'OTHER ARTIFACTS', nodes: [] },
+      };
+
+      const getFileBucketKey = (node: any): string => {
+        const fn = (node.label || node.id || '').toLowerCase();
+        if (fn.endsWith('.docm') || fn.endsWith('.docx') || fn.endsWith('.doc') || fn.endsWith('.xls') || fn.endsWith('.xlsx')) return 'office';
+        if (fn.endsWith('.exe') || fn.endsWith('.dll') || fn.endsWith('.bin') || fn.endsWith('.sys')) return 'executable';
+        if (fn.endsWith('.evtx')) return 'log';
+        if (fn.endsWith('.pcap') || fn.endsWith('.pcapng')) return 'pcap';
+        if (fn.endsWith('.zip') || fn.endsWith('.7z') || fn.endsWith('.tar') || fn.endsWith('.gz')) return 'archive';
+        if (fn.endsWith('.msg') || fn.endsWith('.eml')) return 'email';
+        return 'other';
+      };
+
+      sortedNodes.forEach((n) => {
+        if (n.is_shared) {
+          formatBuckets.shared.nodes.push(n);
+        } else if (n.type === 'file') {
+          const bKey = getFileBucketKey(n);
+          formatBuckets[bKey].nodes.push(n);
+        } else {
+          // Connect artifact to related file's format
+          const connectedFile = sortedNodes.find(
+            (fn) => fn.type === 'file' && edges.some((e) => (e.source === fn.id && e.target === n.id) || (e.target === fn.id && e.source === n.id))
+          );
+          if (connectedFile) {
+            const bKey = getFileBucketKey(connectedFile);
+            formatBuckets[bKey].nodes.push(n);
+          } else {
+            formatBuckets.other.nodes.push(n);
+          }
+        }
+      });
+
+      const activeBuckets = Object.entries(formatBuckets).filter(([_, b]) => b.nodes.length > 0 && _ !== 'shared');
+      const bucketCount = activeBuckets.length;
+      const bRadiusX = Math.min(width * 0.44, Math.max(300 * prox, bucketCount * 70 * prox));
+      const bRadiusY = Math.min(height * 0.36, Math.max(160 * prox, bucketCount * 35 * prox));
+
+      activeBuckets.forEach(([key, b], bIdx) => {
+        const angle = (bIdx / (bucketCount || 1)) * 2 * Math.PI - Math.PI / 2;
+        const bCenterX = centerX + bRadiusX * Math.cos(angle);
+        const bCenterY = centerY + bRadiusY * Math.sin(angle);
+        const nList = b.nodes;
+        const subRad = Math.min(110 * prox, Math.max(50 * prox, nList.length * 15 * prox));
+
+        nList.forEach((node, nIdx) => {
+          if (nList.length === 1) {
+            positions[node.id] = { x: bCenterX, y: bCenterY };
+          } else {
+            const subAngle = (nIdx / nList.length) * 2 * Math.PI;
+            positions[node.id] = {
+              x: bCenterX + subRad * Math.cos(subAngle),
+              y: bCenterY + subRad * Math.sin(subAngle),
+            };
+          }
+        });
+
+        clusterLabels.push({
+          key,
+          label: b.label,
+          count: nList.length,
+          x: bCenterX,
+          y: bCenterY - subRad - 18,
+        });
+      });
+
+      // Place shared bridge in center
+      const sharedList = formatBuckets.shared.nodes;
+      if (sharedList.length > 0) {
+        sharedList.forEach((node, idx) => {
+          const angle = (idx / (sharedList.length || 1)) * 2 * Math.PI;
+          positions[node.id] = {
+            x: centerX + (70 * prox) * Math.cos(angle),
+            y: centerY + (60 * prox) * Math.sin(angle),
+          };
+        });
+        clusterLabels.push({
+          key: 'shared',
+          label: 'SHARED CORRELATION BRIDGE',
+          count: sharedList.length,
+          x: centerX,
+          y: centerY - 95 * prox,
+        });
+      }
     } else if (layout === 'hierarchical') {
-      // 4. HIERARCHICAL FORENSIC TIERS
+      // 5. HIERARCHICAL FORENSIC TIERS
       const tiers: any[][] = [[], [], [], []];
       sortedNodes.forEach((n) => {
         if (n.type === 'file') {
@@ -628,49 +770,29 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         }
       });
 
-      const tierY = [65, 185, 325, 475];
+      const tierY = [65 * prox, 185 * prox, 325 * prox, 475 * prox];
       tiers.forEach((tierNodes, tIdx) => {
         const count = tierNodes.length;
         if (count === 0) return;
 
-        if (count <= 6) {
-          const baseSpacing = Math.min(220, Math.max(110, (width - 240) / (count || 1)));
-          const totalSpan = (count - 1) * baseSpacing;
-          const startX = centerX - totalSpan / 2;
+        const baseSpacing = Math.min(220 * prox, Math.max(110 * prox, (width - 240) / (count || 1)));
+        const totalSpan = (count - 1) * baseSpacing;
+        const startX = centerX - totalSpan / 2;
 
-          tierNodes.forEach((node, idx) => {
-            positions[node.id] = {
-              x: startX + idx * baseSpacing,
-              y: tierY[tIdx],
-            };
-          });
-        } else {
-          // Stagger into dual rows for tiers with many nodes (e.g. Tier 2 metadata with 10+ items)
-          const halfCount = Math.ceil(count / 2);
-          const baseSpacing = Math.min(210, Math.max(115, (width - 240) / (halfCount || 1)));
-          const totalSpan = (halfCount - 1) * baseSpacing;
-          const startX = centerX - totalSpan / 2;
-
-          tierNodes.forEach((node, idx) => {
-            const isRow2 = idx % 2 === 1;
-            const colIdx = Math.floor(idx / 2);
-            const xOffset = isRow2 ? baseSpacing * 0.5 : 0;
-            const yOffset = isRow2 ? 32 : -32;
-
-            positions[node.id] = {
-              x: startX + colIdx * baseSpacing + xOffset,
-              y: tierY[tIdx] + yOffset,
-            };
-          });
-        }
+        tierNodes.forEach((node, idx) => {
+          positions[node.id] = {
+            x: startX + idx * baseSpacing,
+            y: tierY[tIdx],
+          };
+        });
       });
     } else if (layout === 'grid') {
-      // 5. STRUCTURED GRID MATRIX
+      // 6. STRUCTURED GRID MATRIX
       const count = sortedNodes.length;
       const cols = Math.max(3, Math.min(6, Math.ceil(Math.sqrt(count * 1.1))));
       const rows = Math.ceil(count / cols);
-      const cellW = Math.min(220, Math.max(165, (width - 160) / cols));
-      const cellH = Math.min(150, Math.max(115, (height - 130) / rows));
+      const cellW = Math.round(Math.min(240, Math.max(140, (width - 160) / cols)) * prox);
+      const cellH = Math.round(Math.min(160, Math.max(100, (height - 130) / rows)) * prox);
       const startX = centerX - ((cols - 1) * cellW) / 2;
       const startY = centerY - ((rows - 1) * cellH) / 2;
 
@@ -684,10 +806,9 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       });
     }
 
-    // 6. Overlap-Prevention & Collision Avoidance Relaxation Pass
-    // Guarantees all nodes maintain generous clearance for circles & label badges
-    const minClearanceX = 120; // clearance for label badge (~115px wide)
-    const minClearanceY = 65;  // clearance for node circle + label badge height
+    // 7. Overlap-Prevention & Collision Avoidance Relaxation Pass
+    const minClearanceX = Math.round(115 * prox);
+    const minClearanceY = Math.round(60 * prox);
     const nodeIds = Object.keys(positions);
 
     for (let iter = 0; iter < 12; iter++) {
@@ -737,7 +858,8 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       layoutMode,
       sortMode,
       canvasSize.width,
-      canvasSize.height
+      canvasSize.height,
+      nodeProximity
     );
     setNodePositions(positions);
     setCategoryClusterLabels(clusterLabels);
@@ -843,6 +965,16 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     setSharedOnlyFilter(false);
   };
 
+  const nodeDegreeMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!data?.campaign_graph?.edges) return map;
+    data.campaign_graph.edges.forEach((e) => {
+      map[e.source] = (map[e.source] || 0) + 1;
+      map[e.target] = (map[e.target] || 0) + 1;
+    });
+    return map;
+  }, [data]);
+
   // Multi-filtered graph nodes
   const filteredGraphNodes = useMemo(() => {
     if (!data?.campaign_graph?.nodes) return [];
@@ -851,6 +983,16 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     return nodes.filter((n) => {
       // Shared Only toggle constraint
       if (sharedOnlyFilter && !n.is_shared && n.type !== 'file') {
+        return false;
+      }
+
+      // Hide isolated/leaf nodes constraint (degree <= 1), keeping file hubs
+      if (hideIsolatedNodes && n.type !== 'file' && (nodeDegreeMap[n.id] || 0) <= 1) {
+        return false;
+      }
+
+      // Hide benign / low-severity informational entities
+      if (hideBenignNodes && n.type !== 'file' && !n.is_shared && ['timestamp', 'user'].includes(n.type)) {
         return false;
       }
 
@@ -878,7 +1020,56 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         return false;
       });
     });
-  }, [data, selectedFilters, sharedOnlyFilter]);
+  }, [data, selectedFilters, sharedOnlyFilter, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap]);
+
+  const selectAllOfType = (typeKey: string) => {
+    if (typeKey === 'all') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'none') {
+      setSelectedNodeIds(new Set());
+      setSelectedNode(null);
+      return;
+    }
+    if (typeKey === 'shared') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.is_shared).map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'file') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'file').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'hash') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'hash').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'network') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => ['ip', 'domain', 'url'].includes(n.type)).map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'technique') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'technique').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'user') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'user').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'vulnerability') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'vulnerability').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'invert') {
+      setSelectedNodeIds((prev) => {
+        const next = new Set<string>();
+        filteredGraphNodes.forEach((n) => {
+          if (!prev.has(n.id)) next.add(n.id);
+        });
+        return next;
+      });
+    }
+  };
 
   const visibleNodeIds = useMemo(() => new Set(filteredGraphNodes.map((n) => n.id)), [filteredGraphNodes]);
 
@@ -890,7 +1081,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     );
   }, [data, visibleNodeIds]);
 
-  // Re-layout & redraw graph automatically when visible nodes, edges, layout mode, sort mode, or canvas size changes
+  // Re-layout & redraw graph automatically when visible nodes, edges, layout mode, sort mode, canvas size, or proximity changes
   useEffect(() => {
     if (filteredGraphNodes.length > 0) {
       const { positions, clusterLabels } = calculateLayout(
@@ -899,7 +1090,8 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         layoutMode,
         sortMode,
         canvasSize.width,
-        canvasSize.height
+        canvasSize.height,
+        nodeProximity
       );
       setNodePositions(positions);
       setCategoryClusterLabels(clusterLabels);
@@ -907,7 +1099,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       setNodePositions({});
       setCategoryClusterLabels([]);
     }
-  }, [filteredGraphNodes, visibleEdges, layoutMode, sortMode, canvasSize]);
+  }, [filteredGraphNodes, visibleEdges, layoutMode, sortMode, canvasSize, nodeProximity]);
 
   // Filtered Timeline Events
   const uniqueTimelineFiles = useMemo(() => {
@@ -1355,22 +1547,23 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
               )}
             </div>
 
-            {/* Row 2: Layout / Grouping, Sorting, Stats, and Canvas Controls */}
+            {/* Row 2: Layout / Grouping, Sorting, Spacing, and Visibility Controls */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-200/60">
               <div className="flex items-center gap-2.5 flex-wrap">
                 {/* Grouping & Layout Selector */}
                 <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
                   <Layers className="w-3.5 h-3.5 text-indigo-500" />
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Layout:</span>
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Group/Layout:</span>
                   <select
                     id="threat-graph-layout-select"
                     value={layoutMode}
                     onChange={(e) => setLayoutMode(e.target.value as any)}
                     className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
                   >
+                    <option value="sample">Group by Analyzed File (Artifact Hubs)</option>
+                    <option value="category">Group by Entity Type</option>
+                    <option value="format">Group by File Format</option>
                     <option value="radial">Radial Orbit</option>
-                    <option value="category">Group by Category</option>
-                    <option value="sample">Group by File Sample</option>
                     <option value="hierarchical">Hierarchical Tiers</option>
                     <option value="grid">Structured Grid</option>
                   </select>
@@ -1388,13 +1581,65 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   >
                     <option value="connectivity">Connectivity (Degree)</option>
                     <option value="threat_severity">Threat Severity & Risk</option>
+                    <option value="shared_first">Shared Entities First</option>
                     <option value="alpha">Alphabetical (A-Z)</option>
+                    <option value="reverse_alpha">Alphabetical (Z-A)</option>
                     <option value="type">Entity Category</option>
                   </select>
                 </div>
 
+                {/* Spacing / Proximity Selector */}
+                <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Proximity:</span>
+                  <select
+                    id="threat-graph-proximity-select"
+                    value={nodeProximity}
+                    onChange={(e) => setNodeProximity(e.target.value as any)}
+                    className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+                  >
+                    <option value="close">Close (0.65x)</option>
+                    <option value="middle">Middle (1.0x)</option>
+                    <option value="far">Far (1.6x)</option>
+                    <option value="very_far">Very Far (2.4x)</option>
+                  </select>
+                </div>
+
+                {/* Hide Controls */}
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-0.5 shadow-2xs">
+                  <button
+                    type="button"
+                    id="threat-graph-hide-isolated-btn"
+                    onClick={() => setHideIsolatedNodes((prev) => !prev)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      hideIsolatedNodes
+                        ? 'bg-amber-500 text-white shadow-2xs'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                    title="Hide single-connection leaf nodes to reduce clutter"
+                  >
+                    {hideIsolatedNodes ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                    <span>Hide Leaves</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    id="threat-graph-hide-benign-btn"
+                    onClick={() => setHideBenignNodes((prev) => !prev)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      hideBenignNodes
+                        ? 'bg-amber-500 text-white shadow-2xs'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                    title="Hide benign timestamps & low-severity informational entities"
+                  >
+                    {hideBenignNodes ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                    <span>Hide Benign</span>
+                  </button>
+                </div>
+
                 {/* Live Stats */}
-                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-600 border border-slate-200 font-mono">
+                <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-600 border border-slate-200 font-mono">
                   <span><strong className="text-slate-900">{filteredGraphNodes.length}</strong> / {data.campaign_graph.nodes.length} nodes</span>
                   <span className="text-slate-300">•</span>
                   <span><strong className="text-slate-900">{visibleEdges.length}</strong> lines</span>
@@ -1403,9 +1648,9 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
               {/* Drag Hint & Zoom / Pan Controls */}
               <div className="flex items-center gap-2">
-                <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-500 border border-slate-200">
+                <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-500 border border-slate-200">
                   <Move className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Drag nodes to position</span>
+                  <span>Drag node(s) to move</span>
                 </div>
 
                 <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-2xs">
@@ -1428,6 +1673,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       setGraphZoom(1);
                       setGraphPan({ x: 0, y: 0 });
                       setSelectedNode(null);
+                      setSelectedNodeIds(new Set());
                       if (filteredGraphNodes.length > 0) {
                         const { positions, clusterLabels } = calculateLayout(
                           filteredGraphNodes,
@@ -1435,7 +1681,8 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           layoutMode,
                           sortMode,
                           canvasSize.width,
-                          canvasSize.height
+                          canvasSize.height,
+                          nodeProximity
                         );
                         setNodePositions(positions);
                         setCategoryClusterLabels(clusterLabels);
@@ -1448,6 +1695,91 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Row 3: Quick Select All by Type & Group Movement Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-slate-200/60 text-xs">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+                  <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Select Group:</span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => selectAllOfType('file')}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-indigo-50 text-indigo-700 border border-slate-200 hover:border-indigo-300 transition-colors cursor-pointer shadow-2xs"
+                >
+                  Files
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectAllOfType('hash')}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 hover:border-emerald-300 transition-colors cursor-pointer shadow-2xs"
+                >
+                  Hashes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectAllOfType('network')}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-sky-50 text-sky-700 border border-slate-200 hover:border-sky-300 transition-colors cursor-pointer shadow-2xs"
+                >
+                  IPs & URLs
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectAllOfType('technique')}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-slate-200 hover:border-rose-300 transition-colors cursor-pointer shadow-2xs"
+                >
+                  ATT&CK TTPs
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectAllOfType('user')}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-amber-50 text-amber-700 border border-slate-200 hover:border-amber-300 transition-colors cursor-pointer shadow-2xs"
+                >
+                  Users
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectAllOfType('shared')}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-purple-50 text-purple-700 border border-slate-200 hover:border-purple-300 transition-colors cursor-pointer shadow-2xs"
+                >
+                  Shared
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectAllOfType('all')}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors cursor-pointer"
+                >
+                  Select All
+                </button>
+                {selectedNodeIds.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => selectAllOfType('none')}
+                    className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-colors cursor-pointer"
+                  >
+                    Deselect
+                  </button>
+                )}
+              </div>
+
+              {selectedNodeIds.size > 0 && (
+                <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-900 px-3 py-1 rounded-xl text-xs font-medium">
+                  <Move className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
+                  <span>
+                    <strong>{selectedNodeIds.size}</strong> nodes selected — drag any selected node to move the group
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => selectAllOfType('none')}
+                    className="ml-1 text-[11px] text-indigo-700 hover:text-indigo-950 font-bold underline cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1466,6 +1798,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
               onClick={(e) => {
                 if ((e.target as HTMLElement).tagName === 'svg' || (e.target as HTMLElement).id === 'threat-graph-canvas-bg') {
                   setSelectedNode(null);
+                  setSelectedNodeIds(new Set());
                 }
               }}
             >
@@ -1661,13 +1994,16 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         />
                       )}
 
-                      {/* Selection Halo */}
-                      {isSelected && (
+                      {/* Selection Halo / Ring (Single Selected or Multi-Selected) */}
+                      {(isSelected || selectedNodeIds.has(node.id)) && (
                         <circle
-                          r={nodeRadius + 4}
-                          fill="none"
+                          r={nodeRadius + (selectedNodeIds.has(node.id) ? 6 : 4)}
+                          fill={selectedNodeIds.has(node.id) ? '#6366f1' : 'none'}
+                          fillOpacity={selectedNodeIds.has(node.id) ? 0.15 : 0}
                           stroke="#4f46e5"
                           strokeWidth="2.5"
+                          strokeDasharray={selectedNodeIds.has(node.id) && selectedNodeIds.size > 1 ? '4 2' : undefined}
+                          className={selectedNodeIds.has(node.id) && selectedNodeIds.size > 1 ? 'animate-pulse' : ''}
                         />
                       )}
 

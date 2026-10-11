@@ -1217,6 +1217,373 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
   </Event>
 
   <!-- ===================================================================== -->
+  <!-- SECTION A.2: Benign Hardware, USB, File/Share Audit & Multi-Server RDP -->
+  <!-- ===================================================================== -->
+
+  <!-- 14a. USB Hardware Plugged-In: SanDisk Ultra 3.0 Flash Drive Recognized (6416) at 09:43:10Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>6416</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:43:10.000Z" />
+      <EventRecordID>4915</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="DeviceId">SWD\WPDBUSENUM\_??_USBSTOR#Disk&amp;Ven_SanDisk&amp;Prod_Ultra&amp;Rev_1.00#0101198592817263#{{53f56307-b6bf-11d0-94f2-00a0c91efb8b}}</Data>
+      <Data Name="DeviceDescription">SanDisk Ultra USB 3.0 Flash Drive</Data>
+      <Data Name="HardwareId">USBSTOR\DiskSanDisk_Ultra___________1.00\0101198592817263</Data>
+      <Data Name="DriveName">E:</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14b. PnP Driver Install Succeeded (20001) at 09:43:12Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-DriverFrameworks-UserMode" />
+      <EventID>20001</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:43:12.000Z" />
+      <EventRecordID>4916</EventRecordID>
+      <Channel>Microsoft-Windows-DriverFrameworks-UserMode/Operational</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <UserData>
+      <UMDFHostDeviceRequest xmlns="http://manifests.microsoft.com/win/2004/08/windows/driverframeworks/usermode">
+        <LifetimeId>{{18374920-4829-4112-9842-192847561029}}</LifetimeId>
+        <InstanceId>USB\VID_0781&amp;PID_5581\0101198592817263</InstanceId>
+        <DeviceDescription>SanDisk Ultra USB 3.0 Device</DeviceDescription>
+      </UMDFHostDeviceRequest>
+    </UserData>
+  </Event>
+
+  <!-- 14c. PnP Storage Volume Mounted on Drive E: (2003) at 09:43:15Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Storage-ClassPnP" />
+      <EventID>2003</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:43:15.000Z" />
+      <EventRecordID>4917</EventRecordID>
+      <Channel>System</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="DeviceName">SanDisk Ultra USB Device</Data>
+      <Data Name="Volume">E:</Data>
+      <Data Name="FriendlyName">SanDisk Ultra 64GB Flash Drive</Data>
+      <Data Name="HardwareId">USBSTOR\DiskSanDisk_Ultra___________1.00</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14d. User Document Access on USB Drive (4663) at 09:44:10Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4663</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:44:10.000Z" />
+      <EventRecordID>4918</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="ObjectName">E:\Personal_Expenses_Q3.xlsx</Data>
+      <Data Name="ObjectType">File</Data>
+      <Data Name="AccessMask">0x120089</Data>
+      <Data Name="ProcessName">C:\Windows\explorer.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14e. USB Device Safely Ejected / Removed (2102) at 09:47:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-DriverFrameworks-UserMode" />
+      <EventID>2102</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:47:00.000Z" />
+      <EventRecordID>4919</EventRecordID>
+      <Channel>Microsoft-Windows-DriverFrameworks-UserMode/Operational</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <UserData>
+      <UMDFHostDeviceRequest xmlns="http://manifests.microsoft.com/win/2004/08/windows/driverframeworks/usermode">
+        <InstanceId>USBSTOR\DiskSanDisk_Ultra___________1.00\0101198592817263</InstanceId>
+        <DriveName>E:</DriveName>
+        <DeviceDescription>SanDisk Ultra USB 3.0 Device Unmounted</DeviceDescription>
+      </UMDFHostDeviceRequest>
+    </UserData>
+  </Event>
+
+  <!-- 14f. Network Share Object Accessed: Finance Shares (5140) at 09:48:15Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5140</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:48:15.000Z" />
+      <EventRecordID>4920</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="ShareName">\\FILESERVER-01.target.local\Finance_Shares</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="IpPort">52410</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14g. Network Share Detailed Access Check: Budget Spreadsheet (5145) at 09:48:20Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5145</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:48:20.000Z" />
+      <EventRecordID>4921</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="ShareName">\\FILESERVER-01.target.local\Finance_Shares</Data>
+      <Data Name="RelativeTargetName">Monthly_Reports\2026_Q3_Preliminary_Budget.xlsx</Data>
+      <Data Name="AccessMask">0x120089</Data>
+      <Data Name="AccessList">%%1614 %%4416 %%4419 %%4423</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="IpPort">52410</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14h. Network Share Detailed Access Check: Public Security Policy (5145) at 09:49:05Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5145</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:49:05.000Z" />
+      <EventRecordID>4922</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="ShareName">\\CORP-STORAGE.target.local\Public_Docs</Data>
+      <Data Name="RelativeTargetName">Compliance\Employee_Code_of_Conduct_2026.pdf</Data>
+      <Data Name="AccessMask">0x120089</Data>
+      <Data Name="AccessList">%%1614 %%4416 %%4419 %%4423</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14i. Local Financial File Save Audit (4663) at 09:49:30Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4663</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:49:30.000Z" />
+      <EventRecordID>4923</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="ObjectName">C:\Users\jdoe\Documents\Quarterly_Financials_Q3.xlsx</Data>
+      <Data Name="ObjectType">File</Data>
+      <Data Name="AccessMask">0x2</Data>
+      <Data Name="ProcessName">C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14j. RDP Connection to Server 1: APPSRV-01.target.local (4688 mstsc.exe) at 09:50:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:50:00.000Z" />
+      <EventRecordID>4924</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\mstsc.exe</Data>
+      <Data Name="CommandLine">"mstsc.exe" /v:APPSRV-01.target.local</Data>
+      <Data Name="ParentProcessName">C:\Windows\explorer.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14k. RDP Client Connected to APPSRV-01 (1024) at 09:50:05Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-TerminalServices-RDPClient" />
+      <EventID>1024</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:50:05.000Z" />
+      <EventRecordID>4925</EventRecordID>
+      <Channel>Microsoft-Windows-TerminalServices-RDPClient/Operational</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <UserData>
+      <EventInfo xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+        <ServerName>APPSRV-01.target.local</ServerName>
+        <ServerIp>10.0.2.20</ServerIp>
+        <Port>3389</Port>
+        <Message>RDP ClientActiveX has connected to the server APPSRV-01.target.local (10.0.2.20:3389)</Message>
+      </EventInfo>
+    </UserData>
+  </Event>
+
+  <!-- 14l. RDP Transport Configured: APPSRV-01 TLS 1.3 CredSSP (1025) at 09:50:06Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-TerminalServices-RDPClient" />
+      <EventID>1025</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:50:06.000Z" />
+      <EventRecordID>4926</EventRecordID>
+      <Channel>Microsoft-Windows-TerminalServices-RDPClient/Operational</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <UserData>
+      <EventInfo xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+        <ServerName>APPSRV-01.target.local</ServerName>
+        <Transport>TCP (TLS 1.3 / CredSSP)</Transport>
+      </EventInfo>
+    </UserData>
+  </Event>
+
+  <!-- 14m. RDP Session Disconnected from APPSRV-01 (4779) at 09:52:30Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4779</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:52:30.000Z" />
+      <EventRecordID>4927</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="SessionName">RDP-Tcp#12</Data>
+      <Data Name="ClientAddress">10.0.2.20</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14n. RDP Connection to Server 2: SQL-PROD-02.target.local (4688 mstsc.exe) at 09:53:10Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:53:10.000Z" />
+      <EventRecordID>4928</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\mstsc.exe</Data>
+      <Data Name="CommandLine">"mstsc.exe" /v:SQL-PROD-02.target.local</Data>
+      <Data Name="ParentProcessName">C:\Windows\explorer.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14o. RDP Client Connected to SQL-PROD-02 (1024) at 09:53:15Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-TerminalServices-RDPClient" />
+      <EventID>1024</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:53:15.000Z" />
+      <EventRecordID>4929</EventRecordID>
+      <Channel>Microsoft-Windows-TerminalServices-RDPClient/Operational</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <UserData>
+      <EventInfo xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+        <ServerName>SQL-PROD-02.target.local</ServerName>
+        <ServerIp>10.0.3.50</ServerIp>
+        <Port>3389</Port>
+        <Message>RDP ClientActiveX has connected to the server SQL-PROD-02.target.local (10.0.3.50:3389)</Message>
+      </EventInfo>
+    </UserData>
+  </Event>
+
+  <!-- 14p. RDP Session Disconnected from SQL-PROD-02 (4779) at 09:55:40Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4779</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:55:40.000Z" />
+      <EventRecordID>4930</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="SessionName">RDP-Tcp#14</Data>
+      <Data Name="ClientAddress">10.0.3.50</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14q. RDP Connection to Server 3: BACKUP-VAULT.target.local (4688 mstsc.exe) at 09:56:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:56:00.000Z" />
+      <EventRecordID>4931</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\mstsc.exe</Data>
+      <Data Name="CommandLine">"mstsc.exe" /v:BACKUP-VAULT.target.local</Data>
+      <Data Name="ParentProcessName">C:\Windows\explorer.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 14r. RDP Client Connected to BACKUP-VAULT (1024) at 09:56:05Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-TerminalServices-RDPClient" />
+      <EventID>1024</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:56:05.000Z" />
+      <EventRecordID>4932</EventRecordID>
+      <Channel>Microsoft-Windows-TerminalServices-RDPClient/Operational</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <UserData>
+      <EventInfo xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+        <ServerName>BACKUP-VAULT.target.local</ServerName>
+        <ServerIp>10.0.3.99</ServerIp>
+        <Port>3389</Port>
+        <Message>RDP ClientActiveX has connected to the server BACKUP-VAULT.target.local (10.0.3.99:3389)</Message>
+      </EventInfo>
+    </UserData>
+  </Event>
+
+  <!-- 14s. RDP Session Disconnected from BACKUP-VAULT (4779) at 09:58:20Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4779</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:58:20.000Z" />
+      <EventRecordID>4933</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe</Data>
+      <Data Name="TargetDomainName">TARGET</Data>
+      <Data Name="SessionName">RDP-Tcp#17</Data>
+      <Data Name="ClientAddress">10.0.3.99</Data>
+    </EventData>
+  </Event>
+
+  <!-- ===================================================================== -->
   <!-- SECTION B: Attack Chain Telemetry (09:59:30 - 10:01:25Z)              -->
   <!-- ===================================================================== -->
 
@@ -1654,6 +2021,110 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
       <Data Name="TaskName">\Microsoft\Windows\Active Directory\AD Backup Verification</Data>
       <Data Name="ActionName">powershell.exe -ExecutionPolicy Bypass -File C:\Scripts\Verify-ADBackup.ps1</Data>
       <Data Name="ResultCode">0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7a. Group Policy Share Access: SYSVOL Accessed by WKSTN-FIN-01 (5140) at 09:15:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5140</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:15:00.000Z" />
+      <EventRecordID>7908</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="ShareName">\\DC-PROD-01.target.local\SYSVOL</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="IpPort">51120</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7b. Detailed Share Access: Group Policy Template Read (5145) at 09:15:02Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>5145</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:15:02.000Z" />
+      <EventRecordID>7909</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="ShareName">\\DC-PROD-01.target.local\SYSVOL</Data>
+      <Data Name="RelativeTargetName">target.local\Policies\{{31B2F340-016D-11D2-945F-00C04FB984F9}}\gpt.ini</Data>
+      <Data Name="AccessMask">0x120089</Data>
+      <Data Name="AccessList">%%1614 %%4416 %%4419 %%4423</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="IpPort">51120</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7c. Kerberos Ticket for RDP to APPSRV-01 (4769) at 09:49:58Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:49:58.000Z" />
+      <EventRecordID>7910</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe@TARGET.LOCAL</Data>
+      <Data Name="ServiceName">TERMSRV/APPSRV-01.target.local</Data>
+      <Data Name="TicketOptions">0x40810000</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Port">52480</Data>
+      <Data Name="Status">0x0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7d. Kerberos Ticket for RDP to SQL-PROD-02 (4769) at 09:53:08Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:53:08.000Z" />
+      <EventRecordID>7911</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe@TARGET.LOCAL</Data>
+      <Data Name="ServiceName">TERMSRV/SQL-PROD-02.target.local</Data>
+      <Data Name="TicketOptions">0x40810000</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Port">52512</Data>
+      <Data Name="Status">0x0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7e. Kerberos Ticket for RDP to BACKUP-VAULT (4769) at 09:55:58Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:55:58.000Z" />
+      <EventRecordID>7912</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">jdoe@TARGET.LOCAL</Data>
+      <Data Name="ServiceName">TERMSRV/BACKUP-VAULT.target.local</Data>
+      <Data Name="TicketOptions">0x40810000</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="Port">52544</Data>
+      <Data Name="Status">0x0</Data>
     </EventData>
   </Event>
 
