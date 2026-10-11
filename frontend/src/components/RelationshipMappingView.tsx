@@ -1089,6 +1089,37 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     );
   }, [data, visibleNodeIds]);
 
+  // Select all nodes connected to a node, restoring filters if necessary, and close the inspector
+  const handleSelectConnectedNodes = (nodeId: string) => {
+    const connectedIds = new Set<string>();
+    const allEdges = data?.campaign_graph?.edges || [];
+    allEdges.forEach((edge: any) => {
+      if (edge.source === nodeId) connectedIds.add(edge.target);
+      else if (edge.target === nodeId) connectedIds.add(edge.source);
+    });
+
+    // If any connected nodes are currently hidden by active category filters or sharedOnly, restore them so they become visible
+    const hasHiddenConnected = Array.from(connectedIds).some((id) => !visibleNodeIds.has(id));
+    if (hasHiddenConnected) {
+      setSelectedFilters([...ALL_THREAT_FILTER_KEYS]);
+      if (sharedOnlyFilter) setSharedOnlyFilter(false);
+    }
+
+    setSelectedNodeIds(connectedIds);
+    setSelectedNode(null);
+  };
+
+  // Connected node count for selectedNode
+  const selectedNodeConnectedCount = useMemo(() => {
+    if (!selectedNode || !data?.campaign_graph?.edges) return 0;
+    const connected = new Set<string>();
+    data.campaign_graph.edges.forEach((edge: any) => {
+      if (edge.source === selectedNode.id) connected.add(edge.target);
+      else if (edge.target === selectedNode.id) connected.add(edge.source);
+    });
+    return connected.size;
+  }, [selectedNode, data?.campaign_graph?.edges]);
+
   // Re-layout & redraw graph automatically when visible nodes, edges, layout mode, sort mode, canvas size, or proximity changes
   useEffect(() => {
     if (filteredGraphNodes.length > 0) {
@@ -2132,12 +2163,23 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       </span>
                     )}
                   </div>
-                  <button
-                    onClick={() => setSelectedNode(null)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                  >
-                    ×
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectConnectedNodes(selectedNode.id)}
+                      className="p-1 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors cursor-pointer"
+                      title="Select connected nodes & close inspector"
+                    >
+                      <Network className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedNode(null)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Close inspector"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
 
                 <div className="py-4 space-y-4 flex-1 overflow-y-auto">
@@ -2157,6 +2199,20 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       </button>
                     </div>
                   </div>
+
+                  {/* Button: Select Connected Nodes & Close Inspector */}
+                  <button
+                    type="button"
+                    onClick={() => handleSelectConnectedNodes(selectedNode.id)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 border border-indigo-200 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs group"
+                    title="Close inspector and select all nodes connected to this entity"
+                  >
+                    <Network className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                    <span>Select Connected Nodes</span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-indigo-200/80 text-indigo-800">
+                      {selectedNodeConnectedCount}
+                    </span>
+                  </button>
 
                   {/* Shared Indicator */}
                   {selectedNode.is_shared && (

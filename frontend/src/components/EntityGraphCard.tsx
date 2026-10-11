@@ -208,6 +208,35 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     );
   }, [graphData?.edges, visibleNodeIds]);
 
+  // Select all nodes connected to a node, restoring filters if necessary, and close the inspector
+  const handleSelectConnectedNodes = (nodeId: string) => {
+    const connectedIds = new Set<string>();
+    const allEdges = graphData?.edges || [];
+    allEdges.forEach((edge: any) => {
+      if (edge.source === nodeId) connectedIds.add(edge.target);
+      else if (edge.target === nodeId) connectedIds.add(edge.source);
+    });
+
+    const hasHiddenConnected = Array.from(connectedIds).some((id) => !visibleNodeIds.has(id));
+    if (hasHiddenConnected) {
+      setSelectedFilters([...activeCategoryKeys]);
+    }
+
+    setSelectedNodeIds(connectedIds);
+    setSelectedNode(null);
+  };
+
+  // Connected node count for selectedNode
+  const selectedNodeConnectedCount = useMemo(() => {
+    if (!selectedNode || !graphData?.edges) return 0;
+    const connected = new Set<string>();
+    graphData.edges.forEach((edge: any) => {
+      if (edge.source === selectedNode.id) connected.add(edge.target);
+      else if (edge.target === selectedNode.id) connected.add(edge.source);
+    });
+    return connected.size;
+  }, [selectedNode, graphData?.edges]);
+
   // Smooth mouse scroll wheel & trackpad pinch-zoom centered on cursor
   useEffect(() => {
     const svgEl = svgRef.current;
@@ -1353,14 +1382,38 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   {selectedNode.full_label || selectedNode.label}
                 </h4>
               </div>
-              <button
-                onClick={() => setSelectedNode(null)}
-                className="text-slate-400 hover:text-slate-700 p-1.5 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                title="Close Details"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleSelectConnectedNodes(selectedNode.id)}
+                  className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-xl transition-colors cursor-pointer"
+                  title="Select connected nodes & close inspector"
+                >
+                  <Network className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setSelectedNode(null)}
+                  className="text-slate-400 hover:text-slate-700 p-1.5 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                  title="Close Details"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
+
+            {/* Select Connected Nodes Action Button */}
+            <button
+              type="button"
+              onClick={() => handleSelectConnectedNodes(selectedNode.id)}
+              className="w-full mt-3 py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 border border-indigo-200 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs group"
+              title="Close inspector and select all connected nodes in graph"
+            >
+              <Network className="w-3.5 h-3.5 text-indigo-600 group-hover:scale-110 transition-transform" />
+              <span>Select Connected Nodes</span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-indigo-200/80 text-indigo-800">
+                {selectedNodeConnectedCount}
+              </span>
+            </button>
 
             {/* Key-Value Details */}
             <div className="py-3.5 space-y-2.5 text-xs">
