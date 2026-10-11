@@ -7,7 +7,13 @@ import {
   ExternalLink,
   Copy,
   Check,
-  Move
+  Move,
+  Layers,
+  ArrowUpDown,
+  SlidersHorizontal,
+  Eye,
+  EyeOff,
+  CheckSquare
 } from 'lucide-react';
 import { EntityGraphData, EntityGraphNode } from '../types';
 
@@ -16,37 +22,191 @@ interface EntityGraphCardProps {
   onSelectJob?: (jobId: string) => void;
 }
 
+const ENTITY_CATEGORIES = [
+  {
+    key: 'intel',
+    label: 'Threat Intel',
+    types: ['threat_intel', 'threat_signature'],
+    color: 'bg-red-600 text-white border-red-600',
+    hoverColor: 'hover:bg-red-50 hover:text-red-700'
+  },
+  {
+    key: 'network',
+    label: 'Network & Domains',
+    types: ['url', 'domain', 'ip', 'geolocation', 'flow', 'protocol', 'asn', 'network', 'organization'],
+    color: 'bg-sky-600 text-white border-sky-600',
+    hoverColor: 'hover:bg-sky-50 hover:text-sky-700'
+  },
+  {
+    key: 'identity',
+    label: 'Identity & Users',
+    types: ['user', 'auth_policy', 'tracking_pixel', 'computer'],
+    color: 'bg-blue-600 text-white border-blue-600',
+    hoverColor: 'hover:bg-blue-50 hover:text-blue-700'
+  },
+  {
+    key: 'payloads',
+    label: 'Payloads & Hashes',
+    types: ['embedded_file', 'hash'],
+    color: 'bg-emerald-600 text-white border-emerald-600',
+    hoverColor: 'hover:bg-emerald-50 hover:text-emerald-700'
+  },
+  {
+    key: 'ttps',
+    label: 'ATT&CK TTPs',
+    types: ['technique', 'similar_sample'],
+    color: 'bg-rose-700 text-white border-rose-700',
+    hoverColor: 'hover:bg-rose-50 hover:text-rose-700'
+  },
+  {
+    key: 'forensics',
+    label: 'Forensic Artifacts',
+    types: ['log_source', 'share', 'process', 'certificate'],
+    color: 'bg-purple-600 text-white border-purple-600',
+    hoverColor: 'hover:bg-purple-50 hover:text-purple-700'
+  }
+];
+
+const ALL_ENTITY_CATEGORY_KEYS = ENTITY_CATEGORIES.map(c => c.key);
+
 export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onSelectJob }) => {
+  // Category Filtering
+  const [selectedFilters, setSelectedFilters] = useState<string[]>(ALL_ENTITY_CATEGORY_KEYS);
+
+  // Layout, Sorting, Spacing, Hiding
+  const [layoutMode, setLayoutMode] = useState<'radial' | 'category' | 'hierarchical' | 'grid'>('radial');
+  const [sortMode, setSortMode] = useState<'connectivity' | 'threat_severity' | 'alpha' | 'reverse_alpha' | 'type'>('connectivity');
+  const [nodeProximity, setNodeProximity] = useState<'close' | 'middle' | 'far' | 'very_far'>('middle');
+  const [hideIsolatedNodes, setHideIsolatedNodes] = useState<boolean>(false);
+  const [hideBenignNodes, setHideBenignNodes] = useState<boolean>(false);
+
+  // Selection & Inspector
   const [selectedNode, setSelectedNode] = useState<EntityGraphNode | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [zoom, setZoom] = useState<number>(1);
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Dragging individual nodes
+  // Viewport Zoom & Pan
+  const [zoom, setZoom] = useState<number>(1);
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+
+  // Positions & Cluster Labels
   const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [categoryClusterLabels, setCategoryClusterLabels] = useState<{ key: string; label: string; count: number; x: number; y: number }[]>([]);
+
+  // Dragging mechanics (Single & Multi-Node Group Dragging)
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const nodeDragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const nodeMouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
   const hasDraggedNodeRef = useRef<boolean>(false);
+  const dragInitialPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const dragOriginWorldRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  // Initialize node positions when graphData changes
-  useEffect(() => {
-    if (graphData?.nodes) {
-      const posMap: Record<string, { x: number; y: number }> = {};
-      graphData.nodes.forEach(n => {
-        if (n.x !== undefined && n.y !== undefined) {
-          posMap[n.id] = { x: n.x, y: n.y };
-        }
-      });
-      setNodePositions(posMap);
-      setSelectedNode(null);
+  // Category counts for filter badges
+  const categoryCounts = useMemo(() => {
+    const nodes = graphData?.nodes || [];
+    const nonRoot = nodes.filter(n => n.id !== 'root' && n.type !== 'root');
+    const counts: Record<string, number> = {
+      total: nonRoot.length
+    };
+    ENTITY_CATEGORIES.forEach(cat => {
+      counts[cat.key] = nonRoot.filter(n => cat.types.includes(n.type)).length;
+    });
+    return counts;
+  }, [graphData?.nodes]);
+
+  // Only show categories that have at least 1 node in this artifact
+  const availableFilterOptions = useMemo(() => {
+    return ENTITY_CATEGORIES.filter(cat => (categoryCounts[cat.key] || 0) > 0).map(cat => ({
+      ...cat,
+      count: categoryCounts[cat.key] || 0
+    }));
+  }, [categoryCounts]);
+
+  const activeCategoryKeys = useMemo(() => {
+    return availableFilterOptions.map(opt => opt.key);
+  }, [availableFilterOptions]);
+
+  const isAllSelected = useMemo(() => {
+    if (activeCategoryKeys.length === 0) return true;
+    return activeCategoryKeys.every(k => selectedFilters.includes(k));
+  }, [activeCategoryKeys, selectedFilters]);
+
+  // Toggle "All Entities" handler matching Threat Graph
+  const handleToggleAllEntities = () => {
+    if (isAllSelected) {
+      setSelectedFilters([]);
+    } else {
+      setSelectedFilters([...activeCategoryKeys]);
     }
-  }, [graphData]);
+  };
+
+  const toggleFilter = (key: string) => {
+    setSelectedFilters(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const handleResetFilters = () => {
+    setSelectedFilters([...activeCategoryKeys]);
+    setHideIsolatedNodes(false);
+    setHideBenignNodes(false);
+  };
+
+  // Node Degree Map for connectivity calculation & leaf filtering
+  const nodeDegreeMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!graphData?.edges) return map;
+    graphData.edges.forEach(e => {
+      map[e.source] = (map[e.source] || 0) + 1;
+      map[e.target] = (map[e.target] || 0) + 1;
+    });
+    return map;
+  }, [graphData?.edges]);
+
+  // Multi-filtered graph nodes
+  const filteredNodes = useMemo(() => {
+    const nodes = graphData?.nodes || [];
+    return nodes.filter(n => {
+      const isRoot = n.id === 'root' || n.type === 'root';
+      if (isRoot) return true; // Always keep root file anchor
+
+      // Hide leaves (degree <= 1)
+      if (hideIsolatedNodes && (nodeDegreeMap[n.id] || 0) <= 1) {
+        return false;
+      }
+
+      // Hide benign
+      if (hideBenignNodes) {
+        const isBenign = n.risk === 'benign' || n.risk === 'info' || n.risk === 'low' || !n.risk;
+        if (isBenign && !['threat_intel', 'threat_signature', 'technique'].includes(n.type)) {
+          return false;
+        }
+      }
+
+      // If no category filters are selected, non-root nodes are filtered out
+      if (selectedFilters.length === 0) {
+        return false;
+      }
+
+      // Check if node matches ANY selected category
+      return selectedFilters.some(filterKey => {
+        const cat = ENTITY_CATEGORIES.find(c => c.key === filterKey);
+        return cat ? cat.types.includes(n.type) : false;
+      });
+    });
+  }, [graphData?.nodes, selectedFilters, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap]);
+
+  const visibleNodeIds = useMemo(() => new Set(filteredNodes.map(n => n.id)), [filteredNodes]);
+
+  const filteredEdges = useMemo(() => {
+    return (graphData?.edges ?? []).filter(
+      e => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target)
+    );
+  }, [graphData?.edges, visibleNodeIds]);
 
   // Smooth mouse scroll wheel & trackpad pinch-zoom centered on cursor
   useEffect(() => {
@@ -61,10 +221,8 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
 
       let factor = 1.0;
       if (e.ctrlKey) {
-        // Trackpad pinch-to-zoom
         factor = Math.exp(-e.deltaY * 0.015);
       } else {
-        // Standard mouse scroll wheel or two-finger swipe
         factor = e.deltaY < 0 ? 1.12 : 0.89;
       }
 
@@ -85,42 +243,320 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     };
   }, []);
 
-  // Filter nodes
-  const filteredNodes = useMemo(() => {
-    return (graphData?.nodes ?? []).filter(n => {
-      if (activeFilter === 'all') return true;
-      if (activeFilter === 'intel') return ['threat_intel', 'threat_signature'].includes(n.type);
-      if (activeFilter === 'network') return ['url', 'domain', 'ip', 'geolocation', 'flow', 'protocol', 'asn', 'network', 'organization'].includes(n.type);
-      if (activeFilter === 'email') return ['user', 'auth_policy', 'tracking_pixel'].includes(n.type);
-      if (activeFilter === 'payloads') return ['embedded_file', 'hash'].includes(n.type);
-      if (activeFilter === 'ttps') return ['technique', 'similar_sample'].includes(n.type);
-      if (activeFilter === 'trust') return n.type === 'certificate';
-      if (activeFilter === 'forensics') return ['log_source', 'user', 'computer', 'ip', 'share', 'process'].includes(n.type);
-      return true;
+  // Multi-Layout & Multi-Sorting Graph Engine for Single-Artifact Entity Graph
+  const calculateLayout = (
+    nodes: EntityGraphNode[],
+    edges: any[],
+    layout: 'radial' | 'category' | 'hierarchical' | 'grid',
+    sort: 'connectivity' | 'threat_severity' | 'alpha' | 'reverse_alpha' | 'type',
+    cWidth?: number,
+    cHeight?: number,
+    proximity: 'close' | 'middle' | 'far' | 'very_far' = 'middle'
+  ): { positions: Record<string, { x: number; y: number }>; clusterLabels: { key: string; label: string; count: number; x: number; y: number }[] } => {
+    const positions: Record<string, { x: number; y: number }> = {};
+    const clusterLabels: { key: string; label: string; count: number; x: number; y: number }[] = [];
+    if (!nodes || nodes.length === 0) return { positions, clusterLabels };
+
+    const proximityMultipliers: Record<string, number> = {
+      close: 0.65,
+      middle: 1.0,
+      far: 1.6,
+      very_far: 2.4,
+    };
+    const prox = proximityMultipliers[proximity || 'middle'] || 1.0;
+
+    const width = Math.max(1100, cWidth || 1200);
+    const height = Math.max(600, cHeight || 620);
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    const degreeMap: Record<string, number> = {};
+    edges.forEach((e) => {
+      degreeMap[e.source] = (degreeMap[e.source] || 0) + 1;
+      degreeMap[e.target] = (degreeMap[e.target] || 0) + 1;
     });
-  }, [graphData?.nodes, activeFilter]);
 
-  const filteredNodeIds = useMemo(() => new Set(filteredNodes.map(n => n.id)), [filteredNodes]);
+    const getSeverityScore = (n: EntityGraphNode) => {
+      if (n.risk === 'critical' || n.risk === 'malicious') return 100;
+      if (n.risk === 'high') return 80;
+      if (n.risk === 'warning' || n.risk === 'medium') return 60;
+      if (n.type === 'technique') return 50;
+      if (n.type === 'threat_intel' || n.type === 'threat_signature') return 45;
+      if (n.id === 'root' || n.type === 'root') return 40;
+      return 10;
+    };
 
-  const filteredEdges = useMemo(() => {
-    return (graphData?.edges ?? []).filter(
-      e => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)
-    );
-  }, [graphData?.edges, filteredNodeIds]);
+    const sortedNodes = [...nodes].sort((a, b) => {
+      if (sort === 'connectivity') {
+        const degDiff = (degreeMap[b.id] || 0) - (degreeMap[a.id] || 0);
+        if (degDiff !== 0) return degDiff;
+        return (a.label || '').localeCompare(b.label || '');
+      }
+      if (sort === 'threat_severity') {
+        const scoreDiff = getSeverityScore(b) - getSeverityScore(a);
+        if (scoreDiff !== 0) return scoreDiff;
+        return (a.label || '').localeCompare(b.label || '');
+      }
+      if (sort === 'alpha') {
+        return (a.label || '').localeCompare(b.label || '');
+      }
+      if (sort === 'reverse_alpha') {
+        return (b.label || '').localeCompare(a.label || '');
+      }
+      if (sort === 'type') {
+        const typeComp = (a.type || '').localeCompare(b.type || '');
+        if (typeComp !== 0) return typeComp;
+        return (a.label || '').localeCompare(b.label || '');
+      }
+      return 0;
+    });
 
-  if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
-    return (
-      <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center text-slate-500 shadow-sm">
-        <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 mx-auto mb-3 shadow-inner">
-          <Network className="w-7 h-7" />
-        </div>
-        <h4 className="font-bold text-slate-800 text-sm">No Entity Relationships Available</h4>
-        <p className="text-xs text-slate-500 mt-1.5 max-w-md mx-auto leading-relaxed">
-          The uploaded artifact does not contain child objects, embedded URLs, digital certificates, or behavioral mappings to graph.
-        </p>
-      </div>
-    );
-  }
+    const rootNode = sortedNodes.find(n => n.id === 'root' || n.type === 'root') || sortedNodes[0];
+    const nonRootNodes = sortedNodes.filter(n => n.id !== rootNode.id);
+
+    if (layout === 'radial') {
+      positions[rootNode.id] = { x: centerX, y: centerY };
+      const count = nonRootNodes.length;
+      if (count <= 10) {
+        const rad = Math.min(width * 0.42, Math.max(160 * prox, count * 36 * prox));
+        nonRootNodes.forEach((node, idx) => {
+          const angle = (idx / (count || 1)) * 2 * Math.PI - Math.PI / 2;
+          positions[node.id] = {
+            x: centerX + rad * Math.cos(angle),
+            y: centerY + (rad * 0.78) * Math.sin(angle),
+          };
+        });
+      } else {
+        const innerCount = Math.ceil(count * 0.38);
+        const outerCount = count - innerCount;
+        const innerRad = Math.min(width * 0.28, Math.max(140 * prox, innerCount * 26 * prox));
+        const outerRad = Math.min(width * 0.46, Math.max(260 * prox, outerCount * 22 * prox));
+
+        nonRootNodes.forEach((node, idx) => {
+          if (idx < innerCount) {
+            const angle = (idx / innerCount) * 2 * Math.PI - Math.PI / 2;
+            positions[node.id] = {
+              x: centerX + innerRad * Math.cos(angle),
+              y: centerY + (innerRad * 0.78) * Math.sin(angle),
+            };
+          } else {
+            const outIdx = idx - innerCount;
+            const angle = (outIdx / outerCount) * 2 * Math.PI - Math.PI / 2;
+            positions[node.id] = {
+              x: centerX + outerRad * Math.cos(angle),
+              y: centerY + (outerRad * 0.78) * Math.sin(angle),
+            };
+          }
+        });
+      }
+    } else if (layout === 'category') {
+      positions[rootNode.id] = { x: centerX, y: centerY };
+
+      const groups: Record<string, EntityGraphNode[]> = {};
+      nonRootNodes.forEach((n) => {
+        let catKey = 'forensics';
+        for (const cat of ENTITY_CATEGORIES) {
+          if (cat.types.includes(n.type)) {
+            catKey = cat.key;
+            break;
+          }
+        }
+        if (!groups[catKey]) groups[catKey] = [];
+        groups[catKey].push(n);
+      });
+
+      const activeGroupKeys = Object.keys(groups);
+      const totalGroups = activeGroupKeys.length;
+
+      const clusterRadiusX = Math.min(width * 0.42, Math.max(260 * prox, totalGroups * 60 * prox));
+      const clusterRadiusY = Math.min(height * 0.36, Math.max(150 * prox, totalGroups * 32 * prox));
+
+      activeGroupKeys.forEach((key, gIdx) => {
+        const angle = (gIdx / (totalGroups || 1)) * 2 * Math.PI - Math.PI / 2;
+        const cX = centerX + clusterRadiusX * Math.cos(angle);
+        const cY = centerY + clusterRadiusY * Math.sin(angle);
+        const groupNodes = groups[key];
+        const gCount = groupNodes.length;
+
+        const subRadius = Math.min(100 * prox, Math.max(45 * prox, gCount * 18 * prox));
+
+        groupNodes.forEach((node, nIdx) => {
+          if (gCount === 1) {
+            positions[node.id] = { x: cX, y: cY };
+          } else {
+            const subAngle = (nIdx / gCount) * 2 * Math.PI;
+            positions[node.id] = {
+              x: cX + subRadius * Math.cos(subAngle),
+              y: cY + subRadius * Math.sin(subAngle),
+            };
+          }
+        });
+
+        const catDef = ENTITY_CATEGORIES.find(c => c.key === key);
+        const label = (catDef?.label || key).toUpperCase();
+        clusterLabels.push({
+          key,
+          label,
+          count: gCount,
+          x: cX,
+          y: cY - subRadius - 20,
+        });
+      });
+    } else if (layout === 'hierarchical') {
+      const tiers: EntityGraphNode[][] = [[], [], [], []];
+      tiers[0].push(rootNode);
+
+      nonRootNodes.forEach((n) => {
+        if (['threat_intel', 'threat_signature', 'technique', 'similar_sample'].includes(n.type)) {
+          tiers[1].push(n);
+        } else if (['url', 'domain', 'ip', 'geolocation', 'asn', 'network', 'embedded_file', 'hash'].includes(n.type)) {
+          tiers[2].push(n);
+        } else {
+          tiers[3].push(n);
+        }
+      });
+
+      const tierY = [65 * prox, 200 * prox, 350 * prox, 500 * prox];
+      tiers.forEach((tierNodes, tIdx) => {
+        const count = tierNodes.length;
+        if (count === 0) return;
+
+        const baseSpacing = Math.min(220 * prox, Math.max(105 * prox, (width - 200) / (count || 1)));
+        const totalSpan = (count - 1) * baseSpacing;
+        const startX = centerX - totalSpan / 2;
+
+        tierNodes.forEach((node, idx) => {
+          positions[node.id] = {
+            x: startX + idx * baseSpacing,
+            y: tierY[tIdx],
+          };
+        });
+      });
+    } else if (layout === 'grid') {
+      const count = sortedNodes.length;
+      const cols = Math.max(3, Math.min(6, Math.ceil(Math.sqrt(count * 1.1))));
+      const rows = Math.ceil(count / cols);
+      const cellW = Math.round(Math.min(230, Math.max(130, (width - 140) / cols)) * prox);
+      const cellH = Math.round(Math.min(150, Math.max(90, (height - 120) / rows)) * prox);
+      const startX = centerX - ((cols - 1) * cellW) / 2;
+      const startY = centerY - ((rows - 1) * cellH) / 2;
+
+      sortedNodes.forEach((node, idx) => {
+        const c = idx % cols;
+        const r = Math.floor(idx / cols);
+        positions[node.id] = {
+          x: startX + c * cellW,
+          y: startY + r * cellH,
+        };
+      });
+    }
+
+    // Overlap-Prevention & Collision Avoidance Relaxation Pass
+    const minClearanceX = Math.round(110 * prox);
+    const minClearanceY = Math.round(55 * prox);
+    const nodeIds = Object.keys(positions);
+
+    for (let iter = 0; iter < 12; iter++) {
+      let maxOverlap = 0;
+      for (let i = 0; i < nodeIds.length; i++) {
+        const idA = nodeIds[i];
+        const posA = positions[idA];
+        for (let j = i + 1; j < nodeIds.length; j++) {
+          const idB = nodeIds[j];
+          const posB = positions[idB];
+
+          const dx = posB.x - posA.x;
+          const dy = posB.y - posA.y;
+
+          const normX = dx / minClearanceX;
+          const normY = dy / minClearanceY;
+          const distSq = normX * normX + normY * normY;
+
+          if (distSq < 1 && distSq > 0.0001) {
+            const dist = Math.sqrt(distSq);
+            const overlap = 1 - dist;
+            if (overlap > maxOverlap) maxOverlap = overlap;
+
+            const pushX = (normX / dist) * overlap * 0.5 * minClearanceX * 0.45;
+            const pushY = (normY / dist) * overlap * 0.5 * minClearanceY * 0.45;
+
+            posA.x -= pushX;
+            posA.y -= pushY;
+            posB.x += pushX;
+            posB.y += pushY;
+          } else if (distSq <= 0.0001) {
+            posA.x -= 20;
+            posB.x += 20;
+          }
+        }
+      }
+      if (maxOverlap < 0.02) break;
+    }
+
+    return { positions, clusterLabels };
+  };
+
+  // Re-layout & redraw graph automatically when visible nodes, edges, layout mode, sort mode, or proximity changes
+  useEffect(() => {
+    if (filteredNodes.length > 0) {
+      const { positions, clusterLabels } = calculateLayout(
+        filteredNodes,
+        filteredEdges,
+        layoutMode,
+        sortMode,
+        1200,
+        620,
+        nodeProximity
+      );
+      setNodePositions(positions);
+      setCategoryClusterLabels(clusterLabels);
+    } else {
+      setNodePositions({});
+      setCategoryClusterLabels([]);
+    }
+  }, [filteredNodes, filteredEdges, layoutMode, sortMode, nodeProximity]);
+
+  // Quick Select Group by Type
+  const selectAllOfType = (typeKey: string) => {
+    if (typeKey === 'all') {
+      setSelectedNodeIds(new Set(filteredNodes.map(n => n.id)));
+      return;
+    }
+    if (typeKey === 'none') {
+      setSelectedNodeIds(new Set());
+      setSelectedNode(null);
+      return;
+    }
+    if (typeKey === 'intel') {
+      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['threat_intel', 'threat_signature'].includes(n.type)).map(n => n.id)));
+      return;
+    }
+    if (typeKey === 'network') {
+      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['url', 'domain', 'ip', 'geolocation', 'asn', 'network', 'flow', 'protocol'].includes(n.type)).map(n => n.id)));
+      return;
+    }
+    if (typeKey === 'payloads') {
+      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['embedded_file', 'hash'].includes(n.type)).map(n => n.id)));
+      return;
+    }
+    if (typeKey === 'technique') {
+      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['technique', 'similar_sample'].includes(n.type)).map(n => n.id)));
+      return;
+    }
+    if (typeKey === 'identity') {
+      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['user', 'computer', 'auth_policy'].includes(n.type)).map(n => n.id)));
+      return;
+    }
+    if (typeKey === 'invert') {
+      setSelectedNodeIds(prev => {
+        const next = new Set<string>();
+        filteredNodes.forEach(n => {
+          if (!prev.has(n.id)) next.add(n.id);
+        });
+        return next;
+      });
+    }
+  };
 
   // Coordinate conversion helper: client coordinate -> graph space (world)
   const clientToWorld = (clientX: number, clientY: number) => {
@@ -134,47 +570,76 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
 
   // Canvas Pan Handlers
   const handleSvgMouseDown = (e: React.MouseEvent) => {
-    // Only pan if clicking canvas background
     if ((e.target as HTMLElement).tagName === 'svg' || (e.target as HTMLElement).id === 'graph-canvas-bg') {
       setIsPanning(true);
       dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
     }
   };
 
-  // Node Drag Handler (Grabbing individual nodes)
+  // Node Drag Handler (Supports single & multi-node simultaneous group dragging)
   const handleNodeMouseDown = (node: EntityGraphNode, e: React.MouseEvent) => {
     e.stopPropagation();
-    const worldPos = clientToWorld(e.clientX, e.clientY);
-    const currNodePos = nodePositions[node.id] || { x: node.x ?? 480, y: node.y ?? 320 };
+    setDraggingNodeId(node.id);
+    hasDraggedNodeRef.current = false;
+    nodeMouseDownPosRef.current = { x: e.clientX, y: e.clientY };
 
+    const worldPos = clientToWorld(e.clientX, e.clientY);
+    dragOriginWorldRef.current = worldPos;
+    dragInitialPositionsRef.current = { ...nodePositions };
+
+    const currNodePos = nodePositions[node.id] || { x: node.x ?? 600, y: node.y ?? 310 };
     nodeDragOffsetRef.current = {
       x: worldPos.x - currNodePos.x,
       y: worldPos.y - currNodePos.y
     };
-    nodeMouseDownPosRef.current = { x: e.clientX, y: e.clientY };
-    hasDraggedNodeRef.current = false;
-    setDraggingNodeId(node.id);
+
+    if (e.shiftKey) {
+      setSelectedNodeIds(prev => {
+        const next = new Set(prev);
+        if (next.has(node.id)) next.delete(node.id);
+        else next.add(node.id);
+        return next;
+      });
+    } else if (!selectedNodeIds.has(node.id)) {
+      setSelectedNodeIds(new Set([node.id]));
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (draggingNodeId) {
       if (nodeMouseDownPosRef.current) {
-        const dx = e.clientX - nodeMouseDownPosRef.current.x;
-        const dy = e.clientY - nodeMouseDownPosRef.current.y;
-        if (Math.hypot(dx, dy) > 4) {
-          hasDraggedNodeRef.current = true;
-        }
+        const dist = Math.hypot(e.clientX - nodeMouseDownPosRef.current.x, e.clientY - nodeMouseDownPosRef.current.y);
+        if (dist > 3) hasDraggedNodeRef.current = true;
+      }
+      const worldPos = clientToWorld(e.clientX, e.clientY);
+
+      // Multi-node simultaneous drag
+      if (selectedNodeIds.has(draggingNodeId) && selectedNodeIds.size > 1) {
+        const dx = worldPos.x - dragOriginWorldRef.current.x;
+        const dy = worldPos.y - dragOriginWorldRef.current.y;
+        setNodePositions(prev => {
+          const next = { ...prev };
+          selectedNodeIds.forEach(id => {
+            const initPos = dragInitialPositionsRef.current[id] || prev[id];
+            if (initPos) {
+              next[id] = { x: Math.round((initPos.x + dx) * 10) / 10, y: Math.round((initPos.y + dy) * 10) / 10 };
+            }
+          });
+          return next;
+        });
+        return;
       }
 
-      const worldPos = clientToWorld(e.clientX, e.clientY);
+      // Single node drag
       const newX = Math.round((worldPos.x - nodeDragOffsetRef.current.x) * 10) / 10;
       const newY = Math.round((worldPos.y - nodeDragOffsetRef.current.y) * 10) / 10;
-
       setNodePositions(prev => ({
         ...prev,
         [draggingNodeId]: { x: newX, y: newY }
       }));
-    } else if (isPanning) {
+      return;
+    }
+    if (isPanning) {
       setPan({
         x: e.clientX - dragStartRef.current.x,
         y: e.clientY - dragStartRef.current.y
@@ -191,6 +656,20 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setSelectedNode(null);
+    setSelectedNodeIds(new Set());
+    if (filteredNodes.length > 0) {
+      const { positions, clusterLabels } = calculateLayout(
+        filteredNodes,
+        filteredEdges,
+        layoutMode,
+        sortMode,
+        1200,
+        620,
+        nodeProximity
+      );
+      setNodePositions(positions);
+      setCategoryClusterLabels(clusterLabels);
+    }
   };
 
   const copyToClipboard = (text: string, key: string) => {
@@ -199,7 +678,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // Modern Forensic Palette
+  // Forensic Node Palette
   const getNodeStyling = (node: EntityGraphNode) => {
     const isRoot = node.id === 'root';
     const isCritical = node.risk === 'critical' || node.risk === 'malicious';
@@ -266,9 +745,24 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     return { fill: '#f8fafc', stroke: '#64748b', text: '#334155', badge: 'bg-slate-100 text-slate-700 border-slate-200' };
   };
 
+  // Unconditional render check for empty graph data
+  if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center text-slate-500 shadow-sm">
+        <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 mx-auto mb-3 shadow-inner">
+          <Network className="w-7 h-7" />
+        </div>
+        <h4 className="font-bold text-slate-800 text-sm">No Entity Relationships Available</h4>
+        <p className="text-xs text-slate-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+          The uploaded artifact does not contain child objects, embedded URLs, digital certificates, or behavioral mappings to graph.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden flex flex-col transition-all">
-      {/* Header & Controls Toolbar */}
+      {/* Header & Main Info */}
       <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-200/80 flex items-center justify-center text-indigo-600 shadow-2xs">
@@ -282,147 +776,270 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Interactive topological mapping of root files, IOCs, threat intel, email hops, network targets, and TTPs. Grab nodes to rearrange.
+              Topological entity mapping of root file, IOCs, threat intel, network targets, payload hashes, and TTPs. Grab nodes to rearrange.
             </p>
-          </div>
-        </div>
-
-        {/* Viewport Zoom / Pan Controls & Drag Hint */}
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/80 text-[11px] font-medium text-slate-500 border border-slate-200/60">
-            <Move className="w-3.5 h-3.5 text-slate-400" />
-            <span>Drag nodes to position</span>
-          </div>
-
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-2xs">
-            <button
-              onClick={() => setZoom(prev => Math.min(2.5, prev + 0.2))}
-              title="Zoom In"
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setZoom(prev => Math.max(0.4, prev - 0.2))}
-              title="Zoom Out"
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleResetView}
-              title="Reset View"
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Quick Filter Bar */}
-      <div className="px-6 py-2.5 bg-slate-50/50 border-b border-slate-200/60 flex items-center gap-1.5 overflow-x-auto text-xs font-medium scrollbar-thin">
-        <button
-          onClick={() => setActiveFilter('all')}
-          className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
-            activeFilter === 'all'
-              ? 'bg-slate-900 text-white shadow-2xs font-semibold'
-              : 'text-slate-600 hover:bg-slate-200/60 hover:text-slate-900'
-          }`}
-        >
-          All Entities ({graphData.stats.total_nodes})
-        </button>
+      {/* Controls Toolbar Container */}
+      <div className="p-4 bg-slate-50/80 border-b border-slate-200/80 flex flex-col gap-3 z-10">
+        {/* Row 1: Filter Pills (Multi-Select with New "All Entities" Behavior) */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 hidden lg:inline">Filters:</span>
+            <button
+              onClick={handleToggleAllEntities}
+              data-filter="all"
+              title={isAllSelected ? "Click to deselect all filters" : "Click to select all filters"}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                isAllSelected
+                  ? 'bg-slate-900 text-white shadow-2xs font-semibold border border-slate-900'
+                  : 'bg-slate-100 text-slate-400 border border-slate-200 hover:bg-slate-200/70 hover:text-slate-600'
+              }`}
+            >
+              {isAllSelected && <Check className="w-3 h-3 stroke-[2.5]" />}
+              <span>All Entities</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isAllSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                {categoryCounts.total}
+              </span>
+            </button>
 
-        {graphData.stats.threat_intel_count > 0 && (
-          <button
-            onClick={() => setActiveFilter('intel')}
-            className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
-              activeFilter === 'intel'
-                ? 'bg-rose-600 text-white shadow-2xs font-semibold'
-                : 'text-slate-600 hover:bg-rose-50 hover:text-rose-700'
-            }`}
-          >
-            Threat Intel ({graphData.stats.threat_intel_count})
-          </button>
-        )}
+            {availableFilterOptions.map((opt) => {
+              const isSelected = selectedFilters.includes(opt.key);
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => toggleFilter(opt.key)}
+                  data-filter={opt.key}
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                    isSelected
+                      ? `${opt.color} shadow-2xs font-semibold`
+                      : `text-slate-600 ${opt.hoverColor} bg-white border border-slate-200`
+                  }`}
+                >
+                  {isSelected && <Check className="w-3 h-3 stroke-[2.5]" />}
+                  <span>{opt.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                    {opt.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-        {graphData.stats.email_artifacts_count > 0 && (
-          <button
-            onClick={() => setActiveFilter('email')}
-            className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
-              activeFilter === 'email'
-                ? 'bg-blue-600 text-white shadow-2xs font-semibold'
-                : 'text-slate-600 hover:bg-blue-50 hover:text-blue-700'
-            }`}
-          >
-            Email & Identity ({graphData.stats.email_artifacts_count})
-          </button>
-        )}
+          {(!isAllSelected || hideIsolatedNodes || hideBenignNodes) && (
+            <button
+              onClick={handleResetFilters}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 cursor-pointer transition-colors ml-auto"
+            >
+              Reset filters
+            </button>
+          )}
+        </div>
 
-        {graphData.stats.url_count > 0 && (
-          <button
-            onClick={() => setActiveFilter('network')}
-            className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
-              activeFilter === 'network'
-                ? 'bg-teal-600 text-white shadow-2xs font-semibold'
-                : 'text-slate-600 hover:bg-teal-50 hover:text-teal-700'
-            }`}
-          >
-            Network & Geo ({graphData.stats.url_count})
-          </button>
-        )}
+        {/* Row 2: Layout / Grouping, Sorting, Spacing, and Visibility Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-200/60">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Grouping & Layout Selector */}
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
+              <Layers className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Group/Layout:</span>
+              <select
+                id="entity-graph-layout-select"
+                value={layoutMode}
+                onChange={(e) => setLayoutMode(e.target.value as any)}
+                className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="radial">Radial Orbit</option>
+                <option value="category">Group by Entity Type</option>
+                <option value="hierarchical">Hierarchical Tiers</option>
+                <option value="grid">Structured Grid</option>
+              </select>
+            </div>
 
-        {graphData.stats.embedded_count > 0 && (
-          <button
-            onClick={() => setActiveFilter('payloads')}
-            className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
-              activeFilter === 'payloads'
-                ? 'bg-amber-600 text-white shadow-2xs font-semibold'
-                : 'text-slate-600 hover:bg-amber-50 hover:text-amber-700'
-            }`}
-          >
-            Payloads & Hashes ({graphData.stats.embedded_count})
-          </button>
-        )}
+            {/* Sorting Mode Selector */}
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
+              <ArrowUpDown className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Sort:</span>
+              <select
+                id="entity-graph-sort-select"
+                value={sortMode}
+                onChange={(e) => setSortMode(e.target.value as any)}
+                className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="connectivity">Connectivity (Degree)</option>
+                <option value="threat_severity">Threat Severity & Risk</option>
+                <option value="alpha">Alphabetical (A-Z)</option>
+                <option value="reverse_alpha">Alphabetical (Z-A)</option>
+                <option value="type">Entity Category</option>
+              </select>
+            </div>
 
-        {graphData.stats.certificate_count > 0 && (
-          <button
-            onClick={() => setActiveFilter('trust')}
-            className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
-              activeFilter === 'trust'
-                ? 'bg-emerald-600 text-white shadow-2xs font-semibold'
-                : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'
-            }`}
-          >
-            Certificates ({graphData.stats.certificate_count})
-          </button>
-        )}
+            {/* Spacing / Proximity Selector */}
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Proximity:</span>
+              <select
+                id="entity-graph-proximity-select"
+                value={nodeProximity}
+                onChange={(e) => setNodeProximity(e.target.value as any)}
+                className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="close">Close (0.65x)</option>
+                <option value="middle">Middle (1.0x)</option>
+                <option value="far">Far (1.6x)</option>
+                <option value="very_far">Very Far (2.4x)</option>
+              </select>
+            </div>
 
-        {(graphData.stats.technique_count > 0 || graphData.stats.similar_count > 0) && (
-          <button
-            onClick={() => setActiveFilter('ttps')}
-            className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
-              activeFilter === 'ttps'
-                ? 'bg-purple-600 text-white shadow-2xs font-semibold'
-                : 'text-slate-600 hover:bg-purple-50 hover:text-purple-700'
-            }`}
-          >
-            TTPs & Clusters ({graphData.stats.technique_count + graphData.stats.similar_count})
-          </button>
-        )}
+            {/* Hide Controls */}
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-0.5 shadow-2xs">
+              <button
+                type="button"
+                id="entity-graph-hide-isolated-btn"
+                onClick={() => setHideIsolatedNodes((prev) => !prev)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  hideIsolatedNodes
+                    ? 'bg-amber-500 text-white shadow-2xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+                title="Hide single-connection leaf nodes to reduce clutter"
+              >
+                {hideIsolatedNodes ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                <span>Hide Leaves</span>
+              </button>
 
-        {(graphData.stats.forensic_count || 0) > 0 && (
-          <button
-            onClick={() => setActiveFilter('forensics')}
-            className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
-              activeFilter === 'forensics'
-                ? 'bg-indigo-600 text-white shadow-2xs font-semibold'
-                : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
-            }`}
-          >
-            Forensics &amp; Cross-Log ({graphData.stats.forensic_count})
-          </button>
-        )}
+              <button
+                type="button"
+                id="entity-graph-hide-benign-btn"
+                onClick={() => setHideBenignNodes((prev) => !prev)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  hideBenignNodes
+                    ? 'bg-amber-500 text-white shadow-2xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+                title="Hide benign & low-severity informational entities"
+              >
+                {hideBenignNodes ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                <span>Hide Benign</span>
+              </button>
+            </div>
+
+            {/* Live Stats */}
+            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-600 border border-slate-200 font-mono">
+              <span><strong className="text-slate-900">{filteredNodes.length}</strong> / {graphData.nodes.length} nodes</span>
+              <span className="text-slate-300">•</span>
+              <span><strong className="text-slate-900">{filteredEdges.length}</strong> lines</span>
+            </div>
+          </div>
+
+          {/* Drag Hint & Zoom / Pan Controls */}
+          <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-500 border border-slate-200">
+              <Move className="w-3.5 h-3.5 text-slate-400" />
+              <span>Drag node(s) to move</span>
+            </div>
+
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-2xs">
+              <button
+                onClick={() => setZoom((z) => Math.min(3.5, z + 0.2))}
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setZoom((z) => Math.max(0.3, z - 0.2))}
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleResetView}
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                title="Reset View & Layout"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Quick Select Group & Multi-Node Movement Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2.5 border-t border-slate-200/60 text-xs">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+              <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Select Group:</span>
+            </span>
+
+            <button
+              type="button"
+              onClick={() => selectAllOfType('all')}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer shadow-2xs"
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => selectAllOfType('intel')}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-red-50 text-red-700 border border-slate-200 hover:border-red-300 transition-colors cursor-pointer shadow-2xs"
+            >
+              Intel
+            </button>
+            <button
+              type="button"
+              onClick={() => selectAllOfType('network')}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-sky-50 text-sky-700 border border-slate-200 hover:border-sky-300 transition-colors cursor-pointer shadow-2xs"
+            >
+              Network
+            </button>
+            <button
+              type="button"
+              onClick={() => selectAllOfType('payloads')}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 hover:border-emerald-300 transition-colors cursor-pointer shadow-2xs"
+            >
+              Payloads
+            </button>
+            <button
+              type="button"
+              onClick={() => selectAllOfType('technique')}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-slate-200 hover:border-rose-300 transition-colors cursor-pointer shadow-2xs"
+            >
+              TTPs
+            </button>
+            <button
+              type="button"
+              onClick={() => selectAllOfType('identity')}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-blue-50 text-blue-700 border border-slate-200 hover:border-blue-300 transition-colors cursor-pointer shadow-2xs"
+            >
+              Identity
+            </button>
+            <button
+              type="button"
+              onClick={() => selectAllOfType('invert')}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-indigo-50 text-indigo-700 border border-slate-200 hover:border-indigo-300 transition-colors cursor-pointer shadow-2xs"
+            >
+              Invert
+            </button>
+            <button
+              type="button"
+              onClick={() => selectAllOfType('none')}
+              className="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors cursor-pointer ml-1"
+            >
+              Clear
+            </button>
+          </div>
+
+          {selectedNodeIds.size > 0 && (
+            <div className="flex items-center gap-2 text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+              <span>{selectedNodeIds.size} node{selectedNodeIds.size > 1 ? 's' : ''} selected — drag to move group</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Canvas + Side Inspector Layout */}
@@ -485,6 +1102,36 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
 
           {/* Graph Content Group with Zoom/Pan */}
           <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+            {/* Category Cluster Labels when in Category Layout Mode */}
+            {layoutMode === 'category' &&
+              categoryClusterLabels.map((cl) => (
+                <g key={`cluster-${cl.key}`} transform={`translate(${cl.x}, ${cl.y})`} className="pointer-events-none select-none">
+                  <rect
+                    x={-(cl.label.length * 4.2 + 20)}
+                    y="-14"
+                    width={cl.label.length * 8.4 + 40}
+                    height="24"
+                    rx="12"
+                    fill="#ffffff"
+                    stroke="#cbd5e1"
+                    strokeWidth="1.2"
+                    className="filter drop-shadow-xs"
+                    opacity="0.96"
+                  />
+                  <text
+                    y="3"
+                    textAnchor="middle"
+                    fill="#475569"
+                    fontSize="10"
+                    fontWeight="700"
+                    fontFamily="ui-sans-serif, system-ui, sans-serif"
+                    letterSpacing="0.05em"
+                  >
+                    {cl.label} ({cl.count})
+                  </text>
+                </g>
+              ))}
+
             {/* Edges */}
             {filteredEdges.map((edge, idx) => {
               const srcPos = nodePositions[edge.source];
@@ -559,7 +1206,8 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
               if (!pos) return null;
 
               const styling = getNodeStyling(node);
-              const isSelected = selectedNode?.id === node.id;
+              const isInspectorSelected = selectedNode?.id === node.id;
+              const isSelectedInGroup = selectedNodeIds.has(node.id);
               const isHovered = hoveredNodeId === node.id;
               const isRoot = node.id === 'root';
               const radius = isRoot ? 26 : 20;
@@ -579,15 +1227,26 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   onMouseLeave={() => setHoveredNodeId(null)}
                   className="cursor-pointer"
                 >
-                  {/* Selected / Hover Halo (Pure SVG, NO transform scales = NO jumping!) */}
-                  {(isSelected || isHovered) && (
+                  {/* Multi-selection Halo */}
+                  {isSelectedInGroup && (
+                    <circle
+                      r={radius + 7}
+                      fill="none"
+                      stroke="#6366f1"
+                      strokeWidth={2.5}
+                      strokeDasharray="4 2"
+                      opacity="0.9"
+                    />
+                  )}
+
+                  {/* Inspector / Hover Halo */}
+                  {(isInspectorSelected || isHovered) && !isSelectedInGroup && (
                     <circle
                       r={radius + 6}
                       fill="none"
-                      stroke={isSelected ? '#6366f1' : styling.stroke}
-                      strokeWidth={isSelected ? 2.5 : 1.5}
-                      strokeDasharray={isSelected ? '4 3' : 'none'}
-                      opacity={isSelected ? '0.9' : '0.6'}
+                      stroke={isInspectorSelected ? '#6366f1' : styling.stroke}
+                      strokeWidth={isInspectorSelected ? 2.5 : 1.5}
+                      opacity={isInspectorSelected ? '0.9' : '0.6'}
                     />
                   )}
 
