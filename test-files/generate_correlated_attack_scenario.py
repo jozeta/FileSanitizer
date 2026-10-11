@@ -29,7 +29,7 @@ import io
 import time
 from datetime import datetime, timezone
 
-OUT_DIR = "test-files/attack_scenario"
+OUT_DIR = "test-files/correlated_investigation"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # -------------------------------------------------------------------------
@@ -178,7 +178,8 @@ def make_eth_ip_udp_dns(src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, do
 # 3. Build Hacker Attack PCAP File
 # -------------------------------------------------------------------------
 def build_pcap():
-    out_pcap = os.path.join(OUT_DIR, "network_attack_capture.pcap")
+    out_pcap = os.path.join(OUT_DIR, "06_network_traffic_capture.pcap")
+    alt_pcap = os.path.join(OUT_DIR, "network_attack_capture.pcap")
     pcap_hdr = struct.pack("<IHHiIII", 0xa1b2c3d4, 2, 4, 0, 0, 65535, 1)
     packets = []
 
@@ -386,12 +387,18 @@ def build_pcap():
     # Sort packets strictly by timestamp
     packets.sort(key=lambda p: p[0])
 
+    pcap_bytes = io.BytesIO()
+    pcap_bytes.write(pcap_hdr)
+    for ts, pkt in packets:
+        ts_sec = int(ts)
+        ts_usec = int((ts - ts_sec) * 1e6)
+        pcap_bytes.write(struct.pack("<IIII", ts_sec, ts_usec, len(pkt), len(pkt)) + pkt)
+
+    raw_pcap = pcap_bytes.getvalue()
     with open(out_pcap, "wb") as f:
-        f.write(pcap_hdr)
-        for ts, pkt in packets:
-            ts_sec = int(ts)
-            ts_usec = int((ts - ts_sec) * 1e6)
-            f.write(struct.pack("<IIII", ts_sec, ts_usec, len(pkt), len(pkt)) + pkt)
+        f.write(raw_pcap)
+    with open(alt_pcap, "wb") as f:
+        f.write(raw_pcap)
 
     print(f"[+] Successfully wrote PCAP: {out_pcap} ({len(packets)} packets)")
 
@@ -399,7 +406,8 @@ def build_pcap():
 # 4. Build Windows Event Log File: Security_WKSTN-FIN-01.evtx (Host A)
 # -------------------------------------------------------------------------
 def build_host_a_evtx():
-    out_file = os.path.join(OUT_DIR, "Security_WKSTN-FIN-01.evtx")
+    out_file = os.path.join(OUT_DIR, "04_endpoint_workstation_hostA.evtx")
+    alt_file = os.path.join(OUT_DIR, "Security_WKSTN-FIN-01.evtx")
 
     xml_content = f"""<Events>
   <!-- ===================================================================== -->
@@ -1336,13 +1344,16 @@ def build_host_a_evtx():
 
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(xml_content)
+    with open(alt_file, "w", encoding="utf-8") as f:
+        f.write(xml_content)
     print(f"[+] Successfully wrote Host A EVTX: {out_file}")
 
 # -------------------------------------------------------------------------
 # 5. Build Windows Event Log File: Security_DC-PROD-01.evtx (Host B)
 # -------------------------------------------------------------------------
 def build_host_b_evtx():
-    out_file = os.path.join(OUT_DIR, "Security_DC-PROD-01.evtx")
+    out_file = os.path.join(OUT_DIR, "05_endpoint_domain_controller_hostB.evtx")
+    alt_file = os.path.join(OUT_DIR, "Security_DC-PROD-01.evtx")
 
     xml_content = f"""<Events>
   <!-- ===================================================================== -->
@@ -2292,14 +2303,48 @@ def build_host_b_evtx():
 
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(xml_content)
+    with open(alt_file, "w", encoding="utf-8") as f:
+        f.write(xml_content)
     print(f"[+] Successfully wrote Host B EVTX: {out_file}")
 
 # -------------------------------------------------------------------------
 # Main Execution
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
+    import shutil
     print("[=== Generating Correlated Attack Scenario Files ===]")
     build_pcap()
     build_host_a_evtx()
     build_host_b_evtx()
-    print("[=== All 3 Artifacts Generated Successfully ===]")
+
+    # 03_c2_implant_beacon.exe
+    pe_file = os.path.join(OUT_DIR, "03_c2_implant_beacon.exe")
+    alt_pe = os.path.join(OUT_DIR, "beacon_updater.exe")
+    with open(pe_file, "wb") as f:
+        f.write(PE_BYTES)
+    with open(alt_pe, "wb") as f:
+        f.write(PE_BYTES)
+    print(f"[+] Successfully wrote Staged PE: {pe_file}")
+
+    # 07_exfiltrated_archive.zip
+    zip_file = os.path.join(OUT_DIR, "07_exfiltrated_archive.zip")
+    alt_zip = os.path.join(OUT_DIR, "financial_q3_confidential.zip")
+    with open(zip_file, "wb") as f:
+        f.write(ZIP_BYTES)
+    with open(alt_zip, "wb") as f:
+        f.write(ZIP_BYTES)
+    print(f"[+] Successfully wrote Exfil Zip: {zip_file}")
+
+    # 01_phishing_email.msg
+    msg_src = "test-files/invoice_with_macro_attachment.msg"
+    if os.path.exists(msg_src):
+        shutil.copy2(msg_src, os.path.join(OUT_DIR, "01_phishing_email.msg"))
+        print(f"[+] Successfully wrote Phishing Email: {os.path.join(OUT_DIR, '01_phishing_email.msg')}")
+
+    # 02_weaponized_document.docm
+    docm_src = "test-files/office_vba_macro_template_injection.docm"
+    if os.path.exists(docm_src):
+        shutil.copy2(docm_src, os.path.join(OUT_DIR, "02_weaponized_document.docm"))
+        print(f"[+] Successfully wrote Weaponized Doc: {os.path.join(OUT_DIR, '02_weaponized_document.docm')}")
+
+    print("[=== All 7 Correlated Artifacts Generated Successfully ===]")

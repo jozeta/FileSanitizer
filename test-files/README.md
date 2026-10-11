@@ -1,36 +1,84 @@
 # FileSanitizer Test Files Suite
 
-This directory contains test files specifically crafted to exercise FileSanitizer's security analyzers, Content Disarm & Reconstruction (CDR) engines, metadata extractors, URL reputation scanners, and antivirus detection.
+This repository directory contains curated test files, forensic attack artifacts, and vulnerability benchmarks specifically crafted to exercise FileSanitizer's security analyzers, Content Disarm & Reconstruction (CDR) engines, threat graph correlation, and antivirus pipelines.
 
-| File Name | Intended Security Triggers | Expected App Reaction |
+---
+
+## Directory Organization
+
+```
+test-files/
+├── demo_showcase/              # 🌟 26 PREMIER FILES (One per supported format for demos)
+├── correlated_investigation/   # 🔗 7 SYNCHRONIZED ARTIFACTS ("Operation CobaltShadow" APT campaign)
+├── malicious_pdf/              # 📄 Specialized Malicious PDF test suite (jonaslejon/malicious-pdf)
+├── ultimate_files/             # 🔬 Comprehensive cross-format vulnerability & detection corpus
+└── [unit-test fixtures]        # 🧪 Core fixtures retained for automated test suites
+```
+
+---
+
+## 1. Demo Showcase Suite (`test-files/demo_showcase/`)
+
+Contains **exactly 26 curated demonstration files** — one per supported file format — showcasing FileSanitizer's forensic analysis, static code decompilation, threat intelligence, and CDR capabilities:
+
+| Format | Showcase File | Primary Feature & Vulnerability Highlight |
 | :--- | :--- | :--- |
-| `ultimate_detection_80mb.pdf` | **80 MB All-in-One Detection Benchmark**: Exactly 80.00 MB (`83,886,080 bytes`). Combines every detection capability: `/Launch` command execution, active multiline `/JavaScript`, Didier Stevens hex obfuscation (`/#4a#61vaScript`, `/L#61unch`), `/OpenAction` trigger, embedded Windows PE executable (`MZ/PE`), dynamic XML Forms Architecture (`/XFA` & `/AcroForm`), `/RichMedia` & `/JBIG2Decode` filters, 3 incremental revisions (`%%EOF`), 8 external URLs with URL shortener redirection tracing, high-contrast dark blue/yellow OCR visual raster image, 7 YARA signature families, and all 10 threat watchlist rules (Personnummer, Credit card, JWT, API Key, Password, IBAN, Email, OrgNr, Confidential). | Achieves **HIGH RISK / CRITICAL (99/100)** score with 30+ comprehensive findings across all 8 security analyzer pipeline stages: PDF Structure, Active JavaScript, Didier Stevens PDFiD, YARA Heuristics, Tesseract OCR, URL Shorteners & Screenshots, Structured Metadata, and Threat Watchlist. Sanitization completely purges scripts, actions, attachments, and strips uncompressed streams. |
-| `pdf_virustotal_api_test.pdf` | **VirusTotal API v3 Test Suite**: Multi-usecase benchmark file testing VirusTotal integration (`virustotal_api_key`). Contains: 1) Known malicious URL (`http://evil.com/payload.exe`), 2) Suspicious/phishing test endpoint (`http://testsafebrowsing.appspot.com/s/phishing.html`), 3) 100% clean domain (`https://www.virustotal.com`), 4) Popular portal (`https://www.google.com`), and 5) File SHA-256 hash lookup integration. | Exercises `VirusTotalClient.lookup_file_hash()` and `URLAnalyzer._check_virustotal()`. When API key is provided, flags malicious vendor count indicators, highlights suspicious threat reputation, and creates one-click direct VirusTotal GUI report links. |
-| `pdf_safebrowsing_api_test.pdf` | **Google Safe Browsing API v4 Test Suite**: Multi-usecase benchmark file testing Google Safe Browsing (`safe_browsing_api_key`). Contains official Google test URLs: 1) Official MALWARE test URL (`http://testsafebrowsing.appspot.com/s/malware.html`), 2) Official PHISHING / SOCIAL_ENGINEERING URL (`http://testsafebrowsing.appspot.com/s/phishing.html`), 3) Official UNWANTED_SOFTWARE URL (`http://testsafebrowsing.appspot.com/s/unwanted.html`), 4) Official POTENTIALLY_HARMFUL_APPLICATION URL (`http://testsafebrowsing.appspot.com/s/harmful.html`), and 5) Clean portal (`https://safebrowsing.google.com`). | Exercises `URLAnalyzer._check_safe_browsing()`. Matches Google threat types, surfaces specific threat classifications in indicators, and sets reputation to `MALICIOUS` or `CLEAN` accordingly. |
-| `pdf_urlhaus_api_test.pdf` | **Abuse.ch URLhaus API Test Suite**: Multi-usecase benchmark file testing Abuse.ch URLhaus threat intelligence (`urlhaus_api_key`). Contains: 1) Active malware distribution URL (`http://evil.com/payload.exe`), 2) Hybrid direct IP with dangerous extension (`http://198.51.100.22/malware.exe`), 3) Verified clean domain returning no blacklist records (`https://urlhaus.abuse.ch`), 4) Major repository (`https://www.python.org`), and 5) URLhaus lookup reference links. | Exercises `URLAnalyzer._check_urlhaus()`. Queries Abuse.ch URLhaus API via POST, flags malicious payload status, surfaces threat tags, and tests the "Allow Threat Intel Lookups" policy switch in Settings. |
-| `image_nominatim_geocoding_test.jpg` | **OpenStreetMap Nominatim Geocoding Test**: High-resolution image (1000x700) with complete EXIF GPS tags set to the Eiffel Tower, Paris, France (48° 51' 30.13" N, 2° 17' 40.13" E, 35m alt), Canon EOS R5 hardware tags, and Lightroom software tags. | Exercises `GeoResolver.resolve_coordinates()` via Nominatim API (`nominatim.openstreetmap.org/reverse`). Resolves to **Paris, France** with interactive location hover card. Also tests fallback: turning off "Allow Geolocation Lookups" in Settings verifies the local offline nearest-neighbor world cities dataset. |
-| `pdf_url_screenshot_and_redirect_test.pdf` | **URL Screenshot & Redirection Engine Test**: Multi-usecase benchmark file testing headless Chromium (`browser:3000`) and redirection tracking. Contains: 1) URL shortener masking (`https://shorturl.at/CT7su`), 2) Direct major HTTPS portal (`https://www.wikipedia.org`), 3) SSRF firewall blocked private IP (`http://192.168.1.1:8080/admin`), 4) Dangerous file download path (`http://evil.com/setup.exe`), and 5) Academic portal (`http://www.sunet.se`). | Tests: shortener unmasking, redirection tracking, destination page screenshotting, thumbnail generation, frontend click-to-enlarge lightbox modal, and SSRF private network interception. |
-| `word_macro_20_rows.docm` | **VBA Macro with >= 20 Rows**: Word document with an embedded VBA automation procedure (`AutoOpen()`, `FormatAuditSummary`) spanning 33 rows of formatted code. | Triggers **MACROS DETECTED** banner, surfaces all 33 lines of VBA code in the **Inspect Extracted Code Modal** with syntax highlighting and line numbers. Disarming eliminates macros. |
-| `pdf_javascript_20_rows.pdf` | **JavaScript with >= 20 Rows**: PDF document with an embedded document-level and `/OpenAction` JavaScript calculation module spanning 37 rows of code. | Triggers **JavaScript Detected in PDF** finding, surfaces all 37 lines in the **Inspect Extracted Code Modal** with full syntax highlighting. Disarming or rasterization neutralizes scripts. |
-| `pdf_with_10_real_urls.pdf` | **12 Verified Real URLs**: Multi-page PDF directory containing 12 distinct real-world websites (Google, Wikipedia, GitHub, Python, SUNET, Mozilla, W3C, Stack Overflow, Cloudflare, EFF, Archive.org, CVE) with interactive clickable annotations and metadata. | Discovers all 12 URLs, inspects TLS certificates and IP resolution, captures sandboxed headless browser screenshots for each website, and enables click-to-enlarge lightbox modals. |
-| `pdf_with_shorturl.pdf` | **Shortened Link**: PDF document containing masked URL shortener `https://shorturl.at/CT7su` in body text, interactive URI link annotation, and metadata properties. | Extracted to **URL Explorer**, inspects `shorturl.at` TLS certificate, tracks redirection to target destination (`https://www.sunet.se`), and provides one-click VirusTotal query. |
-| `word_macro_with_google_links.docm` | **Macro & Google Links**: Word document containing VBA macros (`AutoOpen()`, `CalculateMetrics()`), body links to `www.google.com`, external OpenXML hyperlink relationships, and metadata URLs. | Triggers **MACROS DETECTED** banner, surfaces VBA source code in **Inspect Code Modal**, and extracts `https://www.google.com` to **URL Explorer**. Sanitizer purges VBA streams and external rels. |
-| `pdf_autorun_javascript_sunet_link.pdf` | **Auto-run JavaScript & SUNET Link**: PDF document containing `/OpenAction` auto-executing JavaScript, clickable PDF URI annotation pointing to `www.sunet.se`, body links, and metadata URLs. | Discovers active JavaScript, raises **Automatic /OpenAction Trigger** and **JavaScript Detected in PDF** findings, extracts code, and indexes `https://www.sunet.se`. Flattening / CDR purges script actions. |
-| `pdf_with_image_containing_sunet_url.pdf` | **Embedded Image with URL Text**: PDF containing an embedded raster image (`/XObject /Subtype /Image`) where the graphic pixels physically depict `http://www.sunet.se`. | Detects embedded raster graphics, indexes image streams and metadata. Maximum CDR rasterization disarms and re-encodes pixel buffers. |
-| `pdf_with_body_and_metadata_links.pdf` | **Links in Body & Metadata**: Contains body plain-text URLs, interactive PDF `/URI` link annotations, and embedded URLs across document metadata properties (`Author`, `Title`, `Subject`, `Keywords`, `Producer`). | All URLs from both document body and metadata are extracted, surfaced in the **URL Explorer**, and assessed for SSRF/reputation. Sanitizer strips metadata and disarms/flattens links. |
-| `office_with_body_and_metadata_links.docx` | **Links in Body & Metadata**: Contains body text URLs, OpenXML external relationship hyperlinks (`rIdHyperlink1`, `rIdHyperlink2`), and metadata URLs in `docProps/core.xml` (`dc:creator`, `dc:title`, `dc:description`, `cp:keywords`). | Discovers external relationships and metadata links. Sanitizer purges external relationships and replaces core metadata with clean values. |
-| `image_with_metadata_links.jpg` | **Links in Metadata**: Contains embedded URLs in EXIF tags (`Artist`, `Copyright`, `ImageDescription`, `UserComment`, `Software`) and image text comments. | URLs extracted to URL Explorer; metadata highlighted as **SENSITIVE**. Sanitization strips EXIF headers and re-encodes pixel buffer. |
-| `svg_with_body_and_metadata_links.svg` | **Links in Body & Metadata**: Contains interactive `<a xlink:href>`, body `<text>` URLs, and `<metadata><rdf:RDF>` embedded Dublin Core URLs. | Detects external references and vector links. Sanitizer strips active links or converts SVG to safe rasterized PNG. |
-| `html_with_body_and_metadata_links.html` | **Links in Body & Metadata**: Contains `<meta name="author">` and `<link rel="canonical">` metadata URLs, plus body anchor hyperlinks (`<a href>`) and text URLs. | Discovers all metadata and DOM URLs. Sanitizer strips links or renders sandboxed image/PDF. |
-| `image_gps_exif_metadata.jpg` | Embedded GPS coordinates (Stockholm: 59°19'45" N, 18°04'07" E), Camera Hardware (Sony Alpha 7 IV), Author (Jane Doe), Software. | Detected in **Location** & **Camera** metadata tabs. Flagged as **SENSITIVE**. Displays interactive hover card showing **Stockholm, Sweden**. |
-| `clean_image.png` | Standard clean PNG with zero metadata or scripts. | Evaluated as **CLEAN**. |
-| `image_dark_blue_yellow_sunet.png` | **OCR Visual Text URL Test**: PNG image with high-contrast dark blue background (`#0A192F`) and yellow text (`#FFDC00`) rendering `http://www.sunet.se`. | Tesseract OCR engine extracts visual text string, extracts `http://www.sunet.se` into **URL Explorer**, verifies DNS/HTTP 200, and allows CDR re-encoding / conversion to PDF. |
-| `suspicious_javascript_actions.pdf` | Embedded JavaScript (`app.alert`), `/Launch` command, OpenAction trigger, external URL, and embedded CSV attachment. | Classified as **HIGH RISK**. Flags JS alert, Launch action, and attachments. "Maximum Sanitization" rasterizes pages to pure pixel images. |
-| `clean_document.pdf` | Benign clean PDF document with plain text. | Evaluated as **CLEAN**. |
-| `office_vba_macro_template_injection.docm` | Embedded VBA macro binary stream (`vbaProject.bin`), external template injection relationship (`attachedTemplate`), Author metadata. | Triggers prominent **MACROS DETECTED** banner. Classified as **HIGH RISK**. Sanitizer purges macro streams and neutralizes external rels. |
-| `clean_office_document.docx` | Standard OpenXML document without macros or external targets. | Evaluated as **CLEAN**. |
-| `active_content_xss.svg` | Embedded `<script>` block, inline `onload` DOM event handler, `javascript:` URI, and external tracker beacon image. | Flagged as active content risk. Sanitizer strips scripts or rasterizes to PNG. |
-| `phishing_login_with_iframes.html` | Embedded `<iframe>`, credential `<form>`, inline scripts, and `<meta http-equiv="refresh">` redirect. | Flagged as interactive form & script risk. Sanitizer decomposes iframes, neutralizes forms, and strips scripts. |
-| `dangerous_archive_with_traversal.zip` | Directory traversal entry (`../../etc/passwd`), executable batch script (`.bat`), and PowerShell payload (`.ps1`). | Flagged with **Critical Path Traversal** and **Executable Payload** findings. Sanitizer excludes dangerous members. |
-| `eicar_standard_av_test.txt` | Standard, inert 68-character EICAR antivirus test signature. | ClamAV detects **`Eicar-Test-Signature`** with status **MALICIOUS**. Original download and standard sanitization are blocked. |
-| `spreadsheet_formula_injection.csv` | CSV cells starting with formula execution prefixes (`=cmd\|...`, `+powershell...`, `@SUM...`). | Flagged as **Spreadsheet Formula Injection Detected**. Sanitizer escapes formula prefixes with leading quotes (`'`). |
+| **PDF** | `demo_fontmatrix_breakout.pdf` | CVE-2024-4367 PDF.js RCE, Didier Stevens PDFiD badges, clickable raw stream inspector |
+| **Word Macro** | `demo_vba_weaponized_macro.docm` | VBA stomping, WMI process execution, auto-exec macros, P-code discrepancy |
+| **Word OOXML** | `demo_office_document.docx` | OpenXML relationship inspection, embedded OLE packages, metadata sanitization |
+| **Excel** | `demo_financial_spreadsheets.xlsx` | Dynamic Data Exchange (DDE), formula injection (`=cmd\|'/c calc'!A1`), hidden sheets |
+| **PowerPoint** | `demo_stealth_presentation.pptm` | Mouse-over action triggers (`ppactionhover`), slide click traps, hidden slides |
+| **Rich Text (RTF)** | `demo_weaponized_exploit.rtf` | Microsoft Equation Editor CVE-2017-11882, MonikerLink CVE-2024-21413, carved PE payload |
+| **Windows Logs** | `demo_endpoint_sysmon.evtx` | Multi-Host Swimlanes, parent-child process tree, Sysmon 1/3/7/10/11, MITRE ATT&CK |
+| **Network PCAP** | `demo_network_attack.pcap` | DNS tunneling/exfiltration, HTTP POST C2 beaconing, packet stream reassembly |
+| **Outlook Email** | `demo_phishing_invoice.msg` | Pure-Python OLE Compound File parsing, SPF/DKIM/DMARC badges, transit hop timeline |
+| **MIME Email** | `demo_credential_phishing.eml` | Microsoft 365 credential harvester, hidden 1x1 tracking pixel, base64 MIME body |
+| **Archive** | `demo_multi_payload_archive.zip` | WinRAR extension spoofing CVE-2023-38831, Zip Slip traversal (`../../`), compression bomb |
+| **Windows Executable** | `demo_advanced_implant.exe` | PE section entropy heatmap, API hashing detection, Ghidra decompilation, call graph |
+| **Linux Executable** | `demo_linux_rootkit.elf` | 64-bit ELF headers, dynamic symbol imports (`ptrace`, `mprotect`), checksec flags |
+| **Windows Shortcut** | `demo_stealth_shortcut.lnk` | LOLBin PowerShell execution, Base64 cradle, icon spoofing, MotW bypass CVE-2024-38217 |
+| **Image Forensics** | `demo_geotagged_forensics.jpg` | Forensic GPS EXIF metadata, OpenStreetMap/Nominatim interactive reverse geocoding map |
+| **Vector Graphics** | `demo_active_vector.svg` | ImageTragick CVE-2016-3714, XML External Entity (XXE), inline JavaScript (`onload`) |
+| **PowerShell** | `demo_amsi_bypass_cradle.ps1` | In-memory AMSI patch (`amsiInitFailed`), reflection, WebClient download cradle |
+| **Batch Script** | `demo_lolbin_stager.bat` | CertUtil `-urlcache` download LOLBin, `-decode` payload staging, background execution |
+| **POSIX Shell** | `demo_reverse_shell.sh` | Interactive `/dev/tcp` reverse shell, cron persistence installation, history scrubbing |
+| **PHP Backdoor** | `demo_backdoor_webshell.php` | Obfuscated webshell, `eval(base64_decode())`, system command execution parameters |
+| **Java Archive** | `demo_trojan_archive.jar` | JAR manifest inspection, decompiled Java bytecode analysis, `ProcessBuilder` execution |
+| **Browser Extension** | `demo_malicious_extension.crx` | Chromium CRX3 package, `<all_urls>` permission abuse, background worker analysis |
+| **AppleScript** | `demo_macos_dropper.scpt` | Compiled AppleScript OSA binary, `do shell script` curl download and execution |
+| **VBScript** | `demo_wscript_dropper.vbs` | `WScript.Shell`, MSXML2.XMLHTTP payload download, Temp directory executable staging |
+| **Spreadsheet CSV** | `demo_formula_injection.csv` | Formula injection / DDE command execution (`=cmd\|'/c calc'!A1`), CSV sanitization |
+| **Web Document** | `demo_phishing_login.html` | Credential phishing form, hidden iframe overlay, cross-domain form submission |
+
+See [`test-files/demo_showcase/README.md`](demo_showcase/README.md) for full walkthrough instructions.
+
+---
+
+## 2. Correlated Investigation Suite (`test-files/correlated_investigation/`)
+
+Contains **7 synchronized forensic artifacts** modeling an APT intrusion campaign titled **"Operation CobaltShadow"**:
+
+1. `01_phishing_email.msg` — Initial phishing lure with fake invoice and malicious macro attachment.
+2. `02_weaponized_document.docm` — Weaponized Word document executing AutoOpen PowerShell cradle.
+3. `03_c2_implant_beacon.exe` — CobaltStrike beacon implant payload (**SHA-256**: `b002241f...`).
+4. `04_endpoint_workstation_hostA.evtx` — Windows Event Log from victim Workstation `WKSTN-FIN-01` (`10.0.4.15`).
+5. `05_endpoint_domain_controller_hostB.evtx` — Windows Event Log from Domain Controller `DC-PROD-01` (`10.0.4.50`).
+6. `06_network_traffic_capture.pcap` — Wire traffic capture showing DNS, HTTP download, TLS C2, and SMB lateral movement.
+7. `07_exfiltrated_archive.zip` — Exfiltrated confidential payroll archive (**SHA-256**: `2f38219c...`).
+
+When uploaded or analyzed together, FileSanitizer's **Multi-Host Swimlanes**, **Forensic Super-Timeline**, and **Threat Graph** visually connect all events across network, endpoint, and identity layers.
+
+See [`test-files/correlated_investigation/README.md`](correlated_investigation/README.md) for the complete attack scenario narrative, IOC tables, and demonstration steps.
+
+---
+
+## 3. Automated Test Suite Fixtures
+
+The following files are strictly retained in the root of `test-files/` as required dependencies for the automated pytest suite (`backend/tests/`):
+- `clean_document.pdf`
+- `office_vba_macro_template_injection.docm`
+- `clean_office_document.docx`
+- `image_gps_exif_metadata.jpg`
+- `word_macro_with_google_links.docm`
+- `pdf_autorun_javascript_sunet_link.pdf`
+- `pdf_with_image_containing_sunet_url.pdf`
