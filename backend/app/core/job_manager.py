@@ -539,6 +539,21 @@ class JobManager:
                 job.email_info = email_res.data
                 for u in email_res.data.get("urls", []):
                     extracted_urls.add(u)
+                atts = email_res.data.get("attachments", [])
+                if atts:
+                    job.embedded_files = list(getattr(job, "embedded_files", []) or []) + [
+                        {
+                            "name": a.get("filename"),
+                            "filename": a.get("filename"),
+                            "sha256": a.get("sha256"),
+                            "md5": a.get("md5"),
+                            "size": a.get("size_bytes") or a.get("size") or 0,
+                            "mime_type": a.get("content_type"),
+                            "is_dangerous": a.get("is_dangerous", False),
+                            "source_type": "email_attachment"
+                        }
+                        for a in atts
+                    ]
 
             elif job.category == "text":
                 txt_res = TextAnalyzer().analyze(original_path, job.filename, job.mime_type)
@@ -699,8 +714,16 @@ class JobManager:
                     ws=ws,
                     password=job.unlock_password
                 )
-                job.embedded_files = embedded_list
-                for ef in embedded_list:
+                existing_embedded = list(getattr(job, "embedded_files", []) or [])
+                existing_hashes = {str(x.get("sha256") or x.get("md5") or "").lower() for x in existing_embedded if (x.get("sha256") or x.get("md5"))}
+                for ef in (embedded_list or []):
+                    ef_hash = str(ef.get("sha256") or ef.get("md5") or "").lower()
+                    if not ef_hash or ef_hash not in existing_hashes:
+                        existing_embedded.append(ef)
+                        if ef_hash:
+                            existing_hashes.add(ef_hash)
+                job.embedded_files = existing_embedded
+                for ef in (embedded_list or []):
                     if ef.get("is_dangerous"):
                         findings.append(Finding(
                             category="structure",

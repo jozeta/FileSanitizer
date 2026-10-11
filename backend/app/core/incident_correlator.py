@@ -1302,7 +1302,7 @@ class IncidentCorrelator:
         comp_hash_map: Dict[str, List[Dict[str, str]]] = {}
         for j in jobs:
             for emb in getattr(j, "embedded_files", []) or []:
-                emb_hash = emb.get("sha256") or emb.get("md5")
+                emb_hash = (emb.get("sha256") or emb.get("md5") or "").lower()
                 if emb_hash:
                     if emb_hash not in comp_hash_map: comp_hash_map[emb_hash] = []
                     comp_hash_map[emb_hash].append({
@@ -1310,6 +1310,36 @@ class IncidentCorrelator:
                         "filename": getattr(j, "original_filename", None) or j.filename,
                         "component_name": emb.get("name") or emb.get("filename") or "embedded_payload"
                     })
+
+            # Also check EVTX events for hashes
+            evtx = getattr(j, "evtx_info", None) or (getattr(j, "analysis_data", {}) or {}).get("evtx") or {}
+            if evtx and isinstance(evtx, dict):
+                for evt in (evtx.get("timeline") or evtx.get("timeline_events") or evtx.get("events") or []):
+                    raw_h = (evt.get("details", {}) or {}).get("Hashes") or evt.get("hashes") or ""
+                    if raw_h:
+                        for h_match in re.finditer(r'(MD5|SHA256)=([a-fA-F0-9]{32,64})', str(raw_h)):
+                            h_val = h_match.group(2).lower()
+                            if h_val not in comp_hash_map:
+                                comp_hash_map[h_val] = []
+                            if not any(s["job_id"] == j.job_id for s in comp_hash_map[h_val]):
+                                comp_hash_map[h_val].append({
+                                    "job_id": j.job_id,
+                                    "filename": getattr(j, "original_filename", None) or j.filename,
+                                    "component_name": f"EVTX {evt.get('event_id')} Record"
+                                })
+
+        # Match against root analyzed files
+        for j in jobs:
+            h_map = getattr(j, "hashes", {}) or {}
+            for h_k in ["sha256", "md5"]:
+                h_v = (h_map.get(h_k) or "").lower()
+                if h_v and h_v in comp_hash_map:
+                    if not any(s["job_id"] == j.job_id for s in comp_hash_map[h_v]):
+                        comp_hash_map[h_v].append({
+                            "job_id": j.job_id,
+                            "filename": getattr(j, "original_filename", None) or j.filename,
+                            "component_name": "Root Analyzed File"
+                        })
 
         for h, sightings in comp_hash_map.items():
             if len(sightings) > 1:
@@ -1510,10 +1540,10 @@ class IncidentCorrelator:
 
             # Embedded Component / Carved Hashes
             for emb in getattr(job, "embedded_files", []) or []:
-                ehash = emb.get("sha256") or emb.get("md5")
+                ehash = (emb.get("sha256") or emb.get("md5") or "").lower()
                 ename = emb.get("name") or emb.get("filename") or "embedded_payload"
                 if ehash:
-                    eid = f"hash_emb_{ehash.lower()}"
+                    eid = f"hash_emb_{ehash}"
                     _add_node(
                         nid=eid,
                         label=f"Carved: {ename[:12]}",
@@ -1523,6 +1553,40 @@ class IncidentCorrelator:
                         details={"hash_type": "Embedded Payload", "component_name": ename, "hash_value": ehash}
                     )
                     _link_artifact_to_job(jid, eid, "contains component", "hash")
+
+                    # Cross-artifact linkage to matching root jobs and shared hash nodes
+                    for other_job in jobs:
+                        if other_job.job_id == jid:
+                            continue
+                        other_hashes = getattr(other_job, "hashes", {}) or {}
+                        match_s256 = ehash == (other_hashes.get("sha256") or "").lower()
+                        match_m5 = ehash == (other_hashes.get("md5") or "").lower()
+                        if match_s256 or match_m5:
+                            fnid = file_node_ids.get(jid)
+                            other_fnid = file_node_ids.get(other_job.job_id)
+                            if fnid and other_fnid:
+                                _add_edge(fnid, other_fnid, f"contains payload ({ename})", "embedded_payload", is_shared=True)
+                            if match_s256:
+                                _link_artifact_to_job(jid, f"hash_sha256_{ehash}", f"contains payload ({ename})", "hash")
+                            elif match_m5:
+                                _link_artifact_to_job(jid, f"hash_md5_{ehash}", f"contains payload ({ename})", "hash")
+
+        # 2b. Extract and Connect Hashes from EVTX telemetry
+        for job in jobs:
+            jid = job.job_id
+            evtx = getattr(job, "evtx_info", None) or (getattr(job, "analysis_data", {}) or {}).get("evtx") or {}
+            if evtx and isinstance(evtx, dict):
+                for evt in (evtx.get("timeline") or evtx.get("timeline_events") or evtx.get("events") or []):
+                    raw_h = (evt.get("details", {}) or {}).get("Hashes") or evt.get("hashes") or ""
+                    if raw_h:
+                        for h_match in re.finditer(r'(MD5|SHA256)=([a-fA-F0-9]{32,64})', str(raw_h)):
+                            h_type = h_match.group(1).upper()
+                            h_val = h_match.group(2).lower()
+                            if h_type == "SHA256":
+                                _link_artifact_to_job(jid, f"hash_sha256_{h_val}", f"Event {evt.get('event_id')} hash", "hash")
+                            elif h_type == "MD5":
+                                _link_artifact_to_job(jid, f"hash_md5_{h_val}", f"Event {evt.get('event_id')} hash", "hash")
+
 
         # 3. Extract and Connect Timestamps (Compile Times, Document Dates, Telemetry)
         for job in jobs:

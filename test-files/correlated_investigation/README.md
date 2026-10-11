@@ -12,7 +12,7 @@ All 7 artifacts share exact **cryptographic hashes**, **microsecond timestamps**
 flowchart TD
     Email["01_phishing_email.msg<br/>(Invoice Phish from billing@invoicing-services.net)"]
     Doc["02_weaponized_document.docm<br/>(VBA AutoOpen Macro + WebClient Cradle)"]
-    Implant["03_c2_implant_beacon.exe<br/>(SHA-256: b002241f... / MD5: 4ffdc2a3...)"]
+    Implant["03_c2_implant_beacon.exe<br/>(SHA-256: fbfd5b98... / MD5: a9c6e93a...)"]
     HostA["04_endpoint_workstation_hostA.evtx<br/>(WKSTN-FIN-01: 10.0.4.15 - User: jdoe)"]
     HostB["05_endpoint_domain_controller_hostB.evtx<br/>(DC-PROD-01: 10.0.4.50 - Lateral Movement)"]
     Network["06_network_traffic_capture.pcap<br/>(HTTP Payload Download, TLS C2, Exfiltration)"]
@@ -33,12 +33,12 @@ flowchart TD
 
 | Artifact | File Type | Key Indicators & Role in Scenario |
 | :--- | :--- | :--- |
-| `01_phishing_email.msg` | Outlook MSG | **Delivery Vector**: Phishing lure with subject *"Overdue Invoice #INV-2026-994"*. Transit headers identify hop `185.220.101.45` and carrying attachment `02_weaponized_document.docm`. |
-| `02_weaponized_document.docm` | Word Macro | **Initial Access**: Macro executes `AutoOpen()`, spawning hidden PowerShell cradle connecting to `http://evil-payloads-delivery.org/beacon_updater.exe`. |
-| `03_c2_implant_beacon.exe` | Windows PE | **C2 Implant**: Deterministic CobaltStrike beacon implant.<br/>• **SHA-256**: `b002241ff8da0fd372dc9736bf2e4be970fb89792d6df5fac28de3eaa5b4f982`<br/>• **MD5**: `4ffdc2a3c88a8396fdf1367eec6d2a8b` |
-| `04_endpoint_workstation_hostA.evtx` | Windows Event Log | **Host A Telemetry** (`WKSTN-FIN-01`, `10.0.4.15`):<br/>• Sysmon Event 11: File creation of `beacon_updater.exe` (SHA-256 matching `b002241f...`).<br/>• Event 4688: Process tree `WINWORD.EXE` → `powershell.exe` → `beacon_updater.exe`.<br/>• Sysmon Event 3: Network beacon connection to `185.220.101.45:443`.<br/>• 7-Zip process creating exfiltration archive `financial_q3_confidential.zip`. |
-| `05_endpoint_domain_controller_hostB.evtx` | Windows Event Log | **Host B Telemetry** (`DC-PROD-01`, `10.0.4.50`):<br/>• Event 4624 (LogonType 3 Network Logon) from source `10.0.4.15` as user `svc_admin`.<br/>• Event 4672: Special privilege escalation (`SeDebugPrivilege`).<br/>• Event 5140 & 5145: Administrative network share access (`\\DC-PROD-01\ADMIN$`).<br/>• Event 7045: Remote service creation `WindowsDefendUpdateSvc` executing `beacon_updater.exe` (SHA-256 matching `b002241f...`).<br/>• Event 1102: Audit log clearing anti-forensics attempt. |
-| `06_network_traffic_capture.pcap` | Network PCAP | **Network Wire Traffic** (`10.0.4.0/24` subnet):<br/>• DNS query resolving `evil-payloads-delivery.org` to `185.220.101.45`.<br/>• HTTP GET `/beacon_updater.exe` delivering implant (SHA-256 matching `b002241f...`).<br/>• TLS encrypted C2 sessions to `185.220.101.45:443`.<br/>• SMB2 Tree Connect and Session Setup from `10.0.4.15` to `10.0.4.50`.<br/>• HTTP POST multipart upload of `financial_q3_confidential.zip` to `91.240.118.72:8080`. |
+| `01_phishing_email.msg` | Outlook MSG | **Delivery Vector**: Phishing lure with subject *"Overdue Invoice #INV-2026-994"*. Transit headers identify hop `185.220.101.45` and carrying attachment `02_weaponized_document.docm` (matching SHA-256 `7cc63e39...`). |
+| `02_weaponized_document.docm` | Word Macro | **Initial Access**: Macro executes `AutoOpen()`, spawning hidden PowerShell cradle connecting to `http://evil-payloads-delivery.org/beacon_updater.exe`.<br/>• **SHA-256**: `7cc63e390650dca2003b44564e95ea93e432253802f988278e532a15d5c02867`<br/>• **MD5**: `10e7303411bcc881bca81e397c410981` |
+| `03_c2_implant_beacon.exe` | Windows PE | **C2 Implant**: Deterministic CobaltStrike beacon implant with exported procedures and embedded IOCs.<br/>• **SHA-256**: `fbfd5b9863d0e6acf98c420c3d2e301a830f42e8fee7d94809ea9bffdf755972`<br/>• **MD5**: `a9c6e93aeba5c903c1a33d3c0976147a` |
+| `04_endpoint_workstation_hostA.evtx` | Windows Event Log | **Host A Telemetry** (`WKSTN-FIN-01`, `10.0.4.15`):<br/>• Outlook saving `02_weaponized_document.docm` (SHA-256 matching `7cc63e39...`).<br/>• Sysmon Event 11: File creation of `beacon_updater.exe` (SHA-256 matching `fbfd5b98...`).<br/>• Event 4688: Process tree `WINWORD.EXE` → `powershell.exe` → `beacon_updater.exe`.<br/>• Sysmon Event 3: Network beacon connection to `185.220.101.45:443`.<br/>• 7-Zip process creating exfiltration archive `financial_q3_confidential.zip` (SHA-256 matching `2f38219c...`). |
+| `05_endpoint_domain_controller_hostB.evtx` | Windows Event Log | **Host B Telemetry** (`DC-PROD-01`, `10.0.4.50`):<br/>• Event 4624 (LogonType 3 Network Logon) from source `10.0.4.15` as user `svc_admin`.<br/>• Event 4672: Special privilege escalation (`SeDebugPrivilege`).<br/>• Event 5140 & 5145: Administrative network share access (`\\DC-PROD-01\ADMIN$`) dropping `beacon_updater.exe`.<br/>• Event 7045: Remote service creation `WindowsDefendUpdateSvc` executing `beacon_updater.exe` (SHA-256 matching `fbfd5b98...`).<br/>• Event 1102: Audit log clearing anti-forensics attempt. |
+| `06_network_traffic_capture.pcap` | Network PCAP | **Network Wire Traffic** (`10.0.4.0/24` subnet):<br/>• DNS query resolving `evil-payloads-delivery.org` to `185.220.101.45`.<br/>• HTTP GET `/beacon_updater.exe` delivering implant (SHA-256 matching `fbfd5b98...`).<br/>• TLS encrypted C2 sessions to `185.220.101.45:443`.<br/>• SMB2 Tree Connect and Session Setup from `10.0.4.15` to `10.0.4.50`.<br/>• HTTP POST multipart upload of `financial_q3_confidential.zip` (SHA-256 matching `2f38219c...`) to `91.240.118.72:8080`. |
 | `07_exfiltrated_archive.zip` | ZIP Archive | **Stolen Data**: Confidential employee payroll and domain credential dumps.<br/>• **SHA-256**: `2f38219c4605e94329c4b2dfd086b0af17e0c131b0d2edf30416d8d0ec3c2bf0`<br/>• **MD5**: `4c35089de860e4b79f9c3adbd5c1f41f` |
 
 ---
@@ -60,10 +60,13 @@ Adversary Infrastructure:
 └── Harvested Credentials:       TARGET\svc_admin / P@ssw0rd2026!Summer#
 
 Deterministic Payload Hashes:
-├── beacon_updater.exe:
-│   ├── SHA-256: b002241ff8da0fd372dc9736bf2e4be970fb89792d6df5fac28de3eaa5b4f982
-│   └── MD5:     4ffdc2a3c88a8396fdf1367eec6d2a8b
-└── financial_q3_confidential.zip:
+├── 02_weaponized_document.docm:
+│   ├── SHA-256: 7cc63e390650dca2003b44564e95ea93e432253802f988278e532a15d5c02867
+│   └── MD5:     10e7303411bcc881bca81e397c410981
+├── 03_c2_implant_beacon.exe:
+│   ├── SHA-256: fbfd5b9863d0e6acf98c420c3d2e301a830f42e8fee7d94809ea9bffdf755972
+│   └── MD5:     a9c6e93aeba5c903c1a33d3c0976147a
+└── 07_exfiltrated_archive.zip:
     ├── SHA-256: 2f38219c4605e94329c4b2dfd086b0af17e0c131b0d2edf30416d8d0ec3c2bf0
     └── MD5:     4c35089de860e4b79f9c3adbd5c1f41f
 ```
@@ -82,4 +85,4 @@ When these artifacts are analyzed together or viewed in the Fleet & Cross-File C
    - Blends packet captures, endpoint Sysmon events, Windows Security audit trails, and email transit hops into a single, microsecond-accurate chronology spanning from initial phish arrival (`09:59:30Z`) through to data exfiltration and log wiping (`10:01:30Z`).
 
 3. **Threat Graph & IOC Correlation Engine**:
-   - Shared nodes for SHA-256 `b002241f...`, IP `185.220.101.45`, IP `10.0.4.15`, and user `svc_admin` visually tie all 7 files together into an interconnected attack cluster.
+   - Shared nodes for SHA-256 `fbfd5b98...`, IP `185.220.101.45`, IP `10.0.4.15`, and user `svc_admin` visually tie all 7 files together into an interconnected attack cluster.

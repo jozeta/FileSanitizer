@@ -1337,8 +1337,38 @@ class EmailAnalyzer(BaseAnalyzer):
                                 maintype, subtype = 'application', 'octet-stream'
                             if att_fname.lower().endswith('.zip'):
                                 maintype, subtype = 'application', 'zip'
+                            elif att_fname.lower().endswith('.docm'):
+                                maintype, subtype = 'application', 'vnd.ms-word.document.macroEnabled.12'
                             msg.add_attachment(att_data, maintype=maintype, subtype=subtype, filename=att_fname)
                             attached_count += 1
+
+                # Root stream fallback for attachments if not in sub-storages
+                if attached_count == 0:
+                    for s_data in ['__substg1.0_37010102', '__substg1.0_3701001E']:
+                        if ole.exists(s_data):
+                            att_data = ole.openstream(s_data).read()
+                            att_fname = "attachment.bin"
+                            for s_fn in ['__substg1.0_3707001F', '__substg1.0_3704001F', '__substg1.0_3707001E', '__substg1.0_3704001E']:
+                                if ole.exists(s_fn):
+                                    att_fname = ole.openstream(s_fn).read().decode('utf-16le' if s_fn.endswith('1F') else 'latin-1', errors='ignore').strip('\x00 \t\r\n')
+                                    break
+                            att_mime = "application/octet-stream"
+                            for s_m in ['__substg1.0_370E001F', '__substg1.0_370E001E']:
+                                if ole.exists(s_m):
+                                    att_mime = ole.openstream(s_m).read().decode('utf-16le' if s_m.endswith('1F') else 'latin-1', errors='ignore').strip('\x00 \t\r\n')
+                                    break
+                            if att_data:
+                                maintype, _, subtype = att_mime.partition('/')
+                                if not maintype or not subtype:
+                                    maintype, subtype = 'application', 'octet-stream'
+                                if att_fname.lower().endswith('.zip'):
+                                    maintype, subtype = 'application', 'zip'
+                                elif att_fname.lower().endswith('.docm'):
+                                    maintype, subtype = 'application', 'vnd.ms-word.document.macroEnabled.12'
+                                msg.add_attachment(att_data, maintype=maintype, subtype=subtype, filename=att_fname)
+                                attached_count += 1
+                            break
+
 
                 # 4. Extract and copy Transport Headers from __substg1.0_007D001F / 007D001E
                 text_h = ""
