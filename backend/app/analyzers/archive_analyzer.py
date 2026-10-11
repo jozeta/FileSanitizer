@@ -43,6 +43,7 @@ class ArchiveAnalyzer(BaseAnalyzer):
         return str(file_path).lower().endswith(".rar")
 
     def analyze(self, file_path: Path, filename: str, mime_type: str, provided_password: Optional[str] = None) -> AnalyzerResult:
+        file_path = Path(file_path)
         findings: List[Finding] = []
         data: Dict[str, Any] = {
             "total_files": 0,

