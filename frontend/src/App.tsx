@@ -227,6 +227,28 @@ export const App: React.FC = () => {
     }));
   };
 
+  const handleSelectJob = (newJobId: string, filename?: string) => {
+    setWorkspaceJobs((prev) => {
+      if (prev.some((j) => j.jobId === newJobId)) return prev;
+      return [
+        ...prev,
+        {
+          jobId: newJobId,
+          filename: filename || 'Embedded Payload',
+          category: 'unknown',
+          riskLevel: 'ANALYZING',
+        },
+      ];
+    });
+    setActiveTab(newJobId);
+    setCurrentView('sanitizer');
+
+    // Immediately query full status to populate metadata & start live polling
+    apiClient.getJobStatus(newJobId).then((fullJob) => {
+      if (fullJob) handleJobUpdate(fullJob);
+    }).catch(() => {});
+  };
+
   // Hydrate initial jobs if loaded with URL query parameters
   useEffect(() => {
     if (workspaceJobs.length === 0) return;
@@ -467,7 +489,7 @@ export const App: React.FC = () => {
                 onDataLoaded={(d) => {
                   cachedCorrelationRef.current = d;
                 }}
-                onSelectJob={(newJobId) => setActiveTab(newJobId)}
+                onSelectJob={handleSelectJob}
               />
             </ErrorBoundary>
           ) : workspaceJobs.length > 0 && activeTab ? (
@@ -477,7 +499,7 @@ export const App: React.FC = () => {
                 jobId={activeTab}
                 cachedJob={cachedJobsRef.current[activeTab]}
                 onBack={handleReset}
-                onSelectJob={(newJobId) => setActiveTab(newJobId)}
+                onSelectJob={handleSelectJob}
                 onJobUpdate={handleJobUpdate}
                 workspaceJobs={workspaceJobs}
               />

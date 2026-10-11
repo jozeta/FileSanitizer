@@ -681,9 +681,23 @@ def dump_binary_resource(
 def get_job_embedded_files(job_id: str):
     """Retrieve list of embedded files and payloads extracted from document or binary."""
     job = job_manager.get_job(job_id)
+    ws = job_manager.get_workspace(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
-    files = getattr(job, "embedded_files", [])
+    files = getattr(job, "embedded_files", []) or []
+    if not files and ws:
+        original_file = ws.original_dir / job.filename
+        if original_file.exists():
+            from app.core.embedded_extractor import UniversalEmbeddedExtractor
+            files = UniversalEmbeddedExtractor.extract_all(
+                original_file,
+                job.filename,
+                getattr(job, "mime_type", ""),
+                getattr(job, "category", ""),
+                ws,
+                password=getattr(job, "unlock_password", None)
+            )
+            job.embedded_files = files
     return {
         "job_id": job.job_id,
         "total": len(files),
@@ -698,8 +712,25 @@ def download_embedded_file(job_id: str, file_id: int):
     if not ws or not job:
         raise HTTPException(status_code=404, detail="Job not found.")
 
-    embedded_list = getattr(job, "embedded_files", [])
+    embedded_list = getattr(job, "embedded_files", []) or []
+    if not embedded_list:
+        original_file = ws.original_dir / job.filename
+        if original_file.exists():
+            from app.core.embedded_extractor import UniversalEmbeddedExtractor
+            embedded_list = UniversalEmbeddedExtractor.extract_all(
+                original_file,
+                job.filename,
+                getattr(job, "mime_type", ""),
+                getattr(job, "category", ""),
+                ws,
+                password=getattr(job, "unlock_password", None)
+            )
+            job.embedded_files = embedded_list
+
     target = next((item for item in embedded_list if item.get("id") == file_id), None)
+    if not target and 0 <= file_id < len(embedded_list):
+        target = embedded_list[file_id]
+
     if not target:
         raise HTTPException(status_code=404, detail="Embedded file not found.")
 
@@ -709,6 +740,23 @@ def download_embedded_file(job_id: str, file_id: int):
 
     file_path = (ws.extracted_dir / disk_filename).resolve()
     ws.assert_within_workspace(file_path)
+    if not file_path.exists():
+        original_file = ws.original_dir / job.filename
+        if original_file.exists():
+            from app.core.embedded_extractor import UniversalEmbeddedExtractor
+            embedded_list = UniversalEmbeddedExtractor.extract_all(
+                original_file,
+                job.filename,
+                getattr(job, "mime_type", ""),
+                getattr(job, "category", ""),
+                ws,
+                password=getattr(job, "unlock_password", None)
+            )
+            job.embedded_files = embedded_list
+            target = next((item for item in embedded_list if item.get("id") == file_id), None) or (embedded_list[file_id] if 0 <= file_id < len(embedded_list) else None)
+            if target and target.get("disk_filename"):
+                file_path = (ws.extracted_dir / target["disk_filename"]).resolve()
+
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Extracted embedded file not found on disk.")
 
@@ -727,8 +775,25 @@ def analyze_embedded_file(job_id: str, file_id: int, background_tasks: Backgroun
     if not ws or not job:
         raise HTTPException(status_code=404, detail="Job not found.")
 
-    embedded_list = getattr(job, "embedded_files", [])
+    embedded_list = getattr(job, "embedded_files", []) or []
+    if not embedded_list:
+        original_file = ws.original_dir / job.filename
+        if original_file.exists():
+            from app.core.embedded_extractor import UniversalEmbeddedExtractor
+            embedded_list = UniversalEmbeddedExtractor.extract_all(
+                original_file,
+                job.filename,
+                getattr(job, "mime_type", ""),
+                getattr(job, "category", ""),
+                ws,
+                password=getattr(job, "unlock_password", None)
+            )
+            job.embedded_files = embedded_list
+
     target = next((item for item in embedded_list if item.get("id") == file_id), None)
+    if not target and 0 <= file_id < len(embedded_list):
+        target = embedded_list[file_id]
+
     if not target:
         raise HTTPException(status_code=404, detail="Embedded file not found.")
 
@@ -739,12 +804,31 @@ def analyze_embedded_file(job_id: str, file_id: int, background_tasks: Backgroun
     file_path = (ws.extracted_dir / disk_filename).resolve()
     ws.assert_within_workspace(file_path)
     if not file_path.exists():
+        original_file = ws.original_dir / job.filename
+        if original_file.exists():
+            from app.core.embedded_extractor import UniversalEmbeddedExtractor
+            embedded_list = UniversalEmbeddedExtractor.extract_all(
+                original_file,
+                job.filename,
+                getattr(job, "mime_type", ""),
+                getattr(job, "category", ""),
+                ws,
+                password=getattr(job, "unlock_password", None)
+            )
+            job.embedded_files = embedded_list
+            target = next((item for item in embedded_list if item.get("id") == file_id), None) or (embedded_list[file_id] if 0 <= file_id < len(embedded_list) else None)
+            if target and target.get("disk_filename"):
+                file_path = (ws.extracted_dir / target["disk_filename"]).resolve()
+
+    if not file_path.exists():
         raise HTTPException(status_code=404, detail="Extracted embedded file not found on disk.")
 
     file_bytes = file_path.read_bytes()
     raw_name = target.get("name") or f"embedded_{file_id}.bin"
 
     new_job = job_manager.create_job(file_bytes=file_bytes, raw_filename=raw_name)
+    setattr(new_job, "parent_job_id", job.job_id)
+    setattr(new_job, "parent_filename", job.filename)
     background_tasks.add_task(job_manager.execute_analysis_pipeline, new_job.job_id)
 
     return {

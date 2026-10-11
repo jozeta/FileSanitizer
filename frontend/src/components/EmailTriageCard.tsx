@@ -78,6 +78,9 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
       setAnalyzingAttIndex(index);
       const res = await apiClient.analyzeEmailAttachment(jobId, index);
       setAnalyzedJobs((prev) => ({ ...prev, [index]: res.job_id }));
+      if (onSelectJob && res.job_id) {
+        onSelectJob(res.job_id);
+      }
     } catch (e: any) {
       alert(`Failed to queue attachment: ${e.message}`);
     } finally {
@@ -1243,11 +1246,11 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                       {targetJobId ? (
                         <button
                           onClick={() => onSelectJob && onSelectJob(targetJobId)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                          title="Open this file's full analysis dashboard"
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                          title={`Go to already analysed file '${matchedWorkspaceJob?.filename || att.filename}' in current workspace`}
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>View Analyzed File ({matchedWorkspaceJob?.filename || att.filename})</span>
+                          <span>Go to already analysed file</span>
                           <ArrowRight className="w-3 h-3 ml-0.5" />
                         </button>
                       ) : (

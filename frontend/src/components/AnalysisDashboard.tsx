@@ -117,8 +117,13 @@ function getFormatSections(job: JobDetail | null) {
   if (job.mitre_attack && job.mitre_attack.length > 0) {
     sections.push({ id: 'mitre', label: 'ATT&CK Navigator Matrix', icon: ShieldAlert, count: job.mitre_attack.length });
   }
-  if (job.embedded_files && job.embedded_files.length > 0) {
-    sections.push({ id: 'embedded', label: 'Embedded Artifacts', icon: Layers, count: job.embedded_files.length });
+  if ((job.embedded_files && job.embedded_files.length > 0) || (job.pdf_info?.embedded_files && job.pdf_info.embedded_files.length > 0)) {
+    sections.push({
+      id: 'embedded',
+      label: 'Embedded Artifacts',
+      icon: Layers,
+      count: job.embedded_files?.length || job.pdf_info?.embedded_files?.length || 0
+    });
   }
   if (job.category === 'pcap' || Boolean(job.pcap_info) || job.filename?.match(/\.(pcap|pcapng|cap)$/i)) {
     sections.push({ id: 'pcap', label: 'PCAP Network Packet Forensics', icon: Activity, count: job.pcap_info?.summary?.packet_count });
@@ -1222,6 +1227,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         antiAnalysis={job.anti_analysis}
                         workspaceJobs={workspaceJobs}
                         onSelectJob={onSelectJob}
+                        embeddedFiles={job.embedded_files}
                       />
                     </ErrorBoundary>
                   );

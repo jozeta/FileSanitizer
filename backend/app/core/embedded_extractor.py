@@ -116,7 +116,7 @@ class UniversalEmbeddedExtractor:
 
             # 1. PDF Documents
             if category == "pdf" or filename.lower().endswith(".pdf") or mime_type == "application/pdf":
-                cls._extract_pdf_embedded(file_path, ws, extracted_items)
+                cls._extract_pdf_embedded(file_path, ws, extracted_items, password=password)
 
             # 2. Office Documents
             elif category == "office" or filename.lower().endswith((".docx", ".xlsx", ".pptx", ".docm", ".xlsm", ".pptm", ".doc", ".xls", ".ppt")):
@@ -140,22 +140,40 @@ class UniversalEmbeddedExtractor:
         return extracted_items
 
     @classmethod
-    def _extract_pdf_embedded(cls, file_path: Path, ws: JobWorkspace, items: List[Dict[str, Any]]) -> None:
+    def _extract_pdf_embedded(cls, file_path: Path, ws: JobWorkspace, items: List[Dict[str, Any]], password: Optional[str] = None) -> None:
         try:
             import fitz
             doc = fitz.open(str(file_path))
+            if password and doc.is_encrypted:
+                try:
+                    doc.authenticate(password)
+                except Exception:
+                    pass
+
             count = 0
             try:
                 count = doc.embfile_count()
             except Exception:
                 pass
 
+            names = []
+            try:
+                names = doc.embfile_names()
+            except Exception:
+                pass
+
             for idx in range(count):
                 try:
                     info = doc.embfile_info(idx)
-                    raw_name = info.get("filename") or f"embedded_file_{idx}.bin"
+                    raw_name = (
+                        info.get("filename")
+                        or (names[idx] if idx < len(names) else None)
+                        or f"embedded_file_{idx}.bin"
+                    )
                     safe_name = sanitize_filename(raw_name)
                     file_bytes = doc.embfile_get(idx)
+                    if not file_bytes and idx < len(names):
+                        file_bytes = doc.embfile_get(names[idx])
                     if not file_bytes:
                         continue
 
@@ -184,6 +202,48 @@ class UniversalEmbeddedExtractor:
                     })
                 except Exception as inner_e:
                     logger.debug(f"Error extracting PDF embedded file {idx}: {inner_e}")
+
+            # Check for file attachments stored inside page annotations
+            try:
+                for pno, page in enumerate(doc):
+                    for annot in (page.annots() or []):
+                        try:
+                            annot_type = annot.type[0] if isinstance(annot.type, (list, tuple)) else annot.type
+                            # 17 corresponds to fitz.PDF_ANNOT_FILE_ATTACHMENT
+                            if annot_type == 17 or getattr(fitz, "PDF_ANNOT_FILE_ATTACHMENT", 17) == annot_type:
+                                file_bytes = annot.file_get() if hasattr(annot, "file_get") else None
+                                if file_bytes:
+                                    f_info = annot.file_info() if hasattr(annot, "file_info") else {}
+                                    raw_name = f_info.get("filename") or f"annot_attachment_p{pno+1}.bin"
+                                    safe_name = sanitize_filename(raw_name)
+                                    md5, sha256 = calculate_hashes(file_bytes)
+                                    if any(x.get("sha256") == sha256 for x in items):
+                                        continue
+                                    disk_name = f"pdf_emb_{len(items)}_{safe_name}"
+                                    target_path = ws.extracted_dir / disk_name
+                                    target_path.write_bytes(file_bytes)
+                                    detected_mime = detect_mime_type_from_bytes(file_bytes, Path(safe_name).suffix)
+                                    is_dangerous, reason = is_payload_dangerous(safe_name, detected_mime, file_bytes)
+                                    items.append({
+                                        "id": len(items),
+                                        "name": safe_name,
+                                        "source_type": "pdf_annotation_attachment",
+                                        "parent_format": "PDF Document",
+                                        "origin_stream": f"Page {pno+1} FileAttachment Annotation",
+                                        "size": len(file_bytes),
+                                        "size_formatted": format_file_size(len(file_bytes)),
+                                        "mime_type": detected_mime,
+                                        "md5": md5,
+                                        "sha256": sha256,
+                                        "is_dangerous": is_dangerous,
+                                        "threat_reason": reason or ("File attachment annotation inside PDF document" if is_dangerous else ""),
+                                        "disk_filename": disk_name
+                                    })
+                        except Exception as annot_e:
+                            logger.debug(f"Error inspecting annot attachment p{pno}: {annot_e}")
+            except Exception as annot_scan_err:
+                logger.debug(f"Annotation scan error: {annot_scan_err}")
+
             doc.close()
         except Exception as e:
             logger.debug(f"PDF embedded extraction note: {e}")

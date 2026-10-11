@@ -68,6 +68,34 @@ def test_embedded_extractor_on_office_doc():
         finally:
             ws.cleanup()
 
+def test_embedded_extractor_on_pdf():
+    # Test extraction on ultimate_detection.pdf which contains embedded stager_payload.exe
+    sample_pdf = Path("ultimate_files/ultimate_detection.pdf")
+    if not sample_pdf.exists():
+        sample_pdf = Path("backend/ultimate_files/ultimate_detection.pdf")
+    if not sample_pdf.exists():
+        sample_pdf = Path("test-files/ultimate_files/ultimate_detection.pdf")
+
+    if sample_pdf.exists():
+        ws = JobWorkspace().create()
+        try:
+            items = UniversalEmbeddedExtractor.extract_all(
+                file_path=sample_pdf,
+                filename="ultimate_detection.pdf",
+                mime_type="application/pdf",
+                category="pdf",
+                ws=ws
+            )
+            assert isinstance(items, list)
+            assert len(items) >= 1
+            item = items[0]
+            assert "name" in item
+            assert item["name"] == "stager_payload.exe"
+            assert item["is_dangerous"] is True
+            assert (ws.extracted_dir / item["disk_filename"]).exists()
+        finally:
+            ws.cleanup()
+
 def test_rdap_client_structure_and_verification():
     # Test service availability check
     valid, msg = RdapClient.verify_service()

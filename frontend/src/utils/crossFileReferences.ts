@@ -43,6 +43,18 @@ export function findReferencedJob(
     const jobFn = (job.filename || '').toLowerCase();
     const jobStem = jobFn.replace(/\.[^/.]+$/, '');
 
+    // 0. Direct Job ID match
+    if (job.jobId === clean || job.jobId === cleanLower) {
+      return job;
+    }
+
+    // 0.5. Child job linkage (parent_job_id matches current job)
+    if ((job as any).parent_job_id && (job as any).parent_job_id === currentJobId) {
+      if (jobFn === basename || jobStem === basename || (job as any).original_filename?.toLowerCase() === basename) {
+        return job;
+      }
+    }
+
     // 1. Exact or basename match
     if (jobFn === basename || jobStem === basename || jobFn === cleanLower) {
       return job;

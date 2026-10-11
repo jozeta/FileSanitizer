@@ -14,7 +14,8 @@ import {
   FileText,
   FileArchive,
   Cpu,
-  Mail
+  Mail,
+  PlayCircle
 } from 'lucide-react';
 import { EmbeddedFileItem } from '../types';
 import { apiClient } from '../api/client';
@@ -238,6 +239,8 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
               (file.sha256 ? findReferencedJob(file.sha256, workspaceJobs, jobId) : null) ||
               (file.md5 ? findReferencedJob(file.md5, workspaceJobs, jobId) : null);
           })();
+          const targetJobId = analyzedInfo?.jobId || matchedJob?.jobId;
+          const targetJobName = analyzedInfo?.filename || matchedJob?.filename || file.name;
 
           return (
             <div
@@ -257,17 +260,17 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      {matchedJob ? (
+                      {targetJobId ? (
                         <button
                           type="button"
-                          onClick={() => onSelectJob && onSelectJob(matchedJob.jobId)}
+                          onClick={() => onSelectJob && onSelectJob(targetJobId)}
                           className="text-sm font-bold text-indigo-700 hover:text-indigo-900 hover:underline truncate font-mono flex items-center gap-1.5 cursor-pointer text-left"
-                          title={`Click to open analyzed file '${matchedJob.filename}'`}
+                          title={`Click to open analyzed file '${targetJobName}'`}
                         >
                           <span>{file.name}</span>
                           <ExternalLink className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 font-sans">
-                            Analyzed ({matchedJob.filename})
+                            Analyzed ({targetJobName})
                           </span>
                         </button>
                       ) : (
@@ -358,41 +361,31 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
                     <span>Download</span>
                   </a>
 
-                  {/* Analyze as New Job Button or View Analyzed File */}
-                  {matchedJob ? (
+                  {/* Analyze as New Job Button or Go to already analysed file */}
+                  {targetJobId ? (
                     <button
                       type="button"
-                      onClick={() => onSelectJob && onSelectJob(matchedJob.jobId)}
-                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                      title={`Switch to analyzed workspace file '${matchedJob.filename}'`}
+                      onClick={() => onSelectJob && onSelectJob(targetJobId)}
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      title={`Go to already analysed file '${targetJobName}' in current workspace`}
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>View Analyzed File ({matchedJob.filename})</span>
-                    </button>
-                  ) : analyzedInfo ? (
-                    <button
-                      type="button"
-                      onClick={() => onSelectJob && onSelectJob(analyzedInfo.jobId)}
-                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                      title="Switch to analyzed child job"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>View Analysis ↗</span>
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                      <span>Go to already analysed file</span>
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => handleAnalyze(file)}
                       disabled={isAnalyzing}
-                      className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                      title="Submit this extracted embedded file for a dedicated analysis pipeline"
+                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      title="Send this extracted embedded file to analysis as a new job"
                     >
                       {isAnalyzing ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
                       ) : (
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <PlayCircle className="w-3.5 h-3.5 shrink-0" />
                       )}
-                      <span>{isAnalyzing ? 'Submitting...' : 'Analyze as New Job'}</span>
+                      <span>{isAnalyzing ? 'Queueing Analysis...' : 'Send to Analysis'}</span>
                     </button>
                   )}
                 </div>
