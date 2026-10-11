@@ -31,7 +31,8 @@ import {
   SlidersHorizontal,
   Eye,
   EyeOff,
-  CheckSquare
+  CheckSquare,
+  Link2
 } from 'lucide-react';
 import {
   IncidentCorrelationData,
@@ -217,9 +218,6 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     if (node.type === 'host') {
       return { fill: '#f0fdf4', stroke: '#16a34a', text: '#15803d', badge: 'bg-green-50 text-green-700 border-green-200' };
     }
-    if (node.is_shared) {
-      return { fill: '#faf5ff', stroke: '#a855f7', text: '#7e22ce', badge: 'bg-purple-50 text-purple-700 border-purple-200' };
-    }
     if (node.type === 'hash') {
       return { fill: '#ecfdf5', stroke: '#10b981', text: '#047857', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
     }
@@ -390,11 +388,9 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     const sortedNodes = sortNodesList(nodes);
 
     if (layout === 'radial') {
-      // 1. RADIAL ORBIT (File hubs at center, shared in middle orbit, unique in outer orbit)
+      // 1. RADIAL ORBIT (File hubs at center, all artifacts in orbit sorted by type/connectivity)
       const fileNodes = sortedNodes.filter((n) => n.type === 'file');
       const nonFileNodes = sortedNodes.filter((n) => n.type !== 'file');
-      const sharedEntities = nonFileNodes.filter((n) => n.is_shared);
-      const uniqueEntities = nonFileNodes.filter((n) => !n.is_shared);
 
       // File hubs with spacious separation
       if (fileNodes.length === 1) {
@@ -414,47 +410,41 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         });
       }
 
-      // Shared entities in intermediate orbit
-      const sharedCount = sharedEntities.length;
-      if (sharedCount > 0) {
-        const sharedRx = Math.min(width * 0.38, Math.max(220 * prox, sharedCount * 36 * prox));
-        const sharedRy = Math.min(height * 0.34, Math.max(150 * prox, sharedCount * 24 * prox));
-        sharedEntities.forEach((node, idx) => {
-          const angle = (idx / sharedCount) * 2 * Math.PI - Math.PI / 2;
-          positions[node.id] = {
-            x: centerX + sharedRx * Math.cos(angle),
-            y: centerY + sharedRy * Math.sin(angle),
-          };
-        });
-      }
-
-      // Unique entities in outer orbit (with dual-orbit staggering)
-      const uniqueCount = uniqueEntities.length;
-      if (uniqueCount <= 8) {
-        const outerRx = Math.min(width * 0.46, 460 * prox);
-        const outerRy = Math.min(height * 0.40, 235 * prox);
-        uniqueEntities.forEach((node, idx) => {
-          const angle = (idx / (uniqueCount || 1)) * 2 * Math.PI - Math.PI / 2;
-          positions[node.id] = {
-            x: centerX + outerRx * Math.cos(angle),
-            y: centerY + outerRy * Math.sin(angle),
-          };
-        });
-      } else {
-        const orbit1Rx = Math.min(width * 0.40, 380 * prox);
-        const orbit1Ry = Math.min(height * 0.34, 190 * prox);
-        const orbit2Rx = Math.min(width * 0.48, 510 * prox);
-        const orbit2Ry = Math.min(height * 0.42, 245 * prox);
-
-        uniqueEntities.forEach((node, idx) => {
-          const isOuter = idx % 2 === 1;
-          const rx = isOuter ? orbit2Rx : orbit1Rx;
-          const ry = isOuter ? orbit2Ry : orbit1Ry;
-          const angle = (idx / uniqueCount) * 2 * Math.PI - Math.PI / 2;
+      // Non-file entities arranged by sort/type
+      const count = nonFileNodes.length;
+      if (count <= 10) {
+        const rx = Math.min(width * 0.44, Math.max(220 * prox, count * 36 * prox));
+        const ry = Math.min(height * 0.38, Math.max(140 * prox, count * 22 * prox));
+        nonFileNodes.forEach((node, idx) => {
+          const angle = (idx / (count || 1)) * 2 * Math.PI - Math.PI / 2;
           positions[node.id] = {
             x: centerX + rx * Math.cos(angle),
             y: centerY + ry * Math.sin(angle),
           };
+        });
+      } else {
+        const innerCount = Math.ceil(count * 0.4);
+        const outerCount = count - innerCount;
+        const orbit1Rx = Math.min(width * 0.38, Math.max(200 * prox, innerCount * 24 * prox));
+        const orbit1Ry = Math.min(height * 0.32, Math.max(130 * prox, innerCount * 16 * prox));
+        const orbit2Rx = Math.min(width * 0.48, Math.max(340 * prox, outerCount * 22 * prox));
+        const orbit2Ry = Math.min(height * 0.42, Math.max(220 * prox, outerCount * 14 * prox));
+
+        nonFileNodes.forEach((node, idx) => {
+          if (idx < innerCount) {
+            const angle = (idx / (innerCount || 1)) * 2 * Math.PI - Math.PI / 2;
+            positions[node.id] = {
+              x: centerX + orbit1Rx * Math.cos(angle),
+              y: centerY + orbit1Ry * Math.sin(angle),
+            };
+          } else {
+            const outIdx = idx - innerCount;
+            const angle = (outIdx / (outerCount || 1)) * 2 * Math.PI - Math.PI / 2;
+            positions[node.id] = {
+              x: centerX + orbit2Rx * Math.cos(angle),
+              y: centerY + orbit2Ry * Math.sin(angle),
+            };
+          }
         });
       }
     } else if (layout === 'category') {
@@ -670,7 +660,6 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         pcap: { label: 'NETWORK PCAPS', nodes: [] },
         archive: { label: 'ARCHIVES (ZIP)', nodes: [] },
         email: { label: 'EMAILS (MSG/EML)', nodes: [] },
-        shared: { label: 'SHARED THREAT BRIDGE', nodes: [] },
         other: { label: 'OTHER ARTIFACTS', nodes: [] },
       };
 
@@ -686,9 +675,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       };
 
       sortedNodes.forEach((n) => {
-        if (n.is_shared) {
-          formatBuckets.shared.nodes.push(n);
-        } else if (n.type === 'file') {
+        if (n.type === 'file') {
           const bKey = getFileBucketKey(n);
           formatBuckets[bKey].nodes.push(n);
         } else {
@@ -705,7 +692,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         }
       });
 
-      const activeBuckets = Object.entries(formatBuckets).filter(([_, b]) => b.nodes.length > 0 && _ !== 'shared');
+      const activeBuckets = Object.entries(formatBuckets).filter(([_, b]) => b.nodes.length > 0);
       const bucketCount = activeBuckets.length;
       const bRadiusX = Math.min(width * 0.44, Math.max(300 * prox, bucketCount * 70 * prox));
       const bRadiusY = Math.min(height * 0.36, Math.max(160 * prox, bucketCount * 35 * prox));
@@ -737,32 +724,13 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           y: bCenterY - subRad - 18,
         });
       });
-
-      // Place shared bridge in center
-      const sharedList = formatBuckets.shared.nodes;
-      if (sharedList.length > 0) {
-        sharedList.forEach((node, idx) => {
-          const angle = (idx / (sharedList.length || 1)) * 2 * Math.PI;
-          positions[node.id] = {
-            x: centerX + (70 * prox) * Math.cos(angle),
-            y: centerY + (60 * prox) * Math.sin(angle),
-          };
-        });
-        clusterLabels.push({
-          key: 'shared',
-          label: 'SHARED CORRELATION BRIDGE',
-          count: sharedList.length,
-          x: centerX,
-          y: centerY - 95 * prox,
-        });
-      }
     } else if (layout === 'hierarchical') {
       // 5. HIERARCHICAL FORENSIC TIERS
       const tiers: any[][] = [[], [], [], []];
       sortedNodes.forEach((n) => {
         if (n.type === 'file') {
           tiers[0].push(n);
-        } else if (n.is_shared || n.type === 'vulnerability') {
+        } else if (['vulnerability', 'technique'].includes(n.type)) {
           tiers[1].push(n);
         } else if (['hash', 'timestamp', 'geolocation', 'ip', 'domain', 'url'].includes(n.type)) {
           tiers[2].push(n);
@@ -974,6 +942,16 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     );
   };
 
+  const handleToggleSharedOnly = () => {
+    setSharedOnlyFilter((prev) => {
+      const next = !prev;
+      if (next && selectedFilters.length === 0) {
+        setSelectedFilters([...ALL_THREAT_FILTER_KEYS]);
+      }
+      return next;
+    });
+  };
+
   const handleResetFilters = () => {
     setSelectedFilters([...ALL_THREAT_FILTER_KEYS]);
     setSharedOnlyFilter(false);
@@ -993,11 +971,27 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const filteredGraphNodes = useMemo(() => {
     if (!data?.campaign_graph?.nodes) return [];
     const nodes = data.campaign_graph.nodes;
+    const edges = data.campaign_graph.edges || [];
+
+    // Find all IDs of nodes that are shared across submitted files
+    const sharedIds = new Set(nodes.filter((n) => n.is_shared).map((n) => n.id));
+
+    // Find which file nodes connect to at least one shared node
+    const fileIdsWithShared = new Set<string>();
+    edges.forEach((e) => {
+      if (sharedIds.has(e.source)) fileIdsWithShared.add(e.target);
+      if (sharedIds.has(e.target)) fileIdsWithShared.add(e.source);
+    });
 
     return nodes.filter((n) => {
-      // Shared Only toggle constraint
-      if (sharedOnlyFilter && !n.is_shared && n.type !== 'file') {
-        return false;
+      // Shared Only toggle constraint:
+      // When active, strictly show only nodes that are shared between submitted files and the files that share them
+      if (sharedOnlyFilter) {
+        if (n.type === 'file') {
+          if (!fileIdsWithShared.has(n.id)) return false;
+        } else if (!n.is_shared) {
+          return false;
+        }
       }
 
       // Hide isolated/leaf nodes constraint (degree <= 1), keeping file hubs
@@ -1010,7 +1004,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         return false;
       }
 
-      // Base files are preserved as reference anchors
+      // Base files are preserved as reference anchors (if not filtered out by sharedOnlyFilter)
       if (n.type === 'file') {
         return true;
       }
@@ -1519,17 +1513,18 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   </span>
                 </button>
                 <button
-                  onClick={() => setSharedOnlyFilter((prev) => !prev)}
+                  onClick={handleToggleSharedOnly}
                   data-filter="shared_only"
-                  className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                  title="Only show artifacts and files shared across submitted samples"
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                     sharedOnlyFilter
-                      ? 'bg-purple-600 text-white shadow-2xs font-semibold border border-purple-600'
-                      : 'text-slate-600 hover:bg-purple-50 hover:text-purple-700 bg-white border border-slate-200'
+                      ? 'bg-indigo-600 text-white shadow-2xs font-semibold border border-indigo-600'
+                      : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 bg-white border border-slate-200'
                   }`}
                 >
                   {sharedOnlyFilter && <Check className="w-3 h-3 stroke-[2.5]" />}
                   <span>Shared Only</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${sharedOnlyFilter ? 'bg-purple-700/60 text-white' : 'bg-purple-50 text-purple-700'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${sharedOnlyFilter ? 'bg-indigo-700/60 text-white' : 'bg-slate-100 text-slate-600'}`}>
                     {categoryCounts.shared}
                   </span>
                 </button>
@@ -1887,9 +1882,9 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     <line x1="20" y1="255" x2={canvasSize.width - 20} y2="255" stroke="#cbd5e1" strokeDasharray="3 3" />
                     <line x1="20" y1="400" x2={canvasSize.width - 20} y2="400" stroke="#cbd5e1" strokeDasharray="3 3" />
                     <text x="30" y="55" fill="#6366f1" fontSize="9px" fontWeight="bold" fontFamily="monospace">TIER 0: FILE SAMPLES</text>
-                    <text x="30" y="165" fill="#a855f7" fontSize="9px" fontWeight="bold" fontFamily="monospace">TIER 1: SHARED BRIDGES & VULNS</text>
-                    <text x="30" y="305" fill="#0ea5e9" fontSize="9px" fontWeight="bold" fontFamily="monospace">TIER 2: FORENSIC METADATA</text>
-                    <text x="30" y="450" fill="#e11d48" fontSize="9px" fontWeight="bold" fontFamily="monospace">TIER 3: ATT&CK TTPS & TOOLS</text>
+                    <text x="30" y="165" fill="#e11d48" fontSize="9px" fontWeight="bold" fontFamily="monospace">TIER 1: VULNERABILITIES & TECHNIQUES</text>
+                    <text x="30" y="305" fill="#0ea5e9" fontSize="9px" fontWeight="bold" fontFamily="monospace">TIER 2: FORENSIC METADATA & NETWORK</text>
+                    <text x="30" y="450" fill="#64748b" fontSize="9px" fontWeight="bold" fontFamily="monospace">TIER 3: IDENTITIES & TOOLS</text>
                   </g>
                 )}
 
@@ -1898,7 +1893,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     <line x1={canvasSize.width / 2 - 160} y1="30" x2={canvasSize.width / 2 - 160} y2={canvasSize.height - 30} stroke="#cbd5e1" strokeDasharray="3 3" />
                     <line x1={canvasSize.width / 2 + 160} y1="30" x2={canvasSize.width / 2 + 160} y2={canvasSize.height - 30} stroke="#cbd5e1" strokeDasharray="3 3" />
                     <text x={canvasSize.width / 2 - 350} y="45" fill="#6366f1" fontSize="9px" fontWeight="bold" fontFamily="monospace" textAnchor="middle">SAMPLE A ARTIFACTS</text>
-                    <text x={canvasSize.width / 2} y="45" fill="#a855f7" fontSize="9px" fontWeight="bold" fontFamily="monospace" textAnchor="middle">CORRELATION BRIDGE</text>
+                    <text x={canvasSize.width / 2} y="45" fill="#6366f1" fontSize="9px" fontWeight="bold" fontFamily="monospace" textAnchor="middle">SHARED ARTIFACTS</text>
                     <text x={canvasSize.width / 2 + 350} y="45" fill="#6366f1" fontSize="9px" fontWeight="bold" fontFamily="monospace" textAnchor="middle">SAMPLE B ARTIFACTS</text>
                   </g>
                 )}
@@ -1918,15 +1913,15 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   let strokeWidth = 1.2;
                   let markerUrl = 'url(#threat-arrow-slate)';
 
-                  if (isSharedEdge) {
-                    strokeColor = '#a855f7';
-                    strokeWidth = 2;
-                    markerUrl = 'url(#threat-arrow-purple)';
-                  } else if (isThreat) {
+                  if (isThreat) {
                     strokeColor = '#f43f5e';
                     strokeWidth = 1.8;
                     markerUrl = 'url(#threat-arrow-danger)';
-                  } else if (edge.source.startsWith('file') || edge.target.startsWith('file')) {
+                  } else if (isSharedEdge) {
+                    strokeColor = '#6366f1';
+                    strokeWidth = 1.8;
+                    markerUrl = 'url(#threat-arrow-indigo)';
+                  } else if (edge.source.startsWith('file') || edge.target.startsWith('file') || edge.source.startsWith('job_root') || edge.target.startsWith('job_root')) {
                     strokeColor = '#818cf8';
                     strokeWidth = 1.4;
                     markerUrl = 'url(#threat-arrow-indigo)';
@@ -1986,7 +1981,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   const isShared = node.is_shared;
                   const isSelected = selectedNode?.id === node.id;
                   const styling = getNodeStyling(node);
-                  const nodeRadius = isFile ? 24 : isShared ? 18 : 14;
+                  const nodeRadius = isFile ? 24 : 16;
 
                   return (
                     <g
@@ -2001,16 +1996,32 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       }}
                       className="cursor-move group"
                     >
-                      {/* Pulsing Aura for Shared Entities */}
+                      {/* Shared Tag Badge Above Node */}
                       {isShared && (
-                        <circle
-                          r={nodeRadius + 6}
-                          fill="none"
-                          stroke="#c084fc"
-                          strokeWidth="2"
-                          opacity="0.6"
-                          className="animate-pulse"
-                        />
+                        <g transform={`translate(0, -${nodeRadius + 9})`} className="pointer-events-none select-none">
+                          <rect
+                            x="-22"
+                            y="-6"
+                            width="44"
+                            height="13"
+                            rx="6.5"
+                            fill="#ffffff"
+                            stroke="#6366f1"
+                            strokeWidth="1.2"
+                            className="filter drop-shadow-2xs"
+                          />
+                          <text
+                            y="3"
+                            textAnchor="middle"
+                            fill="#4f46e5"
+                            fontSize="7.5px"
+                            fontWeight="bold"
+                            fontFamily="ui-sans-serif, system-ui, sans-serif"
+                            letterSpacing="0.05em"
+                          >
+                            SHARED
+                          </text>
+                        </g>
                       )}
 
                       {/* Selection Halo / Ring (Single Selected or Multi-Selected) */}
@@ -2045,7 +2056,31 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         fontFamily="ui-sans-serif, system-ui, sans-serif"
                         className="select-none pointer-events-none"
                       >
-                        {isFile ? 'FILE' : isShared ? 'SHARED' : node.type === 'hash' ? 'HASH' : node.type === 'timestamp' ? 'TIME' : node.type === 'vulnerability' ? 'VULN' : node.type === 'geolocation' ? 'GEO' : node.type === 'artifact' ? 'TOOL' : node.type.substring(0, 3).toUpperCase()}
+                        {isFile
+                          ? 'FILE'
+                          : node.type === 'host'
+                          ? 'HOST'
+                          : node.type === 'hash'
+                          ? 'HASH'
+                          : node.type === 'timestamp'
+                          ? 'TIME'
+                          : node.type === 'vulnerability'
+                          ? 'VULN'
+                          : node.type === 'geolocation'
+                          ? 'GEO'
+                          : node.type === 'ip'
+                          ? 'IP'
+                          : node.type === 'domain'
+                          ? 'DOM'
+                          : node.type === 'url'
+                          ? 'URL'
+                          : node.type === 'user'
+                          ? 'USER'
+                          : node.type === 'technique'
+                          ? 'TTP'
+                          : node.type === 'artifact'
+                          ? 'TOOL'
+                          : node.type.substring(0, 3).toUpperCase()}
                       </text>
 
                       {/* Node Label Text */}
@@ -2090,6 +2125,12 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     <span className={`px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold border ${getNodeStyling(selectedNode).badge}`}>
                       {selectedNode.type}
                     </span>
+                    {selectedNode.is_shared && (
+                      <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                        <Link2 className="w-3 h-3" />
+                        <span>SHARED</span>
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => setSelectedNode(null)}
@@ -2119,11 +2160,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
                   {/* Shared Indicator */}
                   {selectedNode.is_shared && (
-                    <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 flex items-center gap-2 text-xs text-purple-900">
-                      <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
+                    <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center gap-2 text-xs text-indigo-900">
+                      <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
                       <div>
-                        <strong className="block font-semibold">Correlated Campaign Artifact</strong>
-                        <span className="text-[11px] text-purple-700">Identified across multiple analyzed files</span>
+                        <strong className="block font-semibold">Shared Campaign Artifact</strong>
+                        <span className="text-[11px] text-indigo-700">Observed across multiple submitted files</span>
                       </div>
                     </div>
                   )}
