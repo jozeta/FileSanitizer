@@ -23,6 +23,7 @@ import {
   Key,
   Repeat,
   Layers,
+  FileText,
   Move,
   ArrowUpDown,
   Radio,
@@ -899,11 +900,164 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       vulns: nodes.filter((n) => n.type === 'vulnerability').length,
       geo: nodes.filter((n) => n.type === 'geolocation').length,
       network: nodes.filter((n) => ['ip', 'domain', 'url'].includes(n.type)).length,
-      identity: nodes.filter((n) => n.type === 'user').length,
+      identity: nodes.filter((n) => ['user', 'metadata'].includes(n.type)).length,
       ttps: nodes.filter((n) => n.type === 'technique').length,
       artifacts: nodes.filter((n) => n.type === 'artifact').length,
     };
   }, [data]);
+
+  // File inclusion state: which analyzed files are included in the threat graph
+  const allFileNodes = useMemo(() => {
+    return (data?.campaign_graph?.nodes || []).filter((n) => n.type === 'file');
+  }, [data?.campaign_graph?.nodes]);
+
+  const allFileNodeIds = useMemo(() => {
+    return allFileNodes.map((n) => n.id);
+  }, [allFileNodes]);
+
+  const [includedFileIds, setIncludedFileIds] = useState<Set<string>>(new Set());
+
+  // Initialize includedFileIds when graph data loads or changes
+  useEffect(() => {
+    if (allFileNodeIds.length > 0) {
+      setIncludedFileIds((prev) => {
+        if (prev.size === 0) return new Set(allFileNodeIds);
+        const next = new Set<string>();
+        allFileNodeIds.forEach((id) => {
+          if (prev.has(id)) next.add(id);
+        });
+        return next.size > 0 ? next : new Set(allFileNodeIds);
+      });
+    }
+  }, [allFileNodeIds]);
+
+  // Node to File IDs Reachability & Association Map
+  const nodeToFileIdsMap = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    if (!data?.campaign_graph?.nodes) return map;
+
+    const nodes = data.campaign_graph.nodes;
+    const edges = data.campaign_graph.edges || [];
+    const fileNodes = nodes.filter((n) => n.type === 'file');
+    const fileNodeIdSet = new Set(fileNodes.map((f) => f.id));
+
+    nodes.forEach((n) => {
+      map.set(n.id, new Set<string>());
+    });
+
+    fileNodes.forEach((f) => {
+      map.get(f.id)?.add(f.id);
+    });
+
+    // Extract associations from backend node.file_ids, seen_in_files, and job_id
+    nodes.forEach((n: any) => {
+      if (Array.isArray(n.file_ids)) {
+        n.file_ids.forEach((fid: string) => {
+          if (fileNodeIdSet.has(fid)) {
+            map.get(n.id)?.add(fid);
+          }
+        });
+      }
+      if (Array.isArray(n.details?.seen_in_files)) {
+        n.details.seen_in_files.forEach((sf: any) => {
+          const matchingFile = fileNodes.find(
+            (f) =>
+              f.details?.job_id === sf.job_id ||
+              f.id === `job_root_${sf.job_id}` ||
+              f.label === sf.filename
+          );
+          if (matchingFile) {
+            map.get(n.id)?.add(matchingFile.id);
+          }
+        });
+      }
+      if (n.details?.job_id) {
+        const matchingFile = fileNodes.find(
+          (f) =>
+            f.details?.job_id === n.details.job_id ||
+            f.id === `job_root_${n.details.job_id}`
+        );
+        if (matchingFile) {
+          map.get(n.id)?.add(matchingFile.id);
+        }
+      }
+    });
+
+    // Direct edges connecting to file nodes
+    edges.forEach((e) => {
+      const isSrcFile = fileNodeIdSet.has(e.source);
+      const isTgtFile = fileNodeIdSet.has(e.target);
+      if (isSrcFile && !isTgtFile) {
+        map.get(e.target)?.add(e.source);
+      } else if (isTgtFile && !isSrcFile) {
+        map.get(e.source)?.add(e.target);
+      }
+    });
+
+    // Multi-hop propagation for secondary nodes (e.g. IP -> Geolocation, or sub-artifacts)
+    let changed = true;
+    let iterations = 0;
+    while (changed && iterations < 3) {
+      changed = false;
+      iterations++;
+      edges.forEach((e) => {
+        const isSrcFile = fileNodeIdSet.has(e.source);
+        const isTgtFile = fileNodeIdSet.has(e.target);
+        if (isSrcFile && isTgtFile) return;
+
+        const srcFiles = map.get(e.source) || new Set();
+        const tgtFiles = map.get(e.target) || new Set();
+
+        if (!isTgtFile && tgtFiles.size === 0 && srcFiles.size > 0) {
+          srcFiles.forEach((fid) => map.get(e.target)?.add(fid));
+          changed = true;
+        } else if (!isSrcFile && srcFiles.size === 0 && tgtFiles.size > 0) {
+          tgtFiles.forEach((fid) => map.get(e.source)?.add(fid));
+          changed = true;
+        }
+      });
+    }
+
+    return map;
+  }, [data?.campaign_graph?.nodes, data?.campaign_graph?.edges]);
+
+  // Counts of associated entities for each file
+  const fileNodeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (!data?.campaign_graph?.nodes) return counts;
+    const nodes = data.campaign_graph.nodes;
+    allFileNodes.forEach((fn) => {
+      counts[fn.id] = nodes.filter(
+        (n) => n.id !== fn.id && nodeToFileIdsMap.get(n.id)?.has(fn.id)
+      ).length;
+    });
+    return counts;
+  }, [data?.campaign_graph?.nodes, allFileNodes, nodeToFileIdsMap]);
+
+  const isAllFilesSelected = useMemo(() => {
+    if (allFileNodeIds.length === 0) return true;
+    return allFileNodeIds.every((id) => includedFileIds.has(id));
+  }, [allFileNodeIds, includedFileIds]);
+
+  const handleToggleAllFiles = () => {
+    if (isAllFilesSelected) {
+      setIncludedFileIds(new Set());
+    } else {
+      setIncludedFileIds(new Set(allFileNodeIds));
+    }
+  };
+
+  const handleToggleFileInclusion = (fileNodeId: string) => {
+    setIncludedFileIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(fileNodeId)) {
+        next.delete(fileNodeId);
+      } else {
+        next.add(fileNodeId);
+      }
+      return next;
+    });
+  };
 
   // Filter options configuration
   const filterOptions = [
@@ -950,7 +1104,10 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const handleResetFilters = () => {
     setSelectedFilters([...ALL_THREAT_FILTER_KEYS]);
     setSharedOnlyFilter(false);
+    setHideIsolatedNodes(false);
+    setHideBenignNodes(false);
     setShowEmptyNodes(false);
+    setIncludedFileIds(new Set(allFileNodeIds));
   };
 
   const nodeDegreeMap = useMemo(() => {
@@ -1059,6 +1216,24 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     });
 
     return nodes.filter((n) => {
+      // 0. File Inclusion Filter (User can select/deselect which files are included in the graph)
+      if (n.type === 'file') {
+        if (!includedFileIds.has(n.id)) {
+          return false;
+        }
+      } else {
+        const associatedFiles = nodeToFileIdsMap.get(n.id);
+        if (associatedFiles && associatedFiles.size > 0) {
+          const hasIncludedParent = Array.from(associatedFiles).some((fid) => includedFileIds.has(fid));
+          if (!hasIncludedParent) {
+            return false;
+          }
+        } else {
+          // If orphan node, hide when all files are deselected
+          if (includedFileIds.size === 0) return false;
+        }
+      }
+
       // Base files are preserved as reference anchors (if not filtered out by sharedOnlyFilter)
       if (n.type === 'file') {
         if (sharedOnlyFilter && !fileIdsWithShared.has(n.id)) return false;
@@ -1106,13 +1281,13 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         if (f === 'vulns') return n.type === 'vulnerability' || n.type === 'threat_intel' || n.type === 'threat_signature';
         if (f === 'geo') return n.type === 'geolocation';
         if (f === 'network') return ['ip', 'domain', 'url'].includes(n.type);
-        if (f === 'identity') return n.type === 'user';
+        if (f === 'identity') return ['user', 'metadata'].includes(n.type);
         if (f === 'ttps') return n.type === 'technique';
         if (f === 'artifacts') return ['artifact', 'embedded_file'].includes(n.type);
         return false;
       });
     });
-  }, [data, selectedFilters, sharedOnlyFilter, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap, showEmptyNodes]);
+  }, [data, selectedFilters, sharedOnlyFilter, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap, showEmptyNodes, includedFileIds, nodeToFileIdsMap]);
 
   const selectAllOfType = (typeKey: string) => {
     if (typeKey === 'all') {
@@ -1165,6 +1340,13 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
   const visibleNodeIds = useMemo(() => new Set(filteredGraphNodes.map((n) => n.id)), [filteredGraphNodes]);
 
+  // If selected node was filtered out or hidden, close the inspector
+  useEffect(() => {
+    if (selectedNode && !visibleNodeIds.has(selectedNode.id)) {
+      setSelectedNode(null);
+    }
+  }, [visibleNodeIds, selectedNode]);
+
   // Edges filtered: ANY edge connected to a hidden/filtered node is hidden!
   const visibleEdges = useMemo(() => {
     if (!data?.campaign_graph?.edges) return [];
@@ -1189,6 +1371,10 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         const otherNode = nodeMap.get(otherId);
         // Exclude file nodes as requested: "when clicking select connected nodes i dont want a file to be selected"
         if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && !otherId.startsWith('job_')) {
+          const otherFiles = nodeToFileIdsMap.get(otherId);
+          if (otherFiles && otherFiles.size > 0 && !Array.from(otherFiles).some((fid) => includedFileIds.has(fid))) {
+            return;
+          }
           connectedIds.add(otherId);
         }
       }
@@ -1692,6 +1878,77 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative min-h-[690px] flex flex-col transition-all">
           {/* Graph Controls Toolbar */}
           <div className="p-4 bg-slate-50/80 border-b border-slate-200/80 flex flex-col gap-3 z-10">
+            {/* Row 0: Analyzed Files Inclusion Filter */}
+            {allFileNodes.length > 0 && (
+              <div id="threat-graph-file-filter-bar" className="flex items-center justify-between gap-3 flex-wrap pb-2.5 border-b border-slate-200/60">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+                    <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Analyzed Files:</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleToggleAllFiles}
+                    data-filter="all_files"
+                    title={isAllFilesSelected ? "Click to deselect all files" : "Click to select all files"}
+                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                      isAllFilesSelected
+                        ? 'bg-slate-900 text-white shadow-2xs font-semibold border border-slate-900'
+                        : includedFileIds.size > 0
+                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
+                        : 'bg-slate-100 text-slate-400 border border-slate-200 hover:bg-slate-200/70 hover:text-slate-600'
+                    }`}
+                  >
+                    {isAllFilesSelected && <Check className="w-3 h-3 stroke-[2.5]" />}
+                    <span>All Files</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isAllFilesSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                      {allFileNodes.length}
+                    </span>
+                  </button>
+
+                  {allFileNodes.map((fn) => {
+                    const isIncluded = includedFileIds.has(fn.id);
+                    const count = fileNodeCounts[fn.id] || 0;
+                    const label = fn.label || fn.details?.filename || 'File';
+                    const displayLabel = label.length > 28 ? label.substring(0, 26) + '…' : label;
+
+                    return (
+                      <button
+                        key={fn.id}
+                        type="button"
+                        onClick={() => handleToggleFileInclusion(fn.id)}
+                        data-file-id={fn.id}
+                        title={`${isIncluded ? 'Click to hide' : 'Click to show'} ${label} (${count} connected entities)`}
+                        className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isIncluded
+                            ? 'bg-indigo-600 text-white border border-indigo-600 shadow-2xs'
+                            : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 hover:text-slate-600 opacity-60'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${isIncluded ? 'bg-white' : 'bg-slate-300'}`} />
+                        <span className="font-mono text-[11px] truncate max-w-[200px]">{displayLabel}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                          isIncluded ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {(!isAllFilesSelected || !isAllSelected || sharedOnlyFilter) && (
+                  <button
+                    onClick={handleResetFilters}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 cursor-pointer transition-colors ml-auto"
+                  >
+                    Reset all filters
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Row 1: Filter Pills (Multi-Select) */}
             <div id="threat-graph-filter-bar" className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -1751,7 +2008,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                 })}
               </div>
 
-              {(!isAllSelected || sharedOnlyFilter) && (
+              {(!isAllSelected || sharedOnlyFilter || !isAllFilesSelected) && (
                 <button
                   onClick={handleResetFilters}
                   className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 cursor-pointer transition-colors ml-auto"

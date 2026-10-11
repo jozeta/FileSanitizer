@@ -2717,6 +2717,7 @@ export interface IncidentCorrelationData {
       risk: string;
       tier: number;
       is_shared?: boolean;
+      file_ids?: string[];
       details?: Record<string, any>;
     }>;
     edges: Array<{

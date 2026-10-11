@@ -40,7 +40,7 @@ const ENTITY_CATEGORIES = [
   {
     key: 'identity',
     label: 'Identity & Users',
-    types: ['user', 'auth_policy', 'tracking_pixel', 'computer'],
+    types: ['user', 'auth_policy', 'tracking_pixel', 'computer', 'metadata'],
     color: 'bg-blue-600 text-white border-blue-600',
     hoverColor: 'hover:bg-blue-50 hover:text-blue-700'
   },
@@ -836,7 +836,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     if (node.type === 'threat_intel' || node.type === 'threat_signature') {
       return { fill: '#fef2f2', stroke: '#ef4444', text: '#b91c1c', badge: 'bg-red-50 text-red-700 border-red-200' };
     }
-    if (node.type === 'user' || node.type === 'auth_policy') {
+    if (node.type === 'user' || node.type === 'auth_policy' || node.type === 'metadata') {
       return { fill: '#eff6ff', stroke: '#3b82f6', text: '#1d4ed8', badge: 'bg-blue-50 text-blue-700 border-blue-200' };
     }
     if (node.type === 'domain' || node.type === 'ip') {
@@ -1458,6 +1458,8 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                       ? 'SIG'
                       : node.type === 'user'
                       ? 'USER'
+                      : node.type === 'metadata'
+                      ? 'META'
                       : node.type === 'auth_policy'
                       ? 'AUTH'
                       : node.type === 'tracking_pixel'

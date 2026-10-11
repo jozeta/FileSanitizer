@@ -2152,6 +2152,12 @@ class IncidentCorrelator:
         # If any node is referenced across multiple files, promote it to shared bridge node!
         for node in nodes:
             nid = node["id"]
+            if node.get("type") == "file":
+                node["file_ids"] = [nid]
+            else:
+                jids = node_jobs.get(nid, set())
+                node["file_ids"] = [file_node_ids[j] for j in jids if j in file_node_ids]
+
             if nid in node_jobs and len(node_jobs[nid]) > 1:
                 node["is_shared"] = True
                 node["tier"] = 1
