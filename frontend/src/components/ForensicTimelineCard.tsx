@@ -38,7 +38,8 @@ import {
   X,
   RotateCcw,
   FileText,
-  Layers
+  Layers,
+  ChevronDown
 } from 'lucide-react';
 import { ForensicTimelineData } from '../types';
 import { MultiArtifactSwimlaneCanvas } from './MultiArtifactSwimlaneCanvas';
@@ -869,6 +870,8 @@ export const ForensicTimelineCard: React.FC<ForensicTimelineCardProps> = ({ jobI
 
   // Set of active filter group IDs (multiple can be active simultaneously)
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+  const [groupSimilar, setGroupSimilar] = useState<boolean>(true);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
 
   const fetchTimeline = async (superMode = isSuperTimeline) => {
     setLoading(true);
@@ -1032,6 +1035,70 @@ export const ForensicTimelineCard: React.FC<ForensicTimelineCardProps> = ({ jobI
     const max = filteredEvents[filteredEvents.length - 1].epoch;
     return Math.max(0, max - min);
   }, [filteredEvents]);
+
+  const getEventSimilarityKey = (e: any): string => {
+    const normTitle = (e.title || '').trim().toLowerCase();
+    const eventType = e.event_type || '';
+    const source = e.source || '';
+    const category = e.category || '';
+    return `${eventType}:::${normTitle}:::${source}:::${category}`;
+  };
+
+  // Group consecutive similar activities
+  const groupedTimelineItems = useMemo(() => {
+    if (!groupSimilar) {
+      return filteredEvents.map((event, idx) => ({
+        id: `single-${event.id || idx}`,
+        isGroup: false,
+        events: [event],
+        firstEvent: event,
+        lastEvent: event,
+        count: 1,
+        cfg: EVENT_TYPE_CONFIG[event.event_type] || DEFAULT_EVENT_TYPE_STYLE,
+      }));
+    }
+
+    const items: Array<{
+      id: string;
+      isGroup: boolean;
+      events: any[];
+      firstEvent: any;
+      lastEvent: any;
+      count: number;
+      cfg: any;
+    }> = [];
+
+    for (let i = 0; i < filteredEvents.length; i++) {
+      const current = filteredEvents[i];
+      const currentKey = getEventSimilarityKey(current);
+
+      if (items.length > 0) {
+        const lastItem = items[items.length - 1];
+        const lastKey = getEventSimilarityKey(lastItem.events[0]);
+
+        // Consecutive similar events with same signature and same anomaly status
+        if (currentKey === lastKey && Boolean(current.is_anomaly) === Boolean(lastItem.events[0].is_anomaly)) {
+          lastItem.events.push(current);
+          lastItem.lastEvent = current;
+          lastItem.count = lastItem.events.length;
+          lastItem.isGroup = true;
+          continue;
+        }
+      }
+
+      items.push({
+        id: `group-${current.id || i}-${current.epoch}`,
+        isGroup: false,
+        events: [current],
+        firstEvent: current,
+        lastEvent: current,
+        count: 1,
+        cfg: EVENT_TYPE_CONFIG[current.event_type] || DEFAULT_EVENT_TYPE_STYLE,
+      });
+    }
+
+    return items;
+  }, [filteredEvents, groupSimilar]);
 
   if (loading) {
     return (
@@ -1282,7 +1349,33 @@ export const ForensicTimelineCard: React.FC<ForensicTimelineCardProps> = ({ jobI
                 ({activeFilters.size}/{presentFilterGroups.length} active • Showing {filteredEvents.length} of {rawEvents.length} events)
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Group Similar Activities Filter Toggle */}
+              <label
+                id="timeline-group-similar-label"
+                className={`px-2.5 py-1 text-[11px] font-semibold border rounded-lg transition-all cursor-pointer select-none flex items-center gap-1.5 shadow-2xs ${
+                  groupSimilar
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                }`}
+                title="Group consecutive similar activities together"
+              >
+                <input
+                  type="checkbox"
+                  id="timeline-group-similar"
+                  checked={groupSimilar}
+                  onChange={(e) => setGroupSimilar(e.target.checked)}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                />
+                <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Group similar activities</span>
+                {groupSimilar && filteredEvents.length - groupedTimelineItems.length > 0 && (
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold bg-indigo-200/80 text-indigo-900">
+                    -{filteredEvents.length - groupedTimelineItems.length}
+                  </span>
+                )}
+              </label>
+
               <button
                 type="button"
                 onClick={handleSelectAllFilters}
@@ -1349,17 +1442,20 @@ export const ForensicTimelineCard: React.FC<ForensicTimelineCardProps> = ({ jobI
           </div>
         ) : (
           <div className="mt-8 relative border-l-2 border-slate-200 ml-4 sm:ml-6 space-y-6">
-            {filteredEvents.map((event, idx) => {
-              const cfg = EVENT_TYPE_CONFIG[event.event_type] || DEFAULT_EVENT_TYPE_STYLE;
+            {groupedTimelineItems.map((item, idx) => {
+              const event = item.firstEvent;
+              const cfg = item.cfg;
+              const isGroup = item.isGroup && item.count > 1;
+              const isExpanded = expandedGroupIds.has(item.id);
 
-              // Check if there is a long time gap between this event and the next event
+              // Check if there is a long time gap between this item and the next item
               let isLongGap = false;
               let gapSeconds = 0;
               let gapRatio = 0;
 
-              if (idx < filteredEvents.length - 1) {
-                const nextEvent = filteredEvents[idx + 1];
-                gapSeconds = Math.max(0, nextEvent.epoch - event.epoch);
+              if (idx < groupedTimelineItems.length - 1) {
+                const nextItem = groupedTimelineItems[idx + 1];
+                gapSeconds = Math.max(0, nextItem.firstEvent.epoch - item.lastEvent.epoch);
                 if (totalTimelineSpan > 0) {
                   gapRatio = gapSeconds / totalTimelineSpan;
                 }
@@ -1372,7 +1468,7 @@ export const ForensicTimelineCard: React.FC<ForensicTimelineCardProps> = ({ jobI
               }
 
               return (
-                <React.Fragment key={idx}>
+                <React.Fragment key={item.id || idx}>
                   <div className="relative pl-6 sm:pl-8 group">
                     {/* Node Bullet with Event Type Custom Icon & Subtle Color Hint */}
                     <div
@@ -1405,7 +1501,15 @@ export const ForensicTimelineCard: React.FC<ForensicTimelineCardProps> = ({ jobI
                       <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-xs font-bold text-slate-800">
-                            {event.timestamp.replace('T', ' ').replace('Z', ' UTC')}
+                            {isGroup ? (
+                              <span>
+                                {item.firstEvent.timestamp.replace('T', ' ').replace('Z', ' UTC')}
+                                <span className="text-slate-400 font-normal mx-1">↳</span>
+                                {item.lastEvent.timestamp.replace('T', ' ').replace('Z', ' UTC')}
+                              </span>
+                            ) : (
+                              event.timestamp.replace('T', ' ').replace('Z', ' UTC')
+                            )}
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-semibold border ${
@@ -1420,6 +1524,12 @@ export const ForensicTimelineCard: React.FC<ForensicTimelineCardProps> = ({ jobI
                           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/80 text-slate-600 border border-slate-200/90 shadow-2xs">
                             {cfg.label}
                           </span>
+                          {isGroup && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1 shadow-2xs">
+                              <Layers className="w-3 h-3 text-indigo-600" />
+                              <span>{item.count}x Grouped Activities</span>
+                            </span>
+                          )}
                           {event.category === 'history' && (
                             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
                               <span>🕒</span> Previous Submission
@@ -1433,21 +1543,73 @@ export const ForensicTimelineCard: React.FC<ForensicTimelineCardProps> = ({ jobI
                         )}
                       </div>
 
-                      <h4
-                        className={`text-sm font-bold ${
-                          event.is_anomaly ? 'text-rose-950' : 'text-slate-900'
-                        }`}
-                      >
-                        {event.title}
-                      </h4>
-                      {event.description && (
-                        <p
-                          className={`text-xs mt-1 leading-relaxed ${
-                            event.is_anomaly ? 'text-rose-900/90' : 'text-slate-600'
-                          }`}
-                        >
-                          {event.description}
-                        </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <h4
+                            className={`text-sm font-bold ${
+                              event.is_anomaly ? 'text-rose-950' : 'text-slate-900'
+                            }`}
+                          >
+                            {event.title}
+                          </h4>
+                          {event.description && (
+                            <p
+                              className={`text-xs mt-1 leading-relaxed ${
+                                event.is_anomaly ? 'text-rose-900/90' : 'text-slate-600'
+                              }`}
+                            >
+                              {event.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {isGroup && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExpandedGroupIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(item.id)) next.delete(item.id);
+                                else next.add(item.id);
+                                return next;
+                              });
+                            }}
+                            className="shrink-0 px-2.5 py-1 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-indigo-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs select-none"
+                          >
+                            <span>{isExpanded ? 'Collapse' : `View all ${item.count}`}</span>
+                            {isExpanded ? (
+                              <ChevronDown className="w-3.5 h-3.5 rotate-180 transition-transform" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5 transition-transform" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Sub-events expanded list */}
+                      {isGroup && isExpanded && (
+                        <div className="mt-3 pt-3 border-t border-slate-200/80 space-y-2">
+                          <div className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                            Consecutive Occurrences ({item.count}):
+                          </div>
+                          <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                            {item.events.map((subEv, subIdx) => (
+                              <div key={subIdx} className="p-2 bg-white/90 border border-slate-200 rounded-xl text-xs flex items-start justify-between gap-2 shadow-2xs">
+                                <div className="space-y-0.5">
+                                  <span className="font-mono text-[11px] font-bold text-slate-700">
+                                    #{subIdx + 1} • {subEv.timestamp.replace('T', ' ').replace('Z', ' UTC')}
+                                  </span>
+                                  {subEv.description && subEv.description !== event.description && (
+                                    <p className="text-[11px] text-slate-500 leading-snug">{subEv.description}</p>
+                                  )}
+                                </div>
+                                <span className="font-mono text-[10px] text-slate-400 shrink-0">
+                                  {subEv.source}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>

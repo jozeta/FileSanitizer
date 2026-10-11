@@ -33,6 +33,7 @@ import {
   Sparkles,
   CheckCircle2,
   X,
+  Layers,
 } from 'lucide-react';
 import {
   EvtxInfo,
@@ -277,6 +278,8 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
   const [hoveredBin, setHoveredBin] = useState<any | null>(null);
   const [expandedEvents, setExpandedEvents] = useState<Record<number, boolean>>({});
   const [isAllExpanded, setIsAllExpanded] = useState(false);
+  const [groupSimilar, setGroupSimilar] = useState<boolean>(true);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -863,6 +866,75 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
     selectedSeverity,
     searchFilter,
   ]);
+
+  // Grouped timeline events when grouping similar activities is enabled
+  const groupedTimeline = useMemo(() => {
+    if (!groupSimilar) {
+      return filteredTimeline.map((ev, idx) => ({
+        groupId: `ev-${idx}`,
+        isGroup: false,
+        leadEvent: ev,
+        events: [ev],
+        count: 1,
+        firstTimestamp: ev.timestamp,
+        lastTimestamp: ev.timestamp,
+        originalIndex: idx,
+      }));
+    }
+
+    const groups: Array<{
+      groupId: string;
+      isGroup: boolean;
+      leadEvent: EvtxTimelineEvent;
+      events: EvtxTimelineEvent[];
+      count: number;
+      firstTimestamp?: string;
+      lastTimestamp?: string;
+      originalIndex: number;
+    }> = [];
+
+    for (let i = 0; i < filteredTimeline.length; i++) {
+      const ev = filteredTimeline[i];
+      const prevGroup = groups[groups.length - 1];
+
+      if (prevGroup) {
+        const p = prevGroup.leadEvent;
+        const isSame =
+          ev.event_id === p.event_id &&
+          (ev.event_name || '') === (p.event_name || '') &&
+          (ev.user || '') === (p.user || '') &&
+          (ev.source_file || '') === (p.source_file || '') &&
+          (ev.severity || 'info').toLowerCase() === (p.severity || 'info').toLowerCase() &&
+          (ev.process_name || '') === (p.process_name || '') &&
+          (ev.share_name || '') === (p.share_name || '');
+
+        if (isSame) {
+          prevGroup.events.push(ev);
+          prevGroup.count += 1;
+          prevGroup.isGroup = true;
+          prevGroup.lastTimestamp = ev.timestamp;
+          continue;
+        }
+      }
+
+      groups.push({
+        groupId: `grp-${i}-${ev.event_id}`,
+        isGroup: false,
+        leadEvent: ev,
+        events: [ev],
+        count: 1,
+        firstTimestamp: ev.timestamp,
+        lastTimestamp: ev.timestamp,
+        originalIndex: i,
+      });
+    }
+
+    return groups;
+  }, [filteredTimeline, groupSimilar]);
+
+  const groupSavingsCount = useMemo(() => {
+    return filteredTimeline.length - groupedTimeline.length;
+  }, [filteredTimeline.length, groupedTimeline.length]);
 
   if (!evtxInfo) {
     return (
@@ -1559,6 +1631,23 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                   </select>
                 </div>
 
+                {/* Group similar activities filter */}
+                <label className="flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 cursor-pointer select-none transition-colors shadow-2xs">
+                  <input
+                    type="checkbox"
+                    checked={groupSimilar}
+                    onChange={(e) => setGroupSimilar(e.target.checked)}
+                    className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                  />
+                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Group similar activities</span>
+                  {groupSavingsCount > 0 && groupSimilar && (
+                    <span className="px-1.5 py-0.2 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-full">
+                      -{groupSavingsCount}
+                    </span>
+                  )}
+                </label>
+
                 {/* Expand All / Collapse All Toggle */}
                 {filteredTimeline.length > 0 && (
                   <button
@@ -1620,8 +1709,11 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             {/* Timeline Stream */}
             {filteredTimeline.length > 0 ? (
               <div className="relative pl-6 space-y-3.5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                {filteredTimeline.map((ev, idx) => {
+                {groupedTimeline.map((item) => {
+                  const ev = item.leadEvent;
+                  const idx = item.originalIndex;
                   const isExpanded = expandedEvents[idx];
+                  const isGroupExpanded = Boolean(expandedGroupIds[item.groupId]);
                   const safeSev = (ev.severity || 'info').toLowerCase();
                   const isThreat =
                     ev.is_threat ||
@@ -1630,7 +1722,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
                   return (
                     <div
-                      key={idx}
+                      key={item.groupId}
                       className={`relative p-4 bg-white hover:bg-slate-50/80 border rounded-2xl shadow-2xs transition-all ${
                         safeSev === 'critical'
                           ? 'border-rose-300 ring-1 ring-rose-500/20'
@@ -1676,6 +1768,12 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                               ? 'SUSPICIOUS / MEDIUM'
                               : safeSev.toUpperCase()}
                           </span>
+                          {item.isGroup && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1 shrink-0">
+                              <Layers className="w-3 h-3 text-indigo-600" />
+                              <span>{item.count}x Grouped Activities</span>
+                            </span>
+                          )}
 
                           {/* 1-line snippet of summary / user when collapsed */}
                           {!isExpanded && (
@@ -1688,8 +1786,27 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
                         <div className="flex items-center gap-2.5 shrink-0">
                           <span className="text-slate-400 font-mono text-[11px]">
-                            {ev.timestamp ? formatTimestamp(ev.timestamp, timeConfig) : 'N/A'}
+                            {item.isGroup && item.firstTimestamp && item.lastTimestamp && item.firstTimestamp !== item.lastTimestamp
+                              ? `${formatTimestamp(item.firstTimestamp, timeConfig)} — ${formatTimestamp(item.lastTimestamp, timeConfig)}`
+                              : (ev.timestamp ? formatTimestamp(ev.timestamp, timeConfig) : 'N/A')}
                           </span>
+                          {item.isGroup && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedGroupIds((prev) => ({
+                                  ...prev,
+                                  [item.groupId]: !prev[item.groupId],
+                                }));
+                              }}
+                              className="px-2 py-0.5 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-indigo-200 transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                              title={isGroupExpanded ? 'Hide occurrences' : `View all ${item.count} occurrences`}
+                            >
+                              <span>{isGroupExpanded ? 'Hide' : `View all ${item.count}`}</span>
+                              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1982,6 +2099,36 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                               </div>
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {/* Sub-events occurrences list */}
+                      {item.isGroup && isGroupExpanded && (
+                        <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
+                          <div className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                            Consecutive Occurrences ({item.count}):
+                          </div>
+                          <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                            {item.events.map((subEv, subIdx) => (
+                              <div
+                                key={subIdx}
+                                className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between gap-2"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="font-mono text-[11px] font-bold text-slate-500">
+                                    #{subIdx + 1}
+                                  </span>
+                                  <span className="font-mono text-[11px] text-slate-600 font-medium">
+                                    {subEv.timestamp ? formatTimestamp(subEv.timestamp, timeConfig) : 'N/A'}
+                                  </span>
+                                  <span className="text-slate-700 truncate font-medium">
+                                    {subEv.user ? `[${subEv.user}] ` : ''}
+                                    {subEv.process_name || subEv.share_name || subEv.summary || subEv.description}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>

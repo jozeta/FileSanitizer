@@ -79,6 +79,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   const [nodeProximity, setNodeProximity] = useState<'close' | 'middle' | 'far' | 'very_far'>('middle');
   const [hideIsolatedNodes, setHideIsolatedNodes] = useState<boolean>(false);
   const [hideBenignNodes, setHideBenignNodes] = useState<boolean>(false);
+  const [showEmptyNodes, setShowEmptyNodes] = useState<boolean>(false);
 
   // Selection & Inspector
   const [selectedNode, setSelectedNode] = useState<EntityGraphNode | null>(null);
@@ -154,6 +155,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     setSelectedFilters([...activeCategoryKeys]);
     setHideIsolatedNodes(false);
     setHideBenignNodes(false);
+    setShowEmptyNodes(false);
   };
 
   // Node Degree Map for connectivity calculation & leaf filtering
@@ -167,12 +169,80 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     return map;
   }, [graphData?.edges]);
 
+  // Helper to identify nodes that do not contain any results or data (e.g. VirusTotal with 0 detections)
+  const isEmptyNode = (node: any): boolean => {
+    if (!node) return false;
+    if (node.id === 'root' || node.type === 'root' || node.type === 'file') return false;
+
+    const label = (node.label || '').toLowerCase();
+    const fullLabel = (node.full_label || '').toLowerCase();
+    const details = node.details || {};
+
+    // 1. Explicit 0 detections / 0 engines / 0 results / 0 hits / 0 matches in label or full_label
+    if (
+      /\b0\s*(\/\s*\d+|\s*detections?|\s*results?|\s*hits?|\s*matches?|\s*findings?|\s*threats?|\s*alerts?|\s*engines?)\b/i.test(label) ||
+      /\b0\s*(\/\s*\d+|\s*detections?|\s*results?|\s*hits?|\s*matches?|\s*findings?|\s*threats?|\s*alerts?|\s*engines?)\b/i.test(fullLabel)
+    ) {
+      return true;
+    }
+
+    // 2. VirusTotal or Threat Intel specific checks: positives === 0 or total_engines with positives === 0
+    if (
+      details.engine === 'VirusTotal' ||
+      node.id?.includes('virustotal') ||
+      node.id?.includes('intel_vt') ||
+      node.type === 'threat_intel' ||
+      node.type === 'threat_signature'
+    ) {
+      if (typeof details.positives === 'number' && details.positives === 0) return true;
+      if (typeof details.threat_score === 'number' && details.threat_score === 0) return true;
+      if (label.includes('0/')) return true;
+      if (label.includes('(0)')) return true;
+    }
+
+    // 3. Details with explicit 0 count / hits / detections / findings / matches
+    if (
+      (typeof details.detections === 'number' && details.detections === 0) ||
+      (typeof details.positives === 'number' && details.positives === 0) ||
+      (typeof details.hits === 'number' && details.hits === 0) ||
+      (typeof details.matches === 'number' && details.matches === 0) ||
+      (typeof details.findings_count === 'number' && details.findings_count === 0) ||
+      (typeof details.anomalies_count === 'number' && details.anomalies_count === 0) ||
+      (typeof details.count === 'number' && details.count === 0)
+    ) {
+      return true;
+    }
+
+    // 4. "no detections", "0 detection", "0 results", "0 found"
+    if (
+      label.includes('no detection') ||
+      label.includes('0 detection') ||
+      label.includes('0 result') ||
+      label.includes('0 found') ||
+      fullLabel.includes('no detection') ||
+      fullLabel.includes('0 detection')
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const emptyNodesCount = useMemo(() => {
+    return (graphData?.nodes || []).filter((n: any) => isEmptyNode(n)).length;
+  }, [graphData?.nodes]);
+
   // Multi-filtered graph nodes
   const filteredNodes = useMemo(() => {
     const nodes = graphData?.nodes || [];
     return nodes.filter(n => {
       const isRoot = n.id === 'root' || n.type === 'root';
       if (isRoot) return true; // Always keep root file anchor
+
+      // Hide empty nodes constraint (e.g. VirusTotal with 0 detections)
+      if (!showEmptyNodes && isEmptyNode(n)) {
+        return false;
+      }
 
       // Hide leaves (degree <= 1)
       if (hideIsolatedNodes && (nodeDegreeMap[n.id] || 0) <= 1) {
@@ -954,6 +1024,33 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                 <span>Hide Benign</span>
               </button>
             </div>
+
+            {/* Show Empty Nodes Filter */}
+            <label
+              id="entity-graph-show-empty-nodes-label"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer select-none shadow-2xs ${
+                showEmptyNodes
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+              title="When checked, shows nodes that do not contain any results or data (e.g. VirusTotal with 0 detections). Unchecked by default."
+            >
+              <input
+                type="checkbox"
+                id="entity-graph-show-empty-nodes"
+                checked={showEmptyNodes}
+                onChange={(e) => setShowEmptyNodes(e.target.checked)}
+                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+              />
+              <span>Show empty nodes</span>
+              {emptyNodesCount > 0 && (
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                  showEmptyNodes ? 'bg-indigo-200/80 text-indigo-900' : 'bg-slate-100 text-slate-500 border border-slate-200'
+                }`}>
+                  {emptyNodesCount}
+                </span>
+              )}
+            </label>
 
             {/* Live Stats */}
             <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-600 border border-slate-200 font-mono">

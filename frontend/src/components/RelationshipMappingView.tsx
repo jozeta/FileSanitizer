@@ -32,7 +32,8 @@ import {
   Eye,
   EyeOff,
   CheckSquare,
-  Link2
+  Link2,
+  ChevronDown
 } from 'lucide-react';
 import {
   IncidentCorrelationData,
@@ -72,6 +73,8 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const [selectedTimelineHost, setSelectedTimelineHost] = useState<string>('all');
   const [anomaliesOnly, setAnomaliesOnly] = useState<boolean>(false);
   const [timelineViewMode, setTimelineViewMode] = useState<'table' | 'swimlanes'>('table');
+  const [groupSimilarTimelineActivities, setGroupSimilarTimelineActivities] = useState<boolean>(true);
+  const [expandedTimelineGroupIds, setExpandedTimelineGroupIds] = useState<Set<string>>(new Set());
 
   // Identify EVTX log files for multi-host vertical swimlane view
   const evtxJobs = useMemo(() => {
@@ -98,6 +101,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const [nodeProximity, setNodeProximity] = useState<'close' | 'middle' | 'far' | 'very_far'>('middle');
   const [hideIsolatedNodes, setHideIsolatedNodes] = useState<boolean>(false);
   const [hideBenignNodes, setHideBenignNodes] = useState<boolean>(false);
+  const [showEmptyNodes, setShowEmptyNodes] = useState<boolean>(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
 
   const [graphZoom, setGraphZoom] = useState<number>(1);
@@ -955,6 +959,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const handleResetFilters = () => {
     setSelectedFilters([...ALL_THREAT_FILTER_KEYS]);
     setSharedOnlyFilter(false);
+    setShowEmptyNodes(false);
   };
 
   const nodeDegreeMap = useMemo(() => {
@@ -966,6 +971,69 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     });
     return map;
   }, [data]);
+
+  // Helper to identify nodes that do not contain any results or data (e.g. VirusTotal with 0 detections)
+  const isEmptyNode = (node: any): boolean => {
+    if (!node) return false;
+    if (node.id === 'root' || node.type === 'root' || node.type === 'file') return false;
+
+    const label = (node.label || '').toLowerCase();
+    const fullLabel = (node.full_label || '').toLowerCase();
+    const details = node.details || {};
+
+    // 1. Explicit 0 detections / 0 engines / 0 results / 0 hits / 0 matches in label or full_label
+    if (
+      /\b0\s*(\/\s*\d+|\s*detections?|\s*results?|\s*hits?|\s*matches?|\s*findings?|\s*threats?|\s*alerts?|\s*engines?)\b/i.test(label) ||
+      /\b0\s*(\/\s*\d+|\s*detections?|\s*results?|\s*hits?|\s*matches?|\s*findings?|\s*threats?|\s*alerts?|\s*engines?)\b/i.test(fullLabel)
+    ) {
+      return true;
+    }
+
+    // 2. VirusTotal or Threat Intel specific checks: positives === 0 or total_engines with positives === 0
+    if (
+      details.engine === 'VirusTotal' ||
+      node.id?.includes('virustotal') ||
+      node.id?.includes('intel_vt') ||
+      node.type === 'threat_intel' ||
+      node.type === 'threat_signature'
+    ) {
+      if (typeof details.positives === 'number' && details.positives === 0) return true;
+      if (typeof details.threat_score === 'number' && details.threat_score === 0) return true;
+      if (label.includes('0/')) return true;
+      if (label.includes('(0)')) return true;
+    }
+
+    // 3. Details with explicit 0 count / hits / detections / findings / matches
+    if (
+      (typeof details.detections === 'number' && details.detections === 0) ||
+      (typeof details.positives === 'number' && details.positives === 0) ||
+      (typeof details.hits === 'number' && details.hits === 0) ||
+      (typeof details.matches === 'number' && details.matches === 0) ||
+      (typeof details.findings_count === 'number' && details.findings_count === 0) ||
+      (typeof details.anomalies_count === 'number' && details.anomalies_count === 0) ||
+      (typeof details.count === 'number' && details.count === 0)
+    ) {
+      return true;
+    }
+
+    // 4. "no detections", "0 detection", "0 results", "0 found"
+    if (
+      label.includes('no detection') ||
+      label.includes('0 detection') ||
+      label.includes('0 result') ||
+      label.includes('0 found') ||
+      fullLabel.includes('no detection') ||
+      fullLabel.includes('0 detection')
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const emptyNodesCount = useMemo(() => {
+    return (data?.campaign_graph?.nodes || []).filter((n: any) => isEmptyNode(n)).length;
+  }, [data?.campaign_graph?.nodes]);
 
   // Multi-filtered graph nodes
   const filteredGraphNodes = useMemo(() => {
@@ -984,6 +1052,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     });
 
     return nodes.filter((n) => {
+      // Show Empty Nodes filter constraint:
+      // When unchecked (default false), hide nodes that do not contain any results or data (e.g. VirusTotal with 0 detections)
+      if (!showEmptyNodes && isEmptyNode(n)) {
+        return false;
+      }
       // Shared Only toggle constraint:
       // When active, strictly show only nodes that are shared between submitted files and the files that share them
       if (sharedOnlyFilter) {
@@ -1175,6 +1248,68 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     }
     return list;
   }, [data, selectedTimelineFile, selectedTimelineHost, anomaliesOnly, timelineSearch]);
+
+  // Group consecutive similar timeline activities
+  const groupedTimelineEvents = useMemo(() => {
+    if (!groupSimilarTimelineActivities) {
+      return filteredTimelineEvents.map((ev, idx) => ({
+        id: `single-${idx}`,
+        isGroup: false,
+        events: [ev],
+        firstEvent: ev,
+        lastEvent: ev,
+        count: 1,
+      }));
+    }
+
+    const items: Array<{
+      id: string;
+      isGroup: boolean;
+      events: any[];
+      firstEvent: any;
+      lastEvent: any;
+      count: number;
+    }> = [];
+
+    const getTimelineEventKey = (e: any): string => {
+      const evName = (e.event || '').trim().toLowerCase();
+      const comp = (e.computer || '').trim().toLowerCase();
+      const user = (e.user || '').trim().toLowerCase();
+      const phase = (e.staging_phase || '').trim().toLowerCase();
+      const file = (e.filename || '').trim().toLowerCase();
+      return `${evName}:::${comp}:::${user}:::${phase}:::${file}`;
+    };
+
+    for (let i = 0; i < filteredTimelineEvents.length; i++) {
+      const current = filteredTimelineEvents[i];
+      const currentKey = getTimelineEventKey(current);
+
+      if (items.length > 0) {
+        const lastItem = items[items.length - 1];
+        const lastKey = getTimelineEventKey(lastItem.events[0]);
+
+        // Consecutive similar events with same signature and same anomaly status
+        if (currentKey === lastKey && Boolean(current.is_anomaly) === Boolean(lastItem.events[0].is_anomaly)) {
+          lastItem.events.push(current);
+          lastItem.lastEvent = current;
+          lastItem.count = lastItem.events.length;
+          lastItem.isGroup = true;
+          continue;
+        }
+      }
+
+      items.push({
+        id: `group-${i}-${current.timestamp || ''}`,
+        isGroup: false,
+        events: [current],
+        firstEvent: current,
+        lastEvent: current,
+        count: 1,
+      });
+    }
+
+    return items;
+  }, [filteredTimelineEvents, groupSimilarTimelineActivities]);
 
   // Export Timeline to CSV
   const handleExportTimeline = () => {
@@ -1682,6 +1817,33 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     <span>Hide Benign</span>
                   </button>
                 </div>
+
+                {/* Show Empty Nodes Filter */}
+                <label
+                  id="threat-graph-show-empty-nodes-label"
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer select-none shadow-2xs ${
+                    showEmptyNodes
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                  }`}
+                  title="When checked, shows nodes that do not contain any results or data (e.g. VirusTotal with 0 detections). Unchecked by default."
+                >
+                  <input
+                    type="checkbox"
+                    id="threat-graph-show-empty-nodes"
+                    checked={showEmptyNodes}
+                    onChange={(e) => setShowEmptyNodes(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                  />
+                  <span>Show empty nodes</span>
+                  {emptyNodesCount > 0 && (
+                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                      showEmptyNodes ? 'bg-indigo-200/80 text-indigo-900' : 'bg-slate-100 text-slate-500 border border-slate-200'
+                    }`}>
+                      {emptyNodesCount}
+                    </span>
+                  )}
+                </label>
 
                 {/* Live Stats */}
                 <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-600 border border-slate-200 font-mono">
@@ -3577,10 +3739,31 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     </span>
                   )}
                 </label>
+
+                {/* Group Similar Activities Toggle */}
+                <label
+                  id="rel-timeline-group-similar-label"
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer select-none ${
+                    groupSimilarTimelineActivities
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                  }`}
+                  title="Group consecutive similar activities in the timeline"
+                >
+                  <input
+                    type="checkbox"
+                    id="rel-timeline-group-similar"
+                    checked={groupSimilarTimelineActivities}
+                    onChange={(e) => setGroupSimilarTimelineActivities(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                  />
+                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Group similar activities</span>
+                </label>
               </div>
 
               <div className="text-xs font-mono text-slate-500">
-                Showing {filteredTimelineEvents.length} of {timeline_comparison.total_events} events
+                Showing {groupedTimelineEvents.length} {groupSimilarTimelineActivities && groupedTimelineEvents.length !== filteredTimelineEvents.length ? `rows (${filteredTimelineEvents.length} events)` : 'events'} of {timeline_comparison.total_events} total
               </div>
             </div>
 
@@ -3599,70 +3782,149 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono">
-                  {filteredTimelineEvents.length === 0 ? (
+                  {groupedTimelineEvents.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-8 text-center text-slate-400 text-xs font-mono">
                         No events match current filter criteria.
                       </td>
                     </tr>
                   ) : (
-                    filteredTimelineEvents.map((ev, idx) => (
-                      <tr key={idx} className={`hover:bg-slate-50 ${ev.is_anomaly ? 'bg-rose-50/40' : ''}`}>
-                        <td className="py-2.5 px-3 text-slate-800 whitespace-nowrap">{ev.timestamp || '-'}</td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-900 whitespace-nowrap">
-                          <button
-                            onClick={() => onSelectJob(ev.job_id)}
-                            className="hover:text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
-                          >
-                            <span className="truncate max-w-[130px]">{ev.filename}</span>
-                            <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-                          </button>
-                        </td>
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-700">
-                            <Server className="w-2.5 h-2.5 text-slate-500" />
-                            <span className="truncate max-w-[110px]">{ev.computer || '-'}</span>
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
-                            {ev.staging_phase}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-slate-800">{ev.event}</td>
-                        <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
-                          {ev.user && ev.user !== '-' ? (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-50 text-amber-800">
-                              <User className="w-2.5 h-2.5" />
-                              <span>{ev.user}</span>
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-[10px] font-mono">-</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-600 max-w-sm">
-                          <ReferencedText
-                            text={ev.description}
-                            workspaceJobs={jobs}
-                            onSelectJob={onSelectJob}
-                          />
-                        </td>
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <div className="flex items-center gap-1">
-                            {ev.is_anomaly && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                                ANOMALY
+                    groupedTimelineEvents.map((item, idx) => {
+                      const ev = item.firstEvent;
+                      const isGroup = item.isGroup && item.count > 1;
+                      const isExpanded = expandedTimelineGroupIds.has(item.id);
+
+                      return (
+                        <React.Fragment key={item.id || idx}>
+                          <tr className={`hover:bg-slate-50 transition-colors ${ev.is_anomaly ? 'bg-rose-50/40' : isGroup ? 'bg-indigo-50/15' : ''}`}>
+                            <td className="py-2.5 px-3 text-slate-800 whitespace-nowrap">
+                              {isGroup ? (
+                                <div className="space-y-0.5">
+                                  <div className="font-semibold text-indigo-950">{item.firstEvent.timestamp}</div>
+                                  <div className="text-[10px] text-slate-400 font-mono">↳ {item.lastEvent.timestamp}</div>
+                                </div>
+                              ) : (
+                                ev.timestamp || '-'
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-900 whitespace-nowrap">
+                              <button
+                                onClick={() => onSelectJob(ev.job_id)}
+                                className="hover:text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                              >
+                                <span className="truncate max-w-[130px]">{ev.filename}</span>
+                                <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                              </button>
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-700">
+                                <Server className="w-2.5 h-2.5 text-slate-500" />
+                                <span className="truncate max-w-[110px]">{ev.computer || '-'}</span>
                               </span>
-                            )}
-                            {ev.is_timestomp && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                                TIMESTOMP
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                {ev.staging_phase}
                               </span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-800">{ev.event}</span>
+                                {isGroup && (
+                                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 shadow-2xs">
+                                    {item.count}x
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
+                              {ev.user && ev.user !== '-' ? (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-50 text-amber-800">
+                                  <User className="w-2.5 h-2.5" />
+                                  <span>{ev.user}</span>
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 text-[10px] font-mono">-</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-600 max-w-sm">
+                              <ReferencedText
+                                text={ev.description}
+                                workspaceJobs={jobs}
+                                onSelectJob={onSelectJob}
+                              />
+                              {isGroup && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setExpandedTimelineGroupIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(item.id)) next.delete(item.id);
+                                      else next.add(item.id);
+                                      return next;
+                                    });
+                                  }}
+                                  className="mt-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer select-none"
+                                >
+                                  <span>
+                                    {isExpanded
+                                      ? `Collapse grouped events`
+                                      : `View all ${item.count} occurrences`}
+                                  </span>
+                                  {isExpanded ? (
+                                    <ChevronDown className="w-3 h-3 rotate-180 transition-transform" />
+                                  ) : (
+                                    <ChevronDown className="w-3 h-3 transition-transform" />
+                                  )}
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <div className="flex items-center gap-1">
+                                {ev.is_anomaly && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                    ANOMALY
+                                  </span>
+                                )}
+                                {ev.is_timestomp && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                    TIMESTOMP
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* Expanded Group Occurrence Child Rows */}
+                          {isGroup && isExpanded && item.events.map((subEv, subIdx) => (
+                            <tr key={`${item.id}-sub-${subIdx}`} className="bg-indigo-50/30 text-[11px] text-slate-600 hover:bg-indigo-50/50">
+                              <td className="py-1.5 px-3 pl-6 font-mono text-slate-700 whitespace-nowrap">
+                                ↳ {subEv.timestamp || '-'}
+                              </td>
+                              <td className="py-1.5 px-3 text-slate-500 whitespace-nowrap">{subEv.filename}</td>
+                              <td className="py-1.5 px-3 text-slate-500 whitespace-nowrap">{subEv.computer || '-'}</td>
+                              <td className="py-1.5 px-3 text-slate-500 whitespace-nowrap">{subEv.staging_phase}</td>
+                              <td className="py-1.5 px-3 text-slate-700 font-semibold whitespace-nowrap">#{subIdx + 1} {subEv.event}</td>
+                              <td className="py-1.5 px-3 text-slate-500 whitespace-nowrap">{subEv.user || '-'}</td>
+                              <td className="py-1.5 px-3 text-slate-500 max-w-sm">
+                                <ReferencedText
+                                  text={subEv.description}
+                                  workspaceJobs={jobs}
+                                  onSelectJob={onSelectJob}
+                                />
+                              </td>
+                              <td className="py-1.5 px-3 whitespace-nowrap">
+                                {subEv.is_anomaly && (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-rose-100 text-rose-800">
+                                    ANOMALY
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

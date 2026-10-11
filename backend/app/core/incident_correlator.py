@@ -1923,6 +1923,31 @@ class IncidentCorrelator:
                 )
                 _link_artifact_to_job(jid, avid, "identified as malware", "vulnerability")
 
+            # VirusTotal Threat Intelligence
+            vt = getattr(job, "virustotal", None)
+            if vt and isinstance(vt, dict):
+                positives = vt.get("positives", 0)
+                total = vt.get("total_engines") or vt.get("total", 0)
+                vtid = f"intel_vt_{job.job_id}"
+                vt_risk = "critical" if positives >= 5 else ("warning" if positives > 0 else "clean")
+                vt_label = f"VirusTotal ({positives}/{total})" if total else f"VirusTotal ({positives} detections)"
+                _add_node(
+                    nid=vtid,
+                    label=vt_label,
+                    ntype="vulnerability",
+                    risk=vt_risk,
+                    tier=2,
+                    details={
+                        "engine": "VirusTotal",
+                        "positives": positives,
+                        "total": total,
+                        "permalink": vt.get("permalink") or vt.get("web_link"),
+                        "threat_classification": vt.get("threat_classification"),
+                        "scan_date": vt.get("scan_date")
+                    }
+                )
+                _link_artifact_to_job(jid, vtid, f"{positives} detections", "vulnerability")
+
         # 5. Geolocation, ASNs, IPs, Domains, and URLs
         for item in ioc_data.get("ips", []):
             if item.get("is_private") and not item.get("is_shared"):
