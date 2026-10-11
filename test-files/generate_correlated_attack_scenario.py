@@ -179,7 +179,6 @@ def make_eth_ip_udp_dns(src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, do
 # -------------------------------------------------------------------------
 def build_pcap():
     out_pcap = os.path.join(OUT_DIR, "06_network_traffic_capture.pcap")
-    alt_pcap = os.path.join(OUT_DIR, "network_attack_capture.pcap")
     pcap_hdr = struct.pack("<IHHiIII", 0xa1b2c3d4, 2, 4, 0, 0, 65535, 1)
     packets = []
 
@@ -397,8 +396,6 @@ def build_pcap():
     raw_pcap = pcap_bytes.getvalue()
     with open(out_pcap, "wb") as f:
         f.write(raw_pcap)
-    with open(alt_pcap, "wb") as f:
-        f.write(raw_pcap)
 
     print(f"[+] Successfully wrote PCAP: {out_pcap} ({len(packets)} packets)")
 
@@ -407,7 +404,6 @@ def build_pcap():
 # -------------------------------------------------------------------------
 def build_host_a_evtx():
     out_file = os.path.join(OUT_DIR, "04_endpoint_workstation_hostA.evtx")
-    alt_file = os.path.join(OUT_DIR, "Security_WKSTN-FIN-01.evtx")
 
     xml_content = f"""<Events>
   <!-- ===================================================================== -->
@@ -1344,8 +1340,6 @@ def build_host_a_evtx():
 
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(xml_content)
-    with open(alt_file, "w", encoding="utf-8") as f:
-        f.write(xml_content)
     print(f"[+] Successfully wrote Host A EVTX: {out_file}")
 
 # -------------------------------------------------------------------------
@@ -1353,7 +1347,6 @@ def build_host_a_evtx():
 # -------------------------------------------------------------------------
 def build_host_b_evtx():
     out_file = os.path.join(OUT_DIR, "05_endpoint_domain_controller_hostB.evtx")
-    alt_file = os.path.join(OUT_DIR, "Security_DC-PROD-01.evtx")
 
     xml_content = f"""<Events>
   <!-- ===================================================================== -->
@@ -2303,8 +2296,6 @@ def build_host_b_evtx():
 
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(xml_content)
-    with open(alt_file, "w", encoding="utf-8") as f:
-        f.write(xml_content)
     print(f"[+] Successfully wrote Host B EVTX: {out_file}")
 
 # -------------------------------------------------------------------------
@@ -2319,19 +2310,13 @@ if __name__ == "__main__":
 
     # 03_c2_implant_beacon.exe
     pe_file = os.path.join(OUT_DIR, "03_c2_implant_beacon.exe")
-    alt_pe = os.path.join(OUT_DIR, "beacon_updater.exe")
     with open(pe_file, "wb") as f:
-        f.write(PE_BYTES)
-    with open(alt_pe, "wb") as f:
         f.write(PE_BYTES)
     print(f"[+] Successfully wrote Staged PE: {pe_file}")
 
     # 07_exfiltrated_archive.zip
     zip_file = os.path.join(OUT_DIR, "07_exfiltrated_archive.zip")
-    alt_zip = os.path.join(OUT_DIR, "financial_q3_confidential.zip")
     with open(zip_file, "wb") as f:
-        f.write(ZIP_BYTES)
-    with open(alt_zip, "wb") as f:
         f.write(ZIP_BYTES)
     print(f"[+] Successfully wrote Exfil Zip: {zip_file}")
 
