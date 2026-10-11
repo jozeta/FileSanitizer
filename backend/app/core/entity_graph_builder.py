@@ -9,6 +9,7 @@ resolved IPs, geolocations, digital certificates, MITRE ATT&CK techniques, and f
 """
 
 import math
+import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Set
 from urllib.parse import urlparse
@@ -724,6 +725,86 @@ class EntityGraphBuilder:
                 }
             )
             _add_edge("root", emb_id, "drops / contains", "contains")
+
+            # Link embedded payload cryptographic hash
+            e_sha256 = (ef.get("sha256") or "").lower()
+            if e_sha256 and len(e_sha256) >= 32:
+                e_hid = f"hash_emb_{e_sha256[:16]}"
+                _add_node(
+                    node_id=e_hid,
+                    label=f"SHA256: {e_sha256[:10]}...",
+                    n_type="hash",
+                    risk="clean",
+                    tier=3,
+                    details={"algorithm": "SHA-256", "hash": e_sha256, "payload": ef.get("name")}
+                )
+                _add_edge(emb_id, e_hid, "payload hash", "has_hash")
+
+        # ---------------------------------------------------------
+        # 7b. ARCHIVE FORENSICS: MEMBERS, CREDENTIALS & TOPOLOGY (Tier 2 & 3)
+        # ---------------------------------------------------------
+        arch_info = getattr(job, "archive_info", None) or (getattr(job, "analysis_data", {}) or {}).get("archive") or {}
+        if isinstance(arch_info, dict) and arch_info:
+            ext_iocs = arch_info.get("extracted_iocs") or {}
+
+            # Find member file IDs for cross-linking
+            cred_mem_id = None
+            topo_mem_id = None
+            pay_mem_id = None
+            for e_idx, ef in enumerate(emb_list[:8]):
+                name_l = str(ef.get("name", "")).lower()
+                if any(k in name_l for k in ("ntds", "credential", "password", "audit")):
+                    cred_mem_id = f"emb_{e_idx}"
+                elif any(k in name_l for k in ("topology", "network", "architecture")):
+                    topo_mem_id = f"emb_{e_idx}"
+                elif any(k in name_l for k in ("payroll", "salary", "bonus")):
+                    pay_mem_id = f"emb_{e_idx}"
+
+            # Dumped User Accounts (NTDS / active directory secrets dump)
+            for u_idx, u in enumerate(ext_iocs.get("users", [])[:8]):
+                u_node_id = f"arch_user_{re.sub(r'[^a-zA-Z0-9]', '_', u)}"
+                u_risk = "critical" if u.lower() in ("administrator", "svc_admin", "root") else "high"
+                _add_node(
+                    node_id=u_node_id,
+                    label=f"User: {u}",
+                    n_type="user",
+                    risk=u_risk,
+                    tier=2,
+                    details={"username": u, "source": "Active Directory NTDS Audit / Staged Payroll"}
+                )
+                _add_edge("root", u_node_id, "dumped credential", "identity")
+                if cred_mem_id:
+                    _add_edge(cred_mem_id, u_node_id, "contained account", "identity")
+
+            # Stolen Internal Enterprise Target Domains
+            for d_idx, dom in enumerate(ext_iocs.get("domains", [])[:5]):
+                dom_node_id = f"arch_dom_{re.sub(r'[^a-zA-Z0-9]', '_', dom.lower())}"
+                _add_node(
+                    node_id=dom_node_id,
+                    label=dom,
+                    n_type="domain",
+                    risk="high",
+                    tier=2,
+                    details={"domain": dom, "source": "Internal Architecture Mapping"}
+                )
+                _add_edge("root", dom_node_id, "target domain", "network")
+                if topo_mem_id:
+                    _add_edge(topo_mem_id, dom_node_id, "architecture target", "network")
+
+            # Stolen Internal Enterprise IPs
+            for ip_idx, ip in enumerate(ext_iocs.get("ips", [])[:5]):
+                ip_node_id = f"arch_ip_{ip.replace('.', '_')}"
+                _add_node(
+                    node_id=ip_node_id,
+                    label=ip,
+                    n_type="ip",
+                    risk="high",
+                    tier=2,
+                    details={"ip": ip, "source": "Internal Network Topology"}
+                )
+                _add_edge("root", ip_node_id, "internal IP", "network")
+                if topo_mem_id:
+                    _add_edge(topo_mem_id, ip_node_id, "topology asset", "network")
 
         # ---------------------------------------------------------
         # 8. EXTRACTED URLS, DOMAINS, RESOLVED IPS & GEOLOCATION (Tier 2 & 3)

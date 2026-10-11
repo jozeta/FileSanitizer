@@ -1,4 +1,5 @@
 import json
+import re
 import threading
 import time
 from datetime import datetime
@@ -152,6 +153,8 @@ class JobModel(BaseModel):
     hta_info: Optional[Dict[str, Any]] = None
     evtx_info: Optional[Dict[str, Any]] = None
     lnk_info: Optional[Dict[str, Any]] = None
+    archive_info: Optional[Dict[str, Any]] = None
+    analysis_data: Optional[Dict[str, Any]] = None
     detection_rules: Optional[Dict[str, Any]] = None
     telemetry: Optional[Dict[str, Any]] = None
 
@@ -522,6 +525,7 @@ class JobManager:
                 arch_res = ArchiveAnalyzer().analyze(original_path, job.filename, job.mime_type, provided_password=job.unlock_password)
                 findings.extend(arch_res.findings)
                 analysis_data["archive"] = arch_res.data
+                job.archive_info = arch_res.data
                 if arch_res.data.get("jar_info"):
                     job.jar_info = arch_res.data["jar_info"]
                 has_path_traversal = arch_res.data.get("has_path_traversal", False)
@@ -531,6 +535,19 @@ class JobManager:
                 job.is_unlocked = arch_res.data.get("is_unlocked", False)
                 if arch_res.data.get("unlock_password"):
                     job.unlock_password = arch_res.data.get("unlock_password")
+
+                # Populate embedded files from extracted archive members
+                ext_files = arch_res.data.get("extracted_files", [])
+                if ext_files:
+                    existing_embs = list(getattr(job, "embedded_files", []) or [])
+                    job.embedded_files = existing_embs + ext_files
+
+                # Populate extracted text corpus for downstream IOC and URL processing
+                text_corp = arch_res.data.get("text_corpus", "")
+                if text_corp:
+                    job.extracted_code = {"code": text_corp, "language": "text"}
+                    for u in re.findall(r'https?://[^\s\'"<>]+', text_corp):
+                        extracted_urls.add(u)
 
             elif job.category == "email":
                 email_res = EmailAnalyzer().analyze(original_path, job.filename, job.mime_type, workspace_dir=ws.workspace_dir)
@@ -1305,6 +1322,9 @@ class JobManager:
                 has_executable=has_executable,
                 is_mismatch=is_mismatch
             )
+
+            # Persist analysis data on job model for cross-referencing and entity graphing
+            job.analysis_data = analysis_data
 
             # MITRE ATT&CK Mapping & Attribution
             try:

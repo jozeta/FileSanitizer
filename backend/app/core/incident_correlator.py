@@ -260,6 +260,17 @@ class IncidentCorrelator:
                 if user_match:
                     cls._record_user(user_map, user_match.group(1), file_meta, "PE Debug PDB Path User")
 
+            # Archive Members, Internal Network Topology, and Credential Dumps
+            arch = (getattr(job, "analysis_data", {}) or {}).get("archive") or {}
+            if arch and isinstance(arch, dict):
+                ext_iocs = arch.get("extracted_iocs") or {}
+                for ip in ext_iocs.get("ips", []):
+                    cls._record_ip(ip_map, ip, file_meta, "Archive Network Topology / Staged Notes")
+                for dom in ext_iocs.get("domains", []):
+                    cls._record_domain(domain_map, dom.lower(), file_meta, "Archive Target Domain / Hostname")
+                for u in ext_iocs.get("users", []):
+                    cls._record_user(user_map, u, file_meta, "Archive Credential Dump / Staged Payroll")
+
             # Raw IP regex in extracted code/findings
             raw_ips = re.findall(r'\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b', code)
             for ip in set(raw_ips):
@@ -1400,12 +1411,40 @@ class IncidentCorrelator:
                 "type": etype,
                 "is_shared": is_shared
             })
+            for jid, fnid in file_node_ids.items():
+                if src == fnid:
+                    node_jobs.setdefault(dst, set()).add(jid)
+                elif dst == fnid:
+                    node_jobs.setdefault(src, set()).add(jid)
 
-        def _link_artifact_to_job(job_id: str, art_nid: str, edge_label: str, edge_type: str = "artifact"):
+        def _link_artifact_to_job(job_id: str, art_nid: str, edge_label: str, edge_type: str = "artifact", is_shared: bool = False):
             fnid = file_node_ids.get(job_id)
-            if fnid:
-                _add_edge(fnid, art_nid, edge_label, edge_type)
-                node_jobs.setdefault(art_nid, set()).add(job_id)
+            if not fnid:
+                return
+            if art_nid not in node_ids:
+                if art_nid.startswith("hash_sha256_"):
+                    h = art_nid.replace("hash_sha256_", "")
+                    _add_node(nid=art_nid, label=f"SHA256: {h[:8]}..", ntype="hash", risk="clean", tier=2, details={"hash_type": "SHA-256", "hash_value": h})
+                elif art_nid.startswith("hash_md5_"):
+                    h = art_nid.replace("hash_md5_", "")
+                    _add_node(nid=art_nid, label=f"MD5: {h[:8]}..", ntype="hash", risk="clean", tier=2, details={"hash_type": "MD5", "hash_value": h})
+                elif art_nid.startswith("hash_emb_"):
+                    h = art_nid.replace("hash_emb_", "")
+                    _add_node(nid=art_nid, label=f"Carved: {h[:8]}..", ntype="hash", risk="high", tier=2, details={"hash_type": "Embedded Payload", "hash_value": h})
+                elif art_nid.startswith("user_"):
+                    u = art_nid.replace("user_", "")
+                    _add_node(nid=art_nid, label=f"User: {u}", ntype="user", risk="clean", tier=2, details={"username": u})
+                elif art_nid.startswith("dom_"):
+                    d = art_nid.replace("dom_", "")
+                    _add_node(nid=art_nid, label=d, ntype="domain", risk="clean", tier=2, details={"domain": d})
+                elif art_nid.startswith("ip_"):
+                    ip = art_nid.replace("ip_", "").replace("_", ".")
+                    _add_node(nid=art_nid, label=ip, ntype="ip", risk="clean", tier=2, details={"ip": ip})
+                elif art_nid.startswith("mitre_"):
+                    m_id = art_nid.replace("mitre_", "").replace("_", ".")
+                    _add_node(nid=art_nid, label=f"ATT&CK {m_id}", ntype="technique", risk="medium", tier=2, details={"technique_id": m_id})
+            _add_edge(fnid, art_nid, edge_label, edge_type, is_shared=is_shared)
+            node_jobs.setdefault(art_nid, set()).add(job_id)
 
         def _normalize_date_str(raw_val: Any) -> Optional[str]:
             if not raw_val:
@@ -1586,10 +1625,176 @@ class IncidentCorrelator:
                         for h_match in re.finditer(r'(MD5|SHA256)=([a-fA-F0-9]{32,64})', str(raw_h)):
                             h_type = h_match.group(1).upper()
                             h_val = h_match.group(2).lower()
-                            if h_type == "SHA256":
-                                _link_artifact_to_job(jid, f"hash_sha256_{h_val}", f"Event {evt.get('event_id')} hash", "hash")
-                            elif h_type == "MD5":
-                                _link_artifact_to_job(jid, f"hash_md5_{h_val}", f"Event {evt.get('event_id')} hash", "hash")
+                            h_nid = f"hash_sha256_{h_val}" if h_type == "SHA256" else f"hash_md5_{h_val}"
+                            _link_artifact_to_job(jid, h_nid, f"Event {evt.get('event_id')} hash", "hash")
+
+                            # Link originating host node if available
+                            comp = evt.get("computer")
+                            if comp and comp in host_nodes:
+                                _add_edge(host_nodes[comp], h_nid, f"staged / executed hash (Event {evt.get('event_id')})", "hash")
+                                node_jobs.setdefault(h_nid, set()).add(jid)
+
+                            # Connect directly to any other matching analyzed job in the incident workspace
+                            for other_job in jobs:
+                                if other_job.job_id == jid:
+                                    continue
+                                o_hashes = getattr(other_job, "hashes", {}) or {}
+                                o_s256 = (o_hashes.get("sha256") or "").lower()
+                                o_md5 = (o_hashes.get("md5") or "").lower()
+                                if (h_type == "SHA256" and h_val == o_s256) or (h_type == "MD5" and h_val == o_md5):
+                                    fnid = file_node_ids.get(jid)
+                                    o_fnid = file_node_ids.get(other_job.job_id)
+                                    if fnid and o_fnid:
+                                        t_name = other_job.original_filename or other_job.filename
+                                        lbl = f"staged on disk (Event {evt.get('event_id', '11')})" if "zip" in t_name.lower() or other_job.category == "archive" else f"executed on endpoint (Event {evt.get('event_id', '1')})"
+                                        _add_edge(fnid, o_fnid, lbl, "endpoint_drop", is_shared=True)
+                                        if comp and comp in host_nodes:
+                                            _add_edge(host_nodes[comp], o_fnid, lbl, "endpoint_drop", is_shared=True)
+
+        # 2c. Direct PCAP Carved & Transferred File Hash Linking
+        for job in jobs:
+            if getattr(job, "category", "") == "pcap":
+                pinfo = getattr(job, "pcap_info", {}) or (getattr(job, "analysis_data", {}) or {}).get("pcap") or {}
+                carved_list = pinfo.get("carved_files", []) or []
+                for cf in carved_list:
+                    c_sha256 = (cf.get("sha256") or "").lower()
+                    c_md5 = (cf.get("md5") or "").lower()
+                    c_name = cf.get("filename") or "carved_payload"
+                    is_upload = "upload" in c_name.lower() or cf.get("direction") == "uploaded" or "exfil" in c_name.lower() or "confidential" in c_name.lower()
+
+                    if c_sha256 and len(c_sha256) >= 32:
+                        lbl = f"carved POST upload ({c_name[:14]})" if is_upload else f"carved GET download ({c_name[:14]})"
+                        _link_artifact_to_job(job.job_id, f"hash_sha256_{c_sha256}", lbl, "hash", is_shared=True)
+                    if c_md5 and len(c_md5) >= 16:
+                        lbl = f"carved POST upload ({c_name[:14]})" if is_upload else f"carved GET download ({c_name[:14]})"
+                        _link_artifact_to_job(job.job_id, f"hash_md5_{c_md5}", lbl, "hash", is_shared=True)
+
+                    for other_job in jobs:
+                        if other_job.job_id == job.job_id:
+                            continue
+                        o_hashes = getattr(other_job, "hashes", {}) or {}
+                        o_s256 = (o_hashes.get("sha256") or "").lower()
+                        o_md5 = (o_hashes.get("md5") or "").lower()
+                        if (c_sha256 and c_sha256 == o_s256) or (c_md5 and c_md5 == o_md5):
+                            fnid = file_node_ids.get(job.job_id)
+                            o_fnid = file_node_ids.get(other_job.job_id)
+                            if fnid and o_fnid:
+                                edge_lbl = f"exfiltrated via HTTP POST ({c_name})" if is_upload else f"delivered via HTTP GET ({c_name})"
+                                _add_edge(fnid, o_fnid, edge_lbl, "pcap_transfer", is_shared=True)
+
+        # 2d. Archive Member Files, Credential Dumps, and Internal Infrastructure
+        for job in jobs:
+            if getattr(job, "category", "") == "archive":
+                arch_data = getattr(job, "analysis_data", {}).get("archive") or {}
+                ext_iocs = arch_data.get("extracted_iocs") or {}
+
+                # Connect member files and member hashes
+                for ef in (arch_data.get("extracted_files") or getattr(job, "embedded_files", []) or []):
+                    ef_name = ef.get("name") or ef.get("filename") or "member_file"
+                    ef_sha256 = (ef.get("sha256") or "").lower()
+                    ef_id = f"arch_mem_{re.sub(r'[^a-zA-Z0-9]', '_', ef_name.lower())}"
+                    _add_node(
+                        nid=ef_id,
+                        label=ef_name,
+                        ntype="embedded_file",
+                        risk="critical" if "credential" in ef_name.lower() or "ntds" in ef_name.lower() else ("high" if "payroll" in ef_name.lower() else "medium"),
+                        tier=2,
+                        details=ef
+                    )
+                    _link_artifact_to_job(job.job_id, ef_id, "contains member file", "archive_member")
+                    if ef_sha256:
+                        s_node_id = f"hash_sha256_{ef_sha256}"
+                        _add_node(
+                            nid=s_node_id,
+                            label=f"SHA256: {ef_sha256[:8]}..",
+                            ntype="hash",
+                            risk="clean",
+                            tier=2,
+                            details={"hash_type": "SHA-256", "hash_value": ef_sha256, "member_file": ef_name}
+                        )
+                        _add_edge(ef_id, s_node_id, "member hash", "hash")
+
+                # Dumped Accounts (Active Directory NTDS)
+                for u in ext_iocs.get("users", []):
+                    unid = f"user_{re.sub(r'[^a-zA-Z0-9]', '_', u)}"
+                    _add_node(
+                        nid=unid,
+                        label=f"User: {u}",
+                        ntype="user",
+                        risk="critical" if u.lower() in ("administrator", "svc_admin") else "high",
+                        tier=1 if u.lower() in ("administrator", "svc_admin", "jdoe") else 2,
+                        is_shared=True,
+                        details={"username": u, "source": "Archive Active Directory NTDS Audit / Staged Payroll"}
+                    )
+                    _link_artifact_to_job(job.job_id, unid, "dumped account credential", "identity", is_shared=True)
+
+                # Target Domains
+                for dom in ext_iocs.get("domains", []):
+                    clean_dom = dom.strip().lower()
+                    dnid = f"dom_{re.sub(r'[^a-zA-Z0-9]', '_', clean_dom)}"
+                    _add_node(
+                        nid=dnid,
+                        label=clean_dom,
+                        ntype="domain",
+                        risk="high",
+                        tier=1,
+                        is_shared=True,
+                        details={"domain": clean_dom, "source": "Archive Network Topology / Staged Notes"}
+                    )
+                    _link_artifact_to_job(job.job_id, dnid, "target enterprise domain", "network", is_shared=True)
+
+                # Internal IPs
+                for ip in ext_iocs.get("ips", []):
+                    inid = f"ip_{ip.replace('.', '_')}"
+                    _add_node(
+                        nid=inid,
+                        label=ip,
+                        ntype="ip",
+                        risk="high",
+                        tier=1,
+                        is_shared=True,
+                        details={"ip": ip, "source": "Archive Internal Network Topology"}
+                    )
+                    _link_artifact_to_job(job.job_id, inid, "internal network topology map", "network", is_shared=True)
+
+        # 2e. Direct Email Attachment & Office Macro Cross-File Linkage
+        for job in jobs:
+            jid = job.job_id
+            fnid = file_node_ids.get(jid)
+            if not fnid:
+                continue
+
+            # Email attachments
+            if getattr(job, "category", "") == "email":
+                einfo = getattr(job, "email_info", {}) or (getattr(job, "analysis_data", {}) or {}).get("email") or {}
+                for att in einfo.get("attachments", []):
+                    a_s256 = (att.get("sha256") or "").lower()
+                    a_md5 = (att.get("md5") or "").lower()
+                    a_name = att.get("filename") or "attachment"
+                    if a_s256:
+                        _link_artifact_to_job(jid, f"hash_sha256_{a_s256}", f"delivers attachment ({a_name[:12]})", "hash", is_shared=True)
+                    if a_md5:
+                        _link_artifact_to_job(jid, f"hash_md5_{a_md5}", f"delivers attachment ({a_name[:12]})", "hash", is_shared=True)
+                    for other_job in jobs:
+                        if other_job.job_id == jid:
+                            continue
+                        o_hashes = getattr(other_job, "hashes", {}) or {}
+                        o_s256 = (o_hashes.get("sha256") or "").lower()
+                        o_md5 = (o_hashes.get("md5") or "").lower()
+                        if (a_s256 and a_s256 == o_s256) or (a_md5 and a_md5 == o_md5) or (a_name.lower() == (other_job.original_filename or other_job.filename).lower()):
+                            o_fnid = file_node_ids.get(other_job.job_id)
+                            if o_fnid:
+                                _add_edge(fnid, o_fnid, f"delivers lure attachment ({a_name})", "email_attachment", is_shared=True)
+
+            # Office macro payload dropper
+            if getattr(job, "category", "") == "office":
+                for other_job in jobs:
+                    if other_job.job_id == jid:
+                        continue
+                    if other_job.category in ("executable", "binary"):
+                        o_fnid = file_node_ids.get(other_job.job_id)
+                        if o_fnid:
+                            _add_edge(fnid, o_fnid, "cradle drops executable payload", "dropper_cradle", is_shared=True)
 
 
         # 3. Extract and Connect Timestamps (Compile Times, Document Dates, Telemetry)
@@ -1925,7 +2130,8 @@ class IncidentCorrelator:
 
         for edge in edges:
             target_id = edge["target"]
-            if target_id in node_jobs and len(node_jobs[target_id]) > 1:
+            source_id = edge["source"]
+            if edge.get("is_shared") or (target_id in node_jobs and len(node_jobs[target_id]) > 1) or (source_id in node_jobs and len(node_jobs[source_id]) > 1):
                 edge["is_shared"] = True
 
         return {
@@ -3003,6 +3209,65 @@ class IncidentCorrelator:
                             "detail": f"Contains embedded file member '{emb.get('name')}' matching target artifact",
                             "matched_by": "hash" if (emb_h & tgt_h) else "filename",
                             "matched_value": emb.get("name") or ""
+                        })
+
+                # 7. Archive Staging, Stolen Credentials & Target Infrastructure
+                if getattr(src, "category", "") == "archive":
+                    arch_info = getattr(src, "analysis_data", {}).get("archive") or {}
+                    arch_iocs = arch_info.get("extracted_iocs") or {}
+
+                    # Check credential overlap with EVTX or PCAP
+                    arch_users = {u.lower() for u in arch_iocs.get("users", [])}
+                    tgt_users = set()
+                    tgt_evtx = getattr(tgt, "evtx_info", {}) or (getattr(tgt, "analysis_data", {}) or {}).get("evtx") or {}
+                    for ev in (tgt_evtx.get("timeline") or tgt_evtx.get("timeline_events") or []):
+                        u = ev.get("user")
+                        if u and u not in ("-", "SYSTEM", "LOCAL SERVICE", "NETWORK SERVICE"):
+                            tgt_users.add(u.lower())
+                    tgt_pcap = getattr(tgt, "pcap_info", {}) or (getattr(tgt, "analysis_data", {}) or {}).get("pcap") or {}
+                    for cred in tgt_pcap.get("credentials", []):
+                        if cred.get("username"):
+                            tgt_users.add(cred["username"].lower())
+
+                    shared_users = arch_users & tgt_users
+                    if shared_users:
+                        raw_refs.append({
+                            "source_job_id": src.job_id,
+                            "source_filename": src_fn,
+                            "target_job_id": tgt.job_id,
+                            "target_filename": tgt_fn,
+                            "reference_type": "COMPROMISED_ACCOUNT_OVERLAP",
+                            "confidence": "HIGH",
+                            "label": "Compromised Account Overlap",
+                            "detail": f"Archive NTDS credential dump contains account(s) '{', '.join(sorted(list(shared_users))[:3])}' observed active in target telemetry",
+                            "matched_by": "username",
+                            "matched_value": list(shared_users)[0]
+                        })
+
+                    # Check internal infrastructure overlap
+                    arch_ips = set(arch_iocs.get("ips", []))
+                    tgt_ips = set()
+                    for ev in (tgt_evtx.get("timeline") or tgt_evtx.get("timeline_events") or []):
+                        ip = ev.get("ip_address") or (ev.get("details", {}) or {}).get("IpAddress")
+                        if ip and not ip.startswith("127."):
+                            tgt_ips.add(ip)
+                    for fl in tgt_pcap.get("conversations", []):
+                        for ep in (fl.get("source_ip"), fl.get("dest_ip")):
+                            if ep and not ep.startswith("127."):
+                                tgt_ips.add(ep)
+                    shared_ips = arch_ips & tgt_ips
+                    if shared_ips:
+                        raw_refs.append({
+                            "source_job_id": src.job_id,
+                            "source_filename": src_fn,
+                            "target_job_id": tgt.job_id,
+                            "target_filename": tgt_fn,
+                            "reference_type": "INTERNAL_TOPOLOGY_TARGET",
+                            "confidence": "HIGH",
+                            "label": "Internal Infrastructure Mapping",
+                            "detail": f"Archive topology maps internal enterprise host IP(s) '{', '.join(sorted(list(shared_ips))[:3])}' recorded in target traffic",
+                            "matched_by": "ip",
+                            "matched_value": list(shared_ips)[0]
                         })
 
         # Deduplicate references by (source_job_id, target_job_id, reference_type)
