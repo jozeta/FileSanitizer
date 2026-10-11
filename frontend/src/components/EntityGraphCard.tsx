@@ -299,13 +299,24 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     );
   }, [graphData?.edges, visibleNodeIds]);
 
-  // Select all nodes connected to a node, restoring filters if necessary, and close the inspector
+  // Select all nodes connected to a node (excluding root/file nodes), restoring filters if necessary, and close the inspector
   const handleSelectConnectedNodes = (nodeId: string) => {
     const connectedIds = new Set<string>();
     const allEdges = graphData?.edges || [];
+    const allNodes = graphData?.nodes || [];
+    const nodeMap = new Map<string, any>(allNodes.map((n) => [n.id, n]));
+
     allEdges.forEach((edge: any) => {
-      if (edge.source === nodeId) connectedIds.add(edge.target);
-      else if (edge.target === nodeId) connectedIds.add(edge.source);
+      let otherId: string | null = null;
+      if (edge.source === nodeId) otherId = edge.target;
+      else if (edge.target === nodeId) otherId = edge.source;
+
+      if (otherId) {
+        const otherNode = nodeMap.get(otherId);
+        if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && otherId !== 'root') {
+          connectedIds.add(otherId);
+        }
+      }
     });
 
     const hasHiddenConnected = Array.from(connectedIds).some((id) => !visibleNodeIds.has(id));
@@ -317,16 +328,27 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     setSelectedNode(null);
   };
 
-  // Connected node count for selectedNode
+  // Connected node count for selectedNode (excluding root/file nodes)
   const selectedNodeConnectedCount = useMemo(() => {
     if (!selectedNode || !graphData?.edges) return 0;
+    const allNodes = graphData?.nodes || [];
+    const nodeMap = new Map<string, any>(allNodes.map((n) => [n.id, n]));
     const connected = new Set<string>();
+
     graphData.edges.forEach((edge: any) => {
-      if (edge.source === selectedNode.id) connected.add(edge.target);
-      else if (edge.target === selectedNode.id) connected.add(edge.source);
+      let otherId: string | null = null;
+      if (edge.source === selectedNode.id) otherId = edge.target;
+      else if (edge.target === selectedNode.id) otherId = edge.source;
+
+      if (otherId) {
+        const otherNode = nodeMap.get(otherId);
+        if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && otherId !== 'root') {
+          connected.add(otherId);
+        }
+      }
     });
     return connected.size;
-  }, [selectedNode, graphData?.edges]);
+  }, [selectedNode, graphData?.edges, graphData?.nodes]);
 
   // Smooth mouse scroll wheel & trackpad pinch-zoom centered on cursor
   useEffect(() => {
@@ -713,14 +735,8 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       y: worldPos.y - currNodePos.y
     };
 
-    if (e.shiftKey) {
-      setSelectedNodeIds(prev => {
-        const next = new Set(prev);
-        if (next.has(node.id)) next.delete(node.id);
-        else next.add(node.id);
-        return next;
-      });
-    } else if (!selectedNodeIds.has(node.id)) {
+    const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
+    if (!isMultiSelect && !selectedNodeIds.has(node.id)) {
       setSelectedNodeIds(new Set([node.id]));
     }
   };
@@ -1367,7 +1383,25 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!hasDraggedNodeRef.current) {
-                      setSelectedNode(prev => prev?.id === node.id ? null : node);
+                      const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
+                      if (isMultiSelect) {
+                        setSelectedNodeIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(node.id)) {
+                            next.delete(node.id);
+                            if (selectedNode?.id === node.id) {
+                              setSelectedNode(null);
+                            }
+                          } else {
+                            next.add(node.id);
+                            setSelectedNode(node);
+                          }
+                          return next;
+                        });
+                      } else {
+                        setSelectedNode(prev => prev?.id === node.id ? null : node);
+                        setSelectedNodeIds(new Set([node.id]));
+                      }
                     }
                   }}
                   onMouseEnter={() => setHoveredNodeId(node.id)}

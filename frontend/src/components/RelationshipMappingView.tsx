@@ -96,9 +96,9 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const ALL_THREAT_FILTER_KEYS = useMemo(() => ['hosts', 'hashes', 'timestamps', 'vulns', 'geo', 'network', 'identity', 'ttps', 'artifacts'], []);
   const [selectedFilters, setSelectedFilters] = useState<string[]>(['hosts', 'hashes', 'timestamps', 'vulns', 'geo', 'network', 'identity', 'ttps', 'artifacts']);
   const [sharedOnlyFilter, setSharedOnlyFilter] = useState<boolean>(false);
-  const [layoutMode, setLayoutMode] = useState<'radial' | 'category' | 'sample' | 'format' | 'hierarchical' | 'grid'>('radial');
+  const [layoutMode, setLayoutMode] = useState<'radial' | 'category' | 'sample' | 'format' | 'hierarchical' | 'grid'>('sample');
   const [sortMode, setSortMode] = useState<'connectivity' | 'threat_severity' | 'alpha' | 'reverse_alpha' | 'type' | 'shared_first'>('connectivity');
-  const [nodeProximity, setNodeProximity] = useState<'close' | 'middle' | 'far' | 'very_far'>('middle');
+  const [nodeProximity, setNodeProximity] = useState<'close' | 'middle' | 'far' | 'very_far'>('far');
   const [hideIsolatedNodes, setHideIsolatedNodes] = useState<boolean>(false);
   const [hideBenignNodes, setHideBenignNodes] = useState<boolean>(false);
   const [showEmptyNodes, setShowEmptyNodes] = useState<boolean>(false);
@@ -146,17 +146,8 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       y: worldPos.y - nodePos.y,
     };
 
-    if (e.shiftKey) {
-      setSelectedNodeIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(nodeId)) {
-          next.delete(nodeId);
-        } else {
-          next.add(nodeId);
-        }
-        return next;
-      });
-    } else if (!selectedNodeIds.has(nodeId)) {
+    const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
+    if (!isMultiSelect && !selectedNodeIds.has(nodeId)) {
       setSelectedNodeIds(new Set([nodeId]));
     }
   };
@@ -1182,13 +1173,25 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     );
   }, [data, visibleNodeIds]);
 
-  // Select all nodes connected to a node, restoring filters if necessary, and close the inspector
+  // Select all nodes connected to a node (excluding files), restoring filters if necessary, and close the inspector
   const handleSelectConnectedNodes = (nodeId: string) => {
     const connectedIds = new Set<string>();
     const allEdges = data?.campaign_graph?.edges || [];
+    const allNodes = data?.campaign_graph?.nodes || [];
+    const nodeMap = new Map<string, any>(allNodes.map((n) => [n.id, n]));
+
     allEdges.forEach((edge: any) => {
-      if (edge.source === nodeId) connectedIds.add(edge.target);
-      else if (edge.target === nodeId) connectedIds.add(edge.source);
+      let otherId: string | null = null;
+      if (edge.source === nodeId) otherId = edge.target;
+      else if (edge.target === nodeId) otherId = edge.source;
+
+      if (otherId) {
+        const otherNode = nodeMap.get(otherId);
+        // Exclude file nodes as requested: "when clicking select connected nodes i dont want a file to be selected"
+        if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && !otherId.startsWith('job_')) {
+          connectedIds.add(otherId);
+        }
+      }
     });
 
     // If any connected nodes are currently hidden by active category filters or sharedOnly, restore them so they become visible
@@ -1202,16 +1205,27 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     setSelectedNode(null);
   };
 
-  // Connected node count for selectedNode
+  // Connected node count for selectedNode (excluding files)
   const selectedNodeConnectedCount = useMemo(() => {
     if (!selectedNode || !data?.campaign_graph?.edges) return 0;
+    const allNodes = data?.campaign_graph?.nodes || [];
+    const nodeMap = new Map<string, any>(allNodes.map((n) => [n.id, n]));
     const connected = new Set<string>();
+
     data.campaign_graph.edges.forEach((edge: any) => {
-      if (edge.source === selectedNode.id) connected.add(edge.target);
-      else if (edge.target === selectedNode.id) connected.add(edge.source);
+      let otherId: string | null = null;
+      if (edge.source === selectedNode.id) otherId = edge.target;
+      else if (edge.target === selectedNode.id) otherId = edge.source;
+
+      if (otherId) {
+        const otherNode = nodeMap.get(otherId);
+        if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && !otherId.startsWith('job_')) {
+          connected.add(otherId);
+        }
+      }
     });
     return connected.size;
-  }, [selectedNode, data?.campaign_graph?.edges]);
+  }, [selectedNode, data?.campaign_graph?.edges, data?.campaign_graph?.nodes]);
 
   // Re-layout & redraw graph automatically when visible nodes, edges, layout mode, sort mode, canvas size, or proximity changes
   useEffect(() => {
@@ -2204,7 +2218,25 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       onClick={(e) => {
                         e.stopPropagation();
                         if (!hasDraggedNodeRef.current) {
-                          setSelectedNode(node);
+                          const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
+                          if (isMultiSelect) {
+                            setSelectedNodeIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(node.id)) {
+                                next.delete(node.id);
+                                if (selectedNode?.id === node.id) {
+                                  setSelectedNode(null);
+                                }
+                              } else {
+                                next.add(node.id);
+                                setSelectedNode(node);
+                              }
+                              return next;
+                            });
+                          } else {
+                            setSelectedNode(node);
+                            setSelectedNodeIds(new Set([node.id]));
+                          }
                         }
                       }}
                       className="cursor-move group"
