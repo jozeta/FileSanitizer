@@ -167,8 +167,28 @@ class BinaryDecompiler:
         if imported_apis:
             for imp in imported_apis:
                 name = imp.get("name") or imp.get("api")
+                addr = imp.get("address")
                 if name:
                     api_lookup[name.lower()] = name
+                if addr:
+                    api_lookup[str(addr).lower()] = name
+                    api_lookup[str(addr).lower().replace("0x", "")] = name
+
+        # Resolve exported symbols lookup map
+        export_lookup = {}
+        if exported_symbols:
+            for exp in exported_symbols:
+                name = exp.get("name")
+                addr = exp.get("address")
+                rva = exp.get("rva")
+                if name:
+                    export_lookup[name.lower()] = name
+                if addr:
+                    export_lookup[str(addr).lower()] = name
+                    export_lookup[str(addr).lower().replace("0x", "")] = name
+                if rva:
+                    export_lookup[str(rva).lower()] = name
+                    export_lookup[str(rva).lower().replace("0x", "")] = name
 
         # Scan instructions and identify features
         variables = set()
@@ -261,7 +281,14 @@ class BinaryDecompiler:
             # Function calls
             if mnem == "call":
                 target = op.strip()
-                clean_target = target.replace("[", "").replace("]", "").replace("dword ptr ", "").replace("qword ptr ", "")
+                clean_target = target.replace("[", "").replace("]", "").replace("dword ptr ", "").replace("qword ptr ", "").strip()
+                lower_target = clean_target.lower()
+                if lower_target in api_lookup:
+                    clean_target = api_lookup[lower_target]
+                    lower_target = clean_target.lower()
+                elif lower_target in export_lookup:
+                    clean_target = export_lookup[lower_target]
+                    lower_target = clean_target.lower()
                 demangled = demangle_symbol(clean_target)
                 
                 # Check known Win32 APIs

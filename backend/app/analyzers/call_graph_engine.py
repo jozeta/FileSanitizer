@@ -62,16 +62,28 @@ class CallGraphEngine:
         if imported_apis:
             for imp in imported_apis:
                 name = imp.get("name") or imp.get("api")
+                addr = imp.get("address")
                 if name:
                     api_lookup[name.lower()] = imp
+                if addr:
+                    api_lookup[str(addr).lower()] = imp
+                    api_lookup[str(addr).lower().replace("0x", "")] = imp
 
         # 3. Known exported symbols lookup
         export_lookup: Dict[str, Dict[str, Any]] = {}
         if exported_symbols:
             for exp in exported_symbols:
                 name = exp.get("name")
+                addr = exp.get("address")
+                rva = exp.get("rva")
                 if name:
                     export_lookup[name.lower()] = exp
+                if addr:
+                    export_lookup[str(addr).lower()] = exp
+                    export_lookup[str(addr).lower().replace("0x", "")] = exp
+                if rva:
+                    export_lookup[str(rva).lower()] = exp
+                    export_lookup[str(rva).lower().replace("0x", "")] = exp
 
         # 4. Partition instructions into functions
         current_func_id = root_id
@@ -115,17 +127,24 @@ class CallGraphEngine:
                 flags = []
 
                 if target_lower in api_lookup:
+                    imp_entry = api_lookup[target_lower]
+                    real_name = imp_entry.get("name") or imp_entry.get("api") or target
+                    real_name_lower = real_name.lower()
                     node_type = "IMPORT_API"
-                    target_id = f"api_{target_lower}"
-                    if target_lower in cls.CRITICAL_RISK_APIS:
+                    target_id = f"api_{real_name_lower}"
+                    target = real_name
+                    if real_name_lower in cls.CRITICAL_RISK_APIS:
                         risk = "critical"
                         flags.append("High-Risk Process Injection / RWX API")
-                    elif target_lower in cls.HIGH_RISK_APIS:
+                    elif real_name_lower in cls.HIGH_RISK_APIS:
                         risk = "high"
                         flags.append("Suspicious Evasion / Execution API")
                 elif target_lower in export_lookup:
+                    exp_entry = export_lookup[target_lower]
+                    exp_name = exp_entry.get("name") or target
                     node_type = "EXPORT"
-                    target_id = f"exp_{target_lower}"
+                    target_id = f"exp_{exp_name.lower()}"
+                    target = f"{exp_name} (Export)"
                 elif target.startswith("0x") or target.replace("sub_", "").isalnum():
                     node_type = "INTERNAL"
                     target_id = f"func_{target.replace('0x', '').replace('sub_', '').lower()}"

@@ -75,8 +75,96 @@ def generate_pe_binary() -> bytes:
     headers_padded = headers.ljust(0x200, b"\x00")
     
     # .text section payload (offset 0x200, RVA 0x1000)
-    text_sec = bytearray(0x200)
-    text_sec[0:4] = b"\xCC\x90\x90\xCC"
+    # Multi-function x86 implant routines showcasing CFG branching, loops, and hierarchical API calls:
+    # Function 1: entry_point (RVA 0x1000) - DropPayload
+    f1 = bytes([
+        0x55, 0x89, 0xe5, 0x83, 0xec, 0x20,        # push ebp; mov ebp, esp; sub esp, 0x20
+        0xe8, 0x65, 0x00, 0x00, 0x00,              # call 0x401070 (CheckDebugger / InitPayload)
+        0x85, 0xc0,                                # test eax, eax
+        0x75, 0x51,                                # jnz 0x401060 (loc_exit / evasion branch)
+        0xba, 0x54, 0xca, 0xaf, 0x91,              # mov edx, 0x91afca54 (VirtualAlloc ROR13 hash)
+        0xe8, 0x77, 0x00, 0x00, 0x00,              # call 0x401090 (ResolveApiByHash)
+        0x6a, 0x40,                                # push 0x40 (PAGE_EXECUTE_READWRITE)
+        0x68, 0x00, 0x10, 0x00, 0x00,              # push 0x1000 (MEM_COMMIT)
+        0x68, 0x00, 0x10, 0x00, 0x00,              # push 0x1000 (dwSize = 4096)
+        0x6a, 0x00,                                # push 0 (lpAddress = NULL)
+        0xff, 0x15, 0x30, 0x21, 0x40, 0x00,        # call dword ptr [0x402130] (VirtualAlloc)
+        0x89, 0x45, 0xfc,                          # mov dword ptr [ebp-4], eax
+        0x85, 0xc0,                                # test eax, eax
+        0x74, 0x2c,                                # jz 0x401060 (loc_exit)
+        0xb9, 0x10, 0x00, 0x00, 0x00,              # mov ecx, 0x10 (loop counter)
+        0x31, 0xd2,                                # xor edx, edx (index = 0)
+        # Loop at 0x40103b:
+        0x8a, 0x44, 0x15, 0xe0,                    # mov al, byte ptr [ebp+edx-0x20]
+        0x34, 0x5a,                                # xor al, 0x5a (payload decryption key)
+        0x88, 0x44, 0x15, 0xe0,                    # mov byte ptr [ebp+edx-0x20], al
+        0x42,                                      # inc edx
+        0x39, 0xca,                                # cmp edx, ecx
+        0x7c, 0xf1,                                # jl 0x40103b (backward branch loop!)
+        0xe8, 0x71, 0x00, 0x00, 0x00,              # call 0x4010c0 (ExecutePayloadStage / ServiceMain)
+        0x31, 0xc0,                                # xor eax, eax
+        0x89, 0xec,                                # mov esp, ebp
+        0x5d,                                      # pop ebp
+        0xc3                                       # ret
+    ])
+    pad1 = b"\x90" * (0x60 - len(f1))
+    # Exit / Evasion Handler (RVA 0x401060):
+    exit_handler = bytes([
+        0x31, 0xc0,                                # xor eax, eax
+        0x48,                                      # dec eax
+        0x89, 0xec,                                # mov esp, ebp
+        0x5d,                                      # pop ebp
+        0xc3                                       # ret
+    ])
+    pad2 = b"\x90" * (0x10 - len(exit_handler))
+
+    # Function 2: CheckDebugger (RVA 0x401070) - InitPayload
+    f2 = bytes([
+        0x55, 0x89, 0xe5,                          # push ebp; mov ebp, esp
+        0x64, 0xa1, 0x30, 0x00, 0x00, 0x00,        # mov eax, dword ptr fs:[0x30] (PEB)
+        0x0f, 0xb6, 0x40, 0x02,                    # movzx eax, byte ptr [eax+2] (BeingDebugged)
+        0x85, 0xc0,                                # test eax, eax
+        0x75, 0x06,                                # jnz 0x401088 (loc_deb_ret)
+        0xff, 0x15, 0x3c, 0x21, 0x40, 0x00,        # call dword ptr [0x40213c] (IsDebuggerPresent)
+        0x5d,                                      # pop ebp
+        0xc3                                       # ret
+    ])
+    pad3 = b"\x90" * (0x20 - len(f2))
+
+    # Function 3: ResolveApiByHash (RVA 0x401090)
+    f3 = bytes([
+        0x55, 0x89, 0xe5,                          # push ebp; mov ebp, esp
+        0x64, 0xa1, 0x30, 0x00, 0x00, 0x00,        # mov eax, dword ptr fs:[0x30] (PEB)
+        0x8b, 0x40, 0x0c,                          # mov eax, dword ptr [eax+0xc] (PEB_LDR_DATA)
+        0x8b, 0x70, 0x14,                          # mov esi, dword ptr [eax+0x14] (InMemoryOrderModuleList)
+        0x89, 0xd0,                                # mov eax, edx
+        0x5d,                                      # pop ebp
+        0xc3                                       # ret
+    ])
+    pad4 = b"\x90" * (0x30 - len(f3))
+
+    # Function 4: ExecutePayloadStage (RVA 0x4010c0) - ServiceMain
+    f4 = bytes([
+        0x55, 0x89, 0xe5, 0x83, 0xec, 0x10,        # push ebp; mov ebp, esp; sub esp, 0x10
+        0xba, 0xa1, 0x6a, 0x3d, 0xd8,              # mov edx, 0xd83d6aa1 (WriteProcessMemory ROR13 hash)
+        0x68, 0x00, 0x10, 0x00, 0x00,              # push 0x1000
+        0x68, 0x00, 0x00, 0x40, 0x00,              # push 0x00400000
+        0x6a, 0xff,                                # push -1 (hProcess = GetCurrentProcess)
+        0xff, 0x15, 0x38, 0x21, 0x40, 0x00,        # call dword ptr [0x402138] (WriteProcessMemory)
+        0x6a, 0x00,                                # push 0
+        0x6a, 0x00,                                # push 0
+        0x68, 0x00, 0x10, 0x40, 0x00,              # push 0x00401000 (lpStartAddress)
+        0xff, 0x15, 0x34, 0x21, 0x40, 0x00,        # call dword ptr [0x402134] (CreateRemoteThread)
+        0x6a, 0x00,                                # push 0 (SW_HIDE)
+        0x68, 0x50, 0x20, 0x40, 0x00,              # push 0x00402050 (cmd string)
+        0xff, 0x15, 0x40, 0x21, 0x40, 0x00,        # call dword ptr [0x402140] (WinExec)
+        0x89, 0xec,                                # mov esp, ebp
+        0x5d,                                      # pop ebp
+        0xc3                                       # ret
+    ])
+
+    text_content = f1 + pad1 + exit_handler + pad2 + f2 + pad3 + f3 + pad4 + f4
+    text_sec = bytearray(text_content.ljust(0x200, b"\x90"))
     
     # .rdata section payload (offset 0x400, RVA 0x2000):
     rdata = bytearray(0x400)
@@ -87,7 +175,7 @@ def generate_pe_binary() -> bytes:
     rdata[0:len(exp_dir)] = exp_dir
     dll_name = b"beacon_updater.dll\x00"
     rdata[0x50:0x50+len(dll_name)] = dll_name
-    rdata[0x60:0x6C] = struct.pack("<III", 0x1000, 0x1010, 0x1020)
+    rdata[0x60:0x6C] = struct.pack("<III", 0x1000, 0x1070, 0x10C0)
     rdata[0x70:0x7C] = struct.pack("<III", 0x2090, 0x20A0, 0x20B0)
     rdata[0x80:0x86] = struct.pack("<HHH", 0, 1, 2)
     rdata[0x90:0x9C] = b"DropPayload\x00"

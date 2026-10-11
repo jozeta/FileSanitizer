@@ -109,8 +109,15 @@ export function decompileInstructions(
     // Function Calls
     if (mnem === 'call') {
       const cleanTarget = op.replace(/[\[\]]/g, '').replace(/dword ptr |qword ptr /g, '').trim();
-      apiCalls.add(cleanTarget);
-      bodyLines.push(`${indent}result = ${cleanTarget}();`);
+      const matchedImport = importsList.find((i: any) =>
+        (i.name && i.name.toLowerCase() === cleanTarget.toLowerCase()) ||
+        (i.api && i.api.toLowerCase() === cleanTarget.toLowerCase()) ||
+        (i.address && i.address.toLowerCase() === cleanTarget.toLowerCase()) ||
+        (i.address && i.address.toLowerCase().replace('0x', '') === cleanTarget.toLowerCase().replace('0x', ''))
+      );
+      const funcName = matchedImport ? (matchedImport.name || matchedImport.api || cleanTarget) : cleanTarget;
+      apiCalls.add(funcName);
+      bodyLines.push(`${indent}result = ${funcName}();`);
       return;
     }
 

@@ -812,6 +812,19 @@ class ExecutableAnalyzer(BaseAnalyzer):
                 details={"anti_debugging": anti_debugging}
             ))
 
+        # ---------------------------------------------------------------------
+        # 7. Exports (parsed before disassembly to enrich decompiler & call graph)
+        # ---------------------------------------------------------------------
+        if hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
+            for exp in pe.DIRECTORY_ENTRY_EXPORT.symbols:
+                exp_name = exp.name.decode('latin-1', errors='ignore') if exp.name else f"Ordinal_{exp.ordinal}"
+                data["exports"].append({
+                    "name": exp_name,
+                    "ordinal": exp.ordinal,
+                    "address": hex(pe.OPTIONAL_HEADER.ImageBase + exp.address) if hasattr(pe, "OPTIONAL_HEADER") else hex(exp.address),
+                    "rva": hex(exp.address)
+                })
+
         # Entry Point Disassembly via Capstone
         try:
             import capstone
@@ -845,13 +858,24 @@ class ExecutableAnalyzer(BaseAnalyzer):
                         "instructions": disasm_insts,
                         "suspicious_patterns": list(set(suspicious_patterns))
                     }
+                    flat_imports = [
+                        {
+                            "name": imp.get("name") if isinstance(imp, dict) else getattr(imp, "name", ""),
+                            "api": imp.get("name") if isinstance(imp, dict) else getattr(imp, "name", ""),
+                            "address": imp.get("address") if isinstance(imp, dict) else getattr(imp, "address", None),
+                            "is_suspicious": imp.get("is_suspicious", False) if isinstance(imp, dict) else False
+                        }
+                        for imp_list in data.get("imports", {}).values()
+                        for imp in imp_list
+                    ] if isinstance(data.get("imports"), dict) else []
+
                     try:
                         data["decompilation"] = BinaryDecompiler.decompile_function(
                             instructions=disasm_insts,
                             entry_point=hex(ep_rva),
                             function_name="entry_point",
                             architecture="x86-64" if is_64 else "x86-32",
-                            imported_apis=data.get("imports", []),
+                            imported_apis=flat_imports,
                             exported_symbols=data.get("exports", [])
                         )
                     except Exception as decomp_err:
@@ -880,7 +904,7 @@ class ExecutableAnalyzer(BaseAnalyzer):
                             instructions=disasm_insts,
                             entry_point=hex(ep_rva),
                             known_strings=data.get("strings", {}).get("items", []),
-                            imported_apis=[{"api": imp.get("name") if isinstance(imp, dict) else getattr(imp, "name", "")} for imp_list in data.get("imports", {}).values() for imp in imp_list] if isinstance(data.get("imports"), dict) else [],
+                            imported_apis=flat_imports,
                             exported_symbols=data.get("exports", [])
                         )
                     except Exception as xref_err:
@@ -888,7 +912,6 @@ class ExecutableAnalyzer(BaseAnalyzer):
 
                     # Generate Visual Call Graph Hierarchy
                     try:
-                        flat_imports = [{"api": imp.get("name") if isinstance(imp, dict) else getattr(imp, "name", "")} for imp_list in data.get("imports", {}).values() for imp in imp_list] if isinstance(data.get("imports"), dict) else []
                         data["call_graph"] = CallGraphEngine.generate_call_graph(
                             instructions=disasm_insts,
                             entry_point=hex(ep_rva),
@@ -910,17 +933,6 @@ class ExecutableAnalyzer(BaseAnalyzer):
         except Exception as cs_e:
             logger.debug(f"Capstone disassembly note: {cs_e}")
 
-        # ---------------------------------------------------------------------
-        # 7. Exports
-        # ---------------------------------------------------------------------
-        if hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
-            for exp in pe.DIRECTORY_ENTRY_EXPORT.symbols:
-                exp_name = exp.name.decode('latin-1', errors='ignore') if exp.name else f"Ordinal_{exp.ordinal}"
-                data["exports"].append({
-                    "name": exp_name,
-                    "ordinal": exp.ordinal,
-                    "address": hex(pe.OPTIONAL_HEADER.ImageBase + exp.address) if hasattr(pe, "OPTIONAL_HEADER") else hex(exp.address)
-                })
 
         # ---------------------------------------------------------------------
         # 8. Resources & Abnormal Resource Inspection

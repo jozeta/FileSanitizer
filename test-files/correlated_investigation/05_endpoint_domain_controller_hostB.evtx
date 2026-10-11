@@ -303,7 +303,7 @@
       <Data Name="NewProcessName">C:\Windows\System32\beacon_updater.exe</Data>
       <Data Name="CommandLine">"C:\Windows\System32\beacon_updater.exe" --service</Data>
       <Data Name="ParentProcessName">C:\Windows\System32\services.exe</Data>
-      <Data Name="Hashes">MD5=a9c6e93aeba5c903c1a33d3c0976147a,SHA256=fbfd5b9863d0e6acf98c420c3d2e301a830f42e8fee7d94809ea9bffdf755972</Data>
+      <Data Name="Hashes">MD5=19bfd14436c2fb1cd8ee375055c6ebd7,SHA256=20bde17bc580f858a4bef2ab462744831a3e0164e79c064b266776ffa3c18b90</Data>
     </EventData>
   </Event>
 
