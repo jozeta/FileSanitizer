@@ -39,6 +39,8 @@ import {
 import { formatBytes, truncateHash } from '../utils/formatters';
 import { CarvedFilePreviewModal } from './CarvedFilePreviewModal';
 import { findReferencedJob } from '../utils/crossFileReferences';
+import { InvestigateAssetButton } from './InvestigateAssetButton';
+import { NetworkIocEnrichmentPanel } from './NetworkIocEnrichmentPanel';
 
 interface PcapTriageCardProps {
   pcapInfo?: PcapInfo | null;
@@ -1308,7 +1310,17 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
             TAB 5: Top Endpoints (Clickable Links opening Endpoint Details Modal)
            ========================================================================= */}
         {activeTab === 'endpoints' && (
-          <div className="overflow-x-auto">
+          <div className="space-y-4">
+            {jobId && pcapInfo?.top_endpoints && pcapInfo.top_endpoints.length > 0 && (
+              <NetworkIocEnrichmentPanel
+                jobId={jobId}
+                extractedIocs={pcapInfo.top_endpoints.map((ep: PcapEndpoint) => ep.ip).filter(Boolean)}
+                onNavigateToJob={onSelectJob}
+                title="PCAP Endpoint Autonomous System & Threat Intelligence"
+                subtitle="Correlates communicating IP addresses with BGP Autonomous System origin, ISP/cloud provider classification, and FCrDNS status."
+              />
+            )}
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse font-mono">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
@@ -1389,13 +1401,24 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
               </tbody>
             </table>
           </div>
+        </div>
         )}
 
         {/* =========================================================================
             TAB 6: DNS Queries
            ========================================================================= */}
         {activeTab === 'dns' && (
-          <div className="overflow-x-auto">
+          <div className="space-y-4">
+            {jobId && pcapInfo?.dns_queries && pcapInfo.dns_queries.length > 0 && (
+              <NetworkIocEnrichmentPanel
+                jobId={jobId}
+                extractedIocs={pcapInfo.dns_queries.map(d => d.domain).filter(Boolean)}
+                onNavigateToJob={onSelectJob}
+                title="PCAP Queried Domains Intelligence"
+                subtitle="Enriches queried DNS hostnames with Autonomous System origin, FCrDNS verification, and threat intelligence."
+              />
+            )}
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse font-mono">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
@@ -1419,6 +1442,12 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                       <td className="py-3 px-3 font-semibold text-slate-900 flex items-center gap-2">
                         <Globe className="w-3.5 h-3.5 text-sky-500 shrink-0" />
                         <span className="truncate max-w-xs">{d.domain}</span>
+                        <InvestigateAssetButton
+                          ioc={d.domain}
+                          iocType="domain"
+                          onNavigateToJob={onSelectJob}
+                          compact
+                        />
                         {d.high_entropy && (
                           <span
                             className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300 shrink-0 animate-pulse"
@@ -1437,13 +1466,20 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                         {d.resolved_ips && d.resolved_ips.length > 0 ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {d.resolved_ips.map((ip, i) => (
-                              <button
-                                key={i}
-                                onClick={() => handleOpenEndpoint(ip)}
-                                className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 hover:text-indigo-600 hover:bg-indigo-50 text-[11px] border border-slate-200 cursor-pointer"
-                              >
-                                {ip}
-                              </button>
+                              <div key={i} className="inline-flex items-center gap-1">
+                                <button
+                                  onClick={() => handleOpenEndpoint(ip)}
+                                  className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 hover:text-indigo-600 hover:bg-indigo-50 text-[11px] border border-slate-200 cursor-pointer"
+                                >
+                                  {ip}
+                                </button>
+                                <InvestigateAssetButton
+                                  ioc={ip}
+                                  iocType="ip"
+                                  onNavigateToJob={onSelectJob}
+                                  compact
+                                />
+                              </div>
                             ))}
                           </div>
                         ) : (
@@ -1473,6 +1509,7 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
               </tbody>
             </table>
           </div>
+        </div>
         )}
 
         {/* =========================================================================
@@ -2439,12 +2476,21 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedEndpoint(null)}
-                className="w-8 h-8 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {!selectedEndpoint.is_private && (
+                  <InvestigateAssetButton
+                    ioc={selectedEndpoint.ip}
+                    iocType="ip"
+                    onNavigateToJob={onSelectJob}
+                  />
+                )}
+                <button
+                  onClick={() => setSelectedEndpoint(null)}
+                  className="w-8 h-8 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}

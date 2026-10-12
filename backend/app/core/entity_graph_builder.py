@@ -182,6 +182,94 @@ class EntityGraphBuilder:
                 label = labels[ridx] if ridx < len(labels) else rel
                 _add_edge(anchor, rid, f"{label} ({conf})", rel)
 
+        # -------------------------------------------------------------
+        # Typed Infrastructure Relationships
+        # -------------------------------------------------------------
+        # Nameservers (USES_NAMESERVER)
+        ns_list = list(dns.get("ns") or whois.get("nameservers") or [])[:3]
+        for idx, ns in enumerate(ns_list):
+            ns_id = f"di_ns_{idx}"
+            _add_node(
+                node_id=ns_id,
+                label=f"NS: {ns}",
+                n_type="nameserver",
+                risk="clean",
+                tier=2,
+                details={"nameserver": ns}
+            )
+            _add_edge("di_target", ns_id, "USES_NAMESERVER", "uses_nameserver")
+
+        # TLS Certificate & SANs (CERT_INCLUDES_SAN)
+        tls_prof = dom_info.get("tls_profile") or {}
+        live_cert = tls_prof.get("live_cert") or {}
+        if live_cert and live_cert.get("sha256_fingerprint"):
+            cert_id = "di_tls_cert"
+            iss_name = (live_cert.get("issuer") or {}).get("common_name") or "SSL/TLS Cert"
+            _add_node(
+                node_id=cert_id,
+                label=f"Cert: {iss_name}",
+                n_type="certificate",
+                risk="high" if live_cert.get("is_expired") else "clean",
+                tier=2,
+                details={
+                    "fingerprint": live_cert.get("sha256_fingerprint"),
+                    "issuer": live_cert.get("issuer"),
+                    "expires": live_cert.get("not_after"),
+                    "tls_version": live_cert.get("tls_version"),
+                    "cipher": live_cert.get("cipher_suite"),
+                }
+            )
+            _add_edge("di_target", cert_id, "SECURED_BY_CERT", "secured_by")
+
+            # Link top Subject Alternative Names
+            for san_idx, san in enumerate((live_cert.get("sans") or [])[:5]):
+                clean_san = san.lstrip("*.").lower()
+                if clean_san and clean_san != target:
+                    san_id = f"di_san_{san_idx}"
+                    _add_node(
+                        node_id=san_id,
+                        label=clean_san,
+                        n_type="domain",
+                        risk="clean",
+                        tier=3,
+                        details={"san": san}
+                    )
+                    _add_edge(cert_id, san_id, "CERT_INCLUDES_SAN", "cert_includes_san")
+
+        # Favicon Hash (SHARES_FAVICON_HASH)
+        web_fp = dom_info.get("web_fingerprint") or {}
+        fav = web_fp.get("favicon") or {}
+        if fav.get("murmur_hash"):
+            fav_id = "di_fav_hash"
+            _add_node(
+                node_id=fav_id,
+                label=f"Favicon: {fav['murmur_hash']}",
+                n_type="hash",
+                risk="clean",
+                tier=2,
+                details={
+                    "murmur_hash": fav["murmur_hash"],
+                    "shodan_query": fav.get("shodan_query")
+                }
+            )
+            _add_edge("di_target", fav_id, "SHARES_FAVICON_HASH", "shares_favicon_hash")
+
+        # Attack Surface Active Subdomains (SUBDOMAIN_OF)
+        surface = dom_info.get("attack_surface") or {}
+        for sub_idx, sub_item in enumerate((surface.get("subdomains") or [])[:6]):
+            s_name = sub_item.get("subdomain")
+            if s_name and s_name != target and (sub_item.get("status") == "active" or sub_item.get("resolves")):
+                sub_node_id = f"di_sub_{sub_idx}"
+                _add_node(
+                    node_id=sub_node_id,
+                    label=s_name,
+                    n_type="domain",
+                    risk="clean",
+                    tier=3,
+                    details=sub_item
+                )
+                _add_edge("di_target", sub_node_id, "SUBDOMAIN_OF", "subdomain_of")
+
     @classmethod
     def build(cls, job: Any) -> Dict[str, Any]:
         nodes: List[Dict[str, Any]] = []

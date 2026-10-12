@@ -25,6 +25,8 @@ import { formatBytes } from '../utils/formatters';
 import { EmailInfo } from '../types';
 import { apiClient } from '../api/client';
 import { findReferencedJob } from '../utils/crossFileReferences';
+import { InvestigateAssetButton } from './InvestigateAssetButton';
+import { NetworkIocEnrichmentPanel } from './NetworkIocEnrichmentPanel';
 
 interface EmailTriageCardProps {
   jobId: string;
@@ -64,6 +66,19 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
       f.title.toLowerCase().includes('dmarc') ||
       f.title.toLowerCase().includes('tracking')
   );
+
+  const emailIocs = useMemo(() => {
+    const list: string[] = [];
+    (emailInfo?.sender_ips || []).forEach(ip => list.push(ip));
+    if (emailInfo?.from) {
+      const m = emailInfo.from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+      if (m) list.push(m[1]);
+    }
+    (emailInfo?.transit_hops || []).forEach(h => {
+      if (h.ip) list.push(h.ip);
+    });
+    return Array.from(new Set(list));
+  }, [emailInfo]);
 
   const handleCopyPlaintext = () => {
     if (emailInfo?.body_plain) {
@@ -545,6 +560,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                         <th className="py-2 px-3 text-left">Displayed Text</th>
                         <th className="py-2 px-3 text-left">Actual Destination Host</th>
                         <th className="py-2 px-3 text-left">Full Target URL</th>
+                        <th className="py-2 px-3 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-rose-200/60">
@@ -553,6 +569,13 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                           <td className="py-2 px-3 text-emerald-800 font-bold">{dl.displayed_text}</td>
                           <td className="py-2 px-3 text-rose-900 font-bold">{dl.destination_host}</td>
                           <td className="py-2 px-3 text-slate-600 break-all max-w-xs">{dl.actual_destination}</td>
+                          <td className="py-2 px-3 text-right">
+                            <InvestigateAssetButton
+                              ioc={dl.actual_destination || dl.destination_host}
+                              onNavigateToJob={onSelectJob}
+                              compact
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -570,7 +593,16 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
                     <span className="text-slate-400 block text-[10px]">From Domain</span>
-                    <span className="font-semibold text-slate-800">{emailInfo.sender_analysis.from_domain || 'N/A'}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="font-semibold text-slate-800">{emailInfo.sender_analysis.from_domain || 'N/A'}</span>
+                      {emailInfo.sender_analysis.from_domain && (
+                        <InvestigateAssetButton
+                          ioc={emailInfo.sender_analysis.from_domain}
+                          onNavigateToJob={onSelectJob}
+                          compact
+                        />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px]">Reply-To Domain</span>
@@ -724,7 +756,16 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
 
         {/* Tab 4: Server Transit Hops */}
         {activeTab === 'transit' && (
-          <div className="pt-4 space-y-3">
+          <div className="pt-4 space-y-4">
+            {jobId && emailIocs.length > 0 && (
+              <NetworkIocEnrichmentPanel
+                jobId={jobId}
+                extractedIocs={emailIocs}
+                onNavigateToJob={onSelectJob}
+                title="Email Origin & MTA Relay Intelligence"
+                subtitle="Enriches originating IP addresses, sender domains, and transit MTA relay servers with ASN, FCrDNS validation, and reputation."
+              />
+            )}
             <div className="flex items-center justify-between text-xs text-slate-500">
               <span>
                 Chronological Mail Transfer Agent (MTA) Relay Pipeline (Origin Hop 1 ➔ Final Delivery Hop N)

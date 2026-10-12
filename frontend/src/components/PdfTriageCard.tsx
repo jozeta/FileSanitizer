@@ -38,6 +38,7 @@ import { AntiAnalysisInspectorCard } from './AntiAnalysisInspectorCard';
 import { apiClient } from '../api/client';
 import { findReferencedJob } from '../utils/crossFileReferences';
 import { formatBytes, truncateHash } from '../utils/formatters';
+import { InvestigateAssetButton } from './InvestigateAssetButton';
 
 interface PdfTriageCardProps {
   jobId?: string;
@@ -1549,7 +1550,16 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     {occ.extracted_value && (
                       <div>
                         <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 mb-1">
-                          <span>Extracted Parameter / Action Value:</span>
+                          <div className="flex items-center gap-2">
+                            <span>Extracted Parameter / Action Value:</span>
+                            {Boolean(occ.extracted_value?.match(/^(https?:\/\/|[a-zA-Z0-9-]+\.[a-zA-Z]{2,})/i)) && (
+                              <InvestigateAssetButton
+                                ioc={occ.extracted_value}
+                                onNavigateToJob={onSelectJob}
+                                compact
+                              />
+                            )}
+                          </div>
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(occ.extracted_value || '');

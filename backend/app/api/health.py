@@ -13,6 +13,7 @@ def health_check():
     return {
         "status": "healthy",
         "app_name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
         "environment": settings.APP_ENV,
         "max_file_size_mb": settings.MAX_FILE_SIZE_MB,
         "retention_minutes": settings.FILE_RETENTION_MINUTES,

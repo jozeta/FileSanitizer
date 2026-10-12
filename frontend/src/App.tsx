@@ -14,6 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { AlertTriangle, Info } from 'lucide-react';
 import { apiClient } from './api/client';
 import { WorkspaceJob, JobDetail, IncidentCorrelationData } from './types';
+import { APP_VERSION } from './version';
 
 export const App: React.FC = () => {
   const cachedJobsRef = useRef<Record<string, JobDetail>>({});
@@ -515,10 +516,19 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white py-6">
-        <div className="max-w-[96rem] mx-auto px-4 text-center text-xs text-slate-500 space-y-1 font-mono">
-          <p className="font-semibold text-slate-700">FileSanitizer — Content Disarm & Reconstruction</p>
-          <p className="text-slate-400">
+      <footer className="border-t border-slate-200 bg-white py-6 mt-auto">
+        <div className="max-w-[96rem] mx-auto px-4 text-center text-xs text-slate-500 space-y-1.5 font-mono">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <span className="font-semibold text-slate-700">FileSanitizer</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-500">Content Disarm & Reconstruction</span>
+            <span className="text-slate-300">•</span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              v{APP_VERSION}
+            </span>
+          </div>
+          <p className="text-slate-400 text-[11px]">
             Automated analysis and sanitization reduce threat surface. Never execute untrusted files.
           </p>
         </div>

@@ -28,6 +28,12 @@ class ReanalyzeJobRequest(BaseModel):
     override_extension: Optional[str] = None
     override_filename: Optional[str] = None
 
+class ActiveReconRequest(BaseModel):
+    authorized: bool = True
+
+class EnrichIocsRequest(BaseModel):
+    iocs: List[str]
+
 @router.post("/correlate")
 def correlate_jobs(req: CorrelateJobsRequest):
     """Perform multi-artifact cross-correlation, BinDiff, timeline, and threat graph synthesis across workspace jobs."""
@@ -130,7 +136,8 @@ def get_job_analysis(job_id: str):
         "evtx_info": getattr(job, "evtx_info", None),
         "lnk_info": getattr(job, "lnk_info", None),
         "detection_rules": getattr(job, "detection_rules", None),
-        "telemetry": getattr(job, "telemetry", None)
+        "telemetry": getattr(job, "telemetry", None),
+        "enriched_iocs": getattr(job, "enriched_iocs", {})
     }
 
 @router.get("/{job_id}/detection-rules")
@@ -312,6 +319,165 @@ def get_sanitization_result(job_id: str):
         "removed_items": job.sanitization_result.removed_items if job.sanitization_result else [],
         "warnings": job.sanitization_result.warnings if job.sanitization_result else [],
         "cdr_diff": getattr(job, "cdr_diff", None)
+    }
+
+@router.post("/{job_id}/active-recon")
+def trigger_active_recon(job_id: str, payload: ActiveReconRequest):
+    """
+    Execute controlled, opt-in port & service banner discovery on a domain/IP target.
+    """
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    dom_info = getattr(job, "domain_info", None)
+    if not dom_info:
+        raise HTTPException(status_code=400, detail="Active reconnaissance is only available for domain or IP intelligence targets.")
+
+    target = dom_info.get("target") or job.filename
+    from app.network.active_recon import ActiveServiceScanner
+    from app.network.active_security_prober import ActiveSecurityProber
+    from app.network.scoring_engine import MultiDimensionalRiskEngine
+    from app.network.input_normalizer import UniversalInputNormalizer
+
+    active_data = ActiveServiceScanner.scan_services(target, authorized=payload.authorized)
+    job.domain_info["active_recon"] = active_data
+
+    mx_records = job.domain_info.get("advanced_dns", {}).get("records", {}).get("mx", [])
+    active_probes = ActiveSecurityProber.probe_all(target, mx_hosts=mx_records, authorized=payload.authorized)
+    job.domain_info["active_security_probes"] = active_probes
+
+    # Recalculate 4-dimension risk scores
+    norm_ind = UniversalInputNormalizer.normalize(target)
+    scores = MultiDimensionalRiskEngine.evaluate(
+        target,
+        job.domain_info.get("is_ip", False),
+        norm_ind.details,
+        job.domain_info.get("advanced_dns", {}),
+        job.domain_info.get("whois", {}),
+        job.domain_info.get("tls_profile", {}),
+        job.domain_info.get("web_fingerprint", {}),
+        job.domain_info.get("threat_intelligence", {}),
+        job.domain_info.get("asn_profile", {}),
+        active_data,
+        email_sec=job.domain_info.get("email_security"),
+        web_arch=job.domain_info.get("web_archive"),
+        active_probes=active_probes,
+        vuln_intel=job.domain_info.get("vulnerability_intel"),
+        web_exposure=job.domain_info.get("web_exposure")
+    )
+    job.domain_info["risk_scores"] = scores
+
+    # Rebuild entity graph with new active ports if open
+    try:
+        from app.core.entity_graph_builder import EntityGraphBuilder
+        job.entity_graph = EntityGraphBuilder.build(job)
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "active_recon": active_data,
+        "active_security_probes": active_probes,
+        "risk_scores": scores
+    }
+
+@router.post("/{job_id}/enrich-iocs")
+def enrich_job_iocs(job_id: str, payload: EnrichIocsRequest):
+    """
+    Batch IOC Quick-Enrichment for File Analysis Jobs (PCAP, EVTX, Email, Scripts, Executables).
+    Enriches network indicators (IPs, domains, URLs) with ASN ownership, FCrDNS verification,
+    and multi-feed threat intelligence consensus.
+    """
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    if not payload.iocs:
+        return {"job_id": job_id, "total_indicators": 0, "enriched": []}
+
+    from concurrent.futures import ThreadPoolExecutor
+    from app.analyzers.domain_analyzer import DomainAnalyzer
+    from app.network.advanced_dns import AdvancedDNSInspector
+    from app.network.threat_intelligence import ThreatIntelligenceAggregator
+
+    def _enrich_single_ioc(raw_ioc: str) -> dict:
+        clean = DomainAnalyzer._normalize_target(raw_ioc)
+        if not clean:
+            return {"indicator": raw_ioc, "error": "Invalid indicator format"}
+
+        is_ip = DomainAnalyzer._is_ip_address(clean)
+        if is_ip:
+            fcrdns = AdvancedDNSInspector.verify_fcrdns(clean)
+            co_hosted, net_info = DomainAnalyzer.query_reverse_ip_and_asn(clean)
+            cti = ThreatIntelligenceAggregator.aggregate_intelligence(clean, "ip")
+            return {
+                "indicator": clean,
+                "type": "ip",
+                "is_ip": True,
+                "asn": net_info.get("asn"),
+                "as_org": net_info.get("as_org") or net_info.get("org") or net_info.get("isp"),
+                "country": net_info.get("country"),
+                "fcrdns": fcrdns,
+                "verdict": cti.get("overall_verdict", "unknown"),
+                "threat_tags": cti.get("threat_tags", []),
+                "malicious_score": cti.get("consensus_score", 0),
+                "details": {
+                    "isp": net_info.get("isp"),
+                    "ptr": fcrdns.get("primary_ptr"),
+                    "co_hosted_count": len(co_hosted)
+                }
+            }
+        else:
+            root_dom = DomainAnalyzer.get_registered_domain(clean)
+            resolved_ips = []
+            try:
+                import socket
+                resolved_ips = list({item[4][0] for item in socket.getaddrinfo(clean, None, socket.AF_INET)})
+            except Exception:
+                pass
+
+            primary_ip = resolved_ips[0] if resolved_ips else None
+            fcrdns = AdvancedDNSInspector.verify_fcrdns(primary_ip) if primary_ip else {"status": "NO_IP"}
+            net_info = {}
+            if primary_ip:
+                _, net_info = DomainAnalyzer.query_reverse_ip_and_asn(primary_ip)
+
+            cti = ThreatIntelligenceAggregator.aggregate_intelligence(clean, "domain")
+            return {
+                "indicator": clean,
+                "type": "domain",
+                "is_ip": False,
+                "root_domain": root_dom,
+                "resolved_ips": resolved_ips,
+                "primary_ip": primary_ip,
+                "asn": net_info.get("asn"),
+                "as_org": net_info.get("as_org") or net_info.get("org"),
+                "country": net_info.get("country"),
+                "fcrdns": fcrdns,
+                "verdict": cti.get("overall_verdict", "unknown"),
+                "threat_tags": cti.get("threat_tags", []),
+                "malicious_score": cti.get("consensus_score", 0),
+                "details": {
+                    "is_apex": root_dom == clean
+                }
+            }
+
+    # Bounded parallel execution up to 8 threads
+    unique_iocs = list(dict.fromkeys([i.strip() for i in payload.iocs if i.strip()]))[:30]
+    with ThreadPoolExecutor(max_workers=min(8, len(unique_iocs) or 1)) as executor:
+        results = list(executor.map(_enrich_single_ioc, unique_iocs))
+
+    # Cache on job object
+    if not hasattr(job, "enriched_iocs") or job.enriched_iocs is None:
+        job.enriched_iocs = {}
+    for item in results:
+        job.enriched_iocs[item["indicator"]] = item
+
+    return {
+        "job_id": job_id,
+        "total_indicators": len(results),
+        "enriched": results
     }
 
 @router.get("/{job_id}/download")

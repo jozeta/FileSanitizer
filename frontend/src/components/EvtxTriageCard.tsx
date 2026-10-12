@@ -56,6 +56,8 @@ import {
   TimeDisplayConfig,
 } from '../utils/formatters';
 import { ReferencedText } from './ReferencedFileLink';
+import { InvestigateAssetButton } from './InvestigateAssetButton';
+import { NetworkIocEnrichmentPanel } from './NetworkIocEnrichmentPanel';
 
 interface EvtxTriageCardProps {
   evtxInfo?: EvtxInfo | null;
@@ -64,6 +66,7 @@ interface EvtxTriageCardProps {
   workspaceJobs?: any[];
   onNavigateToPcap?: (pcapJobId?: string, targetIp?: string) => void;
   onSelectJob?: (newJobId: string) => void;
+  jobId?: string;
 }
 
 // Logon Type descriptive names
@@ -240,7 +243,14 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
   workspaceJobs,
   onNavigateToPcap,
   onSelectJob,
+  jobId,
 }) => {
+  const evtxIocs = useMemo(() => {
+    return (evtxInfo?.unique_ips || []).filter(
+      (ip) => ip && ip !== '-' && ip !== '127.0.0.1' && ip !== '::1'
+    );
+  }, [evtxInfo]);
+
   const [activeTab, setActiveTab] = useState<
     | 'timeline'
     | 'storyline'
@@ -2731,6 +2741,15 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
         {/* Tab 3: SMB Lateral Movement & Remote Staging (5145 / 5140) */}
         {activeTab === 'lateral' && (
           <div className="space-y-4">
+            {jobId && evtxIocs.length > 0 && (
+              <NetworkIocEnrichmentPanel
+                jobId={jobId}
+                extractedIocs={evtxIocs}
+                onNavigateToJob={onSelectJob}
+                title="Remote Host & Lateral IP Intelligence"
+                subtitle="Enriches remote staging and client IP addresses with Autonomous System numbers, network operator attribution, and FCrDNS verification."
+              />
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -3776,9 +3795,20 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-700">Target IP Address:</span>
-                  <span className="font-mono text-indigo-700 font-bold text-sm">
-                    {selectedCorrelationEvent.ip_address || 'N/A'}:{selectedCorrelationEvent.ip_port || '*'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-indigo-700 font-bold text-sm">
+                      {selectedCorrelationEvent.ip_address || 'N/A'}:{selectedCorrelationEvent.ip_port || '*'}
+                    </span>
+                    {selectedCorrelationEvent.ip_address &&
+                     !['local', 'n/a', '-', '127.0.0.1', '::1'].includes(selectedCorrelationEvent.ip_address.toLowerCase()) && (
+                      <InvestigateAssetButton
+                        ioc={selectedCorrelationEvent.ip_address}
+                        iocType="ip"
+                        onNavigateToJob={onSelectJob}
+                        compact
+                      />
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-600">Originating Process:</span>
@@ -3799,6 +3829,27 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                   </span>
                 </div>
               </div>
+
+              {selectedCorrelationEvent.ip_address &&
+               !['local', 'n/a', '-', '127.0.0.1', '::1'].includes(selectedCorrelationEvent.ip_address.toLowerCase()) && (
+                <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 flex items-center justify-between gap-3">
+                  <div>
+                    <h5 className="font-bold text-blue-900 text-xs flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Remote IP Threat Intelligence</span>
+                    </h5>
+                    <p className="text-[11px] text-blue-700 mt-0.5">
+                      Run DNS, ASN infrastructure profiling, WHOIS, and multi-feed threat intelligence queries on this address.
+                    </p>
+                  </div>
+                  <InvestigateAssetButton
+                    ioc={selectedCorrelationEvent.ip_address}
+                    iocType="ip"
+                    onNavigateToJob={onSelectJob}
+                    label="Investigate IP"
+                  />
+                </div>
+              )}
 
               {(() => {
                 const pcapJob = workspaceJobs?.find(j => j.category === 'pcap' || j.pcap_info || j.filename?.match(/\.(pcap|pcapng|cap)$/i));

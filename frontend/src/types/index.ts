@@ -1020,6 +1020,7 @@ export interface JobDetail {
   lnk_info?: LnkInfo;
   detection_rules?: DetectionRules;
   telemetry?: JobTelemetry;
+  enriched_iocs?: Record<string, EnrichedIocItem>;
   error_message?: string | null;
 }
 
@@ -1501,6 +1502,36 @@ export interface DomainIntelligence {
     sources: string[];
     confidence: 'high' | 'medium' | 'low';
     observations: number;
+    is_direct?: boolean;
+    connection_type?: 'direct' | 'shared_infrastructure';
+  }>;
+  direct_affiliates?: Array<{
+    domain: string;
+    relationships: string[];
+    relationship_labels: string[];
+    primary_relationship: string;
+    evidence: string[];
+    ips: string[];
+    hosts_seen: string[];
+    sources: string[];
+    confidence: 'high' | 'medium' | 'low';
+    observations: number;
+    is_direct?: boolean;
+    connection_type?: 'direct' | 'shared_infrastructure';
+  }>;
+  shared_infrastructure_neighbors?: Array<{
+    domain: string;
+    relationships: string[];
+    relationship_labels: string[];
+    primary_relationship: string;
+    evidence: string[];
+    ips: string[];
+    hosts_seen: string[];
+    sources: string[];
+    confidence: 'high' | 'medium' | 'low';
+    observations: number;
+    is_direct?: boolean;
+    connection_type?: 'direct' | 'shared_infrastructure';
   }>;
   ownership_pivots?: {
     performed?: boolean;
@@ -1516,7 +1547,365 @@ export interface DomainIntelligence {
     ips_examined?: string[];
     ptr_probes?: number;
     elapsed_s?: number;
+    direct_count?: number;
+    shared_infrastructure_count?: number;
     pivots?: Array<{ name: string; status: string; found: number; detail?: string }>;
+  };
+
+  indicator_type?: string;
+  normalized_value?: string;
+  advanced_dns?: {
+    target?: string;
+    is_ip?: boolean;
+    records?: {
+      a?: string[];
+      aaaa?: string[];
+      cname?: string[];
+      mx?: Array<{ host: string; priority: number } | string>;
+      ns?: string[];
+      soa?: Array<{ mname: string; rname: string; serial: number; refresh: number; retry: number; expire: number; minimum: number }>;
+      txt?: string[];
+      caa?: Array<{ flags: number; tag: string; value: string }>;
+      srv?: string[];
+      https?: string[];
+      ptr?: string[];
+    };
+    ttls?: Record<string, number>;
+    dnssec?: {
+      enabled: boolean;
+      validated: boolean;
+      ds_records?: Array<{ key_tag: number; algorithm: number; digest_type: number; digest: string }>;
+      dnskey_count?: number;
+      notes?: string;
+    };
+    heuristics?: {
+      has_wildcard_dns?: boolean;
+      wildcard_ip?: string | null;
+      low_ttl_detected?: boolean;
+      min_ttl?: number | null;
+      fast_flux_suspect?: boolean;
+      suspicious_spf?: boolean;
+      spf_details?: string | null;
+      dangling_cnames?: Array<{
+        domain: string;
+        cname_target: string;
+        provider: string;
+        status: string;
+        severity: string;
+        vulnerability: string;
+        description: string;
+      }>;
+    };
+    anomalies?: Array<{
+      type: string;
+      severity: string;
+      title: string;
+      description: string;
+    }>;
+  };
+
+  asn_profile?: {
+    ip?: string;
+    asn?: string;
+    as_org?: string;
+    isp?: string;
+    country?: string;
+    city?: string;
+    classification?: string;
+    is_cloud_provider?: boolean;
+    is_bulletproof_suspect?: boolean;
+    is_vpn_proxy?: boolean;
+    risk_level?: string;
+    reverse_ptr?: string | null;
+    announced_cidrs?: string[];
+  };
+
+  tls_profile?: {
+    target?: string;
+    port?: number;
+    has_tls?: boolean;
+    live_cert?: {
+      tls_version?: string;
+      cipher_suite?: string;
+      cipher_bits?: number;
+      subject?: { common_name?: string; organization?: string; country?: string };
+      issuer?: { common_name?: string; organization?: string; country?: string };
+      sans?: string[];
+      sha256_fingerprint?: string;
+      sha1_fingerprint?: string;
+      serial_number?: string;
+      not_before?: string;
+      not_after?: string;
+      days_remaining?: number;
+      is_expired?: boolean;
+      is_self_signed?: boolean;
+    };
+    ct_logs?: {
+      queried?: boolean;
+      total_certificates_found?: number;
+      discovered_subdomains?: string[];
+      issuers?: string[];
+      recent_entries?: Array<{ id?: number; common_name?: string; logged_at?: string; not_before?: string; not_after?: string }>;
+    };
+    security_findings?: Array<{ severity: string; title: string; description: string }>;
+  };
+
+  web_fingerprint?: {
+    initial_url?: string;
+    final_url?: string;
+    status_code?: number | string | null;
+    redirect_chain?: Array<{ hop: number; url: string; status_code: number | string; location?: string }>;
+    hop_count?: number;
+    response_headers?: Record<string, string>;
+    server_technology?: string | null;
+    powered_by?: string | null;
+    security_headers?: {
+      grade: string;
+      score: number;
+      hsts?: { present: boolean; value?: string | null };
+      csp?: { present: boolean; value?: string | null };
+      x_frame_options?: { present: boolean; value?: string | null };
+      x_content_type_options?: { present: boolean; value?: string | null };
+      referrer_policy?: { present: boolean; value?: string | null };
+      permissions_policy?: { present: boolean; value?: string | null };
+      recommendations?: string[];
+    };
+    favicon?: {
+      found: boolean;
+      url?: string | null;
+      murmur_hash?: number | null;
+      md5?: string | null;
+      shodan_query?: string | null;
+    };
+    dom_analysis?: {
+      title?: string | null;
+      has_login_form?: boolean;
+      login_form_actions?: string[];
+      external_scripts?: string[];
+      external_iframes?: string[];
+      analytics_ids?: string[];
+    };
+    findings?: Array<{ severity: string; title: string; description: string }>;
+  };
+
+  threat_intelligence?: {
+    indicator?: string;
+    indicator_type?: string;
+    overall_verdict: string;
+    malicious_votes?: number;
+    total_feeds_queried?: number;
+    threat_tags?: string[];
+    malware_families?: string[];
+    feeds?: {
+      virustotal?: { queried: boolean; verdict: string; detections: number; total: number; tags?: string[] };
+      urlhaus?: { queried: boolean; verdict: string; url_count: number; tags?: string[] };
+      threatfox?: { queried: boolean; verdict: string; ioc_count: number; tags?: string[] };
+      abuseipdb?: { queried: boolean; verdict: string; abuse_confidence_score: number; total_reports: number };
+      alienvault_otx?: { queried: boolean; verdict: string; pulse_count: number };
+    };
+  };
+
+  attack_surface?: {
+    root_domain?: string;
+    total_discovered?: number;
+    active_count?: number;
+    dormant_count?: number;
+    explanation?: string;
+    subdomains?: Array<{
+      subdomain: string;
+      status: 'active' | 'unresolving' | string;
+      status_label?: string;
+      unresolving_reason?: string | null;
+      ips: string[];
+      is_root: boolean;
+      discovered_from?: string;
+      sources?: string[];
+    }>;
+  };
+
+  active_recon?: {
+    target?: string;
+    authorized: boolean;
+    executed: boolean;
+    open_ports_count?: number;
+    services?: Array<{
+      port: number;
+      protocol: string;
+      service: string;
+      state: string;
+      banner?: string | null;
+    }>;
+    message?: string;
+  };
+
+  email_security?: {
+    domain: string;
+    dmarc: {
+      present: boolean;
+      raw_record?: string | null;
+      policy: string;
+      subdomain_policy?: string | null;
+      percentage: number;
+      aggregate_reports: string[];
+      forensic_reports: string[];
+      adkim: string;
+      aspf: string;
+      is_enforced: boolean;
+    };
+    dkim: {
+      selectors_checked: number;
+      selectors_found: Array<{
+        selector: string;
+        record: string;
+        key_size_bits?: number | null;
+      }>;
+    };
+    bimi: {
+      present: boolean;
+      raw_record?: string | null;
+      svg_logo_url?: string | null;
+      vmc_cert_url?: string | null;
+      has_vmc: boolean;
+    };
+    spoofability: {
+      status: 'VULNERABLE' | 'PARTIALLY_PROTECTED' | 'SECURED';
+      risk_score: number;
+      summary: string;
+      remediations: string[];
+    };
+  };
+
+  web_archive?: {
+    target: string;
+    archived: boolean;
+    snapshot_count: number;
+    first_seen?: string | null;
+    last_seen?: string | null;
+    age_days?: number | null;
+    dormant_revival_detected: boolean;
+    revival_gap_days?: number | null;
+    status_code_distribution: Record<string, number>;
+    wayback_calendar_url?: string;
+    api_status?: 'available' | 'service_unavailable' | 'verified_not_archived' | 'pending' | string;
+    api_status_code?: number | null;
+    api_error_detail?: string | null;
+    recent_snapshots: Array<{
+      timestamp: string;
+      date: string;
+      status_code: string;
+      mimetype?: string;
+      archive_url: string;
+    }>;
+  };
+
+  bgp_routing?: {
+    ip: string;
+    asn?: string | null;
+    prefix?: string | null;
+    rpki_status: string;
+    is_rpki_valid?: boolean | null;
+    is_anycast: boolean;
+    anycast_provider?: string | null;
+    bgp_visibility: {
+      first_seen?: string | null;
+      last_seen?: string | null;
+      visibility_ratio?: number | null;
+      peers_seeing?: number;
+    };
+  };
+
+  passive_dns?: {
+    target: string;
+    is_ip: boolean;
+    total_records: number;
+    records: Array<{
+      hostname: string;
+      address: string;
+      record_type: string;
+      first_seen?: string | null;
+      last_seen?: string | null;
+      source: string;
+    }>;
+    discovered_domains: string[];
+    discovered_ips: string[];
+    sources: string[];
+  };
+
+  leak_search?: {
+    target: string;
+    leak_count: number;
+    has_leaks: boolean;
+    severity: string;
+    leaks: Array<{
+      id: string;
+      source: string;
+      date?: string | null;
+      url?: string | null;
+      tags: string[];
+    }>;
+  };
+
+  active_security_probes?: {
+    target: string;
+    authorized: boolean;
+    executed: boolean;
+    message?: string;
+    sensitive_files: {
+      tested: number;
+      exposed: Array<{
+        path: string;
+        title: string;
+        category: string;
+        risk: string;
+        status_code: number;
+        content_preview?: string;
+      }>;
+    };
+    waf_detection: {
+      detected: boolean;
+      waf_name?: string | null;
+      blocked_test?: boolean;
+    };
+    cors_and_methods: {
+      tested: boolean;
+      methods_allowed?: string[];
+      dangerous_methods?: string[];
+      cors_misconfigured: boolean;
+      cors_origin_header?: string | null;
+      cors_credentials_header?: string | null;
+      cors_details?: string | null;
+    };
+    tls_cryptography: {
+      tested: boolean;
+      protocols?: Record<string, boolean>;
+      deprecated_protocols_found?: string[];
+      weak_ciphers?: string[];
+    };
+    api_endpoints: {
+      tested: number;
+      discovered: Array<{
+        path: string;
+        type: string;
+        status_code: number;
+        content_type?: string;
+      }>;
+    };
+    smtp_relay_starttls: {
+      tested: boolean;
+      mx_host?: string | null;
+      mx_ip?: string | null;
+      banner?: string | null;
+      starttls_supported?: boolean;
+      open_relay?: boolean;
+      details?: string | null;
+    };
+  };
+
+  risk_scores?: {
+    maliciousness?: { score: number; level: string; factors: Array<{ weight: number; title: string; description: string }> };
+    infrastructure_risk?: { score: number; level: string; factors: Array<{ weight: number; title: string; description: string }> };
+    exposure?: { score: number; level: string; factors: Array<{ weight: number; title: string; description: string }> };
+    attribution_confidence?: { score: number; level: string; factors: Array<{ weight: number; title: string; description: string }> };
   };
 
   risk_flags?: Array<{
@@ -1524,6 +1913,183 @@ export interface DomainIntelligence {
     title: string;
     description: string;
   }>;
+
+  fcrdns?: {
+    ip: string;
+    has_ptr: boolean;
+    ptr_hosts: string[];
+    primary_ptr?: string | null;
+    forward_ips: string[];
+    is_fcrdns_valid: boolean;
+    status: 'VALID' | 'MISMATCH' | 'NO_PTR' | 'NO_IP' | string;
+    details: string;
+  };
+
+  web_exposure?: {
+    tested: boolean;
+    target: string;
+    has_exposure_data: boolean;
+    robots_txt: {
+      present: boolean;
+      url?: string | null;
+      status_code?: number | null;
+      disallowed_count: number;
+      allowed_count: number;
+      sitemaps_declared: string[];
+      user_agents: string[];
+      disallow_paths: string[];
+      sensitive_paths_flagged: Array<{ path: string; category: string; risk: string }>;
+    };
+    sitemap_xml: {
+      present: boolean;
+      url?: string | null;
+      status_code?: number | null;
+      total_urls_found: number;
+      sample_urls: string[];
+      sensitive_routes_flagged: Array<{ url: string; category: string; risk: string }>;
+    };
+    well_known: {
+      security_txt?: { present: boolean; url?: string | null; fields: Record<string, string>; contacts: string[] };
+      openid_configuration?: { present: boolean; url?: string | null; issuer?: string | null; endpoints: Record<string, string> };
+      assetlinks_json?: { present: boolean; url?: string | null; package_names: string[] };
+      apple_app_site_association?: { present: boolean; url?: string | null; app_ids: string[] };
+    };
+    risk_flags: Array<{ severity: string; title: string; description: string }>;
+    positive_security_findings: Array<{ title: string; description: string }>;
+  };
+
+  vulnerability_intel?: {
+    tested: boolean;
+    total_vulnerabilities: number;
+    cisa_kev_count: number;
+    max_epss_score: number;
+    has_critical_kev: boolean;
+    findings: Array<{
+      cve: string;
+      title: string;
+      product: string;
+      detected_version: string;
+      severity: string;
+      cvss: number;
+      epss: number;
+      epss_percentile: string;
+      cisa_kev: boolean;
+      cisa_due_date?: string | null;
+      confidence: 'CONFIRMED_VULNERABLE' | 'POTENTIALLY_VULNERABLE' | string;
+      source: string;
+      remediation: string;
+      description: string;
+      disclaimer: string;
+    }>;
+  };
+
+  reverse_infrastructure?: {
+    tested: boolean;
+    target: string;
+    reverse_ns: Array<{
+      nameserver: string;
+      is_shared_provider: boolean;
+      associated_domains: string[];
+      count: number;
+      attribution_confidence: string;
+    }>;
+    reverse_mx: Array<{
+      mx_host: string;
+      is_shared_provider: boolean;
+      associated_domains: string[];
+      count: number;
+      attribution_confidence: string;
+    }>;
+    discovered_siblings: string[];
+    total_siblings_discovered: number;
+  };
+
+  typosquatting?: {
+    tested: boolean;
+    target: string;
+    total_generated: number;
+    active_registered_count: number;
+    has_live_impersonators: boolean;
+    lookalikes: Array<{
+      domain: string;
+      punycode?: string | null;
+      technique: string;
+      resolves: boolean;
+      ips: string[];
+      is_active_threat: boolean;
+    }>;
+  };
+
+  tracking_pivots?: {
+    tested: boolean;
+    target: string;
+    total_identifiers: number;
+    tracking_identifiers: Array<{
+      identifier: string;
+      type: string;
+      associated_domains: string[];
+      count: number;
+      attribution_confidence: string;
+      query_url: string;
+    }>;
+    related_domains_from_analytics: string[];
+    has_shared_tracking: boolean;
+  };
+
+  snapshot_diff?: {
+    has_historical_baseline: boolean;
+    baseline_job_id?: string | null;
+    baseline_timestamp?: string | null;
+    message?: string;
+    total_changes_detected?: number;
+    timeline_events?: Array<{
+      type: string;
+      severity: string;
+      title: string;
+      description: string;
+      timestamp?: string;
+    }>;
+    delta_summary?: {
+      ip_changed: boolean;
+      added_ips?: string[];
+      removed_ips?: string[];
+      ns_changed: boolean;
+      added_ns?: string[];
+      removed_ns?: string[];
+      cert_changed: boolean;
+      new_subdomains_count: number;
+      new_subdomains?: string[];
+    };
+  };
+}
+
+export interface EnrichedIocItem {
+  indicator: string;
+  type: 'ip' | 'domain';
+  is_ip: boolean;
+  asn?: string | null;
+  as_org?: string | null;
+  country?: string | null;
+  root_domain?: string | null;
+  resolved_ips?: string[];
+  primary_ip?: string | null;
+  verdict: 'malicious' | 'suspicious' | 'clean' | 'unknown' | string;
+  threat_tags?: string[];
+  malicious_score?: number;
+  fcrdns?: {
+    ip?: string;
+    has_ptr?: boolean;
+    primary_ptr?: string | null;
+    status: 'VALID' | 'MISMATCH' | 'NO_PTR' | 'NO_IP' | string;
+    is_fcrdns_valid?: boolean;
+  };
+  details?: Record<string, any>;
+}
+
+export interface EnrichIocsResponse {
+  job_id: string;
+  total_indicators: number;
+  enriched: EnrichedIocItem[];
 }
 
 export interface ExtensionTriageInfo {

@@ -49,6 +49,10 @@ RELATIONSHIP_LABELS = {
     "same_ip": "Hosted on same IP address",
     "same_network": "Same corporate network block",
     "same_asn": "Same Autonomous System",
+    "passive_dns": "Historical Passive DNS Co-location",
+    "shared_nameserver": "Shares Authoritative Nameserver",
+    "shared_mx": "Shares Dedicated Mail Exchanger",
+    "shared_tracking_id": "Shares Web Analytics / Tag Manager Container",
 }
 
 # AS holders / hosts where "same ASN" or "same netblock" does NOT imply "same owner"
@@ -63,6 +67,9 @@ SHARED_INFRA_KEYWORDS = (
     "zenlayer", "frantech", "selectel", "timeweb", "reg.ru", "beget", "aruba", "strato",
     "hostpoint", "one.com", "gandi", "equinix", "cogent", "level 3", "lumen", "hurricane",
     "choopa", "servers.com", "interserver", "liquid web", "ramnode", "kamatera",
+    "baffin bay", "baffinbay", "bbn", "mastercard", "ports group", "ports media",
+    "ports.se", "ports.net", "dipcon", "arbor", "radware", "neustar", "prolexic",
+    "f5", "distil", "edgio", "limelight", "section.io", "stormwall", "ddos-guard", "kaspersky",
 )
 
 GENERIC_REGISTRANT_TOKENS = (
@@ -87,6 +94,7 @@ KNOWN_MAIL_PLATFORMS = (
     "yandex.ru", "mail.ru", "qq.com", "163.com", "gandi.net", "ovh.net", "one.com",
     "binero.se", "loopia.se", "bahnhof.se", "telia.com", "ionos.com", "kundenserver.de",
     "hostinger.com", "titan.email", "registrar-servers.com", "dnsowl.com", "1and1.com",
+    "ports.se", "tele2.com",
 )
 
 # DNS providers: vanity-NS detection must ignore them
@@ -98,9 +106,10 @@ KNOWN_DNS_PROVIDERS = (
     "name-services.com", "dnsv.jp", "he.net", "afraid.org", "rackspace.com", "bluehost.com",
     "hostgator.com", "wixdns.net", "squarespace.com", "netlify.com", "vercel-dns.com",
     "dnsimple.com", "easydns.com", "easydns.net", "markmonitor.com", "csc.com",
-    "cscdns.net", "cscglobal.com", "networksolutions.com", "ionos.com", "ui-dns.", "1and1.com",
+    "cscdns.net", "cscglobal.com", "cscdbs.com", "safebrands.com", "networksolutions.com", "ionos.com", "ui-dns.", "1and1.com",
     "loopia.se", "binero.se", "one.com", "telia.com", "tele2.com", "bahnhof.net", "namecheap.com", "porkbun.com", "hover.com",
     "inwx.de", "inwx.com", "dnspod.net", "dnspod.com", "alidns.com", "hichina.com", "verisigndns.com",
+    "ports.se", "ports.net", "dipcon.com", "portsgroup.com", "baffinbaynetworks.com", "mastercard.com",
 )
 
 # PTR suffixes that identify cloud/ISP infrastructure rather than a customer's own domain
@@ -258,7 +267,14 @@ class _Collector:
         item["_conf"] = max(item["_conf"], CONF_RANK.get(confidence, 1))
         item["_hits"] += 1
 
-    def finalize(self) -> List[Dict[str, Any]]:
+    def finalize(self, is_shared_infrastructure: bool = False) -> List[Dict[str, Any]]:
+        direct_rels = {
+            "shared_certificate",
+            "cert_organization",
+            "shared_tracking_id",
+            "spf_reference",
+            "shared_mx",
+        }
         out = []
         for item in self.items.values():
             conf = item.pop("_conf")
@@ -273,8 +289,24 @@ class _Collector:
             item["confidence"] = CONF_NAME[conf]
             item["primary_relationship"] = item["relationships"][0]
             item["observations"] = hits
+
+            # Direct organizational affiliate vs shared infrastructure neighbor
+            is_direct = any(r in direct_rels for r in item["relationships"])
+            if not is_direct and "same_network" in item["relationships"] and not is_shared_infrastructure:
+                is_direct = True
+
+            item["is_direct"] = is_direct
+            item["connection_type"] = "direct" if is_direct else "shared_infrastructure"
             out.append(item)
-        out.sort(key=lambda i: (-CONF_RANK[i["confidence"]], -len(i["sources"]), -i["observations"], i["domain"]))
+
+        # Sort: Direct connections first, then higher confidence, sources count, observations
+        out.sort(key=lambda i: (
+            not i.get("is_direct", False),
+            -CONF_RANK[i["confidence"]],
+            -len(i["sources"]),
+            -i["observations"],
+            i["domain"]
+        ))
         return out[:MAX_RESULTS]
 
 
@@ -291,12 +323,18 @@ class DomainRelationDiscovery:
         co_hosted_primary: List[str],
         primary_ip: Optional[str],
         sibling_domains: Optional[List[str]] = None,
+        budget_s: float = 12.0,
+        pdns_domains: Optional[List[str]] = None,
+        reverse_ns_domains: Optional[List[str]] = None,
+        reverse_mx_domains: Optional[List[str]] = None,
+        tracking_domains: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         from app.analyzers.domain_analyzer import DomainAnalyzer
         from app.core.settings_store import settings_store
 
         started = time.time()
-        deadline = started + _TOTAL_BUDGET_S
+        deadline = started + budget_s
+        phase1_budget = min(_PHASE1_BUDGET_S, max(2.0, budget_s * 0.6))
         net_info = net_info or {}
         whois_data = whois_data or {}
         dns_data = dns_data or {}
@@ -305,7 +343,8 @@ class DomainRelationDiscovery:
         cache_key = f"{target}|{','.join(sorted(resolved_ips or []))}"
         cached = _CACHE.get(cache_key)
         if cached and started - cached[0] < _CACHE_TTL:
-            return cached[1]
+            if cached[1].get("related_domains") or cached[1].get("direct_affiliates"):
+                return cached[1]
 
         pivots: List[Dict[str, Any]] = []
         info: Dict[str, Any] = {
@@ -357,6 +396,56 @@ class DomainRelationDiscovery:
         # ------------------------------------------------------------------ DNS policy pivots (instant)
         cls._pivot_dns_records(dns_data, root, collector, info, pivots)
 
+        # ------------------------------------------------------------------ Passive DNS Co-Location (instant)
+        if pdns_domains:
+            pdns_added = 0
+            for pd in pdns_domains:
+                if pd and pd != root and pd != target:
+                    collector.add(pd, "passive_dns", "Historical Passive DNS Co-location", "medium", "Passive DNS")
+                    pdns_added += 1
+            if pdns_added > 0:
+                pivots.append({"name": "Passive DNS Co-Location", "status": "ok", "found": pdns_added, "detail": "Historical resolutions"})
+
+        # ------------------------------------------------------------------ Reverse Nameserver Pivots
+        if reverse_ns_domains:
+            ns_added = 0
+            for rns in reverse_ns_domains:
+                if rns and rns != root and rns != target:
+                    collector.add(rns, "shared_nameserver", "Shares Authoritative Nameserver", "high", "Reverse NS")
+                    ns_added += 1
+            if ns_added > 0:
+                pivots.append({"name": "Reverse Nameserver", "status": "ok", "found": ns_added, "detail": "Shared authoritative NS"})
+
+        # ------------------------------------------------------------------ Reverse Mail Server Pivots
+        if reverse_mx_domains:
+            mx_added = 0
+            for rmx in reverse_mx_domains:
+                if rmx and rmx != root and rmx != target:
+                    collector.add(rmx, "shared_mx", "Shares Dedicated Mail Exchanger", "high", "Reverse MX")
+                    mx_added += 1
+            if mx_added > 0:
+                pivots.append({"name": "Reverse Mail Server", "status": "ok", "found": mx_added, "detail": "Shared dedicated mail server"})
+
+        # ------------------------------------------------------------------ Reverse Tracking ID Pivots
+        if tracking_domains:
+            track_added = 0
+            for trk in tracking_domains:
+                if trk and trk != root and trk != target:
+                    collector.add(trk, "shared_tracking_id", "Shares Web Analytics / Tag Manager Container", "medium", "Reverse Analytics")
+                    track_added += 1
+            if track_added > 0:
+                pivots.append({"name": "Reverse Analytics & Tracking", "status": "ok", "found": track_added, "detail": "Shared tracking ID"})
+
+        # ------------------------------------------------------------------ Cryptographic Sibling Domains
+        if sibling_domains:
+            s_added = 0
+            for sib in sibling_domains:
+                if sib and sib != root and sib != target:
+                    collector.add(sib, "shared_certificate", f"Co-listed with {target} in TLS SAN certificates", "high", "Certificate Transparency")
+                    s_added += 1
+            if s_added > 0:
+                pivots.append({"name": "Cryptographic Sibling Certificates", "status": "ok", "found": s_added, "detail": "Direct corporate certificates"})
+
         # ------------------------------------------------------------------ same-IP: primary IP data we already have
         if primary_ip and co_hosted_primary:
             conf = "medium" if len(co_hosted_primary) <= 25 else "low"
@@ -389,7 +478,7 @@ class DomainRelationDiscovery:
         if tasks:
             ex = ThreadPoolExecutor(max_workers=min(8, len(tasks)))
             futs = {ex.submit(fn): name for name, fn in tasks.items()}
-            done, not_done = wait(list(futs), timeout=min(_PHASE1_BUDGET_S, max(1.0, deadline - time.time())))
+            done, not_done = wait(list(futs), timeout=min(phase1_budget, max(1.0, deadline - time.time())))
             for f in done:
                 name = futs[f]
                 try:
@@ -462,10 +551,20 @@ class DomainRelationDiscovery:
                     pivots.append({"name": f"Autonomous System PTR sampling ({asn})", "status": "ok",
                                    "found": len(found_asn), "detail": f"{len(asn_ips)} addresses across other prefixes"})
 
-        related = collector.finalize()
-        # Subdomains/hosts already discovered by the analyzer under the same root are not "other" domains
+        related = collector.finalize(is_shared_infrastructure=info.get("is_shared_infrastructure", False))
+        direct_affiliates = [d for d in related if d.get("is_direct", False)]
+        shared_neighbors = [d for d in related if not d.get("is_direct", False)]
+
+        info["direct_count"] = len(direct_affiliates)
+        info["shared_infrastructure_count"] = len(shared_neighbors)
         info["elapsed_s"] = round(time.time() - started, 1)
-        result = {"related_domains": related, "ownership_pivots": info}
+
+        result = {
+            "related_domains": related,
+            "direct_affiliates": direct_affiliates,
+            "shared_infrastructure_neighbors": shared_neighbors,
+            "ownership_pivots": info
+        }
         _CACHE[cache_key] = (started, result)
         return result
 

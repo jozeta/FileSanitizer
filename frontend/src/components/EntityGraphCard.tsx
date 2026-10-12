@@ -16,6 +16,7 @@ import {
   CheckSquare
 } from 'lucide-react';
 import { EntityGraphData, EntityGraphNode } from '../types';
+import { InvestigateAssetButton } from './InvestigateAssetButton';
 
 interface EntityGraphCardProps {
   graphData?: EntityGraphData | null;
@@ -33,7 +34,7 @@ const ENTITY_CATEGORIES = [
   {
     key: 'network',
     label: 'Network & Domains',
-    types: ['url', 'domain', 'ip', 'geolocation', 'flow', 'protocol', 'asn', 'network', 'organization'],
+    types: ['url', 'domain', 'ip', 'geolocation', 'flow', 'protocol', 'asn', 'network', 'organization', 'nameserver'],
     color: 'bg-sky-600 text-white border-sky-600',
     hoverColor: 'hover:bg-sky-50 hover:text-sky-700'
   },
@@ -835,7 +836,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     if (node.type === 'user' || node.type === 'auth_policy' || node.type === 'metadata') {
       return { fill: '#eff6ff', stroke: '#3b82f6', text: '#1d4ed8', badge: 'bg-blue-50 text-blue-700 border-blue-200' };
     }
-    if (node.type === 'domain' || node.type === 'ip') {
+    if (node.type === 'domain' || node.type === 'ip' || node.type === 'nameserver') {
       return { fill: '#f0fdfa', stroke: '#0d9488', text: '#115e59', badge: 'bg-teal-50 text-teal-700 border-teal-200' };
     }
     if (node.type === 'asn' || node.type === 'network') {
@@ -1659,6 +1660,18 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>MITRE ATT&CK Matrix ↗</span>
                 </a>
+              )}
+
+              {(selectedNode.type === 'domain' || selectedNode.type === 'ip' || selectedNode.type === 'url') && onSelectJob && (
+                <div className="w-full">
+                  <InvestigateAssetButton
+                    ioc={selectedNode.full_label || selectedNode.label}
+                    iocType={selectedNode.type as any}
+                    onNavigateToJob={onSelectJob}
+                    className="w-full py-2 justify-center"
+                    label={`Investigate ${selectedNode.type === 'ip' ? 'IP' : selectedNode.type === 'url' ? 'URL' : 'Domain'}`}
+                  />
+                </div>
               )}
             </div>
           </div>

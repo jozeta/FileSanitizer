@@ -1,4 +1,4 @@
-import { JobDetail, StructuredMetadata, UrlItem, SanitizationOptions, ValidationComparison, DetectionRules, IncidentCorrelationData, PdfStreamInspection } from '../types';
+import { JobDetail, StructuredMetadata, UrlItem, SanitizationOptions, ValidationComparison, DetectionRules, IncidentCorrelationData, PdfStreamInspection, EnrichIocsResponse } from '../types';
 
 const API_BASE = '/api';
 
@@ -62,6 +62,45 @@ export const apiClient = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'URL fetch failed' }));
       throw new Error(err.detail || 'URL fetch failed');
+    }
+    return res.json();
+  },
+
+  async investigateIoc(ioc: string, iocType?: string, parentJobId?: string): Promise<{ already_analyzed: boolean; job_id: string; filename: string; target: string; message: string }> {
+    const res = await fetch(`${API_BASE}/files/investigate-ioc`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ioc, ioc_type: iocType, parent_job_id: parentJobId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'IOC investigation failed' }));
+      throw new Error(err.detail || 'IOC investigation failed');
+    }
+    return res.json();
+  },
+
+  async triggerActiveRecon(jobId: string, authorized: boolean = true): Promise<{ success: boolean; active_recon: any; active_security_probes?: any; risk_scores: any }> {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/active-recon`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ authorized }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Active reconnaissance failed' }));
+      throw new Error(err.detail || 'Active reconnaissance failed');
+    }
+    return res.json();
+  },
+
+  async enrichJobIocs(jobId: string, iocs: string[]): Promise<EnrichIocsResponse> {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/enrich-iocs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ iocs }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to enrich network IOCs' }));
+      throw new Error(err.detail || 'Network IOC quick-enrichment failed');
     }
     return res.json();
   },

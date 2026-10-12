@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Clock, Info, BookOpen, FileCheck2, Shield, Settings, Lock } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { APP_VERSION } from '../version';
 
 export type ViewTab = 'sanitizer' | 'how-it-works' | 'supported-formats' | 'settings';
 
@@ -49,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-lg text-slate-900 tracking-tight">FileSanitizer</span>
-              <span className="text-[11px] font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">v1.0 CDR</span>
+              <span className="text-[11px] font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">v{APP_VERSION} CDR</span>
             </div>
             <p className="text-xs text-slate-500 font-normal hidden sm:block">Don't trust the file. Wash it first.</p>
           </div>

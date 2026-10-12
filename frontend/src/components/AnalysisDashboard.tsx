@@ -1196,7 +1196,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
               switch (currentSubTab) {
                 case 'domain':
                   return job.domain_info ? (
-                    <DomainAnalyticsCard domainInfo={job.domain_info} thumbnailUrl={job.thumbnail_url} />
+                    <DomainAnalyticsCard domainInfo={job.domain_info} thumbnailUrl={job.thumbnail_url} jobId={job.job_id} onNavigateToJob={onSelectJob} />
                   ) : (
                     <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center text-slate-500">
                       <Globe className="w-8 h-8 text-slate-400 mx-auto mb-2" />
@@ -1336,6 +1336,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                   return (
                     <ErrorBoundary fallbackTitle="Windows Event Log Forensics Error" onReset={() => setActiveTab('security')}>
                       <EvtxTriageCard
+                        jobId={job.job_id}
                         evtxInfo={job.evtx_info || undefined}
                         filename={job.filename}
                         antiAnalysis={job.anti_analysis}
@@ -1383,7 +1384,12 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
         )}
 
         {activeTab === 'urls' && (
-          <UrlExplorer urls={job.urls} />
+          <UrlExplorer
+            urls={job.urls}
+            onSelectJob={onSelectJob}
+            jobId={job.job_id}
+            initialEnriched={job.enriched_iocs}
+          />
         )}
 
         {activeTab === 'timeline' && !isDomainOrIp && (

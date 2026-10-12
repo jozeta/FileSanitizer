@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ShieldCheck, AlertTriangle, Image as ImageIcon, Lock, Unlock, ArrowRight, ExternalLink, Link2, ZoomIn, X } from 'lucide-react';
-import { UrlItem } from '../types';
+import { UrlItem, EnrichedIocItem } from '../types';
+import { InvestigateAssetButton } from './InvestigateAssetButton';
+import { NetworkIocEnrichmentPanel } from './NetworkIocEnrichmentPanel';
 
 interface UrlExplorerProps {
   urls?: UrlItem[];
+  onSelectJob?: (newJobId: string) => void;
+  jobId?: string;
+  initialEnriched?: Record<string, EnrichedIocItem>;
 }
 
 const LOOKALIKE_MAP: Record<string, string> = {
@@ -137,7 +142,12 @@ const getTargetBrand = (item: UrlItem): string | null => {
   return null;
 };
 
-export const UrlExplorer: React.FC<UrlExplorerProps> = ({ urls = [] }) => {
+export const UrlExplorer: React.FC<UrlExplorerProps> = ({
+  urls = [],
+  onSelectJob,
+  jobId,
+  initialEnriched
+}) => {
   const [lightboxScreenshot, setLightboxScreenshot] = useState<{ url: string; domain: string } | null>(null);
 
   // Close lightbox modal on ESC key & lock body scroll
@@ -272,6 +282,17 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({ urls = [] }) => {
         </span>
       </div>
 
+      {jobId && urls.length > 0 && (
+        <NetworkIocEnrichmentPanel
+          jobId={jobId}
+          extractedIocs={urls.map((u) => u.domain || u.url).filter(Boolean)}
+          initialEnriched={initialEnriched}
+          onNavigateToJob={onSelectJob}
+          title="Discovered Domains & Host Quick-Enrichment"
+          subtitle="Enriches discovered domain destinations with autonomous systems, BGP prefixes, FCrDNS verification, and threat intelligence."
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-4">
         {urls.map((item, idx) => {
           return (
@@ -373,15 +394,22 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({ urls = [] }) => {
                   {/* Full URL & VirusTotal Search Button */}
                   <div className="text-xs text-slate-600 font-mono break-all mb-3 bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <span className="truncate flex-1 font-medium">{item.url}</span>
-                    <a
-                      href={item.vt_web_link || `https://www.virustotal.com/gui/search/${encodeURIComponent(item.url)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-sans font-medium text-indigo-600 hover:text-indigo-800 shrink-0 bg-white px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 shadow-sm transition-colors"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      <span>Lookup on VirusTotal</span>
-                    </a>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <InvestigateAssetButton
+                        ioc={item.redirect_url || item.url}
+                        onNavigateToJob={onSelectJob}
+                        label="Investigate Asset"
+                      />
+                      <a
+                        href={item.vt_web_link || `https://www.virustotal.com/gui/search/${encodeURIComponent(item.url)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-sans font-medium text-indigo-600 hover:text-indigo-800 shrink-0 bg-white px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 shadow-sm transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Lookup on VirusTotal</span>
+                      </a>
+                    </div>
                   </div>
 
                   {/* Redirect information & Deep Target Analysis */}

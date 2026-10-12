@@ -8,6 +8,26 @@ import httpx
 import dateutil.parser
 
 from app.core.logging_config import logger
+from app.network.input_normalizer import UniversalInputNormalizer
+from app.network.advanced_dns import AdvancedDNSInspector
+from app.network.tls_inspector import TLSInspector
+from app.network.web_fingerprinter import WebFingerprinter
+from app.network.threat_intelligence import ThreatIntelligenceAggregator
+from app.network.active_recon import ActiveServiceScanner
+from app.network.subdomain_mapper import SubdomainMapper
+from app.network.scoring_engine import MultiDimensionalRiskEngine
+from app.network.email_security import EmailSecurityAuditor
+from app.network.web_archive import WebArchiveInspector
+from app.network.bgp_routing import BgpRoutingInspector
+from app.network.passive_dns import PassiveDnsClient
+from app.network.leak_search import LeakExposureSearcher
+from app.network.active_security_prober import ActiveSecurityProber
+from app.network.web_exposure import WebExposureInspector
+from app.network.vulnerability_intel import VulnerabilityCorrelator
+from app.network.reverse_infrastructure import ReverseInfrastructurePivoter
+from app.network.typosquat_generator import TyposquattingGenerator
+from app.network.tracking_pivots import TrackingIdentifierPivoter
+from app.network.snapshot_differ import InvestigationSnapshotDiffer
 
 # Cache for RDAP lookups to avoid rate limiting
 _RDAP_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
@@ -54,33 +74,58 @@ class DomainAnalyzer:
         return bool(cls.DOMAIN_REGEX.match(clean))
 
     @classmethod
-    def analyze(cls, target: str, deep: bool = False) -> Dict[str, Any]:
+    def analyze(cls, target: str, deep: bool = False, active_recon: bool = False) -> Dict[str, Any]:
         """
-        Analyze a domain or IP address.
-
-        With deep=True (explicit domain/IP lookups) the Autonomous System, corporate network
-        block and owned IPs are used to discover other domains held by the same owner
-        (see app.analyzers.domain_relations).
+        Analyze a domain or IP address with full multi-dimensional intelligence:
+        - Universal Input Normalization & Homoglyph Detection
+        - Passive Certificate Transparency (CT) & TLS Handshake
+        - Advanced DNS, DNSSEC, CAA, low TTL / fast-flux detection
+        - Multi-feed passive threat intelligence consensus
+        - ASN profiling, BGP prefixes, bulletproof/cloud classification
+        - Web tech fingerprinting, Favicon MurmurHash3, security headers
+        - Attack surface subdomain enumeration
+        - Multi-dimensional risk & exposure scores (4 dimensions)
+        - Controlled active security audit & port reconnaissance (opt-in)
+        - Dangling CNAME & subdomain takeover heuristics
+        - Redirection hop trace & credential form detection
         """
-        clean_target = cls._normalize_target(target)
-        is_ip = cls._is_ip_address(clean_target)
+        # 1. Normalization & Input Validation
+        norm_ind = UniversalInputNormalizer.normalize(target)
+        clean_target = norm_ind.target_host or cls._normalize_target(target)
+        is_ip = (norm_ind.indicator_type in ("ipv4", "ipv6")) or cls._is_ip_address(clean_target)
 
         res: Dict[str, Any] = {
             "target": clean_target,
             "is_ip": is_ip,
+            "indicator_type": norm_ind.indicator_type,
+            "normalized_value": norm_ind.normalized_value,
             "punycode_analysis": {},
             "obfuscation_analysis": {},
             "dns_records": {},
+            "advanced_dns": {},
             "whois": {},
             "network": {},
+            "asn_profile": {},
+            "tls_profile": {},
+            "web_fingerprint": {},
+            "threat_intelligence": {},
+            "attack_surface": {},
+            "active_recon": {},
+            "risk_scores": {},
             "co_hosted_domains": [],
             "owner_intelligence": {},
             "related_domains": [],
             "ownership_pivots": {},
+            "email_security": None,
+            "web_archive": None,
+            "bgp_routing": None,
+            "passive_dns": None,
+            "leak_search": None,
+            "active_security_probes": None,
             "risk_flags": []
         }
 
-        # 1. Punycode & Homograph Analysis
+        # 2. Punycode & Homograph Analysis
         if not is_ip:
             punycode_info = cls.analyze_punycode(clean_target)
             res["punycode_analysis"] = punycode_info
@@ -91,7 +136,7 @@ class DomainAnalyzer:
                     "description": f"Domain uses Punycode '{clean_target}' to impersonate '{punycode_info.get('unicode_rendered')}' using non-ASCII lookalike characters."
                 })
 
-        # 2. Obfuscation Analysis
+        # 3. Obfuscation Analysis
         obf = cls.detect_obfuscation(target)
         res["obfuscation_analysis"] = obf
         if obf.get("is_obfuscated"):
@@ -102,11 +147,28 @@ class DomainAnalyzer:
                     "description": t.get("description", "")
                 })
 
-        # 3. DNS Records Resolution
-        dns_data = cls.resolve_dns(clean_target, is_ip=is_ip)
-        res["dns_records"] = dns_data
+        # 4. Advanced DNS & DNSSEC Resolution
+        adv_dns = AdvancedDNSInspector.inspect(clean_target, is_ip=is_ip)
+        res["advanced_dns"] = adv_dns
+        # Merge records into dns_records for backward compatibility
+        res["dns_records"] = {
+            "a": adv_dns["records"].get("a", []),
+            "aaaa": adv_dns["records"].get("aaaa", []),
+            "mx": adv_dns["records"].get("mx", []),
+            "ns": adv_dns["records"].get("ns", []),
+            "txt": adv_dns["records"].get("txt", []),
+            "cname": adv_dns["records"].get("cname", []),
+            "ptr": adv_dns["records"].get("ptr", []),
+            "soa": adv_dns["records"].get("soa", []),
+            "caa": adv_dns["records"].get("caa", []),
+            "srv": adv_dns["records"].get("srv", []),
+            "https": adv_dns["records"].get("https", []),
+        }
+        res["fcrdns"] = adv_dns.get("fcrdns", {})
+        for anom in adv_dns.get("anomalies", []):
+            res["risk_flags"].append(anom)
 
-        # 4. WHOIS / RDAP Registration Intelligence
+        # 5. WHOIS / RDAP Registration Intelligence
         whois_data = cls.query_rdap_whois(clean_target, is_ip=is_ip)
         res["whois"] = whois_data
 
@@ -119,18 +181,28 @@ class DomainAnalyzer:
                 "description": f"Domain was registered very recently on {whois_data.get('registration_date', 'recent')}. Newly registered domains are disproportionately used in phishing and malware campaigns."
             })
 
-        # 5. Reverse IP & Co-hosted Domains
-        resolved_ips = dns_data.get("a", []) if not is_ip else [clean_target]
+        # 6. Reverse IP, ASN & Co-hosted Domains
+        resolved_ips = adv_dns["records"].get("a", []) if not is_ip else [clean_target]
         primary_ip = resolved_ips[0] if resolved_ips else (clean_target if is_ip else None)
 
         sibling_domains: List[str] = []
+        net_info: Dict[str, Any] = {}
         if primary_ip:
             co_hosted, net_info = cls.query_reverse_ip_and_asn(primary_ip)
-            # Filter co-hosted strictly to valid domains
             res["co_hosted_domains"] = [d for d in co_hosted if cls._is_valid_domain_string(d)]
             res["network"] = net_info
 
-            # Discover sibling / related domains owned by the same organization
+            # ASN Infrastructure Profiling
+            asn_prof = ThreatIntelligenceAggregator.profile_asn(primary_ip, net_info)
+            res["asn_profile"] = asn_prof
+            if asn_prof.get("is_bulletproof_suspect"):
+                res["risk_flags"].append({
+                    "severity": "high",
+                    "title": "High-Risk / Bulletproof Hosting Infrastructure",
+                    "description": f"IP {primary_ip} is hosted on {asn_prof.get('as_org')}, known for bulletproof hosting and abuse tolerance."
+                })
+
+            # Sibling domains via HackerTarget
             root_domain = cls.get_registered_domain(clean_target) if not is_ip else None
             if root_domain and not cls._is_ip_address(root_domain):
                 try:
@@ -146,7 +218,135 @@ class DomainAnalyzer:
                 except Exception:
                     pass
 
-        # 6. Corporate & Owner Intelligence Synthesis
+        # 7. Passive TLS & Certificate Transparency
+        tls_port = norm_ind.target_port if (norm_ind.target_port and norm_ind.target_port != 80) else 443
+        tls_data = TLSInspector.inspect(clean_target, port=tls_port, query_ct_logs=not is_ip)
+        res["tls_profile"] = tls_data
+        for finding in tls_data.get("security_findings", []):
+            res["risk_flags"].append(finding)
+
+        # 8. Web Technology & Redirection Fingerprinting
+        web_data = WebFingerprinter.fingerprint(target)
+        res["web_fingerprint"] = web_data
+        for finding in web_data.get("findings", []):
+            res["risk_flags"].append(finding)
+
+        # 8b. Passive Web Exposure & Asset Harvesting (robots.txt, sitemap.xml, .well-known)
+        try:
+            web_exp = WebExposureInspector.inspect(clean_target)
+            res["web_exposure"] = web_exp
+            for rf in web_exp.get("risk_flags", []):
+                res["risk_flags"].append({
+                    "severity": rf.get("severity", "medium").lower(),
+                    "title": rf.get("title"),
+                    "description": rf.get("description")
+                })
+        except Exception as e:
+            logger.debug(f"Web exposure inspection failed for {clean_target}: {e}")
+            res["web_exposure"] = {"tested": False, "target": clean_target}
+
+        # 9. Multi-Feed Passive Threat Intelligence
+        cti_data = ThreatIntelligenceAggregator.aggregate_intelligence(clean_target, "ip" if is_ip else "domain")
+        res["threat_intelligence"] = cti_data
+        if cti_data.get("overall_verdict") in ("malicious", "suspicious"):
+            res["risk_flags"].append({
+                "severity": "critical" if cti_data["overall_verdict"] == "malicious" else "high",
+                "title": f"Multi-Feed CTI Consensus ({cti_data['overall_verdict'].upper()})",
+                "description": f"Target was flagged by threat intelligence feeds ({', '.join(cti_data.get('threat_tags', [])[:3])})."
+            })
+
+        # 10. Attack Surface Subdomain Mapping
+        if not is_ip:
+            ct_subs = tls_data.get("ct_logs", {}).get("discovered_subdomains", [])
+            tls_sans = (tls_data.get("live_cert") or {}).get("sans", [])
+            dns_cnames = adv_dns.get("records", {}).get("cname", [])
+            surface_map = SubdomainMapper.map_surface(clean_target, ct_subs, tls_sans, dns_cnames, sibling_domains)
+            res["attack_surface"] = surface_map
+
+        # 11. Controlled Active Reconnaissance & Security Probes (strictly opt-in)
+        active_scan = ActiveServiceScanner.scan_services(clean_target, authorized=active_recon)
+        res["active_recon"] = active_scan
+
+        try:
+            mx_records = adv_dns.get("records", {}).get("mx", [])
+            active_probes = ActiveSecurityProber.probe_all(
+                clean_target,
+                mx_hosts=mx_records,
+                authorized=active_recon
+            )
+            res["active_security_probes"] = active_probes
+            for rf in active_probes.get("risk_flags", []):
+                res["risk_flags"].append({
+                    "severity": rf.get("severity", "high").lower(),
+                    "title": rf.get("title"),
+                    "description": rf.get("description")
+                })
+        except Exception as e:
+            logger.debug(f"Active security probing failed for {clean_target}: {e}")
+
+        # 12. Email Security, Spoofability & Brand Integrity Audit
+        if not is_ip:
+            try:
+                email_sec = EmailSecurityAuditor.audit(clean_target)
+                res["email_security"] = email_sec
+                if email_sec.get("spoofability", {}).get("status") == "VULNERABLE":
+                    res["risk_flags"].append({
+                        "severity": "medium",
+                        "title": "Email Spoofability Exposure (DMARC/SPF)",
+                        "description": email_sec["spoofability"].get("summary", "")
+                    })
+            except Exception as e:
+                logger.debug(f"Email security audit failed for {clean_target}: {e}")
+
+        # 13. Historical Web Archive & Website Evolution
+        try:
+            web_arch = WebArchiveInspector.inspect(clean_target)
+            res["web_archive"] = web_arch
+            for rf in web_arch.get("risk_flags", []):
+                res["risk_flags"].append({
+                    "severity": rf.get("severity", "medium").lower(),
+                    "title": rf.get("title"),
+                    "description": rf.get("description")
+                })
+        except Exception as e:
+            logger.debug(f"Web archive lookup failed for {clean_target}: {e}")
+
+        # 14. BGP Routing, RPKI Validation & Route Hijack Detection
+        if primary_ip:
+            try:
+                asn_val = res.get("network", {}).get("asn") or (res.get("asn_profile") or {}).get("asn")
+                bgp_data = BgpRoutingInspector.inspect(primary_ip, asn_val)
+                res["bgp_routing"] = bgp_data
+                for rf in bgp_data.get("risk_flags", []):
+                    res["risk_flags"].append({
+                        "severity": rf.get("severity", "medium").lower(),
+                        "title": rf.get("title"),
+                        "description": rf.get("description")
+                    })
+            except Exception as e:
+                logger.debug(f"BGP routing inspection failed for {primary_ip}: {e}")
+
+        # 15. Passive DNS (pDNS) Co-Location & Sibling Infrastructure
+        try:
+            pdns_data = PassiveDnsClient.query_pdns(clean_target, is_ip=is_ip)
+            res["passive_dns"] = pdns_data
+        except Exception as e:
+            logger.debug(f"Passive DNS lookup failed for {clean_target}: {e}")
+
+        # 16. Public Pastebin & Leak Exposure Search
+        try:
+            leak_data = LeakExposureSearcher.search_leaks(clean_target)
+            res["leak_search"] = leak_data
+            for rf in leak_data.get("risk_flags", []):
+                res["risk_flags"].append({
+                    "severity": rf.get("severity", "medium").lower(),
+                    "title": rf.get("title"),
+                    "description": rf.get("description")
+                })
+        except Exception as e:
+            logger.debug(f"Leak exposure search failed for {clean_target}: {e}")
+
+        # 17. Corporate & Owner Intelligence Synthesis
         owner_name = (
             whois_data.get("registrant_org")
             or (res["network"].get("org") if res.get("network") else None)
@@ -180,39 +380,157 @@ class DomainAnalyzer:
             "more_ip_ranges": ip_ranges[:15]
         }
 
-        # 7. Ownership pivoting: ASN + corporate network + owned IPs -> other domains of same owner
-        if deep:
-            try:
-                from app.analyzers.domain_relations import DomainRelationDiscovery
-                rel = DomainRelationDiscovery.discover(
-                    target=clean_target,
-                    is_ip=is_ip,
-                    resolved_ips=resolved_ips,
-                    dns_data=dns_data,
-                    whois_data=whois_data,
-                    net_info=res.get("network") or {},
-                    co_hosted_primary=res["co_hosted_domains"],
-                    primary_ip=primary_ip,
-                    sibling_domains=sibling_domains,
-                )
-                res["related_domains"] = rel["related_domains"]
-                res["ownership_pivots"] = rel["ownership_pivots"]
+        # 17b. Reverse Nameserver & Reverse Mail Server Infrastructure Pivots
+        reverse_ns_domains: List[str] = []
+        reverse_mx_domains: List[str] = []
+        try:
+            ns_records = adv_dns.get("records", {}).get("ns", [])
+            mx_records = [m.get("host") if isinstance(m, dict) else m for m in adv_dns.get("records", {}).get("mx", [])]
+            rev_infra = ReverseInfrastructurePivoter.pivot(clean_target, nameservers=ns_records, mx_hosts=mx_records)
+            res["reverse_infrastructure"] = rev_infra
+            for item in rev_infra.get("reverse_ns", []):
+                reverse_ns_domains.extend(item.get("associated_domains", []))
+            for item in rev_infra.get("reverse_mx", []):
+                reverse_mx_domains.extend(item.get("associated_domains", []))
+        except Exception as e:
+            logger.debug(f"Reverse infrastructure pivoting failed for {clean_target}: {e}")
+            res["reverse_infrastructure"] = {"tested": False, "target": clean_target}
 
-                oi = res["owner_intelligence"]
-                merged_domains: List[str] = list(sibling_domains)
-                for r in rel["related_domains"]:
-                    # Co-hosting on shared IPs alone is weak evidence of common ownership
-                    if r["confidence"] != "low" and r["domain"] not in merged_domains:
-                        merged_domains.append(r["domain"])
-                oi["more_domains"] = merged_domains[:60]
-                for rng in rel["ownership_pivots"].get("asn_prefixes", [])[:10]:
-                    if rng not in ip_ranges:
-                        ip_ranges.append(rng)
-                oi["more_ip_ranges"] = ip_ranges[:25]
-                if not oi.get("asn") and rel["ownership_pivots"].get("asn"):
-                    oi["asn"] = rel["ownership_pivots"]["asn"]
+        # 17c. Reverse Tracking & Analytics Identifier Pivots
+        tracking_domains: List[str] = []
+        try:
+            existing_ids = web_data.get("dom", {}).get("analytics_ids", [])
+            track_pivots = TrackingIdentifierPivoter.extract_and_pivot(clean_target, existing_identifiers=existing_ids)
+            res["tracking_pivots"] = track_pivots
+            tracking_domains = track_pivots.get("related_domains_from_analytics", [])
+        except Exception as e:
+            logger.debug(f"Tracking identifier pivoting failed for {clean_target}: {e}")
+            res["tracking_pivots"] = {"tested": False, "target": clean_target}
+
+        # 18. Restored & Evolved Ownership Pivoting (DomainRelationDiscovery - Always Executed)
+        try:
+            from app.analyzers.domain_relations import DomainRelationDiscovery
+            budget = 25.0 if deep else 8.0
+            pdns_domains = (res.get("passive_dns") or {}).get("discovered_domains", [])
+            rel = DomainRelationDiscovery.discover(
+                target=clean_target,
+                is_ip=is_ip,
+                resolved_ips=resolved_ips,
+                dns_data=res["dns_records"],
+                whois_data=whois_data,
+                net_info=res.get("network") or {},
+                co_hosted_primary=res["co_hosted_domains"],
+                primary_ip=primary_ip,
+                sibling_domains=sibling_domains,
+                budget_s=budget,
+                pdns_domains=pdns_domains,
+                reverse_ns_domains=reverse_ns_domains,
+                reverse_mx_domains=reverse_mx_domains,
+                tracking_domains=tracking_domains,
+            )
+            res["related_domains"] = rel.get("related_domains", [])
+            res["ownership_pivots"] = rel.get("ownership_pivots", {})
+            res["direct_affiliates"] = rel.get("direct_affiliates", [])
+            res["shared_infrastructure_neighbors"] = rel.get("shared_infrastructure_neighbors", [])
+            res["direct_count"] = rel.get("direct_count", len(res["direct_affiliates"]))
+            res["shared_infrastructure_count"] = rel.get("shared_infrastructure_count", len(res["shared_infrastructure_neighbors"]))
+
+            oi = res["owner_intelligence"]
+            merged_domains: List[str] = list(sibling_domains)
+            for r in rel.get("related_domains", []):
+                if r.get("confidence") != "low" and r.get("domain") not in merged_domains:
+                    merged_domains.append(r["domain"])
+            oi["more_domains"] = merged_domains[:60]
+            for rng in rel.get("ownership_pivots", {}).get("asn_prefixes", [])[:10]:
+                if rng not in ip_ranges:
+                    ip_ranges.append(rng)
+            oi["more_ip_ranges"] = ip_ranges[:25]
+            if not oi.get("asn") and rel.get("ownership_pivots", {}).get("asn"):
+                oi["asn"] = rel["ownership_pivots"]["asn"]
+        except Exception as e:
+            logger.warning(f"Related-domain discovery failed for {clean_target}: {e}")
+
+        # 18b. Typosquatting, Homoglyph & Lookalike Impersonator Generator
+        if not is_ip:
+            try:
+                typo_data = TyposquattingGenerator.analyze(clean_target)
+                res["typosquatting"] = typo_data
+                if typo_data.get("has_live_impersonators"):
+                    res["risk_flags"].append({
+                        "severity": "high",
+                        "title": f"Active Resolving Lookalike Domains Detected ({typo_data.get('active_registered_count', 0)})",
+                        "description": f"Discovered registered, resolving lookalike domains mimicking {clean_target}. May indicate active phishing or brand impersonation infrastructure."
+                    })
             except Exception as e:
-                logger.warning(f"Related-domain discovery failed for {clean_target}: {e}")
+                logger.debug(f"Typosquatting analysis failed for {clean_target}: {e}")
+                res["typosquatting"] = {"tested": False, "target": clean_target}
+
+        # 18c. Technology Version to CISA KEV & EPSS Vulnerability Correlator
+        try:
+            vuln_intel = VulnerabilityCorrelator.correlate(
+                web_fingerprint=web_data,
+                active_recon=active_scan,
+                active_security_probes=res.get("active_security_probes")
+            )
+            res["vulnerability_intel"] = vuln_intel
+            for vf in vuln_intel.get("findings", []):
+                res["risk_flags"].append({
+                    "severity": vf.get("severity", "high").lower(),
+                    "title": f"Weaponized / Known Exploited Vulnerability: {vf.get('cve')}",
+                    "description": f"{vf.get('title')} ({vf.get('product')} {vf.get('detected_version')}). EPSS: {vf.get('epss_percentile')} likelihood of exploitation. {vf.get('disclaimer')}"
+                })
+        except Exception as e:
+            logger.debug(f"Vulnerability correlation failed for {clean_target}: {e}")
+            res["vulnerability_intel"] = {"tested": False, "findings": []}
+
+        # 19. Multi-Dimensional Risk Scoring
+        scores = MultiDimensionalRiskEngine.evaluate(
+            clean_target,
+            is_ip,
+            norm_ind.details,
+            adv_dns,
+            whois_data,
+            tls_data,
+            web_data,
+            cti_data,
+            res.get("asn_profile") or {},
+            active_scan,
+            email_sec=res.get("email_security"),
+            web_arch=res.get("web_archive"),
+            active_probes=res.get("active_security_probes"),
+            vuln_intel=res.get("vulnerability_intel"),
+            web_exposure=res.get("web_exposure")
+        )
+        res["risk_scores"] = scores
+
+        # 20. Investigation Snapshot Comparison (Time-Series Delta Tracking)
+        try:
+            prev_job_data = None
+            prev_job_id = None
+            prev_timestamp = None
+            try:
+                from app.core.job_manager import job_manager
+                for jid, j in reversed(list(job_manager.jobs.items())):
+                    if getattr(j, "category", None) == "domain" and getattr(j, "domain_info", None):
+                        j_target = cls._normalize_target(getattr(j, "filename", ""))
+                        if j_target == clean_target and j.domain_info != res:
+                            prev_job_data = j.domain_info
+                            prev_job_id = j.job_id
+                            prev_timestamp = getattr(j, "created_at", None)
+                            break
+            except Exception:
+                pass
+
+            snap_diff = InvestigationSnapshotDiffer.compare(
+                res,
+                previous_data=prev_job_data,
+                previous_job_id=prev_job_id,
+                previous_timestamp=prev_timestamp
+            )
+            res["snapshot_diff"] = snap_diff
+        except Exception as e:
+            logger.debug(f"Snapshot differ failed for {clean_target}: {e}")
+            res["snapshot_diff"] = {"has_historical_baseline": False}
 
         return res
 

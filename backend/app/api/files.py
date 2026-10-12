@@ -6,6 +6,7 @@ from app.config import settings
 from app.core.job_manager import job_manager
 from app.core.logging_config import logger
 from app.network.url_fetcher import URLFileFetcher, URLFetcherException
+from app.network.input_normalizer import UniversalInputNormalizer
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
@@ -385,6 +386,90 @@ def fetch_file_from_url(
         }],
         "source_url": url,
         "reputation": reputation
+    }
+
+class InvestigateIocRequest(BaseModel):
+    ioc: str
+    ioc_type: Optional[str] = None
+    parent_job_id: Optional[str] = None
+
+@router.post("/investigate-ioc")
+def investigate_ioc(
+    payload: InvestigateIocRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    1-Click IOC Pivot to Remote Intelligence.
+    Checks if the target domain, URL, or IP is already analyzed in the workspace.
+    If yes, returns the existing job ID so the frontend can navigate to it.
+    If no, initiates a new investigation job in the current workspace.
+    """
+    raw_ioc = payload.ioc.strip()
+    if not raw_ioc:
+        raise HTTPException(status_code=400, detail="IOC cannot be empty.")
+
+    norm_ind = UniversalInputNormalizer.normalize(raw_ioc)
+    target = norm_ind.target_host or norm_ind.normalized_value or raw_ioc
+
+    # Check for existing job in workspace
+    for existing_job in job_manager.list_jobs():
+        if getattr(existing_job, "category", "") == "domain":
+            dom_info = getattr(existing_job, "domain_info", {}) or {}
+            existing_target = (dom_info.get("target") or "").lower()
+            existing_fn = (existing_job.filename or "").lower()
+            if target.lower() in (existing_target, existing_fn) or raw_ioc.lower() in (existing_target, existing_fn):
+                return {
+                    "already_analyzed": True,
+                    "job_id": existing_job.job_id,
+                    "filename": existing_job.filename,
+                    "target": target,
+                    "message": f"Asset '{target}' is already analyzed in current workspace."
+                }
+
+    # Not analyzed yet: fetch and analyze
+    target_to_fetch = norm_ind.normalized_value if norm_ind.indicator_type == "url" else target
+    try:
+        fetch_res = URLFileFetcher.fetch(target_to_fetch)
+        raw_bytes, filename, reputation = fetch_res
+    except URLFetcherException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"Error fetching IOC '{target}': {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to investigate asset: {e}")
+
+    job = job_manager.create_job(raw_bytes, filename)
+    if getattr(fetch_res, "is_domain_target", False):
+        job.category = "domain"
+        job.mime_type = "text/x-domain-intelligence"
+        job.signature_description = "Domain & Network Infrastructure Target"
+
+    screenshot_bytes = getattr(fetch_res, "screenshot_bytes", None)
+    if screenshot_bytes:
+        ws = job_manager.get_workspace(job.job_id)
+        if ws:
+            thumb_path = ws.base_dir / "thumbnail.png"
+            try:
+                thumb_path.write_bytes(screenshot_bytes)
+                job.thumbnail_available = True
+                job.thumbnail_url = f"/api/jobs/{job.job_id}/thumbnail"
+            except Exception as e:
+                logger.debug(f"Failed to save thumbnail: {e}")
+
+    domain_info = getattr(fetch_res, "domain_info", None)
+    if domain_info:
+        job.domain_info = domain_info
+
+    if reputation:
+        job.urls.append(reputation)
+
+    background_tasks.add_task(job_manager.execute_analysis_pipeline, job.job_id)
+
+    return {
+        "already_analyzed": False,
+        "job_id": job.job_id,
+        "filename": job.filename,
+        "target": target,
+        "message": f"Created new investigation job for asset '{target}'."
     }
 
 @router.get("/supported-formats")
