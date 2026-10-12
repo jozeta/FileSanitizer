@@ -1,8 +1,8 @@
 # FileSanitizer
 
-> **"Don't trust the file. Wash it first."**
+> **"Don't trust the file. Wash it first."** *(featuring 30+ dynamic cybersecurity slogans rotating on every reload)*
 
-[![Release](https://img.shields.io/badge/release-v2.2.7-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
+[![Release](https://img.shields.io/badge/release-v2.2.8-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
 [![Python](https://img.shields.io/badge/python-3.11-brightgreen.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
@@ -683,6 +683,27 @@ Threat actors increasingly utilize Quick Response (QR) codes in emails, PDFs, an
 * **Credential Lure Risk Scoring:** Decodes target URLs and scores them against credential harvesting heuristics (`login`, `signin`, `auth`, `m365`, `verify`, `banking`, `password`, `update`).
 * **Safe Defanged Preview:** Neutralizes active URLs (`hxxps://[.]...`) while displaying clear QR payload metadata, destination hostnames, and redirect chains.
 
+### Interactive Forensic Entity Graph & Universal Forensic Entity Extraction
+Single-file analyses automatically compile an **Interactive Forensic Entity Graph** capturing all indicators, relationships, and forensic artifacts discovered across static inspection, metadata extraction, string search, and pattern matching:
+* **Universal Forensic Entity Extraction**:
+  * **Emails & Tracking Identifiers:** Extracted from RFC email headers, body content, document metadata fields, and encoded string blocks.
+  * **Domains, URLs & IP Targets:** Discovered external C2 links, download cradles, referrers, and DNS endpoints.
+  * **Watchlist & Suspicious Keywords:** Monitored suspicious terms, credential lures, and evasion triggers cross-matched against built-in security threat lists.
+  * **Hostnames & Machine Identifiers:** Discovered NetBIOS/DNS hostnames, internal domain controllers, and workstations.
+  * **Usernames, Authors & Signers:** Windows user accounts, document metadata creators (`Author`, `LastModifiedBy`), and Authenticode certificate signers.
+  * **Cryptographic Hashes & Embedded Artifacts:** MD5, SHA-1, SHA-256, Imphash, Rich Header hashes, and carved embedded polyglots.
+* **Force-Directed Dot-Matrix Canvas:** Interactive SVG canvas with smooth cursor-centered zoom/pan, draggable nodes, and category-color-coded nodes with connectivity count badges.
+* **Layout Presets & Sort Modes:** Radial, Category-Clustered, Sample-Centric, Format-Grouped, Hierarchical DAG, and Compact Grid with auto-spacing clearance and overlap-prevention passes.
+* **Operator Node Visibility Controls ("Hide" & "Unhide All"):**
+  * Selecting any node reveals a **"Hide"** checkbox in the floating inspector. Checking it instantly removes the node and its incident edges from view to declutter complex entity topologies.
+  * When hidden, the inspector remains accessible with an immediate **"Unhide"** toggle link.
+  * An **"Unhide All (N)"** button appears on the canvas toolbar whenever any nodes are hidden, restoring all hidden nodes with a single click.
+* **Operator Node Highlighting & Color Selector ("Highlight" & Palette Dropdown):**
+  * Selecting any node provides a **"Highlight"** checkbox.
+  * Checking "Highlight" renders a solid high-visibility perimeter ring (`strokeWidth="3"`, `fill="none"`) around the node.
+  * A dynamic color dropdown selector appears with a live color swatch preview, offering 10 high-contrast security palette choices: Amber/Gold (`#f59e0b`), Crimson Red (`#ef4444`), Emerald Green (`#10b981`), Sky Blue (`#0ea5e9`), Violet/Purple (`#8b5cf6`), Hot Pink (`#ec4899`), Orange (`#f97316`), Teal (`#14b8a6`), Yellow (`#eab308`), and Indigo (`#6366f1`).
+  * A **"Clear Highlights (N)"** toolbar button enables wiping all custom highlights across the canvas at once.
+
 ### Multi-File "Incident Investigation Workspace" & Campaign Grouping
 Modern security incidents rarely involve a single isolated file — adversaries coordinate multi-stage campaigns leveraging weaponized documents, dropper binaries, C2 network traffic, and scheduled task events. FileSanitizer includes a dedicated **Multi-File Incident Investigation Workspace** designed to ingest, correlate, and cross-analyze entire incident evidence bundles simultaneously:
 
@@ -710,6 +731,18 @@ Modern security incidents rarely involve a single isolated file — adversaries 
   * Entity value with one-click copy button
   * Node category, degree of connectivity, and forensic attributes
   * Direct 1-click **"Open File Analysis Tab"** button navigating straight to the target file's tab with zero re-analysis.
+* **Operator Node Visibility Controls ("Hide" & "Unhide All"):**
+  * Individual nodes can be hidden directly via the **"Hide"** checkbox in the side inspector drawer.
+  * Hiding a node automatically suppresses its incident edges, decluttering large multi-file campaign graphs.
+  * If a node is hidden while selected, the inspector drawer remains open with a direct **"Unhide"** action link for immediate toggle reversal.
+  * An **"Unhide All (N)"** button appears dynamically in the canvas toolbar whenever any nodes are hidden, enabling instant restoration of the complete topology.
+* **Operator Node Highlighting & Multi-Color Dropdown ("Highlight"):**
+  * Selecting any entity reveals a **"Highlight"** checkbox.
+  * Checking "Highlight" draws a solid, bold circular highlight ring (`strokeWidth="3"`, `fill="none"`) around the node, mirroring selection styling with vivid color differentiation.
+  * Dynamically unfolds an intuitive color selection dropdown with an inline preview swatch, featuring 10 vibrant analyst colors: Amber/Gold (`#f59e0b`), Crimson Red (`#ef4444`), Emerald Green (`#10b981`), Sky Blue (`#0ea5e9`), Violet/Purple (`#8b5cf6`), Hot Pink (`#ec4899`), Orange (`#f97316`), Teal (`#14b8a6`), Yellow (`#eab308`), and Indigo (`#6366f1`).
+  * A **"Clear Highlights (N)"** button appears in the canvas toolbar to wipe all custom operator rings with a single click.
+* **Universal Cross-File Entity Correlation:**
+  * Correlates extracted emails, domains, watchlist keywords, IPs, hostnames, usernames, and authors/signers across all submitted files, badging shared campaign artifacts with high-visibility purple `SHARED` pills and count indicators.
 * **100% Strict Light Theme:** Eliminates all dark theme components and fads, enforcing consistent light cards (`bg-white`), borders (`border-slate-200`), and high-contrast badges.
 
 #### 2. Zynamics-Inspired BinDiff Binary Analysis Engine

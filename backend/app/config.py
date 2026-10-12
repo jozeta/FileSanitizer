@@ -5,7 +5,7 @@ import os
 
 class Settings(BaseSettings):
     APP_NAME: str = "FileSanitizer"
-    APP_VERSION: str = "2.2.7"
+    APP_VERSION: str = "2.2.8"
     APP_ENV: str = "production"
     DEBUG: bool = False
     API_PREFIX: str = "/api"
