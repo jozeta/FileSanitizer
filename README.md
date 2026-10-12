@@ -2,6 +2,14 @@
 
 > **"Don't trust the file. Wash it first."**
 
+[![Release](https://img.shields.io/badge/release-v2.2.5-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
+[![Python](https://img.shields.io/badge/python-3.11-brightgreen.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
+[![Nmap](https://img.shields.io/badge/Nmap-7.95+-darkblue.svg)](https://nmap.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 FileSanitizer is a modern, security-focused web application and API platform for **file sanitization, malware analysis, metadata removal, and Content Disarm and Reconstruction (CDR)**.
 
 Designed as a self-hosted Docker application, FileSanitizer allows users to upload untrusted files, inspect them across deep static and behavioral analyzers, review explainable risk reports, disarm potential exploit payloads, and download verified clean reconstructions.
@@ -137,6 +145,14 @@ SECURITY ANALYSIS
    ├── Active Content & Scripts (PDF JS, SVG/HTML scripts, macro hooks)
    ├── URL Extraction & SSRF-Protected Analysis
    ├── Sandboxed Web Preview (Headless browser screenshot)
+   ├── Domain/IP Threat Intelligence Platform (Parallel async pipeline, zero-latency SSRF validation)
+   │     ├── Nmap Active Service Reconnaissance (sudo nmap -sS -sV --version-light -T3 --open -Pn --reason -oA)
+   │     ├── Forward-Confirmed Reverse DNS (FCrDNS bi-directional PTR validation)
+   │     ├── Web Archive (Wayback Machine) Calendar Integration & Delta Diffing
+   │     ├── Related Infrastructure & Pivots (Smart separation of Direct Affiliates vs CDN/DDoS edge noise)
+   │     ├── Email Security & Spoofability Audit (DMARC, DKIM, SPF enforcement)
+   │     ├── Subdomain Topology & Attack Surface (crt.sh, SANs, DNS brute-force)
+   │     └── Active Security Audit Probes (Sensitive files, WAF detection, CORS/HTTP methods, TLS cryptography)
    └── External Threat Intelligence (VirusTotal, Hybrid Analysis, ThreatFox, CIRCL, AbuseIPDB, IPinfo, MXToolbox, RDAP)
    ↓
 EXPLAINABLE RISK EVALUATION & DETECTION RULE GENERATION (Sentinel KQL & YARA)
@@ -179,7 +195,7 @@ CLEAN FILE READY FOR DOWNLOAD
 | **Emails & Messages** | EML, MSG, MBOX | Full RFC header audit, SPF/DKIM/DMARC/ARC validation, homoglyph & Punycode domain spoofing (`xn--`), VIP impersonation, thread hijacking (`Re:` without headers), HTML smuggling (Blob/data URIs), inline QR Code Quishing analysis, MTA hop latency & geolocation, tracking pixels, attachment relationship graph | **Email Disarm:** Neutralize external tracking pixels, defang phishing URLs, strip dangerous attachments, reconstruct clean RFC message or export hardened vector PDF review document. |
 | **Executables & Binaries** | EXE, DLL, SYS, SCR, ELF, Mach-O | PE-bear & DIE static triage, DOS/PE/Optional headers, Imphash & Rich Header Hash (RichPV / Cleartext MD5), Capstone EP Disassembly (PEB access, direct syscalls, shellcode prologues), **High-Level C/C++ Binary Decompiler** (reconstructs C pseudocode, signatures, variables, branches/loops, API calls, and evasion constructs with Split Asm+C view and `.c` source export), Anti-Analysis heuristics (anti-debugging, timing evasion), Authenticode PKCS#7 verification, Linux ELF mitigations (NX, PIE, RELRO, Canary, Stripped), string search with min/max length filtering | **Binary Disarm:** Strip digital certificate overlays, purge abnormal embedded PE resources, isolate dangerous strings, enforce non-executable file permissions (`0o644`). |
 | **Scripts & Command Files** | PS1, VBS, VBA, SH, JS, PHP, CMD, BAT | Static AST & regex analysis: dynamic code execution (`IEX`, `eval`), download cradles (`DownloadString`, `curl | sh`), memory injection / AMSI bypass, Base64 block decoding with preview, LOLBin usage (`certutil`, `bitsadmin`, `mshta`), PHP webshell signatures, Shannon entropy | **Script Sanitizer:** Defang all URLs, disarm dynamic execution hooks (`IEX`, `eval`, `system`), append security disclosure banners, enforce non-executable permissions (`0o644`), or compile into read-only vector PDF review document. |
-| **Domains & IP Intelligence** | URL, Domain, IP | Live sandboxed headless browser webpage screenshot (used as thumbnail), full DNS resolution (A, AAAA, MX, NS, TXT, SOA), WHOIS/RDAP registrar & ownership profiling, reverse IP co-hosted domains, visual Punycode homograph comparison with confusable character mapping, and URL/IP obfuscation decoding (Hex, Dword, Octal, Double URL encoding). | **Network Defang:** Defang active URLs and domain IOCs (`hxxp://`, `[.]`), export structured intelligence reports. |
+| **Domain/IP & Infrastructure** | URL, Domain, IPv4, IPv6 | Non-blocking async threat platform: Live sandboxed Chromium webpage screenshot, full DNS resolution & Forward-Confirmed Reverse DNS (FCrDNS), BGP routing & ASN profiling, Nmap Active Service Reconnaissance (`sudo nmap -sS -sV --version-light -T3 --open -Pn --reason -oA`), Active Security Probes (sensitive file exposure, WAF detection, CORS/HTTP methods), Web Archive (Wayback Machine) calendar integration & snapshot diffing, Smart Infrastructure Pivots (separating direct affiliates from CDN/DDoS edge noise), Typosquatting Radar, and Email Security (DMARC/DKIM/SPF). | **Network Defang & Report:** Defang active URLs and domain IOCs (`hxxp://`, `[.]`), export structured threat intelligence dossiers (JSON/PDF). |
 | **Plain Text & Data** | TXT, CSV, JSON, XML, YAML, Markdown | Character encoding analysis (UTF-8, UTF-16, BOM), CSV formula injection (DDE execution attacks) | **Text Sanitizer:** Strip BOM, sanitize DDE formula prefixes (`=`, `+`, `-`, `@`), strip control characters. |
 
 ---
@@ -198,8 +214,8 @@ The application runs as an isolated multi-container architecture defined in `doc
 | Service Container | Port / Binding | Role & Technology |
 | :--- | :--- | :--- |
 | `filesanitizer-frontend` | `80:80`, `8080:80` | Nginx reverse proxy serving the React 19 + TypeScript + Vite single-page application. |
-| `filesanitizer-api` | `8000:8000` | FastAPI Python 3.11 asynchronous API engine, forensic analyzers, and CDR pipelines. |
-| `filesanitizer-worker` | Internal network | Celery distributed worker executing asynchronous threat analysis and heavy processing. |
+| `filesanitizer-api` | `8000:8000` | FastAPI Python 3.11 asynchronous API engine, forensic analyzers, Nmap 7.95+ active service scanner, and CDR pipelines (`cap_add: [SETUID, SETGID, NET_RAW, NET_ADMIN, AUDIT_WRITE]`). |
+| `filesanitizer-worker` | Internal network | Celery distributed worker executing asynchronous threat analysis, Nmap active reconnaissance, and heavy processing (`cap_add: [SETUID, SETGID, NET_RAW, NET_ADMIN, AUDIT_WRITE]`). |
 | `filesanitizer-redis` | `6379` (Internal) | Redis in-memory message broker, task queue, and intermediate cache. |
 | `filesanitizer-clamav` | `3310` (Internal) | ClamAV antivirus scanner daemon with automatic `freshclam` signature database updates. |
 | `filesanitizer-browser` | `3000` (Internal) | Isolated Playwright Node.js headless browser for sandboxed URL previews and screenshots. |
@@ -208,7 +224,7 @@ The application runs as an isolated multi-container architecture defined in `doc
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/example/FileSanitizer.git
+   git clone https://github.com/jozeta/FileSanitizer.git
    cd FileSanitizer
    ```
 
@@ -347,6 +363,8 @@ To enable external threat intelligence feeds for discovered hashes, files, and U
 | `DELETE` | `/api/jobs/{id}` | Immediately purge workspace and temporary artifacts. |
 | `GET` | `/api/jobs/{id}/detection-rules` | Generate automated Microsoft Sentinel (KQL) and YARA detection rules tailored to discovered IOCs, commands, and hashes. |
 | `POST` | `/api/jobs/correlate` | Correlate multiple forensic jobs into an incident campaign workspace (BinDiff binary similarity, force-directed threat graph, unified timeline & timestomping, hash matrix, IP geolocation, and ATT&CK kill chain). |
+| `POST` | `/api/files/investigate-ioc` | Submit a remote URL, Domain, or IP address for comprehensive threat intelligence analysis. |
+| `POST` | `/api/jobs/{id}/active-recon` | Trigger operator-authorized Nmap service reconnaissance and active security audit probes on a domain or IP. |
 | `POST` | `/api/fetch-url` | Submit a public or intranet-safe URL for SSRF-protected sandboxed analysis and website screenshot capture. |
 | `GET` | `/api/health` | Service health check and scanner connectivity diagnostics. |
 
@@ -496,15 +514,68 @@ Deep static AST and regex inspection for scripts and command files (`.ps1`, `.vb
 * **QR Code Quishing in Attachments & Body:** Scans inline images and PDF attachments for credential harvesting QR codes designed to evade Secure Email Gateway (SEG) URL filters.
 * **MTA Hop Geolocation & Attachment Graph:** Maps mail transfer agent latency, geographical IP hops, and relationship diagrams for multi-attachment emails.
 
-### Domain & IP Infrastructure Intelligence (DNSlytics / WHOIS / DNSChecker inspired)
+### Domain/IP Threat Intelligence Platform & Attack Surface Reconnaissance
+FileSanitizer provides a high-performance, asynchronous threat intelligence platform for investigating domains, hostnames, IPv4, and IPv6 infrastructure:
+* **High-Speed Parallel Pipeline:** Executes investigative modules concurrently across independent worker threads with zero-latency anti-SSRF pre-flight checks, delivering complete threat profiles in seconds.
 * **Live Sandboxed Webpage Screenshot:** Headless Chromium captures full-page visual screenshots of submitted domains and web servers, rendered directly as the file thumbnail.
 * **Punycode & Homograph Impersonation Visualizer:** Detects Internationalized Domain Names (IDN) and renders the visual Unicode representation alongside the Punycode string, explicitly enumerating confusable characters (e.g., Cyrillic `а` vs Latin `a`).
 * **DNS Records Resolution:** Resolves and validates full DNS records: `A`, `AAAA`, `MX` (with preference scores), `NS`, `TXT` (SPF, DKIM, DMARC), `SOA`, and reverse PTR pointers.
 * **RDAP / WHOIS Profiling:** Pulls registration date, expiration date, calculated domain age, registrar identity, and DNSSEC validation status.
 * **Reverse IP & ASN Intelligence:** Queries Autonomous System Numbers (ASN), organization names, BGP routing prefixes, and discovers co-hosted domains on the target IP.
 * **IP & URL Obfuscation Detection:** Decodes Dword (`http://2130706433/`), Hex (`http://0x7f000001/`), Octal (`http://0177.0.0.1/`), double URL percent-encoding, and userinfo `@` credential masking.
-* **Domain & Network Infrastructure Intelligence:** Identifies corporate owners, Autonomous System Numbers (ASN), ISP, and allocated CIDR network ranges (e.g. `193.183.161.0/24`), sibling domains owned by the organization, and strictly validated co-hosted virtual domains.
-* **Visual Punycode Homograph Rendering:** Highlights ASCII encoded punycode domains alongside their visual Unicode rendering and simulated Latin lookalikes (e.g. `xn--pple-43d.com` → `аpple.com` masquerading as `apple.com`).
+
+### Nmap Active Service Reconnaissance & Daemon Versioning (Strictly Opt-In)
+When authorized by the operator, FileSanitizer executes controlled, in-depth service and port reconnaissance using **Nmap 7.95+** with the following production specification:
+```bash
+sudo nmap -sS -sV --version-light -T3 --open -Pn \
+  -p 21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1433,1521,2049,2375,3306,3389,5432,5900,5985,5986,6379,8080,8443,9200,11211,27017 \
+  --reason -oA nmap-service-scan <target>
+```
+* **Half-Open SYN Stealth Scan (`-sS`):** Sends raw TCP SYN packets without completing the three-way handshake, maximizing scan velocity, stealth, and compatibility across restrictive stateful firewalls.
+* **Light Service Versioning (`-sV --version-light`):** Employs probe intensity 2 (out of 9), interrogating open ports with targeted service banners while keeping total scan turnaround times under 15 seconds.
+* **Key Enterprise Ports (31 Ports):** Audits web (80, 443, 8080, 8443), remote management (22 SSH, 23 Telnet, 3389 RDP, 5900 VNC, 5985/5986 WinRM), mail (25 SMTP, 110 POP3, 143 IMAP, 993 IMAPS, 995 POP3S), databases (1433 MS-SQL, 1521 Oracle, 3306 MySQL, 5432 PostgreSQL, 6379 Redis, 9200 Elasticsearch, 11211 Memcached, 27017 MongoDB), and network services (21 FTP, 53 DNS, 111 RPC, 135 MSRPC, 139 NetBIOS, 445 SMB, 2049 NFS, 2375 Docker API).
+* **Probe Reason Tracking (`--reason`):** Captures the exact TCP response flag that determined port status (`syn-ack`, `conn-ack`).
+* **Firewall Resilience (`-Pn`):** Skips ICMP ping discovery, ensuring hosts that drop echo requests (AWS, Azure, Cloudflare, Akamai) are thoroughly scanned.
+* **Automated CVE & Vulnerability Catalog Matching:** Extracted software product names and version strings (e.g. `OpenSSH 8.9p1`, `nginx 1.24.0`, `Cloudflare http proxy`) automatically feed into FileSanitizer's Vulnerability Intelligence engine to correlate known CVEs and CISA KEV entries.
+* **Collapsible Raw Terminal Drawer:** The UI includes an expandable drawer showing the exact executed command line alongside the full raw terminal output from `nmap-service-scan.nmap`.
+* **Three-Tier Fallback Hierarchy:**
+  1. Primary: `sudo nmap -sS` (Raw SYN scan utilizing `NET_RAW`/`NET_ADMIN` capabilities).
+  2. Unprivileged Fallback: `nmap -sT` (TCP Connect scan if host capability restrictions prevent raw socket synthesis).
+  3. Safe Fallback: Pure Python socket banner grabber if the `nmap` binary is absent.
+
+### Smart Infrastructure Pivots: Eliminating Multi-Tenant CDN & DDoS Noise
+Modern domains hosted behind DDoS mitigation scrubbers or Content Delivery Networks (e.g., Baffin Bay Networks, Cloudflare, Fastly, Akamai) share edge IP addresses and authoritative nameservers with thousands of unrelated third-party websites:
+* **Direct Affiliates Isolation:** Automatically isolates high-confidence cryptographic siblings (domains sharing Subject Alternative Names on the target's TLS certificate, shared apex domain ownership, or enterprise infrastructure).
+* **Multi-Tenant Neighbor Noise Suppression:** Co-hosted domains that share only multi-tenant edge IPs or public registrar nameservers are separated into a distinct **Shared Multi-Tenant Infrastructure Neighbors** category and tucked into a collapsible accordion area, preventing false-positive clutter in analyst workflows.
+* **Granular Relationship Filtering:** Filter relations by confidence level (*High*, *Medium*, *Low*), relationship type (*Cryptographic TLS SAN*, *Shared Apex*, *Co-Hosted*), and real-time text query.
+
+### Forward-Confirmed Reverse DNS (FCrDNS) Verification
+* **Bi-Directional DNS Alignment:** Resolves forward `A` / `AAAA` records to determine IP addresses, queries PTR reverse DNS for each IP, and re-resolves the PTR hostnames forward to verify mutual confirmation.
+* **Spoofing & Poisoning Detection:** Flags mismatched configurations, missing PTR pointers, and PTR spoofing attempts commonly associated with botnet relays and phishing mail servers.
+
+### Web Archive (Wayback Machine) Timeline & Delta Diffing
+* **Direct Calendar Linkage:** Formulates verified direct URLs to the Wayback Machine calendar timeline (`https://web.archive.org/web/*/<target>`).
+* **Snapshot Enumeration & Change Detection:** Queries the Wayback Machine Availability API to retrieve total snapshot counts, earliest capture timestamp, and most recent archived snapshot.
+* **Automated Snapshot Delta Diffing:** Compares the latest archived HTML snapshot with the live HTTP response to surface website defacement, staging alterations, and historical redirect chains.
+
+### Active Security Probing & Attack Surface Triage
+* **Sensitive File Exposure:** Probes for exposed configuration files, environment credentials, and repository leakage (`/.env`, `/.git/config`, `/wp-config.php.bak`, `/backup.sql`, `/phpinfo.php`).
+* **Web Application Firewall (WAF) Fingerprinting:** Identifies active WAF/DDoS protection layers (Cloudflare, AWS WAF, Akamai, Imperva, Baffin Bay) by evaluating HTTP response headers, cookie flags, and block page challenge signatures.
+* **CORS & Dangerous HTTP Methods:** Audits Cross-Origin Resource Sharing policies (`Access-Control-Allow-Origin: *`) and tests for dangerous HTTP verbs (`PUT`, `DELETE`, `TRACE`).
+* **TLS Cryptography Audit:** Audits TLS version support (TLS 1.0, 1.1, 1.2, 1.3), cipher suite strength, certificate expiration delta, and HSTS enforcement.
+
+### Subdomain Topology & Attack Surface Mapping
+* **Passive & Active Discovery:** Discovers subdomains via Certificate Transparency (crt.sh), TLS Subject Alternative Names (SANs), DNS CNAME chains, and active resolution probes.
+* **Provenance Tracking:** Every subdomain card details its exact discovery source (`crt.sh`, `TLS SAN`, `DNS CNAME`, `Active Probe`) and live IP resolution.
+
+### Email Security & Domain Spoofability Audit
+* **DMARC Enforcement Audit:** Analyzes DMARC records (`p=reject`, `p=quarantine`, `p=none`), subdomain policy inheritance (`sp`), percentage enforcement (`pct`), and forensic reporting endpoints (`rua`/`ruf`).
+* **DKIM Selector Health:** Verifies standard DKIM selector presence (`default`, `google`, `k1`, `mail`) and public key bit lengths.
+* **SPF Validation:** Evaluates Sender Policy Framework syntax, recursive lookup count limits (RFC 7208 maximum 10 lookups), and fallback qualifiers (`~all`, `-all`, `+all`).
+
+### Typosquatting & Impersonation Radar
+* **Algorithm-Driven Permutations:** Computes bitsquatting (single bit flips), homoglyphs (Cyrillic/Greek Unicode lookalikes), omission, repetition, transposition, replacement, and TLD variations across the target domain name.
+* **Live DNS Confirmation:** Probes permutations for active `A` and `MX` records to unmask registered lookalike domains configured for spear-phishing or brand impersonation.
 
 ### Browser Extension Security & Store Intelligence (Chrome & Edge)
 * **Package Disassembly:** Inspects `.crx` (CRX2/CRX3 headers with RSA/Ed25519 public key parsing) and unpacked extension `.zip` archives or Chrome Web Store URLs (`chromewebstore.google.com/detail/...`).
@@ -820,6 +891,9 @@ The automated test suite verifies:
 * Incident Threat Relationship Graph dot matrix canvas, draggable force-directed nodes, edge midpoint pill boxes, and slide-out Entity Inspector
 * Universal embedded files extraction and recursive job analysis
 * Admin login authentication and protected settings endpoints
+* Domain/IP Threat Intelligence: Parallel async pipeline, zero-latency anti-SSRF verification, and full DNS resolution
+* Nmap active service reconnaissance: SYN stealth scanning (`-sS`), light version detection (`-sV`), probe reason tracking, XML parsing, and fallback resilience
+* Forward-Confirmed Reverse DNS (FCrDNS), Web Archive (Wayback Machine) calendar linkage, and Typosquatting radar
 * Complete end-to-end integration pipeline (Upload → Analyze → Sanitize → Validate → Download)
 
 ### Frontend Build & Linting
