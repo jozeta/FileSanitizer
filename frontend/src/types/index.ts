@@ -1786,6 +1786,8 @@ export interface DomainIntelligence {
     revival_gap_days?: number | null;
     status_code_distribution: Record<string, number>;
     wayback_calendar_url?: string;
+    wayback_https_calendar_url?: string;
+    wayback_www_calendar_url?: string;
     api_status?: 'available' | 'service_unavailable' | 'verified_not_archived' | 'pending' | string;
     api_status_code?: number | null;
     api_error_detail?: string | null;

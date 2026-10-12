@@ -1822,8 +1822,12 @@ class SettingsStore:
 
 # JWT Auth Helpers
 def verify_admin_login(username: str, password: str) -> bool:
-    """Verify admin login credentials against configuration."""
-    return username == settings.ADMIN_USERNAME and password == settings.ADMIN_PASSWORD
+    """Verify admin login credentials against configuration with whitespace and CRLF resilience."""
+    clean_user = (username or "").strip()
+    clean_pass = (password or "").strip()
+    expected_user = (getattr(settings, "ADMIN_USERNAME", "admin") or "admin").strip()
+    expected_pass = (getattr(settings, "ADMIN_PASSWORD", "admin") or "admin").strip()
+    return clean_user == expected_user and clean_pass == expected_pass
 
 def create_admin_token(username: str, expires_in_seconds: int = 86400) -> str:
     """Generate a signed JWT token for the authenticated admin."""

@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional, Tuple
 import unicodedata
 import httpx
 import dateutil.parser
+from concurrent.futures import ThreadPoolExecutor
 
 from app.core.logging_config import logger
 from app.network.input_normalizer import UniversalInputNormalizer
@@ -168,41 +169,33 @@ class DomainAnalyzer:
         for anom in adv_dns.get("anomalies", []):
             res["risk_flags"].append(anom)
 
-        # 5. WHOIS / RDAP Registration Intelligence
-        whois_data = cls.query_rdap_whois(clean_target, is_ip=is_ip)
-        res["whois"] = whois_data
-
-        # Check domain age risk
-        domain_age_days = whois_data.get("domain_age_days")
-        if domain_age_days is not None and domain_age_days < 30:
-            res["risk_flags"].append({
-                "severity": "high",
-                "title": f"Newly Registered Domain ({domain_age_days} Days Old)",
-                "description": f"Domain was registered very recently on {whois_data.get('registration_date', 'recent')}. Newly registered domains are disproportionately used in phishing and malware campaigns."
-            })
-
-        # 6. Reverse IP, ASN & Co-hosted Domains
+        # 5. Extract IP and DNS records required for parallel intelligence tasks
         resolved_ips = adv_dns["records"].get("a", []) if not is_ip else [clean_target]
         primary_ip = resolved_ips[0] if resolved_ips else (clean_target if is_ip else None)
+        ns_records = adv_dns.get("records", {}).get("ns", [])
+        mx_records = [m.get("host") if isinstance(m, dict) else m for m in adv_dns.get("records", {}).get("mx", [])]
+        tls_port = norm_ind.target_port if (norm_ind.target_port and norm_ind.target_port != 80) else 443
 
-        sibling_domains: List[str] = []
-        net_info: Dict[str, Any] = {}
-        if primary_ip:
-            co_hosted, net_info = cls.query_reverse_ip_and_asn(primary_ip)
-            res["co_hosted_domains"] = [d for d in co_hosted if cls._is_valid_domain_string(d)]
-            res["network"] = net_info
+        # 6. Execute all independent network reconnaissance & intelligence activities in parallel
+        def _task_whois():
+            try:
+                return cls.query_rdap_whois(clean_target, is_ip=is_ip)
+            except Exception as e:
+                logger.debug(f"RDAP whois lookup failed for {clean_target}: {e}")
+                return {}
 
-            # ASN Infrastructure Profiling
-            asn_prof = ThreatIntelligenceAggregator.profile_asn(primary_ip, net_info)
-            res["asn_profile"] = asn_prof
-            if asn_prof.get("is_bulletproof_suspect"):
-                res["risk_flags"].append({
-                    "severity": "high",
-                    "title": "High-Risk / Bulletproof Hosting Infrastructure",
-                    "description": f"IP {primary_ip} is hosted on {asn_prof.get('as_org')}, known for bulletproof hosting and abuse tolerance."
-                })
+        def _task_reverse_ip():
+            if not primary_ip:
+                return [], {}
+            try:
+                co_hosted, net_info = cls.query_reverse_ip_and_asn(primary_ip)
+                return [d for d in co_hosted if cls._is_valid_domain_string(d)], net_info
+            except Exception as e:
+                logger.debug(f"Reverse IP / ASN lookup failed for {primary_ip}: {e}")
+                return [], {}
 
-            # Sibling domains via HackerTarget
+        def _task_sibling_domains():
+            s_domains: List[str] = []
             root_domain = cls.get_registered_domain(clean_target) if not is_ip else None
             if root_domain and not cls._is_ip_address(root_domain):
                 try:
@@ -213,40 +206,185 @@ class DomainAnalyzer:
                                 parts = line.split(",")
                                 if parts:
                                     h = parts[0].strip().lower()
-                                    if cls._is_valid_domain_string(h) and h not in sibling_domains:
-                                        sibling_domains.append(h)
+                                    if cls._is_valid_domain_string(h) and h not in s_domains:
+                                        s_domains.append(h)
                 except Exception:
                     pass
+            return s_domains
 
-        # 7. Passive TLS & Certificate Transparency
-        tls_port = norm_ind.target_port if (norm_ind.target_port and norm_ind.target_port != 80) else 443
-        tls_data = TLSInspector.inspect(clean_target, port=tls_port, query_ct_logs=not is_ip)
+        def _task_tls():
+            try:
+                return TLSInspector.inspect(clean_target, port=tls_port, query_ct_logs=not is_ip)
+            except Exception as e:
+                logger.debug(f"TLS inspection failed for {clean_target}: {e}")
+                return {}
+
+        def _task_web_fingerprint():
+            try:
+                return WebFingerprinter.fingerprint(target)
+            except Exception as e:
+                logger.debug(f"Web fingerprinting failed for {target}: {e}")
+                return {}
+
+        def _task_web_exposure():
+            try:
+                return WebExposureInspector.inspect(clean_target)
+            except Exception as e:
+                logger.debug(f"Web exposure inspection failed for {clean_target}: {e}")
+                return {"tested": False, "target": clean_target}
+
+        def _task_cti():
+            try:
+                return ThreatIntelligenceAggregator.aggregate_intelligence(clean_target, "ip" if is_ip else "domain")
+            except Exception as e:
+                logger.debug(f"CTI aggregation failed for {clean_target}: {e}")
+                return {}
+
+        def _task_active_recon():
+            try:
+                return ActiveServiceScanner.scan_services(clean_target, authorized=active_recon)
+            except Exception as e:
+                logger.debug(f"Active recon failed for {clean_target}: {e}")
+                return {}
+
+        def _task_active_probes():
+            try:
+                return ActiveSecurityProber.probe_all(
+                    clean_target,
+                    mx_hosts=adv_dns.get("records", {}).get("mx", []),
+                    authorized=active_recon
+                )
+            except Exception as e:
+                logger.debug(f"Active security probing failed for {clean_target}: {e}")
+                return {"tested": False}
+
+        def _task_email_sec():
+            if is_ip:
+                return None
+            try:
+                return EmailSecurityAuditor.audit(clean_target)
+            except Exception as e:
+                logger.debug(f"Email security audit failed for {clean_target}: {e}")
+                return None
+
+        def _task_web_archive():
+            try:
+                return WebArchiveInspector.inspect(clean_target)
+            except Exception as e:
+                logger.debug(f"Web archive lookup failed for {clean_target}: {e}")
+                return {"target": clean_target, "archived": False, "api_status": "service_unavailable"}
+
+        def _task_bgp():
+            if not primary_ip:
+                return None
+            try:
+                return BgpRoutingInspector.inspect(primary_ip, None)
+            except Exception as e:
+                logger.debug(f"BGP routing inspection failed for {primary_ip}: {e}")
+                return None
+
+        def _task_pdns():
+            try:
+                return PassiveDnsClient.query_pdns(clean_target, is_ip=is_ip)
+            except Exception as e:
+                logger.debug(f"Passive DNS lookup failed for {clean_target}: {e}")
+                return None
+
+        def _task_leak():
+            try:
+                return LeakExposureSearcher.search_leaks(clean_target)
+            except Exception as e:
+                logger.debug(f"Leak exposure search failed for {clean_target}: {e}")
+                return None
+
+        def _task_rev_infra():
+            try:
+                return ReverseInfrastructurePivoter.pivot(clean_target, nameservers=ns_records, mx_hosts=mx_records)
+            except Exception as e:
+                logger.debug(f"Reverse infrastructure pivoting failed for {clean_target}: {e}")
+                return {"tested": False, "target": clean_target}
+
+        def _task_typosquat():
+            if is_ip:
+                return {"tested": False, "target": clean_target}
+            try:
+                return TyposquattingGenerator.analyze(clean_target)
+            except Exception as e:
+                logger.debug(f"Typosquatting analysis failed for {clean_target}: {e}")
+                return {"tested": False, "target": clean_target}
+
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            f_whois = pool.submit(_task_whois)
+            f_rev_ip = pool.submit(_task_reverse_ip)
+            f_sibling = pool.submit(_task_sibling_domains)
+            f_tls = pool.submit(_task_tls)
+            f_web = pool.submit(_task_web_fingerprint)
+            f_web_exp = pool.submit(_task_web_exposure)
+            f_cti = pool.submit(_task_cti)
+            f_active_recon = pool.submit(_task_active_recon)
+            f_active_probes = pool.submit(_task_active_probes)
+            f_email_sec = pool.submit(_task_email_sec)
+            f_web_arch = pool.submit(_task_web_archive)
+            f_bgp = pool.submit(_task_bgp)
+            f_pdns = pool.submit(_task_pdns)
+            f_leak = pool.submit(_task_leak)
+            f_rev_infra = pool.submit(_task_rev_infra)
+            f_typosquat = pool.submit(_task_typosquat)
+
+            whois_data = f_whois.result()
+            co_hosted_domains, net_info = f_rev_ip.result()
+            sibling_domains = f_sibling.result()
+            tls_data = f_tls.result()
+            web_data = f_web.result()
+            web_exp = f_web_exp.result()
+            cti_data = f_cti.result()
+            active_scan = f_active_recon.result()
+            active_probes = f_active_probes.result()
+            email_sec = f_email_sec.result()
+            web_arch = f_web_arch.result()
+            bgp_data = f_bgp.result()
+            pdns_data = f_pdns.result()
+            leak_data = f_leak.result()
+            rev_infra = f_rev_infra.result()
+            typo_data = f_typosquat.result()
+
+        # 7. Assemble Parallel Inspection Results & Security Risk Flags
+        res["whois"] = whois_data
+        domain_age_days = whois_data.get("domain_age_days")
+        if domain_age_days is not None and domain_age_days < 30:
+            res["risk_flags"].append({
+                "severity": "high",
+                "title": f"Newly Registered Domain ({domain_age_days} Days Old)",
+                "description": f"Domain was registered very recently on {whois_data.get('registration_date', 'recent')}. Newly registered domains are disproportionately used in phishing and malware campaigns."
+            })
+
+        res["co_hosted_domains"] = co_hosted_domains
+        res["network"] = net_info
+        asn_prof = ThreatIntelligenceAggregator.profile_asn(primary_ip, net_info) if primary_ip else {}
+        res["asn_profile"] = asn_prof
+        if asn_prof.get("is_bulletproof_suspect"):
+            res["risk_flags"].append({
+                "severity": "high",
+                "title": "High-Risk / Bulletproof Hosting Infrastructure",
+                "description": f"IP {primary_ip} is hosted on {asn_prof.get('as_org')}, known for bulletproof hosting and abuse tolerance."
+            })
+
         res["tls_profile"] = tls_data
         for finding in tls_data.get("security_findings", []):
             res["risk_flags"].append(finding)
 
-        # 8. Web Technology & Redirection Fingerprinting
-        web_data = WebFingerprinter.fingerprint(target)
         res["web_fingerprint"] = web_data
         for finding in web_data.get("findings", []):
             res["risk_flags"].append(finding)
 
-        # 8b. Passive Web Exposure & Asset Harvesting (robots.txt, sitemap.xml, .well-known)
-        try:
-            web_exp = WebExposureInspector.inspect(clean_target)
-            res["web_exposure"] = web_exp
-            for rf in web_exp.get("risk_flags", []):
-                res["risk_flags"].append({
-                    "severity": rf.get("severity", "medium").lower(),
-                    "title": rf.get("title"),
-                    "description": rf.get("description")
-                })
-        except Exception as e:
-            logger.debug(f"Web exposure inspection failed for {clean_target}: {e}")
-            res["web_exposure"] = {"tested": False, "target": clean_target}
+        res["web_exposure"] = web_exp
+        for rf in web_exp.get("risk_flags", []):
+            res["risk_flags"].append({
+                "severity": rf.get("severity", "medium").lower(),
+                "title": rf.get("title"),
+                "description": rf.get("description")
+            })
 
-        # 9. Multi-Feed Passive Threat Intelligence
-        cti_data = ThreatIntelligenceAggregator.aggregate_intelligence(clean_target, "ip" if is_ip else "domain")
         res["threat_intelligence"] = cti_data
         if cti_data.get("overall_verdict") in ("malicious", "suspicious"):
             res["risk_flags"].append({
@@ -255,7 +393,6 @@ class DomainAnalyzer:
                 "description": f"Target was flagged by threat intelligence feeds ({', '.join(cti_data.get('threat_tags', [])[:3])})."
             })
 
-        # 10. Attack Surface Subdomain Mapping
         if not is_ip:
             ct_subs = tls_data.get("ct_logs", {}).get("discovered_subdomains", [])
             tls_sans = (tls_data.get("live_cert") or {}).get("sans", [])
@@ -263,90 +400,52 @@ class DomainAnalyzer:
             surface_map = SubdomainMapper.map_surface(clean_target, ct_subs, tls_sans, dns_cnames, sibling_domains)
             res["attack_surface"] = surface_map
 
-        # 11. Controlled Active Reconnaissance & Security Probes (strictly opt-in)
-        active_scan = ActiveServiceScanner.scan_services(clean_target, authorized=active_recon)
         res["active_recon"] = active_scan
+        res["active_security_probes"] = active_probes
+        for rf in active_probes.get("risk_flags", []):
+            res["risk_flags"].append({
+                "severity": rf.get("severity", "high").lower(),
+                "title": rf.get("title"),
+                "description": rf.get("description")
+            })
 
-        try:
-            mx_records = adv_dns.get("records", {}).get("mx", [])
-            active_probes = ActiveSecurityProber.probe_all(
-                clean_target,
-                mx_hosts=mx_records,
-                authorized=active_recon
-            )
-            res["active_security_probes"] = active_probes
-            for rf in active_probes.get("risk_flags", []):
-                res["risk_flags"].append({
-                    "severity": rf.get("severity", "high").lower(),
-                    "title": rf.get("title"),
-                    "description": rf.get("description")
-                })
-        except Exception as e:
-            logger.debug(f"Active security probing failed for {clean_target}: {e}")
+        res["email_security"] = email_sec
+        if email_sec and email_sec.get("spoofability", {}).get("status") == "VULNERABLE":
+            res["risk_flags"].append({
+                "severity": "medium",
+                "title": "Email Spoofability Exposure (DMARC/SPF)",
+                "description": email_sec["spoofability"].get("summary", "")
+            })
 
-        # 12. Email Security, Spoofability & Brand Integrity Audit
-        if not is_ip:
-            try:
-                email_sec = EmailSecurityAuditor.audit(clean_target)
-                res["email_security"] = email_sec
-                if email_sec.get("spoofability", {}).get("status") == "VULNERABLE":
-                    res["risk_flags"].append({
-                        "severity": "medium",
-                        "title": "Email Spoofability Exposure (DMARC/SPF)",
-                        "description": email_sec["spoofability"].get("summary", "")
-                    })
-            except Exception as e:
-                logger.debug(f"Email security audit failed for {clean_target}: {e}")
+        res["web_archive"] = web_arch
+        for rf in web_arch.get("risk_flags", []):
+            res["risk_flags"].append({
+                "severity": rf.get("severity", "medium").lower(),
+                "title": rf.get("title"),
+                "description": rf.get("description")
+            })
 
-        # 13. Historical Web Archive & Website Evolution
-        try:
-            web_arch = WebArchiveInspector.inspect(clean_target)
-            res["web_archive"] = web_arch
-            for rf in web_arch.get("risk_flags", []):
+        res["bgp_routing"] = bgp_data
+        if bgp_data:
+            for rf in bgp_data.get("risk_flags", []):
                 res["risk_flags"].append({
                     "severity": rf.get("severity", "medium").lower(),
                     "title": rf.get("title"),
                     "description": rf.get("description")
                 })
-        except Exception as e:
-            logger.debug(f"Web archive lookup failed for {clean_target}: {e}")
 
-        # 14. BGP Routing, RPKI Validation & Route Hijack Detection
-        if primary_ip:
-            try:
-                asn_val = res.get("network", {}).get("asn") or (res.get("asn_profile") or {}).get("asn")
-                bgp_data = BgpRoutingInspector.inspect(primary_ip, asn_val)
-                res["bgp_routing"] = bgp_data
-                for rf in bgp_data.get("risk_flags", []):
-                    res["risk_flags"].append({
-                        "severity": rf.get("severity", "medium").lower(),
-                        "title": rf.get("title"),
-                        "description": rf.get("description")
-                    })
-            except Exception as e:
-                logger.debug(f"BGP routing inspection failed for {primary_ip}: {e}")
+        res["passive_dns"] = pdns_data
 
-        # 15. Passive DNS (pDNS) Co-Location & Sibling Infrastructure
-        try:
-            pdns_data = PassiveDnsClient.query_pdns(clean_target, is_ip=is_ip)
-            res["passive_dns"] = pdns_data
-        except Exception as e:
-            logger.debug(f"Passive DNS lookup failed for {clean_target}: {e}")
-
-        # 16. Public Pastebin & Leak Exposure Search
-        try:
-            leak_data = LeakExposureSearcher.search_leaks(clean_target)
-            res["leak_search"] = leak_data
+        res["leak_search"] = leak_data
+        if leak_data:
             for rf in leak_data.get("risk_flags", []):
                 res["risk_flags"].append({
                     "severity": rf.get("severity", "medium").lower(),
                     "title": rf.get("title"),
                     "description": rf.get("description")
                 })
-        except Exception as e:
-            logger.debug(f"Leak exposure search failed for {clean_target}: {e}")
 
-        # 17. Corporate & Owner Intelligence Synthesis
+        # 8. Corporate & Owner Intelligence Synthesis
         owner_name = (
             whois_data.get("registrant_org")
             or (res["network"].get("org") if res.get("network") else None)
@@ -380,23 +479,16 @@ class DomainAnalyzer:
             "more_ip_ranges": ip_ranges[:15]
         }
 
-        # 17b. Reverse Nameserver & Reverse Mail Server Infrastructure Pivots
+        # 9. Reverse Nameserver & Reverse Mail Server Infrastructure Pivots
         reverse_ns_domains: List[str] = []
         reverse_mx_domains: List[str] = []
-        try:
-            ns_records = adv_dns.get("records", {}).get("ns", [])
-            mx_records = [m.get("host") if isinstance(m, dict) else m for m in adv_dns.get("records", {}).get("mx", [])]
-            rev_infra = ReverseInfrastructurePivoter.pivot(clean_target, nameservers=ns_records, mx_hosts=mx_records)
-            res["reverse_infrastructure"] = rev_infra
-            for item in rev_infra.get("reverse_ns", []):
-                reverse_ns_domains.extend(item.get("associated_domains", []))
-            for item in rev_infra.get("reverse_mx", []):
-                reverse_mx_domains.extend(item.get("associated_domains", []))
-        except Exception as e:
-            logger.debug(f"Reverse infrastructure pivoting failed for {clean_target}: {e}")
-            res["reverse_infrastructure"] = {"tested": False, "target": clean_target}
+        res["reverse_infrastructure"] = rev_infra
+        for item in rev_infra.get("reverse_ns", []):
+            reverse_ns_domains.extend(item.get("associated_domains", []))
+        for item in rev_infra.get("reverse_mx", []):
+            reverse_mx_domains.extend(item.get("associated_domains", []))
 
-        # 17c. Reverse Tracking & Analytics Identifier Pivots
+        # 10. Reverse Tracking & Analytics Identifier Pivots
         tracking_domains: List[str] = []
         try:
             existing_ids = web_data.get("dom", {}).get("analytics_ids", [])
@@ -407,10 +499,10 @@ class DomainAnalyzer:
             logger.debug(f"Tracking identifier pivoting failed for {clean_target}: {e}")
             res["tracking_pivots"] = {"tested": False, "target": clean_target}
 
-        # 18. Restored & Evolved Ownership Pivoting (DomainRelationDiscovery - Always Executed)
+        # 11. Restored & Evolved Ownership Pivoting (DomainRelationDiscovery - Always Executed)
         try:
             from app.analyzers.domain_relations import DomainRelationDiscovery
-            budget = 25.0 if deep else 8.0
+            budget = 15.0 if deep else 3.5
             pdns_domains = (res.get("passive_dns") or {}).get("discovered_domains", [])
             rel = DomainRelationDiscovery.discover(
                 target=clean_target,
@@ -450,20 +542,14 @@ class DomainAnalyzer:
         except Exception as e:
             logger.warning(f"Related-domain discovery failed for {clean_target}: {e}")
 
-        # 18b. Typosquatting, Homoglyph & Lookalike Impersonator Generator
-        if not is_ip:
-            try:
-                typo_data = TyposquattingGenerator.analyze(clean_target)
-                res["typosquatting"] = typo_data
-                if typo_data.get("has_live_impersonators"):
-                    res["risk_flags"].append({
-                        "severity": "high",
-                        "title": f"Active Resolving Lookalike Domains Detected ({typo_data.get('active_registered_count', 0)})",
-                        "description": f"Discovered registered, resolving lookalike domains mimicking {clean_target}. May indicate active phishing or brand impersonation infrastructure."
-                    })
-            except Exception as e:
-                logger.debug(f"Typosquatting analysis failed for {clean_target}: {e}")
-                res["typosquatting"] = {"tested": False, "target": clean_target}
+        # 12. Typosquatting, Homoglyph & Lookalike Impersonator Generator
+        res["typosquatting"] = typo_data
+        if typo_data.get("has_live_impersonators"):
+            res["risk_flags"].append({
+                "severity": "high",
+                "title": f"Active Resolving Lookalike Domains Detected ({typo_data.get('active_registered_count', 0)})",
+                "description": f"Discovered registered, resolving lookalike domains mimicking {clean_target}. May indicate active phishing or brand impersonation infrastructure."
+            })
 
         # 18c. Technology Version to CISA KEV & EPSS Vulnerability Correlator
         try:

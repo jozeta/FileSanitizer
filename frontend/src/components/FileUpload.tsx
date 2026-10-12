@@ -164,7 +164,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             }`}
           >
             <Globe className="w-4 h-4 text-blue-600" />
-            <span>Fetch Remote URL, Domain or IP</span>
+            <span>Check Domain or IP</span>
           </button>
         </div>
       </div>

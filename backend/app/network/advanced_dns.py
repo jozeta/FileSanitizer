@@ -7,6 +7,7 @@ Analyzes: Low TTL / fast-flux rotation, wildcard DNS, SPF anomalies, and danglin
 import uuid
 import socket
 from typing import Dict, Any, List, Optional
+from concurrent.futures import ThreadPoolExecutor
 import httpx
 
 from app.core.logging_config import logger
@@ -150,8 +151,8 @@ class AdvancedDNSInspector:
             return result
 
         resolver = dns.resolver.Resolver()
-        resolver.timeout = 2.5
-        resolver.lifetime = 3.5
+        resolver.timeout = 1.2
+        resolver.lifetime = 2.0
 
         # 1. Resolve Standard & Advanced Records
         cls._query_records(resolver, clean_target, result)
@@ -297,9 +298,10 @@ class AdvancedDNSInspector:
             except Exception as e:
                 logger.debug(f"DNS query error for {record_type} on {domain}: {e}")
 
-        # Core queries
-        for rtype in ["A", "AAAA", "CNAME", "MX", "NS", "SOA", "TXT", "CAA", "SRV", "HTTPS"]:
-            _safe_query(rtype)
+        # Core queries executed in parallel
+        record_types = ["A", "AAAA", "CNAME", "MX", "NS", "SOA", "TXT", "CAA", "SRV", "HTTPS"]
+        with ThreadPoolExecutor(max_workers=len(record_types)) as pool:
+            list(pool.map(_safe_query, record_types))
 
     @classmethod
     def _check_dnssec(cls, resolver: Any, domain: str, result: Dict[str, Any]) -> None:

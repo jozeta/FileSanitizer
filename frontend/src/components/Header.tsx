@@ -12,6 +12,39 @@ interface HeaderProps {
   onReset?: () => void;
 }
 
+const SECURITY_SLOGANS = [
+  "Wash your bytes before you eat them.",
+  "Zero Trust, 100% Detergent.",
+  "There is no place like 127.0.0.1 without macros.",
+  "Defanging hostile bits since 1999.",
+  "Making shady attachments cry since v1.0.",
+  "Laundering suspicious files ethically.",
+  "Because 'Invoice.pdf.exe' is never an invoice.",
+  "Soap for your suspicious payloads.",
+  "Giving ransomware an existential crisis.",
+  "Your digital dry cleaner for sketchy files.",
+  "Disarming macros before they hatch.",
+  "Trust nothing. Sanitize everything.",
+  "Where suspicious macros go to die.",
+  "Don't open that attachment, let us wash it.",
+  "Turning weaponized PDFs into harmless pictures.",
+  "No zero-days in our laundry basket.",
+  "Exterminating byte bugs with forensic precision.",
+  "Because curiosity killed the admin's weekend.",
+  "Cleaning digital grease from untrusted sources.",
+  "Treat every file like radioactive waste.",
+  "Scrubbing byte dirt so you sleep at night.",
+  "Stripping bad macros faster than coffee kicks in.",
+  "Even clean files get a courtesy wash.",
+  "Disinfecting phishing bait one click at a time.",
+  "Guaranteed 99.9% malware-free or your bits back.",
+  "Where LOLBins go to lose their laughs.",
+  "Putting shady packets on a strict diet.",
+  "Bleaching suspicious hex strings daily.",
+  "De-weaponizing internet mystery files.",
+  "Keep calm and sanitize the payload.",
+];
+
 export const Header: React.FC<HeaderProps> = ({ 
   currentView, 
   onNavigate, 
@@ -19,6 +52,9 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [health, setHealth] = useState<any>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!localStorage.getItem('fs_admin_token'));
+  const [slogan] = useState<string>(() => {
+    return SECURITY_SLOGANS[Math.floor(Math.random() * SECURITY_SLOGANS.length)];
+  });
 
   useEffect(() => {
     apiClient.getHealth().then(setHealth).catch(() => {});
@@ -52,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="font-semibold text-lg text-slate-900 tracking-tight">FileSanitizer</span>
               <span className="text-[11px] font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">v{APP_VERSION} CDR</span>
             </div>
-            <p className="text-xs text-slate-500 font-normal hidden sm:block">Don't trust the file. Wash it first.</p>
+            <p className="text-xs text-slate-500 font-normal hidden sm:block">{slogan}</p>
           </div>
         </button>
 

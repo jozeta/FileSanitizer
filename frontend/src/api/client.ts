@@ -258,16 +258,43 @@ export const apiClient = {
 
   // Admin Settings & Management API
   async adminLogin(username: string, password: string): Promise<{ success: boolean; token: string; username: string }> {
-    const res = await fetch(`${API_BASE}/settings/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Invalid administrator credentials' }));
-      throw new Error(err.detail || 'Login failed');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const res = await fetch(`${API_BASE}/settings/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: (username || '').trim(), 
+          password: (password || '').trim() 
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        let errorDetail = `Login failed (HTTP ${res.status})`;
+        try {
+          const err = await res.json();
+          if (err && err.detail) errorDetail = err.detail;
+        } catch {
+          if (res.status === 401) {
+            errorDetail = 'Invalid administrator username or password.';
+          } else if (res.status === 504 || res.status === 502) {
+            errorDetail = 'Backend gateway timeout (504). Service is still initializing.';
+          }
+        }
+        throw new Error(errorDetail);
+      }
+      return res.json();
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        throw new Error('Login connection timed out after 15 seconds. Please ensure the backend is running.');
+      }
+      throw err;
     }
-    return res.json();
   },
 
   async verifyAdminSession(token: string): Promise<boolean> {

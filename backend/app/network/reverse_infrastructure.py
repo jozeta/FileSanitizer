@@ -52,8 +52,17 @@ class ReverseInfrastructurePivoter:
         Executes Reverse-NS and Reverse-MX lookups for custom infrastructure.
         """
         clean_target = target_domain.strip().lower()
-        ns_list = [ns.strip().lower().rstrip(".") for ns in (nameservers or []) if ns]
-        mx_list = [mx.strip().lower().rstrip(".") for mx in (mx_hosts or []) if mx]
+        def _to_str(val: Any) -> Optional[str]:
+            if isinstance(val, dict):
+                v = val.get("host") or val.get("exchange") or val.get("server") or ""
+                return str(v).strip().lower().rstrip(".") if v else None
+            if isinstance(val, str):
+                s = val.strip().lower().rstrip(".")
+                return s if s else None
+            return None
+
+        ns_list = [s for s in (_to_str(ns) for ns in (nameservers or [])) if s]
+        mx_list = [s for s in (_to_str(mx) for mx in (mx_hosts or [])) if s]
 
         ns_results: List[Dict[str, Any]] = []
         mx_results: List[Dict[str, Any]] = []

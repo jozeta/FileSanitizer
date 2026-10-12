@@ -1,11 +1,11 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
 from typing import Optional
 import os
 
 class Settings(BaseSettings):
     APP_NAME: str = "FileSanitizer"
-    APP_VERSION: str = "2.1.0"
+    APP_VERSION: str = "2.2.2"
     APP_ENV: str = "production"
     DEBUG: bool = False
     API_PREFIX: str = "/api"
@@ -60,6 +60,13 @@ class Settings(BaseSettings):
 
     # Redis Broker
     REDIS_URL: Optional[str] = "redis://redis:6379/0"
+
+    @field_validator("ADMIN_USERNAME", "ADMIN_PASSWORD", "ADMIN_SECRET_KEY", "REDIS_URL", mode="before")
+    @classmethod
+    def strip_whitespace_crlf(cls, v):
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
     class Config:
         env_file = ".env"

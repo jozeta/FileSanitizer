@@ -1569,202 +1569,286 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
         )}
 
         {/* ================= TAB: HISTORICAL WEB ARCHIVE ================= */}
-        {activeTab === 'archive' && (
-          <div className="space-y-5">
-            {webArch ? (
-              <>
-                {/* Archive Status Banner */}
-                {webArch.archived ? (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-blue-50/70 border border-blue-200 rounded-xl gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
-                        <Archive className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-slate-900">Wayback Machine Archive Record</h4>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                            Archived
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 mt-0.5">
-                          Historical snapshots recorded by the Internet Archive Wayback Machine for <span className="font-mono font-medium text-slate-800">{domainInfo.target}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <a
-                      href={webArch.wayback_calendar_url || `https://web.archive.org/web/*/${domainInfo.target}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition shrink-0"
-                    >
-                      <span>Open Wayback Calendar</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                ) : webArch.api_status === 'service_unavailable' ? (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-amber-50/80 border border-amber-200 rounded-xl gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0">
-                        <AlertTriangle className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-amber-950">Wayback Machine API Temporarily Offline (HTTP 503)</h4>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                            Service Throttled / Offline
-                          </span>
-                        </div>
-                        <p className="text-xs text-amber-900/90 mt-0.5">
-                          The Internet Archive automated CDX / Availability API is undergoing maintenance or service downtime. Snapshots can still be inspected directly in the Wayback Machine web calendar.
-                        </p>
-                      </div>
-                    </div>
-                    <a
-                      href={webArch.wayback_calendar_url || `https://web.archive.org/web/*/${domainInfo.target}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-semibold rounded-lg shadow-sm transition shrink-0"
-                    >
-                      <span>Open Wayback Calendar</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center shrink-0">
-                        <Archive className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-slate-800">No Direct Archive Snapshots Indexed</h4>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-300">
-                            Not Indexed
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          No automated historical snapshots returned by archive.org for {domainInfo.target}.
-                        </p>
-                      </div>
-                    </div>
-                    <a
-                      href={`https://web.archive.org/web/*/${domainInfo.target}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-medium rounded-lg transition shrink-0"
-                    >
-                      <span>Search Wayback Machine</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                )}
+        {activeTab === 'archive' && (() => {
+          const cleanTarget = (domainInfo.target || '').replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+          const waybackHttpUrl = webArch?.wayback_calendar_url || `https://web.archive.org/web/*/http://${cleanTarget}*`;
+          const waybackHttpsUrl = webArch?.wayback_https_calendar_url || `https://web.archive.org/web/*/https://${cleanTarget}*`;
+          const waybackWwwUrl = webArch?.wayback_www_calendar_url || `https://web.archive.org/web/*/http://www.${cleanTarget.replace(/^www\./i, '')}*`;
+          const archiveTodayUrl = `https://archive.today/newest/https://${cleanTarget}`;
+          const urlscanUrl = `https://urlscan.io/search/#page.domain%3A${encodeURIComponent(cleanTarget)}`;
 
-                {/* Timeline Header */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">First Seen in Archive</span>
-                    <p className="text-xs font-bold font-mono text-slate-800 mt-1">
-                      {webArch.first_seen || (webArch.archived ? 'Indexed in Wayback Machine' : webArch.api_status === 'service_unavailable' ? 'API Offline (Check Calendar)' : 'Not Archived')}
-                    </p>
-                  </div>
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Last Seen in Archive</span>
-                    <p className="text-xs font-bold font-mono text-slate-800 mt-1">
-                      {webArch.last_seen || (webArch.archived ? 'Recorded in Archive' : webArch.api_status === 'service_unavailable' ? 'API Offline (Check Calendar)' : 'Not Archived')}
-                    </p>
-                  </div>
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Historic Snapshots</span>
-                    <p className="text-base font-extrabold text-blue-700 mt-0.5">
-                      {webArch.snapshot_count > 0 ? webArch.snapshot_count : (webArch.archived ? '1+' : webArch.api_status === 'service_unavailable' ? 'Inspect Calendar' : 0)}
-                    </p>
-                  </div>
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Historic Archive Span</span>
-                    <p className="text-xs font-bold font-mono text-slate-800 mt-1">
-                      {webArch.age_days ? `${Math.round(webArch.age_days / 365)} Years (${webArch.age_days} days)` : (webArch.archived ? 'Multiple Snapshots' : webArch.api_status === 'service_unavailable' ? 'Historical Timeline' : 'N/A')}
-                    </p>
-                  </div>
-                </div>
+          return (
+            <div className="space-y-5">
+              {webArch ? (
+                <>
+                  {/* Archive Status Banner */}
+                  {webArch.archived ? (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-blue-50/70 border border-blue-200 rounded-xl gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+                          <Archive className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-slate-900">Wayback Machine Archive Record</h4>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              Archived
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 mt-0.5">
+                            Historical snapshots recorded by the Internet Archive Wayback Machine for <span className="font-mono font-medium text-slate-800">{cleanTarget}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <a
+                          href={waybackHttpUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition shrink-0"
+                        >
+                          <span>Open Wayback Calendar</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={archiveTodayUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-medium rounded-lg shadow-xs transition shrink-0"
+                        >
+                          <span>Archive.today</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  ) : webArch.api_status === 'service_unavailable' ? (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-amber-50/80 border border-amber-200 rounded-xl gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0">
+                          <AlertTriangle className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-amber-950">Wayback Machine Unreachable / Offline Maintenance</h4>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              API Offline (Use Mirrors)
+                            </span>
+                          </div>
+                          <p className="text-xs text-amber-900/90 mt-0.5 leading-relaxed">
+                            The Internet Archive cluster is actively refusing connections or experiencing downtime. While Archive.org is offline, you can view snapshots on active alternative archives below:
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <a
+                          href={archiveTodayUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition shrink-0"
+                          title="Independent active archive mirror"
+                        >
+                          <span>Search Archive.today</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={urlscanUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-lg shadow-sm transition shrink-0"
+                          title="View historical security scans on urlscan.io"
+                        >
+                          <span>URLScan.io History</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={waybackHttpUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-xs font-medium rounded-lg transition shrink-0"
+                          title="Official Wayback Calendar (may refuse connections if server is down)"
+                        >
+                          <span>Wayback Calendar</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center shrink-0">
+                          <Archive className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-slate-800">No Automated Archive Snapshots Returned</h4>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-300">
+                              Unindexed
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            No automated snapshots returned for apex domain {cleanTarget}. Check canonical variations or subpaths directly.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <a
+                          href={waybackHttpUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-medium rounded-lg transition shrink-0"
+                        >
+                          <span>Search Wayback Machine</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
 
-                {/* Dormant Revival Warning */}
-                {webArch.dormant_revival_detected && (
-                  <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-950 flex items-start gap-3">
-                    <Flame className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                    <div>
-                      <h5 className="text-xs font-bold uppercase tracking-wider">Dormant Domain Revival / Repurposing Detected</h5>
-                      <p className="text-xs mt-0.5 leading-relaxed">
-                        This domain had an inactivity gap of over {Math.round((webArch.revival_gap_days || 730) / 365)} years before recent re-activation. Threat actors frequently buy expired domains with positive legacy SEO reputation to deploy spear-phishing or C2 channels.
+                  {/* Timeline Header */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">First Seen in Archive</span>
+                      <p className="text-xs font-bold font-mono text-slate-800 mt-1">
+                        {webArch.first_seen || (webArch.archived ? 'Indexed in Wayback Machine' : webArch.api_status === 'service_unavailable' ? 'API Offline (Check Calendar)' : 'Not Indexed')}
+                      </p>
+                    </div>
+                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Last Seen in Archive</span>
+                      <p className="text-xs font-bold font-mono text-slate-800 mt-1">
+                        {webArch.last_seen || (webArch.archived ? 'Recorded in Archive' : webArch.api_status === 'service_unavailable' ? 'API Offline (Check Calendar)' : 'Not Indexed')}
+                      </p>
+                    </div>
+                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Historic Snapshots</span>
+                      <p className="text-base font-extrabold text-blue-700 mt-0.5">
+                        {webArch.snapshot_count > 0 ? webArch.snapshot_count : (webArch.archived ? '1+' : webArch.api_status === 'service_unavailable' ? 'Inspect Calendar' : 0)}
+                      </p>
+                    </div>
+                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Historic Archive Span</span>
+                      <p className="text-xs font-bold font-mono text-slate-800 mt-1">
+                        {webArch.age_days ? `${Math.round(webArch.age_days / 365)} Years (${webArch.age_days} days)` : (webArch.archived ? 'Multiple Snapshots' : webArch.api_status === 'service_unavailable' ? 'Historical Timeline' : 'N/A')}
                       </p>
                     </div>
                   </div>
-                )}
 
-                {/* Recent Snapshots Table */}
-                {webArch.recent_snapshots && webArch.recent_snapshots.length > 0 ? (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-xs font-mono">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px]">
-                        <tr>
-                          <th className="py-2.5 px-4">Snapshot Date</th>
-                          <th className="py-2.5 px-4">Status</th>
-                          <th className="py-2.5 px-4">Content Type</th>
-                          <th className="py-2.5 px-4 text-right">Wayback Machine</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {webArch.recent_snapshots.map((snap, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50">
-                            <td className="py-2 px-4 text-slate-800 font-medium">{snap.date}</td>
-                            <td className="py-2 px-4">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                snap.status_code === '200' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
-                              }`}>
-                                HTTP {snap.status_code}
-                              </span>
-                            </td>
-                            <td className="py-2 px-4 text-slate-500">{snap.mimetype || 'text/html'}</td>
-                            <td className="py-2 px-4 text-right">
-                              <a
-                                href={snap.archive_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium"
-                              >
-                                <span>Inspect Snapshot</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            </td>
+                  {/* Dormant Revival Warning */}
+                  {webArch.dormant_revival_detected && (
+                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-950 flex items-start gap-3">
+                      <Flame className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="text-xs font-bold uppercase tracking-wider">Dormant Domain Revival / Repurposing Detected</h5>
+                        <p className="text-xs mt-0.5 leading-relaxed">
+                          This domain had an inactivity gap of over {Math.round((webArch.revival_gap_days || 730) / 365)} years before recent re-activation. Threat actors frequently buy expired domains with positive legacy SEO reputation to deploy spear-phishing or C2 channels.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent Snapshots Table */}
+                  {webArch.recent_snapshots && webArch.recent_snapshots.length > 0 ? (
+                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px]">
+                          <tr>
+                            <th className="py-2.5 px-4">Snapshot Date</th>
+                            <th className="py-2.5 px-4">Status</th>
+                            <th className="py-2.5 px-4">Content Type</th>
+                            <th className="py-2.5 px-4 text-right">Wayback Machine</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="p-8 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500 space-y-2">
-                    <p>
-                      {webArch.api_status === 'service_unavailable'
-                        ? 'Internet Archive API is temporarily offline (HTTP 503). Snapshots could not be retrieved via automated query.'
-                        : 'No historical snapshots indexed by the Internet Archive Wayback Machine.'}
-                    </p>
-                    <a
-                      href={webArch.wayback_calendar_url || `https://web.archive.org/web/*/${domainInfo.target}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-semibold"
-                    >
-                      <span>Check Wayback Machine Calendar Directly</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="p-8 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500">
-                Historical web archive inspection pending.
-              </div>
-            )}
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {webArch.recent_snapshots.map((snap, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="py-2 px-4 text-slate-800 font-medium">{snap.date}</td>
+                              <td className="py-2 px-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  snap.status_code === '200' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+                                }`}>
+                                  HTTP {snap.status_code}
+                                </span>
+                              </td>
+                              <td className="py-2 px-4 text-slate-500">{snap.mimetype || 'text/html'}</td>
+                              <td className="py-2 px-4 text-right">
+                                <a
+                                  href={snap.archive_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                >
+                                  <span>Inspect Snapshot</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="p-8 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500 space-y-3">
+                      <p>
+                        {webArch.api_status === 'service_unavailable'
+                          ? 'Internet Archive API is temporarily offline or timed out. Snapshots could not be retrieved via automated query.'
+                          : 'No historical snapshots returned for apex query. Check canonical variations below.'}
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <a
+                          href={archiveTodayUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+                        >
+                          <span>Search Archive.today (Working Mirror)</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={urlscanUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+                        >
+                          <span>URLScan.io History</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={waybackHttpUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium transition"
+                        >
+                          <span>Wayback Calendar (http://{cleanTarget}*)</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={waybackHttpsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium transition"
+                        >
+                          <span>HTTPS Variant</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        {!cleanTarget.startsWith('www.') && (
+                          <a
+                            href={waybackWwwUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium transition"
+                          >
+                            <span>www.{cleanTarget} Variant</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="p-8 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500">
+                  Historical web archive inspection pending.
+                </div>
+              )}
 
             {/* Investigation Snapshot Comparison (Time-Series Delta Tracking) */}
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
@@ -1864,7 +1948,8 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
               )}
             </div>
           </div>
-        )}
+        );
+      })()}
 
         {/* ================= TAB: BGP ROUTING, RPKI & PASSIVE DNS ================= */}
         {activeTab === 'bgp_pdns' && (

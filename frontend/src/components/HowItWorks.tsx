@@ -14,7 +14,8 @@ import {
   Clock, 
   GlobeLock,
   Layers,
-  Sparkles
+  Sparkles,
+  Laptop
 } from 'lucide-react';
 
 interface HowItWorksProps {
@@ -26,51 +27,51 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
   const steps = [
     {
       num: "01",
-      title: "Safe Ingestion, Domain & SSRF Protection",
+      title: "Safe Ingestion, Host Discovery & Anti-SSRF Protection",
       icon: GlobeLock,
-      tag: "Ingestion & Intel",
+      tag: "Ingestion & Recon",
       tagColor: "bg-blue-50 text-blue-700 border-blue-200",
-      description: "Upload local files or enter a remote URL, domain, or IP address. Submitting a domain or IP captures a live sandboxed browser screenshot as thumbnail, resolves full DNS records, and performs WHOIS/RDAP registration, reverse IP co-hosting, and visual Punycode homograph analysis. Remote download URLs pass through recursive DNS resolution and strict SSRF filters, blocking cloud metadata (169.254.169.254), loopback, and private RFC 1918 subnets."
+      description: "Upload local files or enter remote URLs, domains, or IPv4/IPv6 indicators. Domain targets trigger automated Host Discovery: authoritative DNS records, WHOIS/RDAP ownership, BGP routing & ASN prefixes, passive exposure harvesting (robots.txt, sitemaps, .well-known), FCrDNS verification, Wayback Machine snapshots, and sandboxed browser rendering with visual Punycode homograph defense. Remote file fetches pass through recursive DNS checking and anti-SSRF filters, barring cloud metadata (169.254.169.254), loopbacks, and RFC 1918 private subnets."
     },
     {
       num: "02",
-      title: "Magic-Byte Identification & Hashing",
+      title: "Magic-Byte Forensics, Binary Headers & Hashes",
       icon: Search,
-      tag: "Verification",
+      tag: "Verification & Hashing",
       tagColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
-      description: "Never trust the file extension. FileSanitizer analyzes binary headers and hex magic bytes to discover true MIME types, exposing dangerous extension-spoofing tricks (e.g. invoice.pdf.exe). Cryptographic SHA-256, SHA-1, and MD5 hashes are generated as permanent forensic identifiers."
+      description: "Never trust file extensions. FileSanitizer parses binary magic bytes across Windows PE, Linux ELF, macOS Mach-O, Windows EVTX logs, LNK shortcuts, PCAP packet traces, and OLE/ZIP packages, eliminating double-extension spoofing (e.g. invoice.pdf.exe). Cryptographic SHA-256, SHA-1, MD5, and fuzzy hashes are cataloged as immutable forensic identifiers."
     },
     {
       num: "03",
-      title: "Streaming Antivirus Inspection",
+      title: "Streaming Antivirus & Threat Intelligence Feeds",
       icon: ShieldCheck,
-      tag: "Antivirus",
+      tag: "Malware & CTI Scanners",
       tagColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      description: "Uploaded files are streamed over an isolated TCP socket to a dedicated ClamAV daemon container without ever executing on the host. If active trojans, ransomware, or virus signatures are detected, the file is immediately quarantined and clean file generation is blocked by default."
+      description: "Samples are streamed over an isolated socket to a dedicated ClamAV daemon equipped with community signature feeds (SecuriteInfo, Sanesecurity) without host execution. Fingerprinted technologies, C2 indicators, and hashes are correlated against CISA Known Exploited Vulnerabilities (KEV), FIRST EPSS (Exploit Prediction Scoring System), ThreatFox (abuse.ch), CIRCL Hashlookup (NSRL benign database), and VirusTotal."
     },
     {
       num: "04",
-      title: "Deep Structural Decomposition",
+      title: "Structural Decomposition & Forensic Timelines",
       icon: Layers,
-      tag: "Decomposition",
+      tag: "Deep Decomposition",
       tagColor: "bg-purple-50 text-purple-700 border-purple-200",
-      description: "Files are unpacked down to their atomic components: PDF cross-reference tables and indirect objects, OpenXML relationship packages, OLE compound storages, SVG Document Object Models (DOM), and recursive archive trees. Directory traversal paths (../../) and zip bombs (>100x compression) are trapped."
+      description: "Files are unpacked to atomic primitives: Windows EVTX event streams (generating chronological timelines of logons, process launches, and privilege escalations), PCAP network conversations (HTTP sessions, cleartext credentials, SNI hosts), PDF cross-reference tables and object streams, OpenXML packages, OLE compound files, Windows LNK shell links, and nested archives. Directory traversals (../../) and zip bombs (>100:1 ratio) are blocked."
     },
     {
       num: "05",
-      title: "Active Content & Exploit Disarmament",
+      title: "Active Content & Binary Exploit Mitigations",
       icon: Cpu,
-      tag: "Exploit Defense",
+      tag: "Exploit Disarmament",
       tagColor: "bg-amber-50 text-amber-700 border-amber-200",
-      description: "Static inspection without code execution identifies embedded Visual Basic for Applications (VBA) macros, ActiveX controls, remote template injection (attachedTemplate), PDF JavaScript actions, /Launch commands, external URI actions, CSV formula/DDE injections (=cmd|...), and SVG inline scripts."
+      description: "Static inspection without code execution identifies embedded VBA macros, Excel 4.0 XLM macro sheets, ActiveX controls, remote template injection (attachedTemplate), PDF JavaScript actions, /Launch hooks, CSV formula/DDE execution (=cmd|...), and browser extension permission misuse. Compiled native binaries undergo checksec v3 mitigation audits: Stack Canary, NX / DEP, ASLR / PIE, RELRO, Fortify Source, SafeSEH, and CFG."
     },
     {
       num: "06",
-      title: "Privacy & Metadata Extraction",
+      title: "Privacy, Optical OCR & Forensic Telemetry",
       icon: EyeOff,
-      tag: "Privacy Audit",
+      tag: "Privacy & Provenance",
       tagColor: "bg-rose-50 text-rose-700 border-rose-200",
-      description: "Identifies hidden information that could compromise privacy: precise GPS geographic coordinates, camera make/model/serial numbers, internal author identities, organization names, tracked revision history, deleted document drafts, reviewer comments, and embedded external URLs."
+      description: "Exposes sensitive data that compromises privacy: precise GPS coordinates, camera make/model/serial numbers, internal author and modifier identities, organizational emails, revision history, and reviewer comments. Optical Character Recognition (OCR) extracts hidden text from photos; QR code scanners decode hidden payloads; and C2PA Content Credentials audit AI-generated imagery and synthetic deepfakes."
     },
     {
       num: "07",
@@ -78,15 +79,15 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
       icon: Wrench,
       tag: "Reconstruction",
       tagColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
-      description: "Rather than attempting to patch broken files, Content Disarm & Reconstruction rebuilds clean files from safe raw primitives. Office files have macros purged and relationships neutralized. Images have pixel buffers re-encoded. PDFs can be flattened into high-resolution rendered pixel pages."
+      description: "Rather than attempting to patch infected documents, Content Disarm & Reconstruction rebuilds clean files from safe raw primitives. Office files have macros purged and relationships neutralized. Images have pixel buffers re-encoded. PDFs can be flattened into high-resolution rendered pixel pages. Windows LNK shortcuts have arguments scrubbed, and archives are re-bundled with safe data only."
     },
     {
       num: "08",
-      title: "Post-Sanitization Verification Matrix",
+      title: "Verification Matrix, Graph Correlation & Dossiers",
       icon: CheckCircle2,
-      tag: "Validation",
+      tag: "Validation & Graph",
       tagColor: "bg-teal-50 text-teal-700 border-teal-200",
-      description: "The sanitized file undergoes full secondary re-analysis. An automated before-and-after comparison matrix proves that metadata fields dropped to zero, macros were eradicated, URLs were removed, and the file passes secondary ClamAV inspection before you download it."
+      description: "The sanitized file undergoes complete secondary multi-scanner re-inspection. An automated before-and-after comparison matrix proves that metadata fields dropped to zero, active macros were eradicated, and URLs were neutralized. Discovered indicators automatically link across multiple analyzed files in the unified Incident Correlation Graph, with one-click asset investigation pivots."
     }
   ];
 
@@ -218,17 +219,17 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
             </div>
             <h4 className="text-sm font-semibold text-slate-900">Non-Root & Zero Caps</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Containers run under unprivileged UIDs with Linux capabilities dropped (<code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">cap_drop: ALL</code>).
+              Containers run under unprivileged UIDs (1001) with Linux capabilities dropped (<code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">cap_drop: ALL</code>).
             </p>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Lock className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Laptop className="w-4 h-4" />
             </div>
-            <h4 className="text-sm font-semibold text-slate-900">Immutable Originals</h4>
+            <h4 className="text-sm font-semibold text-slate-900">Cross-Platform Docker</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Original files are stored in isolated UUID directories and never overwritten. Clean files are completely new artifacts.
+              Natively runs across macOS (Apple Silicon & Intel), Windows 11 (x64 AMD/Intel via WSL2), and Linux (amd64 & arm64).
             </p>
           </div>
 
@@ -236,9 +237,9 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
             <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
               <GlobeLock className="w-4 h-4" />
             </div>
-            <h4 className="text-sm font-semibold text-slate-900">Anti-SSRF Protection</h4>
+            <h4 className="text-sm font-semibold text-slate-900">Anti-SSRF & Network Shield</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Strict DNS checking blocks requests to localhost, AWS/GCP cloud metadata, Docker internal networks, and private IP blocks.
+              Recursive DNS checks block requests to cloud metadata (169.254.169.254), loopbacks, and RFC 1918 subnets across bridge networks.
             </p>
           </div>
 
@@ -246,9 +247,9 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
             <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <Clock className="w-4 h-4" />
             </div>
-            <h4 className="text-sm font-semibold text-slate-900">30-Min Auto-Purge</h4>
+            <h4 className="text-sm font-semibold text-slate-900">Isolated 30-Min Auto-Purge</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Background cleanup daemon permanently purges job workspaces, original samples, and screenshots every 30 minutes.
+              Originals reside in UUID directories and are never overwritten; daemons permanently purge workspaces and screenshots every 30 mins.
             </p>
           </div>
         </div>

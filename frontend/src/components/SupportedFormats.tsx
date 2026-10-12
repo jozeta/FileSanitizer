@@ -18,7 +18,8 @@ import {
   Puzzle,
   Terminal,
   Globe,
-  Activity
+  Activity,
+  Link as LinkIcon
 } from 'lucide-react';
 
 interface SupportedFormatsProps {
@@ -31,12 +32,16 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
 
   const analysisEngines = [
     { name: "Didier Stevens oledump.py", desc: "Deep OLE stream hierarchy & XLM macro sheet analysis" },
-    { name: "pefile & pyelftools", desc: "PE, ELF & Mach-O executable structural & import analysis" },
+    { name: "slimm609/checksec v3", desc: "Binary exploit mitigations (Canary, ASLR, DEP, RELRO, CFG)" },
+    { name: "pefile, pyelftools & Mach-O", desc: "Native executable structural decomposition & import analysis" },
+    { name: "python-evtx Engine", desc: "Windows Event Log binary chunk parsing & MITRE ATT&CK mapping" },
     { name: "ClamAV Multi-Engine", desc: "Core engine + SecuriteInfo & Sanesecurity community feeds" },
+    { name: "CISA KEV & FIRST EPSS", desc: "Known Exploited Vulnerabilities & Exploit Prediction scoring" },
     { name: "YARA Rules Engine", desc: "Office DDE, XLM Macros, LOLBins, & CVE pattern rules" },
-    { name: "CIRCL Hashlookup", desc: "NSRL trusted operating system benign hash verification" },
-    { name: "ThreatFox by Abuse.ch", desc: "Malware payload hashes and command-and-control IOCs" },
-    { name: "urlscan.io", desc: "Automated URL reputation, DOM scanner & threat profiling" },
+    { name: "CIRCL Hashlookup & NSRL", desc: "Trusted operating system benign hash verification" },
+    { name: "ThreatFox & AbuseIPDB", desc: "Malware payload hashes, C2 indicators & IP reputation" },
+    { name: "Wayback Machine & Archive", desc: "Historical snapshot exploration & domain time-series tracking" },
+    { name: "BGPView & Team Cymru", desc: "Autonomous System (ASN) prefix routing & BGP path discovery" },
     { name: "VirusTotal & URLhaus", desc: "Multi-scanner file hashes and malicious host reputation" },
   ];
 
@@ -95,6 +100,7 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
         "Windows PE parsing via pefile (COFF Headers, Optional Header, Subsystem, Target Architecture)",
         "Linux ELF inspection via pyelftools (ELF Headers, PT_LOAD segments, DT_NEEDED shared libraries)",
         "macOS Mach-O parsing (Fat binary multi-architecture slices, LC_LOAD_DYLIB, Code Signatures)",
+        "Binary exploit mitigations audit via checksec v3 (Stack Canary, NX / DEP, ASLR / PIE, Full/Partial RELRO, Fortify Source, SafeSEH, CFG)",
         "Shannon section entropy calculation (detects UPX, Themida, and encrypted payloads)",
         "Suspicious API import heuristic matching (VirtualAlloc, WriteProcessMemory, CreateRemoteThread)",
         "Linux dynamic execution indicators (ptrace anti-debugging, memfd_create fileless execution)",
@@ -204,6 +210,8 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
         "XMP (Extensible Metadata Platform) and IPTC core photo structures",
         "Embedded thumbnails, preview icons, and auxiliary image streams",
         "Embedded URLs within EXIF string headers or comment chunks",
+        "Optical Character Recognition (OCR) text discovery for screenshots and scanned documents",
+        "QR Code and 2D barcode payload extraction and malicious URL triage",
         "ICC color profiles and alpha channel transparency masks"
       ],
       sanitizations: [
@@ -357,30 +365,102 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
     },
     {
       id: "network",
-      category: "Network Infrastructure & Domain/IP Targets",
+      category: "Domain/IP & Host Intelligence",
       icon: Globe,
       iconColor: "text-blue-600 bg-blue-50 border-blue-200",
-      extensions: ["Domains (e.g. google.com)", "IP Addresses (e.g. 8.8.8.8)", "Remote URLs"],
-      description: "Direct infrastructure and target intelligence profiling for web domains, IPv4 addresses, and active hyperlinks with passive WHOIS, DNS records, and sandboxed screenshots.",
+      extensions: ["Domains (e.g. folksam.se)", "IPv4 / IPv6 Addresses", "Hostnames & URLs"],
+      description: "Deep infrastructure, host discovery, and domain intelligence profiling combining authoritative DNS, BGP/ASN routing, passive web exposure, CISA KEV/EPSS correlation, and sandboxed screenshots.",
       threats: [
-        "Punycode / Homograph Impersonation Attacks",
-        "Newly Registered Malicious C2 Domains (<30 days)",
-        "Co-Hosted Malware Distribution IP Nodes",
-        "SSRF (Server-Side Request Forgery) Intranet Probing",
-        "Invalid or Expired TLS / SSL Certificates"
+        "Active C2 Communication & Malicious Hosting",
+        "CISA KEV Known Exploited Frameworks & CMS",
+        "Punycode & Homoglyph Lookalike Impersonation",
+        "Unprotected Web Exposure (robots.txt, .well-known, sitemaps)",
+        "Spoofed Reverse DNS / Mail Server Impersonation",
+        "Shared Infrastructure & Malicious Neighboring Domains"
       ],
       checks: [
-        "Passive WHOIS registration data (Registrar, Created Date, Expiration, Domain Age in days)",
-        "DNS multi-record resolution (A IPv4 records, MX mail exchangers, NS authoritative nameservers, TXT SPF/verification)",
-        "Reverse DNS & PTR hostname lookup and co-hosted domain enumerations",
-        "Punycode homograph impersonation detection with visual user appearance spoofing rendering",
-        "Sandboxed browser headless screenshot capture for visual domain preview",
-        "Multi-source threat reputation lookups across VirusTotal, AbuseIPDB, and AlienVault OTX"
+        "Complete DNS resolution (A, AAAA, MX, NS, TXT, CNAME, SOA, CAA, PTR)",
+        "Forward-Confirmed Reverse DNS (FCrDNS) verification for mail and server hosts",
+        "BGP Routing & ASN intelligence (announced prefix, origin ASN, RIR registration, ISP type)",
+        "Passive Web Exposure harvesting (robots.txt disallow rules, sitemap.xml endpoints, .well-known/ PKI)",
+        "CISA KEV & FIRST EPSS vulnerability correlation for fingerprinted web servers, frameworks, and CMS",
+        "Reverse Nameserver (Reverse-NS) and Reverse Mail Server (Reverse-MX) shared infrastructure pivots",
+        "Collapsible CDN & DDoS infrastructure filtering (Baffin Bay, Cloudflare, Akamai) isolating true affiliates",
+        "Typosquatting & lookalike domain generator (bitsquatting, homoglyphs, omissions, hyphenations)",
+        "Reverse tracking & analytics pivots (Google Analytics UA/G-, Tag Manager GTM-, AdSense pub-)",
+        "Wayback Machine / Internet Archive historical snapshot query and first-seen/last-seen tracking",
+        "Investigation snapshot comparison and time-series delta change tracking",
+        "Live sandboxed headless browser rendering and high-resolution screenshot preview"
       ],
       sanitizations: [
-        "Pure infrastructure analysis (CDR sanitization automatically bypassed for network infrastructure targets)",
-        "Quarantines hostile URLs and neutralizes tracking beacons in downstream reports",
-        "Provides exportable JSON / HTML incident response dossiers"
+        "Pure infrastructure intelligence: CDR file sanitization is safely bypassed for network targets",
+        "Defangs all hostile target URLs and links across forensic incident response dossiers",
+        "Exports structured intelligence dossiers in JSON, CSV, and formatted forensic reports",
+        "Enables one-click IOC quick-enrichment across all file analysis jobs (PCAP, EVTX, Email, etc.)"
+      ]
+    },
+    {
+      id: "evtx",
+      category: "Windows Event Logs (EVTX)",
+      icon: Activity,
+      iconColor: "text-emerald-600 bg-emerald-50 border-emerald-200",
+      extensions: [".evtx"],
+      description: "Windows XML Event Log binary files parsed with python-evtx, reconstructing multi-log chronological incident timelines, MITRE ATT&CK techniques, and privilege escalation.",
+      threats: [
+        "Pass-the-Hash & NTLM Relay Logons (Event 4624)",
+        "Kerberoasting & Ticket Granting Attacks (Event 4769)",
+        "Brute-Force & Password Spraying (Event 4625)",
+        "Event Log Clearing & Defense Evasion (Event 1102 / 104)",
+        "Malicious Service & Scheduled Task Installs (Event 7045 / 4698)",
+        "LSASS Memory Access & Dumping (Sysmon Event 10)"
+      ],
+      checks: [
+        "Binary XML chunk validation & parsing via python-evtx",
+        "MITRE ATT&CK technique classification across 100+ Windows Security, System, and Sysmon Event IDs",
+        "Multi-log chronological timeline correlation across multiple EVTX files in unified incident workspace",
+        "Brute-force burst heuristic analysis (detects high-frequency failed logon bursts within tight time windows)",
+        "Privilege escalation token audit (SeDebugPrivilege, SeTcbPrivilege, SeBackupPrivilege assignments)",
+        "Lateral movement indicators (Type 3 network logons, PsExec service installation 7045, WinRM connections)",
+        "Suspicious parent-child process tree analysis (Office documents spawning cmd.exe or powershell.exe)",
+        "PowerShell script block logging analysis (Event 4104 obfuscated script blocks and download cradles)",
+        "Account lockout event tracking (Event 4740) and user privilege change audits (Events 4728/4732)",
+        "One-click IOC quick-enrichment pivot for extracted domains, IPv4 addresses, and executable hashes"
+      ],
+      sanitizations: [
+        "Redact and mask sensitive internal usernames, domains, and security identifier (SID) strings",
+        "Anonymize private internal IP addresses (RFC 1918 subnets) and computer hostnames",
+        "Generate forensic timeline summary dossier and export sanitized JSON/CSV datasets"
+      ]
+    },
+    {
+      id: "lnk",
+      category: "Windows Shell Links & Shortcuts (LNK)",
+      icon: LinkIcon,
+      iconColor: "text-amber-600 bg-amber-50 border-amber-200",
+      extensions: [".lnk"],
+      description: "Windows Shell Link shortcut binary containers analyzed for command-line injection, living-off-the-land binaries (LOLBins), UNC path credential harvesting, and forensic metadata.",
+      threats: [
+        "Remote PowerShell & CMD Payload Execution",
+        "Living-off-the-Land (LOLBins) Hijacking (mshta, rundll32, certutil)",
+        "Hidden & Minimized Window Evasion (SW_HIDE)",
+        "UNC Path NTLM Credential Theft (\\\\malicious-smb\\share)",
+        "Deceptive Icon Camouflage (PDF/Word icon on script)"
+      ],
+      checks: [
+        "Shell Link Header analysis (LinkFlags, FileAttributes, Creation/Access/Write timestamps)",
+        "Target file path extraction and command-line arguments parsing (-enc, -w hidden, download cradles)",
+        "Working directory and relative path target resolution",
+        "Embedded icon location parsing and icon index spoofing detection (e.g. imageres.dll/shell32.dll disguise)",
+        "Volume metadata extraction (DriveType: FIXED, REMOTE, REMOVABLE, and VolumeSerialNumber)",
+        "Network share UNC path detection (targets attempting remote SMB outbound authentication)",
+        "Environmental variable string expansion (%APPDATA%, %TEMP%, %COMSPEC%)",
+        "Creator machine forensic metadata: MAC address from link UUID/GUID and NetBIOS computer hostname",
+        "Suspicious LOLBin executable target matching (powershell.exe, cmd.exe, wscript.exe, mshta.exe)"
+      ],
+      sanitizations: [
+        "Neutralize and strip dangerous command-line arguments and payload parameters",
+        "Disarm target executable links and strip UNC network share references to prevent NTLM leaks",
+        "Generate forensic triage dossier and export clean, text-based shortcut attribute report"
       ]
     },
     {
@@ -476,19 +556,37 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
             >
               All Formats ({formatCategories.length})
             </button>
-            {formatCategories.map(c => (
-              <button
-                key={c.id}
-                onClick={() => setActiveCategory(c.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
-                  activeCategory === c.id
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {c.category.split(' ')[0]}
-              </button>
-            ))}
+            {formatCategories.map(c => {
+              const shortLabels: Record<string, string> = {
+                email: 'Email',
+                executables: 'Executables',
+                office: 'Office',
+                pdf: 'PDF',
+                images: 'Images',
+                archives: 'Archives',
+                web: 'Web & SVG',
+                data: 'Scripts & Data',
+                extensions: 'Extensions',
+                applescript: 'AppleScript',
+                network: 'Domain/IP',
+                evtx: 'EVTX Logs',
+                lnk: 'LNK Shortcuts',
+                pcap: 'PCAP Traces',
+              };
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setActiveCategory(c.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                    activeCategory === c.id
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {shortLabels[c.id] || c.category.split(' ')[0]}
+                </button>
+              );
+            })}
           </div>
 
           {/* Search Input */}
