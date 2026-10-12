@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Set
 from urllib.parse import urlparse
 
+from app.core.entity_extractor import EntityExtractor
+
 
 class EntityGraphBuilder:
     """Builds interactive node-link entity relationship graphs for complex forensic artifacts."""
@@ -1274,7 +1276,119 @@ class EntityGraphBuilder:
                     )
                     for f in pr_info["files"]:
                         src_id = file_node_ids.get(f, "root")
-                        _add_edge(src_id, pr_node_id, "spawned LOLBin" if pr_info["is_lolbin"] else "executed", "process_execution")
+                        _add_edge(src_id, pr_id, "spawned LOLBin" if pr_info["is_lolbin"] else "executed", "process_execution")
+
+        # ---------------------------------------------------------
+        # 10.8. UNIVERSAL FORENSIC ENTITY EXTRACTION (Emails, Domains, Watchlist Keywords, IPs, Hostnames, Usernames, Names)
+        # ---------------------------------------------------------
+        try:
+            extracted = EntityExtractor.extract_all(job)
+
+            # 1. Emails
+            for em in extracted.get("emails", [])[:12]:
+                em_val = em["value"]
+                em_id = f"ent_email_{abs(hash(em_val)) % 1000000}"
+                _add_node(
+                    node_id=em_id,
+                    label=em_val,
+                    n_type="email",
+                    risk=em.get("risk", "clean"),
+                    tier=2,
+                    details={"email": em_val, "sources": list(em.get("sources", []))}
+                )
+                _add_edge("root", em_id, "contains email", "email")
+
+            # 2. Domains
+            for dom in extracted.get("domains", [])[:12]:
+                d_val = dom["value"]
+                dom_id = f"ent_dom_{abs(hash(d_val)) % 1000000}"
+                _add_node(
+                    node_id=dom_id,
+                    label=d_val,
+                    n_type="domain",
+                    risk=dom.get("risk", "clean"),
+                    tier=3,
+                    details={"domain": d_val, "sources": list(dom.get("sources", []))}
+                )
+                _add_edge("root", dom_id, "references domain", "domain")
+
+            # 3. Watchlist Keywords & Sensitive Warnings
+            for kw in extracted.get("keywords", [])[:12]:
+                kw_val = kw["value"]
+                kw_id = f"ent_kw_{abs(hash(kw.get('rule_name', '') + '::' + kw_val)) % 1000000}"
+                _add_node(
+                    node_id=kw_id,
+                    label=kw["label"],
+                    n_type="keyword",
+                    risk=kw.get("risk", "warning"),
+                    tier=2,
+                    details={
+                        "keyword": kw_val,
+                        "rule_name": kw.get("rule_name"),
+                        "severity": kw.get("severity"),
+                        "sources": list(kw.get("sources", []))
+                    }
+                )
+                _add_edge("root", kw_id, f"watchlist ({kw.get('severity', 'warning')})", "watchlist_match")
+
+            # 4. IPs
+            for ip_item in extracted.get("ips", [])[:12]:
+                ip_val = ip_item["value"]
+                ip_id = f"ent_ip_{ip_val.replace('.', '_')}"
+                _add_node(
+                    node_id=ip_id,
+                    label=f"IP: {ip_val}",
+                    n_type="ip",
+                    risk=ip_item.get("risk", "clean"),
+                    tier=3,
+                    details={"ip": ip_val, "is_private": ip_item.get("is_private", False), "sources": list(ip_item.get("sources", []))}
+                )
+                _add_edge("root", ip_id, "network IP", "ip")
+
+            # 5. Hostnames
+            for h in extracted.get("hostnames", [])[:8]:
+                h_val = h["value"]
+                h_id = f"ent_host_{abs(hash(h_val)) % 1000000}"
+                _add_node(
+                    node_id=h_id,
+                    label=h["label"],
+                    n_type="hostname",
+                    risk=h.get("risk", "clean"),
+                    tier=2,
+                    details={"hostname": h_val, "sources": list(h.get("sources", []))}
+                )
+                _add_edge("root", h_id, "workstation host", "hostname")
+
+            # 6. Usernames
+            for u in extracted.get("usernames", [])[:10]:
+                u_val = u["value"]
+                u_id = f"ent_user_{abs(hash(u_val)) % 1000000}"
+                _add_node(
+                    node_id=u_id,
+                    label=u["label"],
+                    n_type="user",
+                    risk=u.get("risk", "clean"),
+                    tier=2,
+                    details={"username": u_val, "sources": list(u.get("sources", []))}
+                )
+                _add_edge("root", u_id, "account identity", "identity")
+
+            # 7. Person / Author Names
+            for n_item in extracted.get("names", [])[:8]:
+                n_val = n_item["value"]
+                n_id = f"ent_name_{abs(hash(n_val)) % 1000000}"
+                _add_node(
+                    node_id=n_id,
+                    label=n_item["label"],
+                    n_type="name",
+                    risk=n_item.get("risk", "clean"),
+                    tier=2,
+                    details={"name": n_val, "role": n_item.get("role", "Author"), "sources": list(n_item.get("sources", []))}
+                )
+                _add_edge("root", n_id, n_item.get("role", "author"), "attribution")
+        except Exception as e:
+            # Non-blocking entity extraction fallback
+            pass
 
         # ---------------------------------------------------------
         # 11. MULTI-TIER CONCENTRIC CIRCLE COORDINATE GENERATION
@@ -1286,7 +1400,7 @@ class EntityGraphBuilder:
         # Tier Radii:
         # Tier 0 (Root): center (0)
         # Tier 1 (Direct hashes, VT/CS/ClamAV, email senders, protocols, log files): radius 165
-        # Tier 2 (Attachments, URLs, tracking pixels, TTPs, flows, DNS, users, hosts): radius 275
+        # Tier 2 (Attachments, URLs, tracking pixels, TTPs, flows, DNS, users, hosts, emails, keywords, names): radius 275
         # Tier 3 (Domains, resolved IPs, Geo, Similar samples, inner payloads, shares, LOLBins): radius 385
         tier_radii = {
             0: 0.0,
@@ -1344,10 +1458,11 @@ class EntityGraphBuilder:
                 "technique_count": len([n for n in nodes if n["type"] == "technique"]),
                 "similar_count": len([n for n in nodes if n["type"] == "similar_sample"]),
                 "certificate_count": len([n for n in nodes if n["type"] == "certificate"]),
-                "threat_intel_count": len([n for n in nodes if n["type"] in ["threat_intel", "threat_signature"]]),
-                "email_artifacts_count": len([n for n in nodes if n["type"] in ["user", "auth_policy", "tracking_pixel"]]),
-                "network_artifacts_count": len([n for n in nodes if n["type"] in ["flow", "protocol", "ip", "geolocation", "domain"]]),
-                "forensic_count": len([n for n in nodes if n["type"] in ["log_source", "user", "computer", "ip", "share", "process"]]),
+                "threat_intel_count": len([n for n in nodes if n["type"] in ["threat_intel", "threat_signature", "keyword"]]),
+                "email_artifacts_count": len([n for n in nodes if n["type"] in ["user", "email", "auth_policy", "tracking_pixel", "name"]]),
+                "network_artifacts_count": len([n for n in nodes if n["type"] in ["flow", "protocol", "ip", "geolocation", "domain", "hostname", "computer"]]),
+                "forensic_count": len([n for n in nodes if n["type"] in ["log_source", "user", "computer", "hostname", "ip", "share", "process", "keyword", "name", "email"]]),
                 "cross_log_pivots_count": len([n for n in nodes if n.get("details", {}).get("is_cross_log_pivot")])
             }
         }
+

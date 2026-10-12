@@ -10,6 +10,7 @@ from app.core.job_manager import job_manager, JobModel
 from app.analyzers.forensic_timeline import ForensicTimelineBuilder
 from app.network.geo_resolver import geo_resolver
 from app.core.logging_config import logger
+from app.core.entity_extractor import EntityExtractor
 
 
 class IncidentCorrelator:
@@ -145,9 +146,33 @@ class IncidentCorrelator:
         domain_map: Dict[str, Dict[str, Any]] = {}
         url_map: Dict[str, Dict[str, Any]] = {}
         user_map: Dict[str, Dict[str, Any]] = {}
+        email_map: Dict[str, Dict[str, Any]] = {}
+        keyword_map: Dict[str, Dict[str, Any]] = {}
+        hostname_map: Dict[str, Dict[str, Any]] = {}
+        name_map: Dict[str, Dict[str, Any]] = {}
 
         for job in jobs:
             file_meta = {"job_id": job.job_id, "filename": getattr(job, "original_filename", None) or job.filename}
+
+            # 0. Universal Entity Extraction (Emails, Domains, Watchlist Keywords, IPs, Hostnames, Usernames, Names)
+            try:
+                extracted = EntityExtractor.extract_all(job)
+                for em in extracted.get("emails", []):
+                    cls._record_email(email_map, em["value"], file_meta, list(em.get("sources", ["Extracted"]))[0] if em.get("sources") else "Artifact Email")
+                for d in extracted.get("domains", []):
+                    cls._record_domain(domain_map, d["value"], file_meta, list(d.get("sources", ["Extracted"]))[0] if d.get("sources") else "Artifact Domain")
+                for kw in extracted.get("keywords", []):
+                    cls._record_keyword(keyword_map, kw["value"], kw.get("rule_name", kw["value"]), kw.get("severity", "medium"), file_meta, list(kw.get("sources", ["Watchlist"]))[0] if kw.get("sources") else "Watchlist Rule")
+                for ip_item in extracted.get("ips", []):
+                    cls._record_ip(ip_map, ip_item["value"], file_meta, list(ip_item.get("sources", ["Network"]))[0] if ip_item.get("sources") else "Network IP")
+                for h in extracted.get("hostnames", []):
+                    cls._record_hostname(hostname_map, h["value"], file_meta, list(h.get("sources", ["Host"]))[0] if h.get("sources") else "Observed Hostname")
+                for u in extracted.get("usernames", []):
+                    cls._record_user(user_map, u["value"], file_meta, list(u.get("sources", ["Identity"]))[0] if u.get("sources") else "User Identity")
+                for n in extracted.get("names", []):
+                    cls._record_name(name_map, n["value"], n.get("role", "Author"), file_meta, list(n.get("sources", ["Attribution"]))[0] if n.get("sources") else "Metadata Author")
+            except Exception as e:
+                logger.debug(f"Entity extraction in correlator error: {e}")
 
             # 1. URLs & Domains & IPs from extracted_code & url analyzer
             code_raw = getattr(job, "extracted_code", "") or ""
@@ -349,15 +374,74 @@ class IncidentCorrelator:
             })
         user_list.sort(key=lambda x: (not x["is_shared"], -x["occurrences"], x["username"]))
 
+        email_list = []
+        for em, item in email_map.items():
+            files_seen = item["seen_in_files"]
+            email_list.append({
+                "email": em,
+                "is_shared": len(files_seen) > 1,
+                "seen_in_files": files_seen,
+                "occurrences": len(files_seen),
+                "sources": list(item["sources"]),
+            })
+        email_list.sort(key=lambda x: (not x["is_shared"], -x["occurrences"], x["email"]))
+
+        keyword_list = []
+        for key_str, item in keyword_map.items():
+            files_seen = item["seen_in_files"]
+            keyword_list.append({
+                "keyword": item["keyword"],
+                "rule_name": item["rule_name"],
+                "severity": item.get("severity", "medium"),
+                "is_shared": len(files_seen) > 1,
+                "seen_in_files": files_seen,
+                "occurrences": len(files_seen),
+                "sources": list(item["sources"]),
+            })
+        keyword_list.sort(key=lambda x: (not x["is_shared"], -x["occurrences"], x["keyword"]))
+
+        hostname_list = []
+        for h, item in hostname_map.items():
+            files_seen = item["seen_in_files"]
+            hostname_list.append({
+                "hostname": h,
+                "is_shared": len(files_seen) > 1,
+                "seen_in_files": files_seen,
+                "occurrences": len(files_seen),
+                "sources": list(item["sources"]),
+            })
+        hostname_list.sort(key=lambda x: (not x["is_shared"], -x["occurrences"], x["hostname"]))
+
+        name_list = []
+        for n, item in name_map.items():
+            files_seen = item["seen_in_files"]
+            name_list.append({
+                "name": n,
+                "role": item.get("role", "Author"),
+                "is_shared": len(files_seen) > 1,
+                "seen_in_files": files_seen,
+                "occurrences": len(files_seen),
+                "sources": list(item["sources"]),
+            })
+        name_list.sort(key=lambda x: (not x["is_shared"], -x["occurrences"], x["name"]))
+
         return {
             "ips": ip_list,
             "domains": domain_list,
             "urls": url_list,
             "usernames": user_list,
+            "emails": email_list,
+            "keywords": keyword_list,
+            "hostnames": hostname_list,
+            "names": name_list,
             "shared_ip_count": sum(1 for i in ip_list if i["is_shared"]),
             "shared_domain_count": sum(1 for d in domain_list if d["is_shared"]),
             "shared_url_count": sum(1 for u in url_list if u["is_shared"]),
             "shared_user_count": sum(1 for u in user_list if u["is_shared"]),
+            "shared_email_count": sum(1 for e in email_list if e["is_shared"]),
+            "shared_keyword_count": sum(1 for k in keyword_list if k["is_shared"]),
+            "shared_hostname_count": sum(1 for h in hostname_list if h["is_shared"]),
+            "shared_name_count": sum(1 for n in name_list if n["is_shared"]),
         }
 
     @classmethod
@@ -396,6 +480,48 @@ class IncidentCorrelator:
         if not any(f["job_id"] == file_meta["job_id"] for f in m[user]["seen_in_files"]):
             m[user]["seen_in_files"].append(file_meta)
         m[user]["sources"].add(source)
+
+    @classmethod
+    def _record_email(cls, m: Dict[str, Any], email: str, file_meta: Dict[str, str], source: str):
+        clean = email.lower().strip()
+        if not clean or len(clean) > 80: return
+        if clean not in m:
+            m[clean] = {"seen_in_files": [], "sources": set()}
+        if not any(f["job_id"] == file_meta["job_id"] for f in m[clean]["seen_in_files"]):
+            m[clean]["seen_in_files"].append(file_meta)
+        m[clean]["sources"].add(source)
+
+    @classmethod
+    def _record_keyword(cls, m: Dict[str, Any], keyword: str, rule_name: str, severity: str, file_meta: Dict[str, str], source: str):
+        val = keyword.strip()
+        if not val or len(val) > 80: return
+        key = f"{rule_name.lower()}::{val.lower()}"
+        if key not in m:
+            m[key] = {"keyword": val, "rule_name": rule_name, "severity": severity, "seen_in_files": [], "sources": set()}
+        if not any(f["job_id"] == file_meta["job_id"] for f in m[key]["seen_in_files"]):
+            m[key]["seen_in_files"].append(file_meta)
+        m[key]["sources"].add(source)
+
+    @classmethod
+    def _record_hostname(cls, m: Dict[str, Any], hostname: str, file_meta: Dict[str, str], source: str):
+        clean = hostname.strip().upper()
+        if not clean or len(clean) > 60: return
+        if clean not in m:
+            m[clean] = {"seen_in_files": [], "sources": set()}
+        if not any(f["job_id"] == file_meta["job_id"] for f in m[clean]["seen_in_files"]):
+            m[clean]["seen_in_files"].append(file_meta)
+        m[clean]["sources"].add(source)
+
+    @classmethod
+    def _record_name(cls, m: Dict[str, Any], name: str, role: str, file_meta: Dict[str, str], source: str):
+        clean = name.strip()
+        if not clean or len(clean) > 60: return
+        if clean not in m:
+            m[clean] = {"seen_in_files": [], "role": role, "sources": set()}
+        if not any(f["job_id"] == file_meta["job_id"] for f in m[clean]["seen_in_files"]):
+            m[clean]["seen_in_files"].append(file_meta)
+        m[clean]["sources"].add(source)
+
 
     # =========================================================================
     # BinDiff Engine (Inspired by zynamics BinDiff)
@@ -1434,6 +1560,18 @@ class IncidentCorrelator:
                 elif art_nid.startswith("user_"):
                     u = art_nid.replace("user_", "")
                     _add_node(nid=art_nid, label=f"User: {u}", ntype="user", risk="clean", tier=2, details={"username": u})
+                elif art_nid.startswith("email_"):
+                    em = art_nid.replace("email_", "")
+                    _add_node(nid=art_nid, label=em, ntype="email", risk="clean", tier=2, details={"email": em})
+                elif art_nid.startswith("kw_"):
+                    k = art_nid.replace("kw_", "")
+                    _add_node(nid=art_nid, label=f"Watchlist: {k[:16]}", ntype="keyword", risk="warning", tier=2, details={"keyword": k})
+                elif art_nid.startswith("host_"):
+                    h = art_nid.replace("host_", "")
+                    _add_node(nid=art_nid, label=f"Host: {h}", ntype="hostname", risk="clean", tier=2, details={"hostname": h})
+                elif art_nid.startswith("name_"):
+                    n = art_nid.replace("name_", "")
+                    _add_node(nid=art_nid, label=f"Name: {n}", ntype="name", risk="clean", tier=2, details={"name": n})
                 elif art_nid.startswith("dom_"):
                     d = art_nid.replace("dom_", "")
                     _add_node(nid=art_nid, label=d, ntype="domain", risk="clean", tier=2, details={"domain": d})
@@ -2058,6 +2196,84 @@ class IncidentCorrelator:
                 if jid:
                     _link_artifact_to_job(jid, unid, "account overlap" if item.get("is_shared") else "authored/executed by", "identity")
 
+        # 7b. Emails
+        for item in ioc_data.get("emails", []):
+            em_val = item["email"]
+            em_id = f"email_{abs(hash(em_val)) % 1000000}"
+            risk_val = "high" if item.get("is_shared") else "clean"
+            _add_node(
+                nid=em_id,
+                label=em_val,
+                ntype="email",
+                risk=risk_val,
+                tier=1 if item.get("is_shared") else 2,
+                is_shared=item.get("is_shared", False),
+                details=item
+            )
+            for f in item.get("seen_in_files", []):
+                jid = f.get("job_id")
+                if jid:
+                    _link_artifact_to_job(jid, em_id, "shared email" if item.get("is_shared") else "contains email", "email")
+
+        # 7c. Watchlist Keywords & Sensitive Warnings
+        for item in ioc_data.get("keywords", []):
+            kw_val = item["keyword"]
+            r_name = item.get("rule_name", kw_val)
+            kw_id = f"kw_{abs(hash(r_name + '::' + kw_val)) % 1000000}"
+            sev = item.get("severity", "medium").lower()
+            risk_val = "critical" if item.get("is_shared") else ("critical" if sev in ("critical", "high") else "warning")
+            _add_node(
+                nid=kw_id,
+                label=f"Watchlist: {kw_val[:18]}",
+                ntype="keyword",
+                risk=risk_val,
+                tier=1 if item.get("is_shared") else 2,
+                is_shared=item.get("is_shared", False),
+                details=item
+            )
+            for f in item.get("seen_in_files", []):
+                jid = f.get("job_id")
+                if jid:
+                    _link_artifact_to_job(jid, kw_id, "shared watchlist rule" if item.get("is_shared") else "triggers watchlist", "keyword")
+
+        # 7d. Hostnames
+        for item in ioc_data.get("hostnames", []):
+            h_val = item["hostname"]
+            h_id = f"host_{abs(hash(h_val)) % 1000000}"
+            risk_val = "high" if item.get("is_shared") else "clean"
+            _add_node(
+                nid=h_id,
+                label=f"Host: {h_val}",
+                ntype="hostname",
+                risk=risk_val,
+                tier=1 if item.get("is_shared") else 2,
+                is_shared=item.get("is_shared", False),
+                details=item
+            )
+            for f in item.get("seen_in_files", []):
+                jid = f.get("job_id")
+                if jid:
+                    _link_artifact_to_job(jid, h_id, "shared host" if item.get("is_shared") else "observed host", "host")
+
+        # 7e. Person / Author Names
+        for item in ioc_data.get("names", []):
+            n_val = item["name"]
+            n_id = f"name_{abs(hash(n_val)) % 1000000}"
+            risk_val = "high" if item.get("is_shared") else "clean"
+            _add_node(
+                nid=n_id,
+                label=f"Name: {n_val}",
+                ntype="name",
+                risk=risk_val,
+                tier=1 if item.get("is_shared") else 2,
+                is_shared=item.get("is_shared", False),
+                details=item
+            )
+            for f in item.get("seen_in_files", []):
+                jid = f.get("job_id")
+                if jid:
+                    _link_artifact_to_job(jid, n_id, "shared author / attribution" if item.get("is_shared") else "authored / created by", "identity")
+
         # 8. MITRE ATT&CK Techniques
         tech_map: Dict[str, List[str]] = {}
         for job in jobs:
@@ -2277,6 +2493,26 @@ class IncidentCorrelator:
             user_str = ", ".join([x["username"] for x in shared_users[:3]])
             correlations.append(f"Shared threat actor / target account identifier across forensic evidence: {user_str}.")
 
+        shared_emails = [e for e in ioc_data.get("emails", []) if e.get("is_shared")]
+        if shared_emails:
+            em_str = ", ".join([x["email"] for x in shared_emails[:3]])
+            correlations.append(f"Common email communication channel / contact identified: {em_str}.")
+
+        shared_kws = [k for k in ioc_data.get("keywords", []) if k.get("is_shared")]
+        if shared_kws:
+            kw_str = ", ".join([f"'{x['keyword']}' ({x.get('rule_name', '')})" for x in shared_kws[:3]])
+            correlations.append(f"Shared watchlist security rules triggered: {kw_str}.")
+
+        shared_hosts = [h for h in ioc_data.get("hostnames", []) if h.get("is_shared")]
+        if shared_hosts:
+            h_str = ", ".join([x["hostname"] for x in shared_hosts[:3]])
+            correlations.append(f"Shared endpoint host workstation infrastructure identified: {h_str}.")
+
+        shared_names = [n for n in ioc_data.get("names", []) if n.get("is_shared")]
+        if shared_names:
+            n_str = ", ".join([x["name"] for x in shared_names[:3]])
+            correlations.append(f"Common author / creator attribution across files: {n_str}.")
+
         if bindiff.get("available") and bindiff.get("pairs"):
             best_pair = max(bindiff["pairs"], key=lambda p: p.get("similarity_score", 0))
             sim = best_pair.get("similarity_score", 0)
@@ -2311,15 +2547,24 @@ class IncidentCorrelator:
             "shared_ioc_count": (
                 ioc_data.get("shared_ip_count", 0) +
                 ioc_data.get("shared_domain_count", 0) +
-                ioc_data.get("shared_user_count", 0)
+                ioc_data.get("shared_user_count", 0) +
+                ioc_data.get("shared_email_count", 0) +
+                ioc_data.get("shared_keyword_count", 0) +
+                ioc_data.get("shared_hostname_count", 0) +
+                ioc_data.get("shared_name_count", 0)
             ),
             "total_unique_ips": len(ioc_data.get("ips", [])),
             "total_unique_domains": len(ioc_data.get("domains", [])),
+            "total_unique_emails": len(ioc_data.get("emails", [])),
+            "total_unique_keywords": len(ioc_data.get("keywords", [])),
+            "total_unique_hostnames": len(ioc_data.get("hostnames", [])),
+            "total_unique_names": len(ioc_data.get("names", [])),
             "total_mitre_techniques": mitre.get("total_techniques", 0),
             "attack_stages_detected": tactics_present,
             "executive_narrative": " ".join(narrative_parts),
             "key_correlations": correlations,
         }
+
 
     # =========================================================================
     # Multi-EVTX Fleet Forensics & Cross-Host Incident Correlation Engine

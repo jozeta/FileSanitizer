@@ -212,7 +212,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     if (node.type === 'file') {
       return { fill: '#eef2ff', stroke: '#6366f1', text: '#4338ca', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
     }
-    if (node.type === 'host') {
+    if (node.type === 'host' || node.type === 'hostname' || node.type === 'computer') {
       return { fill: '#f0fdf4', stroke: '#16a34a', text: '#15803d', badge: 'bg-green-50 text-green-700 border-green-200' };
     }
     if (node.type === 'hash') {
@@ -221,8 +221,17 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     if (node.type === 'timestamp') {
       return { fill: '#fff7ed', stroke: '#f97316', text: '#c2410c', badge: 'bg-orange-50 text-orange-700 border-orange-200' };
     }
-    if (node.type === 'vulnerability') {
+    if (node.type === 'vulnerability' || node.type === 'threat_intel' || node.type === 'threat_signature') {
       return { fill: '#fff1f2', stroke: '#e11d48', text: '#be123c', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
+    }
+    if (node.type === 'keyword' || node.type === 'watchlist_keyword') {
+      return { fill: '#fef2f2', stroke: '#dc2626', text: '#991b1b', badge: 'bg-red-50 text-red-700 border-red-200' };
+    }
+    if (node.type === 'email') {
+      return { fill: '#eff6ff', stroke: '#2563eb', text: '#1d4ed8', badge: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
+    if (node.type === 'name' || node.type === 'person') {
+      return { fill: '#fdf4ff', stroke: '#c026d3', text: '#86198f', badge: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200' };
     }
     if (node.type === 'geolocation') {
       return { fill: '#ecfeff', stroke: '#06b6d4', text: '#0e7490', badge: 'bg-cyan-50 text-cyan-700 border-cyan-200' };
@@ -233,13 +242,13 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     if (node.type === 'domain' || node.type === 'url') {
       return { fill: '#f0fdfa', stroke: '#14b8a6', text: '#0f766e', badge: 'bg-teal-50 text-teal-700 border-teal-200' };
     }
-    if (node.type === 'user') {
+    if (node.type === 'user' || node.type === 'metadata') {
       return { fill: '#fffbeb', stroke: '#f59e0b', text: '#b45309', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
     }
     if (node.type === 'technique') {
       return { fill: '#fff1f2', stroke: '#f43f5e', text: '#be123c', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
     }
-    if (node.type === 'artifact') {
+    if (node.type === 'artifact' || node.type === 'embedded_file') {
       return { fill: '#f5f3ff', stroke: '#8b5cf6', text: '#6d28d9', badge: 'bg-violet-50 text-violet-700 border-violet-200' };
     }
     return { fill: '#f8fafc', stroke: '#64748b', text: '#334155', badge: 'bg-slate-100 text-slate-700 border-slate-200' };
@@ -895,15 +904,15 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     return {
       total: nodes.length,
       shared: nodes.filter((n) => n.is_shared).length,
-      hosts: nodes.filter((n) => n.type === 'host').length,
+      hosts: nodes.filter((n) => n.type === 'host' || n.type === 'hostname' || n.type === 'computer').length,
       hashes: nodes.filter((n) => n.type === 'hash').length,
       timestamps: nodes.filter((n) => n.type === 'timestamp').length,
-      vulns: nodes.filter((n) => n.type === 'vulnerability').length,
+      vulns: nodes.filter((n) => ['vulnerability', 'threat_intel', 'threat_signature', 'keyword', 'watchlist_keyword'].includes(n.type)).length,
       geo: nodes.filter((n) => n.type === 'geolocation').length,
-      network: nodes.filter((n) => ['ip', 'domain', 'url'].includes(n.type)).length,
-      identity: nodes.filter((n) => ['user', 'metadata'].includes(n.type)).length,
+      network: nodes.filter((n) => ['ip', 'domain', 'url', 'hostname'].includes(n.type)).length,
+      identity: nodes.filter((n) => ['user', 'metadata', 'email', 'name', 'person'].includes(n.type)).length,
       ttps: nodes.filter((n) => n.type === 'technique').length,
-      artifacts: nodes.filter((n) => n.type === 'artifact').length,
+      artifacts: nodes.filter((n) => ['artifact', 'embedded_file'].includes(n.type)).length,
     };
   }, [data]);
 
@@ -1065,10 +1074,10 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     { key: 'hosts', label: 'Hosts & Assets', count: categoryCounts.hosts, color: 'bg-green-600 text-white border-green-600', hoverColor: 'hover:bg-green-50 hover:text-green-700' },
     { key: 'hashes', label: 'Hashes', count: categoryCounts.hashes, color: 'bg-emerald-600 text-white border-emerald-600', hoverColor: 'hover:bg-emerald-50 hover:text-emerald-700' },
     { key: 'timestamps', label: 'Timestamps', count: categoryCounts.timestamps, color: 'bg-orange-600 text-white border-orange-600', hoverColor: 'hover:bg-orange-50 hover:text-orange-700' },
-    { key: 'vulns', label: 'Vulnerabilities', count: categoryCounts.vulns, color: 'bg-rose-600 text-white border-rose-600', hoverColor: 'hover:bg-rose-50 hover:text-rose-700' },
+    { key: 'vulns', label: 'Threats & Watchlists', count: categoryCounts.vulns, color: 'bg-rose-600 text-white border-rose-600', hoverColor: 'hover:bg-rose-50 hover:text-rose-700' },
     { key: 'geo', label: 'Geolocation', count: categoryCounts.geo, color: 'bg-cyan-600 text-white border-cyan-600', hoverColor: 'hover:bg-cyan-50 hover:text-cyan-700' },
-    { key: 'network', label: 'IPs & Domains', count: categoryCounts.network, color: 'bg-sky-600 text-white border-sky-600', hoverColor: 'hover:bg-sky-50 hover:text-sky-700' },
-    { key: 'identity', label: 'User Accounts', count: categoryCounts.identity, color: 'bg-amber-600 text-white border-amber-600', hoverColor: 'hover:bg-amber-50 hover:text-amber-700' },
+    { key: 'network', label: 'Network & Domains', count: categoryCounts.network, color: 'bg-sky-600 text-white border-sky-600', hoverColor: 'hover:bg-sky-50 hover:text-sky-700' },
+    { key: 'identity', label: 'Accounts & Identities', count: categoryCounts.identity, color: 'bg-amber-600 text-white border-amber-600', hoverColor: 'hover:bg-amber-50 hover:text-amber-700' },
     { key: 'ttps', label: 'ATT&CK TTPs', count: categoryCounts.ttps, color: 'bg-rose-700 text-white border-rose-700', hoverColor: 'hover:bg-rose-50 hover:text-rose-700' },
     { key: 'artifacts', label: 'Tools & APIs', count: categoryCounts.artifacts, color: 'bg-violet-600 text-white border-violet-600', hoverColor: 'hover:bg-violet-50 hover:text-violet-700' },
   ];
@@ -1283,13 +1292,13 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
       // Check if node matches ANY of the selected category filters
       return selectedFilters.some((f) => {
-        if (f === 'hosts') return n.type === 'host';
+        if (f === 'hosts') return n.type === 'host' || n.type === 'hostname' || n.type === 'computer';
         if (f === 'hashes') return n.type === 'hash';
         if (f === 'timestamps') return n.type === 'timestamp';
-        if (f === 'vulns') return n.type === 'vulnerability' || n.type === 'threat_intel' || n.type === 'threat_signature';
+        if (f === 'vulns') return ['vulnerability', 'threat_intel', 'threat_signature', 'keyword', 'watchlist_keyword'].includes(n.type);
         if (f === 'geo') return n.type === 'geolocation';
-        if (f === 'network') return ['ip', 'domain', 'url'].includes(n.type);
-        if (f === 'identity') return ['user', 'metadata'].includes(n.type);
+        if (f === 'network') return ['ip', 'domain', 'url', 'hostname'].includes(n.type);
+        if (f === 'identity') return ['user', 'metadata', 'email', 'name', 'person'].includes(n.type);
         if (f === 'ttps') return n.type === 'technique';
         if (f === 'artifacts') return ['artifact', 'embedded_file'].includes(n.type);
         return false;
@@ -1320,19 +1329,27 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       return;
     }
     if (typeKey === 'network') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => ['ip', 'domain', 'url'].includes(n.type)).map((n) => n.id)));
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => ['ip', 'domain', 'url', 'hostname'].includes(n.type)).map((n) => n.id)));
       return;
     }
     if (typeKey === 'technique') {
       setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'technique').map((n) => n.id)));
       return;
     }
-    if (typeKey === 'user') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'user').map((n) => n.id)));
+    if (typeKey === 'user' || typeKey === 'identity') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => ['user', 'metadata', 'email', 'name', 'person'].includes(n.type)).map((n) => n.id)));
       return;
     }
-    if (typeKey === 'vulnerability') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'vulnerability').map((n) => n.id)));
+    if (typeKey === 'vulnerability' || typeKey === 'vulns') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => ['vulnerability', 'threat_intel', 'threat_signature', 'keyword', 'watchlist_keyword'].includes(n.type)).map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'email') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'email').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'keyword') {
+      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'keyword' || n.type === 'watchlist_keyword').map((n) => n.id)));
       return;
     }
     if (typeKey === 'invert') {
@@ -2561,7 +2578,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       >
                         {isFile
                           ? 'FILE'
-                          : node.type === 'host'
+                          : node.type === 'host' || node.type === 'hostname'
                           ? 'HOST'
                           : node.type === 'hash'
                           ? 'HASH'
@@ -2569,6 +2586,16 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           ? 'TIME'
                           : node.type === 'vulnerability'
                           ? 'VULN'
+                          : node.type === 'threat_intel'
+                          ? 'INTEL'
+                          : node.type === 'threat_signature'
+                          ? 'SIG'
+                          : node.type === 'keyword' || node.type === 'watchlist_keyword'
+                          ? 'KEYW'
+                          : node.type === 'email'
+                          ? 'MAIL'
+                          : node.type === 'name' || node.type === 'person'
+                          ? 'NAME'
                           : node.type === 'geolocation'
                           ? 'GEO'
                           : node.type === 'ip'
@@ -2579,9 +2606,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           ? 'URL'
                           : node.type === 'user'
                           ? 'USER'
+                          : node.type === 'metadata'
+                          ? 'META'
                           : node.type === 'technique'
                           ? 'TTP'
-                          : node.type === 'artifact'
+                          : node.type === 'artifact' || node.type === 'embedded_file'
                           ? 'TOOL'
                           : node.type.substring(0, 3).toUpperCase()}
                       </text>
@@ -2774,6 +2803,43 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                             <span className="text-slate-500">Scanner:</span>
                             <span className="text-slate-700">{selectedNode.details.engine || 'Antivirus'}</span>
                           </div>
+                        </div>
+                      )}
+
+                      {/* Email / Watchlist / Name / Host Attributes */}
+                      {selectedNode.details.email && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Email Address:</span>
+                          <span className="font-semibold text-blue-700 break-all">{selectedNode.details.email}</span>
+                        </div>
+                      )}
+
+                      {selectedNode.details.keyword && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Watchlist Word:</span>
+                            <span className="font-bold text-rose-700">{selectedNode.details.keyword}</span>
+                          </div>
+                          {selectedNode.details.rule_name && selectedNode.details.rule_name !== selectedNode.details.keyword && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Rule / List:</span>
+                              <span className="text-slate-700">{selectedNode.details.rule_name}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {(selectedNode.details.person_name || selectedNode.details.name) && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Person / Author:</span>
+                          <span className="font-semibold text-fuchsia-700">{selectedNode.details.person_name || selectedNode.details.name}</span>
+                        </div>
+                      )}
+
+                      {selectedNode.details.hostname && selectedNode.type !== 'host' && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Host / Machine:</span>
+                          <span className="font-semibold text-emerald-700">{selectedNode.details.hostname}</span>
                         </div>
                       )}
 

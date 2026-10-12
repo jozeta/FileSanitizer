@@ -26,22 +26,22 @@ interface EntityGraphCardProps {
 const ENTITY_CATEGORIES = [
   {
     key: 'intel',
-    label: 'Threat Intel',
-    types: ['threat_intel', 'threat_signature'],
+    label: 'Threat Intel & Watchlist',
+    types: ['threat_intel', 'threat_signature', 'keyword', 'watchlist_keyword'],
     color: 'bg-red-600 text-white border-red-600',
     hoverColor: 'hover:bg-red-50 hover:text-red-700'
   },
   {
     key: 'network',
     label: 'Network & Domains',
-    types: ['url', 'domain', 'ip', 'geolocation', 'flow', 'protocol', 'asn', 'network', 'organization', 'nameserver'],
+    types: ['url', 'domain', 'ip', 'hostname', 'computer', 'geolocation', 'flow', 'protocol', 'asn', 'network', 'organization', 'nameserver'],
     color: 'bg-sky-600 text-white border-sky-600',
     hoverColor: 'hover:bg-sky-50 hover:text-sky-700'
   },
   {
     key: 'identity',
-    label: 'Identity & Users',
-    types: ['user', 'auth_policy', 'tracking_pixel', 'computer', 'metadata'],
+    label: 'Identity, Users & Emails',
+    types: ['user', 'username', 'email', 'name', 'person', 'auth_policy', 'tracking_pixel', 'computer', 'metadata'],
     color: 'bg-blue-600 text-white border-blue-600',
     hoverColor: 'hover:bg-blue-50 hover:text-blue-700'
   },
@@ -62,7 +62,7 @@ const ENTITY_CATEGORIES = [
   {
     key: 'forensics',
     label: 'Forensic Artifacts',
-    types: ['log_source', 'share', 'process', 'certificate'],
+    types: ['log_source', 'share', 'process', 'certificate', 'artifact'],
     color: 'bg-purple-600 text-white border-purple-600',
     hoverColor: 'hover:bg-purple-50 hover:text-purple-700'
   }
@@ -667,11 +667,11 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       return;
     }
     if (typeKey === 'intel') {
-      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['threat_intel', 'threat_signature'].includes(n.type)).map(n => n.id)));
+      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['threat_intel', 'threat_signature', 'keyword', 'watchlist_keyword'].includes(n.type)).map(n => n.id)));
       return;
     }
     if (typeKey === 'network') {
-      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['url', 'domain', 'ip', 'geolocation', 'asn', 'network', 'flow', 'protocol'].includes(n.type)).map(n => n.id)));
+      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['url', 'domain', 'ip', 'hostname', 'computer', 'geolocation', 'asn', 'network', 'flow', 'protocol'].includes(n.type)).map(n => n.id)));
       return;
     }
     if (typeKey === 'payloads') {
@@ -683,7 +683,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       return;
     }
     if (typeKey === 'identity') {
-      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['user', 'computer', 'auth_policy'].includes(n.type)).map(n => n.id)));
+      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['user', 'computer', 'auth_policy', 'email', 'name', 'person'].includes(n.type)).map(n => n.id)));
       return;
     }
     if (typeKey === 'invert') {
@@ -832,6 +832,18 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     }
     if (node.type === 'threat_intel' || node.type === 'threat_signature') {
       return { fill: '#fef2f2', stroke: '#ef4444', text: '#b91c1c', badge: 'bg-red-50 text-red-700 border-red-200' };
+    }
+    if (node.type === 'keyword' || node.type === 'watchlist_keyword') {
+      return { fill: '#fef2f2', stroke: '#dc2626', text: '#991b1b', badge: 'bg-red-50 text-red-700 border-red-200' };
+    }
+    if (node.type === 'email') {
+      return { fill: '#eff6ff', stroke: '#2563eb', text: '#1d4ed8', badge: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
+    if (node.type === 'name' || node.type === 'person') {
+      return { fill: '#fdf4ff', stroke: '#c026d3', text: '#86198f', badge: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200' };
+    }
+    if (node.type === 'hostname' || node.type === 'computer') {
+      return { fill: '#f0fdf4', stroke: '#16a34a', text: '#15803d', badge: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
     }
     if (node.type === 'user' || node.type === 'auth_policy' || node.type === 'metadata') {
       return { fill: '#eff6ff', stroke: '#3b82f6', text: '#1d4ed8', badge: 'bg-blue-50 text-blue-700 border-blue-200' };
@@ -1453,6 +1465,14 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                       ? 'INTEL'
                       : node.type === 'threat_signature'
                       ? 'SIG'
+                      : node.type === 'keyword' || node.type === 'watchlist_keyword'
+                      ? 'KEYW'
+                      : node.type === 'email'
+                      ? 'MAIL'
+                      : node.type === 'name' || node.type === 'person'
+                      ? 'NAME'
+                      : node.type === 'hostname' || node.type === 'computer'
+                      ? 'HOST'
                       : node.type === 'user'
                       ? 'USER'
                       : node.type === 'metadata'
@@ -1481,8 +1501,6 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                       ? 'FLOW'
                       : node.type === 'log_source'
                       ? 'LOG'
-                      : node.type === 'computer'
-                      ? 'HOST'
                       : node.type === 'share'
                       ? 'SHAR'
                       : node.type === 'process'
