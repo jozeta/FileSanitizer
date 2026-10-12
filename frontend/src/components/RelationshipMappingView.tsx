@@ -45,6 +45,7 @@ import { BinDiffViewer } from './BinDiffViewer';
 import { EvtxTriageCard } from './EvtxTriageCard';
 import { MultiEvtxSwimlaneView } from './MultiEvtxSwimlaneView';
 import { ReferencedText } from './ReferencedFileLink';
+import { HIGHLIGHT_COLOR_OPTIONS, DEFAULT_HIGHLIGHT_COLOR } from './EntityGraphCard';
 
 interface RelationshipMappingViewProps {
   jobs: WorkspaceJob[];
@@ -105,6 +106,51 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const [hideBenignNodes, setHideBenignNodes] = useState<boolean>(false);
   const [showEmptyNodes, setShowEmptyNodes] = useState<boolean>(false);
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
+
+  // Operator node visibility and highlighting state
+  const [hiddenNodeIds, setHiddenNodeIds] = useState<Set<string>>(new Set());
+  const [highlightedNodes, setHighlightedNodes] = useState<Record<string, string>>({}); // nodeId -> hex color
+
+  const handleToggleHideNode = (nodeId: string, hide?: boolean) => {
+    setHiddenNodeIds((prev) => {
+      const next = new Set(prev);
+      const shouldHide = hide !== undefined ? hide : !next.has(nodeId);
+      if (shouldHide) {
+        next.add(nodeId);
+      } else {
+        next.delete(nodeId);
+      }
+      return next;
+    });
+  };
+
+  const handleUnhideAll = () => {
+    setHiddenNodeIds(new Set());
+  };
+
+  const handleToggleHighlightNode = (nodeId: string, highlight?: boolean, color?: string) => {
+    setHighlightedNodes((prev) => {
+      const next = { ...prev };
+      const shouldHighlight = highlight !== undefined ? highlight : !next[nodeId];
+      if (shouldHighlight) {
+        next[nodeId] = color || next[nodeId] || DEFAULT_HIGHLIGHT_COLOR;
+      } else {
+        delete next[nodeId];
+      }
+      return next;
+    });
+  };
+
+  const handleChangeHighlightColor = (nodeId: string, color: string) => {
+    setHighlightedNodes((prev) => ({
+      ...prev,
+      [nodeId]: color,
+    }));
+  };
+
+  const handleClearHighlights = () => {
+    setHighlightedNodes({});
+  };
 
   const [graphZoom, setGraphZoom] = useState<number>(1);
   const [graphPan, setGraphPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -1233,6 +1279,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     });
 
     return nodes.filter((n) => {
+      // Operator Hide filter (analyst chose to hide this node)
+      if (hiddenNodeIds.has(n.id)) {
+        return false;
+      }
+
       // 0. File Inclusion Filter (User can select/deselect which files are included in the graph)
       if (n.type === 'file') {
         if (!includedFileIds.has(n.id)) {
@@ -1304,7 +1355,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         return false;
       });
     });
-  }, [data, selectedFilters, sharedOnlyFilter, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap, showEmptyNodes, includedFileIds, nodeToFileIdsMap]);
+  }, [data, selectedFilters, sharedOnlyFilter, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap, showEmptyNodes, includedFileIds, nodeToFileIdsMap, hiddenNodeIds]);
 
   const selectAllOfType = (typeKey: string) => {
     if (typeKey === 'all') {
@@ -1365,12 +1416,12 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
   const visibleNodeIds = useMemo(() => new Set(filteredGraphNodes.map((n) => n.id)), [filteredGraphNodes]);
 
-  // If selected node was filtered out or hidden, close the inspector
+  // If selected node was filtered out or hidden, close the inspector (unless explicitly hidden by operator so operator can unhide it)
   useEffect(() => {
-    if (selectedNode && !visibleNodeIds.has(selectedNode.id)) {
+    if (selectedNode && !visibleNodeIds.has(selectedNode.id) && !hiddenNodeIds.has(selectedNode.id)) {
       setSelectedNode(null);
     }
-  }, [visibleNodeIds, selectedNode]);
+  }, [visibleNodeIds, selectedNode, hiddenNodeIds]);
 
   // Edges filtered: ANY edge connected to a hidden/filtered node is hidden!
   const visibleEdges = useMemo(() => {
@@ -2279,6 +2330,28 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     Deselect
                   </button>
                 )}
+                {hiddenNodeIds.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleUnhideAll}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-colors cursor-pointer shadow-2xs"
+                    title="Restore all hidden nodes to view"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-amber-600" />
+                    Unhide All ({hiddenNodeIds.size})
+                  </button>
+                )}
+                {Object.keys(highlightedNodes).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearHighlights}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-300 transition-colors cursor-pointer shadow-2xs"
+                    title="Remove custom operator highlights from all nodes"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                    Clear Highlights ({Object.keys(highlightedNodes).length})
+                  </button>
+                )}
               </div>
 
               {selectedNodeIds.size > 0 && (
@@ -2544,6 +2617,17 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         </g>
                       )}
 
+                      {/* Operator Solid Highlight Ring */}
+                      {highlightedNodes[node.id] && (
+                        <circle
+                          r={nodeRadius + 5}
+                          fill="none"
+                          stroke={highlightedNodes[node.id]}
+                          strokeWidth="3"
+                          className="transition-all pointer-events-none"
+                        />
+                      )}
+
                       {/* Selection Halo / Ring (Single Selected or Multi-Selected) */}
                       {(isSelected || selectedNodeIds.has(node.id)) && (
                         <circle
@@ -2699,6 +2783,76 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         {copiedKey === 'label' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
+                  </div>
+
+                  {/* Operator Visibility & Highlighting Panel */}
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                    <div className="flex items-center justify-between gap-3">
+                      {/* Hide Checkbox */}
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={hiddenNodeIds.has(selectedNode.id)}
+                          onChange={(e) => handleToggleHideNode(selectedNode.id, e.target.checked)}
+                          className="w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                          <EyeOff className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Hide</span>
+                        </span>
+                      </label>
+
+                      {/* Highlight Checkbox */}
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(highlightedNodes[selectedNode.id])}
+                          onChange={(e) => handleToggleHighlightNode(selectedNode.id, e.target.checked)}
+                          className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Highlight</span>
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Highlight Color Dropdown (when Highlight is checked) */}
+                    {Boolean(highlightedNodes[selectedNode.id]) && (
+                      <div className="pt-2 border-t border-slate-200/70 flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1.5">
+                          <span
+                            className="w-3 h-3 rounded-full border border-black/15 shrink-0 shadow-2xs"
+                            style={{ backgroundColor: highlightedNodes[selectedNode.id] || DEFAULT_HIGHLIGHT_COLOR }}
+                          />
+                          <span>Circle Color:</span>
+                        </span>
+                        <select
+                          value={highlightedNodes[selectedNode.id] || DEFAULT_HIGHLIGHT_COLOR}
+                          onChange={(e) => handleChangeHighlightColor(selectedNode.id, e.target.value)}
+                          className="text-xs py-1 px-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
+                        >
+                          {HIGHLIGHT_COLOR_OPTIONS.map((c) => (
+                            <option key={c.value} value={c.value}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {hiddenNodeIds.has(selectedNode.id) && (
+                      <div className="pt-2 border-t border-slate-200/70 text-[11px] text-rose-600 font-medium flex items-center justify-between">
+                        <span>Hidden from view</span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleHideNode(selectedNode.id, false)}
+                          className="underline hover:text-rose-800 font-bold cursor-pointer"
+                        >
+                          Unhide
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Button: Select Connected Nodes & Close Inspector */}

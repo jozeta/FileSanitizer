@@ -13,10 +13,25 @@ import {
   SlidersHorizontal,
   Eye,
   EyeOff,
-  CheckSquare
+  CheckSquare,
+  Sparkles
 } from 'lucide-react';
 import { EntityGraphData, EntityGraphNode } from '../types';
 import { InvestigateAssetButton } from './InvestigateAssetButton';
+
+export const HIGHLIGHT_COLOR_OPTIONS = [
+  { value: '#f59e0b', label: 'Amber / Gold' },
+  { value: '#ef4444', label: 'Crimson Red' },
+  { value: '#10b981', label: 'Emerald Green' },
+  { value: '#0ea5e9', label: 'Sky Blue' },
+  { value: '#8b5cf6', label: 'Violet / Purple' },
+  { value: '#ec4899', label: 'Hot Pink' },
+  { value: '#f97316', label: 'Orange' },
+  { value: '#14b8a6', label: 'Teal' },
+  { value: '#eab308', label: 'Yellow' },
+  { value: '#6366f1', label: 'Indigo' },
+];
+export const DEFAULT_HIGHLIGHT_COLOR = '#f59e0b';
 
 interface EntityGraphCardProps {
   graphData?: EntityGraphData | null;
@@ -87,6 +102,49 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Operator Hide & Highlight State
+  const [hiddenNodeIds, setHiddenNodeIds] = useState<Set<string>>(new Set());
+  const [highlightedNodes, setHighlightedNodes] = useState<Record<string, string>>({});
+
+  const handleToggleHideNode = (nodeId: string, hide: boolean) => {
+    setHiddenNodeIds(prev => {
+      const next = new Set(prev);
+      if (hide) {
+        next.add(nodeId);
+      } else {
+        next.delete(nodeId);
+      }
+      return next;
+    });
+  };
+
+  const handleUnhideAll = () => {
+    setHiddenNodeIds(new Set());
+  };
+
+  const handleToggleHighlightNode = (nodeId: string, highlight: boolean) => {
+    setHighlightedNodes(prev => {
+      const next = { ...prev };
+      if (highlight) {
+        next[nodeId] = next[nodeId] || DEFAULT_HIGHLIGHT_COLOR;
+      } else {
+        delete next[nodeId];
+      }
+      return next;
+    });
+  };
+
+  const handleChangeHighlightColor = (nodeId: string, color: string) => {
+    setHighlightedNodes(prev => ({
+      ...prev,
+      [nodeId]: color,
+    }));
+  };
+
+  const handleClearHighlights = () => {
+    setHighlightedNodes({});
+  };
 
   // Viewport Zoom & Pan
   const [zoom, setZoom] = useState<number>(1);
@@ -253,8 +311,13 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   const filteredNodes = useMemo(() => {
     const nodes = graphData?.nodes || [];
     return nodes.filter(n => {
+      // Explicit operator hidden nodes
+      if (hiddenNodeIds.has(n.id)) {
+        return false;
+      }
+
       const isRoot = n.id === 'root' || n.type === 'root' || n.type === 'file';
-      if (isRoot) return true; // Always keep root file anchor
+      if (isRoot) return true; // Always keep root file anchor unless explicitly hidden
 
       // Hide empty nodes constraint (e.g. VirusTotal with 0 detections)
       if (!showEmptyNodes && isEmptyNode(n)) {
@@ -290,7 +353,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
         return cat ? cat.types.includes(n.type) : false;
       });
     });
-  }, [graphData?.nodes, selectedFilters, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap, showEmptyNodes]);
+  }, [graphData?.nodes, selectedFilters, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap, showEmptyNodes, hiddenNodeIds]);
 
   const visibleNodeIds = useMemo(() => new Set(filteredNodes.map(n => n.id)), [filteredNodes]);
 
@@ -1205,12 +1268,38 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
             </button>
           </div>
 
-          {selectedNodeIds.size > 0 && (
-            <div className="flex items-center gap-2 text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
-              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-              <span>{selectedNodeIds.size} node{selectedNodeIds.size > 1 ? 's' : ''} selected — drag to move group</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {hiddenNodeIds.size > 0 && (
+              <button
+                type="button"
+                onClick={handleUnhideAll}
+                className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer shadow-2xs"
+                title="Unhide all hidden nodes in graph"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Unhide All ({hiddenNodeIds.size})</span>
+              </button>
+            )}
+
+            {Object.keys(highlightedNodes).length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearHighlights}
+                className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs"
+                title="Remove highlights from all nodes"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <span>Clear Highlights ({Object.keys(highlightedNodes).length})</span>
+              </button>
+            )}
+
+            {selectedNodeIds.size > 0 && (
+              <div className="flex items-center gap-2 text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                <span>{selectedNodeIds.size} node{selectedNodeIds.size > 1 ? 's' : ''} selected — drag to move group</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1383,6 +1472,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
               const isHovered = hoveredNodeId === node.id;
               const isRoot = node.id === 'root';
               const radius = isRoot ? 26 : 20;
+              const highlightColor = highlightedNodes[node.id];
 
               return (
                 <g
@@ -1417,6 +1507,17 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   onMouseLeave={() => setHoveredNodeId(null)}
                   className="cursor-pointer"
                 >
+                  {/* Operator Highlight Ring (Solid Circle) */}
+                  {highlightColor && (
+                    <circle
+                      r={radius + 5}
+                      fill="none"
+                      stroke={highlightColor}
+                      strokeWidth={3}
+                      className="transition-all pointer-events-none"
+                    />
+                  )}
+
                   {/* Multi-selection Halo */}
                   {isSelectedInGroup && (
                     <circle
@@ -1568,6 +1669,76 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   ✕
                 </button>
               </div>
+            </div>
+
+            {/* Operator Visibility & Highlighting Panel */}
+            <div className="mt-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                {/* Hide Checkbox */}
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hiddenNodeIds.has(selectedNode.id)}
+                    onChange={(e) => handleToggleHideNode(selectedNode.id, e.target.checked)}
+                    className="w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                  />
+                  <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <EyeOff className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Hide</span>
+                  </span>
+                </label>
+
+                {/* Highlight Checkbox */}
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(highlightedNodes[selectedNode.id])}
+                    onChange={(e) => handleToggleHighlightNode(selectedNode.id, e.target.checked)}
+                    className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Highlight</span>
+                  </span>
+                </label>
+              </div>
+
+              {/* Highlight Color Dropdown (when Highlight is checked) */}
+              {Boolean(highlightedNodes[selectedNode.id]) && (
+                <div className="pt-2 border-t border-slate-200/70 flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1.5">
+                    <span
+                      className="w-3 h-3 rounded-full border border-black/15 shrink-0 shadow-2xs"
+                      style={{ backgroundColor: highlightedNodes[selectedNode.id] || DEFAULT_HIGHLIGHT_COLOR }}
+                    />
+                    <span>Circle Color:</span>
+                  </span>
+                  <select
+                    value={highlightedNodes[selectedNode.id] || DEFAULT_HIGHLIGHT_COLOR}
+                    onChange={(e) => handleChangeHighlightColor(selectedNode.id, e.target.value)}
+                    className="text-xs py-1 px-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
+                  >
+                    {HIGHLIGHT_COLOR_OPTIONS.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {hiddenNodeIds.has(selectedNode.id) && (
+                <div className="pt-2 border-t border-slate-200/70 text-[11px] text-rose-600 font-medium flex items-center justify-between">
+                  <span>Hidden from view</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleHideNode(selectedNode.id, false)}
+                    className="underline hover:text-rose-800 font-bold cursor-pointer"
+                  >
+                    Unhide
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Select Connected Nodes Action Button */}

@@ -2,7 +2,7 @@
 
 > **"Don't trust the file. Wash it first."**
 
-[![Release](https://img.shields.io/badge/release-v2.2.6-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
+[![Release](https://img.shields.io/badge/release-v2.2.7-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
 [![Python](https://img.shields.io/badge/python-3.11-brightgreen.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
@@ -889,7 +889,7 @@ The automated test suite verifies:
 * Zynamics-style BinDiff orthogonal CFG generation, 90° edge routing, semantic instruction-level diffing (MOD/NEW/DEL), synchronized pan/zoom, and lower-right interactive minimap
 * Global symbol renaming and refactoring engine with real-time reactive propagation across Decompiler, BinDiff 2D CFG, Capstone disassembly, and String search
 * Incident Threat Relationship Graph dot matrix canvas, draggable force-directed nodes, edge midpoint pill boxes, and slide-out Entity Inspector
-* Universal forensic entity extraction and correlation across single-file Entity Graph and multi-artifact Threat Graph: emails, domains, watchlist keywords, IPs, hostnames, usernames, and author/signer names
+* Universal forensic entity extraction and correlation across single-file Entity Graph and multi-artifact Threat Graph: emails, domains, watchlist keywords, IPs, hostnames, usernames, author/signer names, with interactive operator node hiding, solid circle highlighting, and multi-color selector
 * Universal embedded files extraction and recursive job analysis
 * Admin login authentication and protected settings endpoints
 * Domain/IP Threat Intelligence: Parallel async pipeline, zero-latency anti-SSRF verification, and full DNS resolution
