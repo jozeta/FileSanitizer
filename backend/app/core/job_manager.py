@@ -581,6 +581,8 @@ class JobManager:
 
             elif job.category == "domain":
                 from app.analyzers.domain_analyzer import DomainAnalyzer
+                job.current_step_label = "Domain Intelligence & Reconnaissance"
+                job.progress = 48
                 if not getattr(job, "domain_info", None):
                     job.domain_info = DomainAnalyzer.analyze(job.filename, deep=True)
                 for rf in (job.domain_info or {}).get("risk_flags", []):
@@ -591,6 +593,13 @@ class JobManager:
                         description=rf.get("description", ""),
                         details=rf
                     ))
+                try:
+                    from app.network.url_fetcher import URLFileFetcher
+                    report_html = URLFileFetcher._build_domain_report_html(job.filename, job.domain_info or {})
+                    original_path.write_bytes(report_html)
+                    job.file_size = len(report_html)
+                except Exception as b_err:
+                    logger.debug(f"Could not rewrite domain report HTML: {b_err}")
 
             elif job.category == "pcap":
                 from app.analyzers.pcap_analyzer import PcapAnalyzer
@@ -1036,6 +1045,10 @@ class JobManager:
                 if isinstance(existing, dict) and existing.get("url"):
                     extracted_urls.add(existing["url"])
 
+            if job.category == "domain":
+                d_url = f"https://{job.filename}" if not job.filename.startswith("http") else job.filename
+                extracted_urls.add(d_url)
+
             analysis_data["urls"] = list(extracted_urls)
             target_urls = list(extracted_urls)[:15]
 
@@ -1068,6 +1081,14 @@ class JobManager:
                     if success:
                         url_data["screenshot_available"] = True
                         url_data["screenshot_url"] = f"/api/jobs/{job_id}/screenshots/{shot_name}"
+                        if job.category == "domain" and not job.thumbnail_available:
+                            thumb_path = ws.base_dir / "thumbnail.png"
+                            try:
+                                thumb_path.write_bytes(shot_path.read_bytes())
+                                job.thumbnail_available = True
+                                job.thumbnail_url = f"/api/jobs/{job.job_id}/thumbnail"
+                            except Exception as th_err:
+                                logger.debug(f"Could not copy domain screenshot thumbnail: {th_err}")
                 analyzed_urls.append(url_data)
                 # Increment progress proportionally during URL inspection & screenshot taking
                 job.progress = min(88, 75 + int((idx + 1) / max(len(target_urls), 1) * 13))

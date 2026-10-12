@@ -106,7 +106,7 @@ class URLAnalyzer:
     """
 
     @classmethod
-    def analyze_url(cls, url: str, _depth: int = 0) -> Dict[str, Any]:
+    def analyze_url(cls, url: str, _depth: int = 0, include_deep_domain: bool = False) -> Dict[str, Any]:
         """Deep analysis of a single URL."""
         raw_url = url.strip()
         normalized_url = raw_url
@@ -224,15 +224,19 @@ class URLAnalyzer:
                     if result["risk"] == "CLEAN":
                         result["risk"] = "MEDIUM RISK"
 
-        # 3b. Domain & Infrastructure Intelligence (DNS, WHOIS/RDAP, Punycode/Homograph, Obfuscations)
+        # 3b. High-Speed Domain Threat & Homograph Analysis (Punycode & Obfuscations)
         if domain:
             try:
                 from app.analyzers.domain_analyzer import DomainAnalyzer
-                domain_intel = DomainAnalyzer.analyze(domain)
-                result["domain_intelligence"] = domain_intel
-                
+                puny = DomainAnalyzer.analyze_punycode(domain)
+                obf = DomainAnalyzer.detect_obfuscation(url)
+
+                result["domain_intelligence"] = {
+                    "punycode_analysis": puny,
+                    "obfuscation_analysis": obf,
+                }
+
                 # Check for Punycode homograph attack
-                puny = domain_intel.get("punycode_analysis", {})
                 if puny.get("is_homograph") or puny.get("is_punycode"):
                     unicode_disp = puny.get("unicode_rendered") or puny.get("visual_appearance") or domain
                     simulated = puny.get("simulated_latin") or unicode_disp
@@ -240,23 +244,24 @@ class URLAnalyzer:
                     result["indicators"].append(
                         f"Punycode homograph impersonation attack: '{domain}' visually renders as '{unicode_disp}' (masquerading as '{simulated}')"
                     )
-                
+
                 # Check for obfuscated address representations
-                obf = domain_intel.get("obfuscation_analysis", {})
                 if obf.get("is_obfuscated"):
                     for tech in obf.get("techniques", []):
                         if result["risk"] != "MALICIOUS":
                             result["risk"] = "HIGH RISK"
                         result["indicators"].append(f"Obfuscated Address: {tech.get('name')}")
-                        
-                # Check for newly registered domain (<30 days)
-                whois_age = domain_intel.get("whois", {}).get("domain_age_days")
-                if whois_age is not None and whois_age < 30:
-                    if result["risk"] in ["CLEAN", "LOW RISK"]:
-                        result["risk"] = "MEDIUM RISK"
-                    result["indicators"].append(f"Newly registered domain ({whois_age} days old)")
+
+                if include_deep_domain:
+                    domain_intel = DomainAnalyzer.analyze(domain)
+                    result["domain_intelligence"] = domain_intel
+                    whois_age = domain_intel.get("whois", {}).get("domain_age_days")
+                    if whois_age is not None and whois_age < 30:
+                        if result["risk"] in ["CLEAN", "LOW RISK"]:
+                            result["risk"] = "MEDIUM RISK"
+                        result["indicators"].append(f"Newly registered domain ({whois_age} days old)")
             except Exception as e:
-                logger.debug(f"DomainAnalyzer execution skipped for {domain}: {e}")
+                logger.debug(f"Fast domain threat check skipped for {domain}: {e}")
 
         # 4. HTTP Status Verification & Deep Redirect Analysis (if allowed)
         if result["is_ssrf_safe"] and protocol in ["http", "https"]:

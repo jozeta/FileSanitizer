@@ -112,11 +112,11 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
     setUrlError(null);
     setIsFetchingUrl(true);
-    setUrlFetchStatus('Checking SSRF security & threat watchlists...');
+    setUrlFetchStatus('Validating SSRF security & threat watchlists...');
 
     try {
       const res = await apiClient.fetchUrl(cleanUrl);
-      setUrlFetchStatus('File fetched successfully! Starting analysis...');
+      setUrlFetchStatus('Target verified! Opening analysis workspace...');
       if (res.jobs && res.jobs.length > 0 && onUrlFetchSuccess) {
         onUrlFetchSuccess(res.jobs[0].job_id);
       }

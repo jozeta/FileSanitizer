@@ -196,12 +196,11 @@ class URLFileFetcher:
         is_safe, ssrf_reason, ips = validate_url_for_ssrf(current_url)
         if not is_safe:
             if is_domain_target and "DNS resolution failed" in (ssrf_reason or ""):
-                domain_info = DomainAnalyzer.analyze(domain_name, deep=True) if domain_name else {}
-                report_bytes = cls._build_domain_report_html(domain_name, domain_info)
+                report_bytes = cls._build_domain_report_html(domain_name, {}, f"<p>Domain does not resolve in DNS: {domain_name}</p>")
                 target_name = sanitize_filename(domain_name) if domain_name else "network_target"
                 reputation = URLAnalyzer.analyze_url(url_input)
-                logger.info(f"Analyzed non-resolving domain target '{target_name}' (Punycode/Homograph/WHOIS analysis)")
-                return FetchResult(report_bytes, target_name, reputation, None, domain_info, is_domain_target=True)
+                logger.info(f"Accepted non-resolving domain target '{target_name}' for background analysis pipeline")
+                return FetchResult(report_bytes, target_name, reputation, None, None, is_domain_target=True)
             raise URLFetcherException(f"Destination blocked by SSRF security policy: {ssrf_reason}", 400, {"ssrf_reason": ssrf_reason})
 
         # 2. URL Reputation & Watchlist Check (Recorded as findings; does NOT block analysis!)
@@ -210,18 +209,14 @@ class URLFileFetcher:
         # 3. Domain & IP Target Inspection Mode
         # If user submits a domain, IP, or web root rather than a downloadable file path:
         if is_domain_target:
-            domain_info = DomainAnalyzer.analyze(domain_name, deep=True) if domain_name else {}
-            screenshot_bytes = cls._fetch_screenshot_bytes(url_input)
-            report_bytes = cls._build_domain_report_html(domain_name, domain_info)
+            report_bytes = cls._build_domain_report_html(domain_name, {}, f"<p>Queued for domain and network infrastructure analysis: {domain_name}</p>")
             target_name = sanitize_filename(domain_name) if domain_name else "network_target"
-            logger.info(f"Analyzed remote domain/IP target '{target_name}' (screenshot captured: {bool(screenshot_bytes)})")
-            return FetchResult(report_bytes, target_name, reputation, screenshot_bytes, domain_info, is_domain_target=True)
+            logger.info(f"Accepted remote domain/IP target '{target_name}' for background analysis pipeline")
+            return FetchResult(report_bytes, target_name, reputation, None, None, is_domain_target=True)
 
         # 4. Stream download for Remote Files
         screenshot_bytes: Optional[bytes] = None
-        domain_info = DomainAnalyzer.analyze(domain_name) if domain_name else {}
-        if not is_extension_store:
-            screenshot_bytes = cls._fetch_screenshot_bytes(url_input)
+        domain_info = None
 
         max_bytes = settings.MAX_FILE_SIZE_MB * 1024 * 1024
         redirect_hops = 0
