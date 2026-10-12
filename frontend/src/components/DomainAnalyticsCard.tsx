@@ -2249,42 +2249,103 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
               </div>
             )}
 
-            {/* Standard Open Ports */}
+            {/* Standard Open Ports (Nmap Service Scan) */}
             {activeRecon?.services && activeRecon.services.length > 0 ? (
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px]">
-                    <tr>
-                      <th className="py-2.5 px-4">Port</th>
-                      <th className="py-2.5 px-4">Protocol</th>
-                      <th className="py-2.5 px-4">Service</th>
-                      <th className="py-2.5 px-4">Status</th>
-                      <th className="py-2.5 px-4">Live Service Banner</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {activeRecon.services.map((svc, i) => (
-                      <tr key={i} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-4 font-bold text-slate-900">{svc.port}</td>
-                        <td className="py-2.5 px-4 text-slate-500">{svc.protocol}</td>
-                        <td className="py-2.5 px-4 font-semibold text-blue-700">{svc.service}</td>
-                        <td className="py-2.5 px-4">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                            OPEN
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-4 text-slate-600 max-w-xs truncate" title={svc.banner || ''}>
-                          {svc.banner || '<no banner returned>'}
-                        </td>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-700">Open Services &amp; Daemons</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                      {activeRecon.open_ports_count || activeRecon.services.length} Open
+                    </span>
+                    {activeRecon.scanner === 'nmap' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                        <Terminal className="w-3 h-3" />
+                        Nmap -sS -sV
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px]">
+                      <tr>
+                        <th className="py-2.5 px-4">Port</th>
+                        <th className="py-2.5 px-4">Protocol</th>
+                        <th className="py-2.5 px-4">Service</th>
+                        <th className="py-2.5 px-4">Status</th>
+                        <th className="py-2.5 px-4">Reason</th>
+                        <th className="py-2.5 px-4">Detected Software / Live Banner</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {activeRecon.services.map((svc, i) => (
+                        <tr key={i} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900">{svc.port}</td>
+                          <td className="py-2.5 px-4 text-slate-500">{svc.protocol}</td>
+                          <td className="py-2.5 px-4 font-semibold text-blue-700">{svc.service}</td>
+                          <td className="py-2.5 px-4">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                              OPEN
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 font-mono">
+                              {svc.reason || 'syn-ack'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4 text-slate-700 max-w-sm">
+                            <div className="truncate font-sans font-medium" title={svc.banner || ''}>
+                              {svc.banner || '<no banner returned>'}
+                            </div>
+                            {(svc.product || svc.version) && (
+                              <div className="text-[10px] text-slate-500 font-mono truncate">
+                                {[svc.product, svc.version, svc.extrainfo].filter(Boolean).join(' ')}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Collapsible Raw Nmap Scan Output */}
+                {(activeRecon.raw_nmap || activeRecon.scan_command) && (
+                  <details className="group border border-slate-200 rounded-xl overflow-hidden bg-slate-50/60 transition-all">
+                    <summary className="flex items-center justify-between px-4 py-2.5 cursor-pointer select-none text-xs font-semibold text-slate-700 hover:bg-slate-100/70">
+                      <div className="flex items-center gap-2">
+                        <Terminal className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Nmap Execution Command &amp; Raw Output</span>
+                      </div>
+                      <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform duration-200" />
+                    </summary>
+                    <div className="p-4 pt-2 border-t border-slate-200 bg-white space-y-2">
+                      {activeRecon.scan_command && (
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Executed Command:</div>
+                          <code className="block p-2 bg-slate-900 text-purple-300 font-mono text-[11px] rounded-md overflow-x-auto select-all">
+                            {activeRecon.scan_command}
+                          </code>
+                        </div>
+                      )}
+                      {activeRecon.raw_nmap && (
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Raw Nmap Output (-oA nmap-service-scan):</div>
+                          <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[11px] rounded-md overflow-x-auto max-h-64 whitespace-pre">
+                            {activeRecon.raw_nmap}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
               </div>
             ) : (
               <div className="p-8 border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-500 space-y-1">
                 <p className="font-semibold text-slate-700">No active scan has been executed yet.</p>
-                <p>Click &quot;Authorize &amp; Run Active Audit&quot; above to discover open web, mail, and management services.</p>
+                <p>Click &quot;Authorize &amp; Run Active Audit&quot; above to discover open web, mail, and management services via Nmap.</p>
               </div>
             )}
           </div>

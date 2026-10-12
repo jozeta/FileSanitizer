@@ -36,10 +36,14 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
     cap_drop:
       - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+      - NET_RAW
+      - NET_ADMIN
+      - AUDIT_WRITE
     networks:
       - frontend-net
       - internal-net
@@ -59,10 +63,14 @@ services:
     volumes:
       - jobs-data:/jobs
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
     cap_drop:
       - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+      - NET_RAW
+      - NET_ADMIN
+      - AUDIT_WRITE
     networks:
       - internal-net
     depends_on:

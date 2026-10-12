@@ -295,25 +295,72 @@ def test_multi_dimensional_scoring_engine():
 # 7. ACTIVE RECON SERVICE SCANNER TESTS
 # ============================================================================
 
+def test_active_recon_nmap_xml_parser():
+    sample_xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <nmaprun scanner="nmap" args="nmap -sS -sV ...">
+      <host>
+        <ports>
+          <port protocol="tcp" portid="22">
+            <state state="open" reason="syn-ack"/>
+            <service name="ssh" product="OpenSSH" version="8.9p1" extrainfo="Ubuntu"/>
+          </port>
+          <port protocol="tcp" portid="443">
+            <state state="open" reason="syn-ack"/>
+            <service name="http" product="nginx" version="1.24.0" tunnel="ssl"/>
+          </port>
+        </ports>
+      </host>
+    </nmaprun>
+    """
+    services = ActiveServiceScanner._parse_nmap_xml(sample_xml)
+    assert len(services) == 2
+    assert services[0]["port"] == 22
+    assert services[0]["service"] == "ssh"
+    assert services[0]["product"] == "OpenSSH"
+    assert services[0]["version"] == "8.9p1"
+    assert services[0]["reason"] == "syn-ack"
+    assert services[0]["banner"] == "OpenSSH 8.9p1 (Ubuntu)"
+
+    assert services[1]["port"] == 443
+    assert services[1]["service"] == "https"
+    assert services[1]["banner"] == "nginx 1.24.0"
+
+
 def test_active_recon_service_scanner_mocked():
     # Without authorization, scanner MUST refuse
     refused = ActiveServiceScanner.scan_services("93.184.216.34", authorized=False)
     assert refused["executed"] is False
     assert "explicit operator authorization" in refused["message"]
 
-    # With authorization and mocked open socket
-    with patch("socket.create_connection") as mock_conn:
+    # Test Nmap execution path
+    with patch("shutil.which", return_value="/usr/bin/nmap"), \
+         patch.object(ActiveServiceScanner, "_execute_nmap_scan") as mock_nmap, \
+         patch("app.network.active_recon.validate_url_for_ssrf", return_value=(True, None, ["93.184.216.34"])):
+        mock_nmap.return_value = (
+            [{"port": 22, "protocol": "TCP", "service": "ssh", "state": "open", "reason": "syn-ack", "banner": "OpenSSH 8.9p1"}],
+            "PORT 22/tcp open ssh",
+            "sudo nmap -sS -sV --version-light -T3 --open -p ... --reason -oA ... 93.184.216.34"
+        )
+        recon = ActiveServiceScanner.scan_services("93.184.216.34", authorized=True)
+        assert recon["executed"] is True
+        assert recon["scanner"] == "nmap"
+        assert recon["open_ports_count"] == 1
+        assert recon["services"][0]["port"] == 22
+
+    # Test socket fallback when Nmap is unavailable
+    with patch("shutil.which", return_value=None), \
+         patch("socket.create_connection") as mock_conn, \
+         patch("app.network.active_recon.validate_url_for_ssrf", return_value=(True, None, ["93.184.216.34"])):
         mock_sock = MagicMock()
         mock_conn.return_value.__enter__.return_value = mock_sock
         mock_sock.recv.return_value = b"SSH-2.0-OpenSSH_8.9p1 Ubuntu\r\n"
 
-        # Mock SSRF validation to allow the public IP
-        with patch("app.network.active_recon.validate_url_for_ssrf", return_value=(True, None, ["93.184.216.34"])):
-            recon = ActiveServiceScanner.scan_services("93.184.216.34", authorized=True)
-            assert recon["executed"] is True
-            assert recon["open_ports_count"] > 0
-            open_port_numbers = [s["port"] for s in recon["services"]]
-            assert 22 in open_port_numbers
+        recon = ActiveServiceScanner.scan_services("93.184.216.34", authorized=True)
+        assert recon["executed"] is True
+        assert recon["scanner"] == "socket_probe"
+        assert recon["open_ports_count"] > 0
+        open_port_numbers = [s["port"] for s in recon["services"]]
+        assert 22 in open_port_numbers
 
 
 # ============================================================================

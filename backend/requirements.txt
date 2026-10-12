@@ -30,4 +30,6 @@ rarfile>=4.5
 python-evtx>=0.8.1
 opencv-python-headless>=4.9.0
 qrcode[pil]>=8.0
+dnspython>=2.6.0
+python-dateutil>=2.9.0
 

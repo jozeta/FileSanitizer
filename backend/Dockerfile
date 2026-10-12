@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     tesseract-ocr-eng \
     binutils \
+    nmap \
+    sudo \
+    libcap2-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # Install checksec v3 (slimm609/checksec) — binary security analysis tool (multi-arch: amd64 / arm64)
@@ -31,9 +34,12 @@ RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" && \
         chmod +x /usr/local/bin/checksec; \
     fi
 
-# Create non-root user
+# Create non-root user and configure passwordless sudo / network capabilities for Nmap reconnaissance
 RUN groupadd -g 1001 appgroup && \
-    useradd -u 1001 -g appgroup -s /bin/bash -m appuser
+    useradd -u 1001 -g appgroup -s /bin/bash -m appuser && \
+    echo "appuser ALL=(ALL) NOPASSWD: /usr/bin/nmap" > /etc/sudoers.d/appuser && \
+    chmod 0440 /etc/sudoers.d/appuser && \
+    setcap cap_net_raw,cap_net_admin+eip /usr/bin/nmap || true
 
 WORKDIR /app
 

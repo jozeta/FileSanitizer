@@ -1727,12 +1727,21 @@ export interface DomainIntelligence {
     target?: string;
     authorized: boolean;
     executed: boolean;
+    scanner?: string;
+    scan_command?: string;
     open_ports_count?: number;
+    raw_nmap?: string;
     services?: Array<{
       port: number;
       protocol: string;
       service: string;
       state: string;
+      reason?: string | null;
+      product?: string | null;
+      version?: string | null;
+      extrainfo?: string | null;
+      tunnel?: string | null;
+      cpe?: string[];
       banner?: string | null;
     }>;
     message?: string;
