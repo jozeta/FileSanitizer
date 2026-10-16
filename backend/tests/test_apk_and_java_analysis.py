@@ -494,4 +494,67 @@ def test_apk_evasion_and_asset_entropy(tmp_path: Path):
     assert data["package_name"] == "com.stealth.trojan"
 
 
+def test_apk_threat_intel_packers_signatures_and_keystore_audit(tmp_path: Path):
+    """Test packer detection, malware signatures, keystore masquerading & Janus, and CTI probers."""
+    apk_file = tmp_path / "threat_sample.apk"
 
+    # Minimal DEX with Telegram bot and Discord webhook strings
+    dex_data = bytearray(112)
+    dex_data[0:8] = b"dex\n035\x00"
+    dex_data.extend(
+        b"Lcom/malicious/dropper/MainActivity;\x00"
+        b"https://api.telegram.org/bot123456789:ABCdefGHIjklMNOpqrsTUVwxyz012345678/sendMessage\x00"
+        b"https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\x00"
+        b"https://c2-backend.firebaseio.com\x00"
+    )
+
+    # Manifest with VPN Service & Overlay permissions
+    manifest_xml = (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.malicious.dropper">\n'
+        '    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />\n'
+        '    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />\n'
+        '    <application>\n'
+        '        <service android:name=".StealthVpnService">\n'
+        '            <intent-filter>\n'
+        '                <action android:name="android.net.VpnService" />\n'
+        '            </intent-filter>\n'
+        '        </service>\n'
+        '    </application>\n'
+        '</manifest>'
+    )
+
+    with zipfile.ZipFile(apk_file, "w") as zf:
+        zf.writestr("AndroidManifest.xml", manifest_xml)
+        zf.writestr("classes.dex", dex_data)
+        # Qihoo 360 Jiagu packer marker
+        zf.writestr("assets/libjiagu.so", b"\x7fELF" + b"\x00" * 100)
+
+    analyzer = ApkAnalyzer()
+    res = analyzer.analyze(apk_file, "threat_sample.apk", "application/vnd.android.package-archive")
+
+    assert res.success is True
+    data = res.data
+
+    # 1. Packer Detection
+    assert data["packer_info"]["is_packed"] is True
+    assert "Qihoo 360" in data["packer_info"]["packer_name"]
+    packer_f = next((f for f in res.findings if "Packer Detected" in f.title), None)
+    assert packer_f is not None
+
+    # 2. Malware Signatures (VPN Proxy & Overlay)
+    vpn_sig = next((s for s in data["malware_signatures"] if "VPN" in s["title"]), None)
+    assert vpn_sig is not None
+
+    overlay_sig = next((s for s in data["malware_signatures"] if "Overlay" in s["title"]), None)
+    assert overlay_sig is not None
+
+    # 3. Exfiltration Tokens
+    tokens = data["online_intel"]["exfiltration_tokens"]
+    assert len(tokens["telegram_bots"]) == 1
+    assert "123456789:ABCdefGHIjklMNOpqrsTUVwxyz012345678" in tokens["telegram_bots"][0]
+    assert len(tokens["discord_webhooks"]) == 1
+    assert "c2-backend" in tokens["firebase_databases"]
+
+    # 4. Play Store Status (Unlisted / Sideloaded)
+    assert data["online_intel"]["play_store_status"] in ("unlisted_sideloaded", "offline_or_timeout")

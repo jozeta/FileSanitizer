@@ -99,6 +99,9 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
     native_so_details = [],
     categorized_strings,
     online_intel,
+    packer_info,
+    malware_signatures = [],
+    keystore_audit,
     security_audit = [],
     embedded_assets = [],
     iocs = { urls: [], ips: [] },
@@ -520,6 +523,91 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                 </span>
               </div>
 
+              {/* Google Play Store Verification Status */}
+              {online_intel.play_store_status && (
+                <div className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                  online_intel.play_store_status === 'verified'
+                    ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200'
+                    : 'bg-amber-950/70 border-amber-500/50 text-amber-200'
+                }`}>
+                  <div className="flex items-center gap-2.5">
+                    {online_intel.play_store_status === 'verified' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    )}
+                    <div>
+                      <strong className="font-semibold block">
+                        {online_intel.play_store_status === 'verified'
+                          ? 'Official Google Play Store Application'
+                          : 'Sideloaded / Unlisted Application (Not on Google Play)'}
+                      </strong>
+                      <span className="text-[11px] opacity-80 block">
+                        {online_intel.play_store_title
+                          ? `Official Title: "${online_intel.play_store_title}"`
+                          : (online_intel.play_store_details || 'Package identity not found in the Google Play index.')}
+                      </span>
+                    </div>
+                  </div>
+                  {online_intel.google_play_url && (
+                    <a
+                      href={online_intel.google_play_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[11px] font-medium shrink-0 flex items-center gap-1 transition-all"
+                    >
+                      <span>View Store</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Multi-Feed Threat Intelligence Consensus Verdict */}
+              {online_intel.overall_verdict && online_intel.overall_verdict !== 'unknown' && (
+                <div className={`p-3.5 rounded-xl border text-xs space-y-2 ${
+                  online_intel.overall_verdict === 'malicious'
+                    ? 'bg-rose-950/80 border-rose-500/60 text-rose-200'
+                    : online_intel.overall_verdict === 'suspicious'
+                    ? 'bg-amber-950/70 border-amber-500/50 text-amber-200'
+                    : 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className={`w-4 h-4 ${online_intel.overall_verdict === 'malicious' ? 'text-rose-400' : 'text-amber-400'}`} />
+                      <span className="font-bold uppercase tracking-wider text-[11px]">
+                        CTI Consensus: {online_intel.overall_verdict} Android Binary
+                      </span>
+                    </div>
+                    {online_intel.feeds?.virustotal?.detections > 0 && (
+                      <span className="font-mono text-[11px] bg-rose-900/80 px-2 py-0.5 rounded text-rose-200 border border-rose-700/60">
+                        VT: {online_intel.feeds?.virustotal?.detections}/{online_intel.feeds?.virustotal?.total} Engines
+                      </span>
+                    )}
+                  </div>
+                  {online_intel.malware_families && online_intel.malware_families.length > 0 && (
+                    <div className="text-[11px] flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="opacity-80 font-semibold">Detected Families:</span>
+                      {online_intel.malware_families.map((fam, fIdx) => (
+                        <span key={fIdx} className="bg-rose-900/90 text-rose-100 px-2 py-0.5 rounded-md font-mono text-[10px] border border-rose-700/70">
+                          {fam}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {online_intel.threat_tags && online_intel.threat_tags.length > 0 && (
+                    <div className="text-[11px] flex flex-wrap items-center gap-1 pt-0.5">
+                      <span className="opacity-80 font-semibold">Threat Tags:</span>
+                      {online_intel.threat_tags.slice(0, 8).map((tag, tIdx) => (
+                        <span key={tIdx} className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-700">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Hash Pills with Copy */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/80">
@@ -638,6 +726,58 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Code Protector / Packer Detection */}
+          {packer_info?.is_packed && (
+            <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 flex items-start gap-3">
+              <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0">
+                <Package className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800">
+                  Packer / Code Protector Detected: {packer_info.packer_name}
+                </h4>
+                <p className="text-xs text-amber-700">
+                  {packer_info.description}
+                </p>
+                {packer_info.matched_markers && packer_info.matched_markers.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {packer_info.matched_markers.map((m, mIdx) => (
+                      <span key={mIdx} className="px-2 py-0.5 bg-amber-200/80 text-amber-900 rounded font-mono text-[10px]">
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Specialized Android Malware Signatures */}
+          {malware_signatures && malware_signatures.length > 0 && (
+            <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-3">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-rose-900">
+                  High-Confidence Android Malware Behavior Signatures ({malware_signatures.length})
+                </h4>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {malware_signatures.map((sig, sIdx) => (
+                  <div key={sIdx} className="p-3 bg-white rounded-xl border border-rose-100 shadow-2xs space-y-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-slate-800">{sig.title}</span>
+                      <span className="px-2 py-0.5 bg-rose-100 text-rose-700 font-mono text-[10px] font-bold rounded uppercase">
+                        {sig.severity}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600">{sig.description}</p>
+                    <span className="text-[10px] text-slate-400 font-mono block">Family: {sig.family}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1873,6 +2013,50 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
               </div>
             </div>
           )}
+
+          {keystore_audit?.is_masquerading_identity && (
+            <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 flex items-start gap-3 text-rose-800">
+              <ShieldAlert className="w-5 h-5 shrink-0 text-rose-600" />
+              <div>
+                <strong className="text-xs font-bold block">Certificate Identity Masquerading / Brand Spoofing</strong>
+                <p className="text-xs text-rose-700 mt-0.5">
+                  {keystore_audit.masquerade_details}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {keystore_audit?.janus_vulnerability && (
+            <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 flex items-start gap-3 text-amber-800">
+              <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600" />
+              <div>
+                <strong className="text-xs font-bold block">Janus Vulnerability Susceptibility (CVE-2017-13156)</strong>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  {keystore_audit.janus_details}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Signature Schemes Support */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-700">Scheme v1 (JAR Signature)</span>
+              <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
+                signing_info.has_v1_signature ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+              }`}>
+                {signing_info.has_v1_signature ? 'PRESENT' : 'NOT PRESENT'}
+              </span>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-700">Scheme v2/v3 (APK Signing Block)</span>
+              <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
+                signing_info.has_v2_or_v3_signature ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+              }`}>
+                {signing_info.has_v2_or_v3_signature ? 'PRESENT (PROTECTED)' : 'MISSING (VULNERABLE)'}
+              </span>
+            </div>
+          </div>
 
           {/* Certificate Attributes Table */}
           <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100 text-xs">

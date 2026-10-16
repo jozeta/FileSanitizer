@@ -3622,6 +3622,54 @@ export interface ApkOnlineIntel {
   malwarebazaar_url: string;
   google_play_url?: string;
   apkpure_url?: string;
+  play_store_status?: 'verified' | 'unlisted_sideloaded' | 'unverified' | 'offline' | string;
+  play_store_title?: string;
+  play_store_details?: string;
+  overall_verdict?: string;
+  threat_tags?: string[];
+  malware_families?: string[];
+  feeds?: Record<string, any>;
+  exfiltration_tokens?: {
+    telegram_bots?: string[];
+    discord_webhooks?: string[];
+    firebase_databases?: string[];
+  };
+  ioc_reputation?: {
+    queried_count: number;
+    malicious_count: number;
+    suspicious_count: number;
+    details: Array<{
+      indicator: string;
+      type: string;
+      verdict: string;
+      tags: string[];
+    }>;
+  };
+}
+
+export interface ApkPackerInfo {
+  is_packed: boolean;
+  packer_name?: string;
+  matched_markers?: string[];
+  description?: string;
+}
+
+export interface ApkMalwareSignature {
+  family: string;
+  title: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description: string;
+  indicators: string[];
+}
+
+export interface ApkKeystoreAudit {
+  is_aosp_debug_testkey: boolean;
+  is_masquerading_identity: boolean;
+  masquerade_details?: string;
+  validity_anomaly: boolean;
+  validity_details?: string;
+  janus_vulnerability: boolean;
+  janus_details?: string;
 }
 
 export interface ApkCategorizedStrings {
@@ -3718,6 +3766,9 @@ export interface ApkAnalysisData {
   native_so_details?: ApkNativeSoDetail[];
   categorized_strings?: ApkCategorizedStrings;
   online_intel?: ApkOnlineIntel;
+  packer_info?: ApkPackerInfo;
+  malware_signatures?: ApkMalwareSignature[];
+  keystore_audit?: ApkKeystoreAudit;
   security_audit?: ApkSecurityAuditItem[];
   network_security_config?: {
     found: boolean;

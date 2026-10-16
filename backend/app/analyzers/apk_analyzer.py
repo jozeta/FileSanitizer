@@ -30,6 +30,7 @@ from typing import Dict, Any, List, Optional, Tuple, Set
 
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
 from app.core.logging_config import logger
+from app.network.threat_intelligence import ThreatIntelligenceAggregator
 
 # Silence verbose Androguard debug logging from loguru
 try:
@@ -1375,6 +1376,40 @@ class NativeLibraryAnalyzer:
         return lib_details
 
 
+ANDROID_PACKERS = [
+    {
+        "name": "Qihoo 360 (Jiagu)",
+        "markers": ["assets/libjiagu.so", "assets/libjiagu_art.so", "assets/libjiagu_x86.so", "libjiagu.so"],
+        "description": "Qihoo 360 Jiagu native dynamic DEX decryptor and code protector."
+    },
+    {
+        "name": "SecNeo (Bangcle)",
+        "markers": ["assets/libsecmain.so", "assets/libsecexe.so", "assets/bangcleplugin", "assets/secData0.jar", "libSecShell.so"],
+        "description": "SecNeo / Bangcle enterprise hardening wrapper, frequently abused by droppers."
+    },
+    {
+        "name": "Tencent Legu",
+        "markers": ["assets/libshell.so", "assets/libBugly.so", "assets/0OO00oo.dat", "assets/o0oooOO0ooOo.dat", "libshell.so"],
+        "description": "Tencent Legu / Tencent Shell binary obfuscator and memory DEX injector."
+    },
+    {
+        "name": "Baidu Protect",
+        "markers": ["assets/libbaiduprotect.so", "assets/baiduprotect1.jar", "libbaiduprotect.so"],
+        "description": "Baidu mobile code encryption and native protector."
+    },
+    {
+        "name": "APKProtector / Ijiami",
+        "markers": ["assets/ijm_lib/", "assets/apkprotector/", "libapkprotector.so"],
+        "description": "APKProtector / Ijiami anti-tamper and reverse engineering protection stub."
+    },
+    {
+        "name": "Alibaba Mobile Security (AliProtection)",
+        "markers": ["assets/libmobisec.so", "assets/libsgmain.so", "libmobisec.so"],
+        "description": "Alibaba Security app wrapper and dynamic payload decryptor."
+    }
+]
+
+
 class ApkAnalyzer(BaseAnalyzer):
     """
     Comprehensive forensic reverse engineering & security analyzer for Android Application Packages (APK).
@@ -1500,6 +1535,22 @@ class ApkAnalyzer(BaseAnalyzer):
                 "sensitive_paths": [],
                 "suspicious_apis": []
             },
+            "packer_info": {
+                "is_packed": False,
+                "packer_name": "",
+                "matched_markers": [],
+                "description": ""
+            },
+            "malware_signatures": [],
+            "keystore_audit": {
+                "is_aosp_debug_testkey": False,
+                "is_masquerading_identity": False,
+                "masquerade_details": "",
+                "validity_anomaly": False,
+                "validity_details": "",
+                "janus_vulnerability": False,
+                "janus_details": ""
+            },
             "online_intel": {
                 "sha256": sha256_hex,
                 "sha1": sha1_hex,
@@ -1509,7 +1560,25 @@ class ApkAnalyzer(BaseAnalyzer):
                 "virustotal_url": f"https://www.virustotal.com/gui/file/{sha256_hex}",
                 "malwarebazaar_url": f"https://bazaar.abuse.ch/sample/{sha256_hex}/",
                 "google_play_url": "",
-                "apkpure_url": ""
+                "apkpure_url": "",
+                "play_store_status": "unverified",
+                "play_store_title": "",
+                "play_store_details": "",
+                "overall_verdict": "unknown",
+                "threat_tags": [],
+                "malware_families": [],
+                "feeds": {},
+                "exfiltration_tokens": {
+                    "telegram_bots": [],
+                    "discord_webhooks": [],
+                    "firebase_databases": []
+                },
+                "ioc_reputation": {
+                    "queried_count": 0,
+                    "malicious_count": 0,
+                    "suspicious_count": 0,
+                    "details": []
+                }
             },
             "security_audit": [],
             "network_security_config": {
@@ -2020,6 +2089,21 @@ class ApkAnalyzer(BaseAnalyzer):
                 # 7b. Network Security Configuration Audit
                 self._analyze_network_security_config(zf, data, findings)
 
+                # 7c. Known Android Packers & Code Obfuscator Signatures
+                self._detect_packers(namelist, data, findings)
+
+                # 7d. Specialized Android Malware Family Signatures
+                self._detect_specialized_malware_signatures(andro_apk, data, findings)
+
+                # 7e. Keystore Intelligence, Brand Masquerading & Janus Audit
+                self._audit_keystore_vulnerabilities(data, findings)
+
+                # 7f. Covert Exfiltration Channels & CTI IoC Pivoting
+                self._extract_exfiltration_tokens_and_pivot_iocs(all_strings_collected, data, findings)
+
+                # 7g. Live Google Play Authenticity & Multi-Feed CTI Probing
+                self._perform_online_reputation_probes(sha256_hex, data, findings)
+
                 # 8. Synthesize MITRE ATT&CK for Mobile Techniques
                 mitre_map = {}
                 for dp in data["dangerous_permissions"]:
@@ -2028,6 +2112,14 @@ class ApkAnalyzer(BaseAnalyzer):
                 for api in data["dex_info"]["detected_apis"]:
                     if api.get("mitre"):
                         mitre_map[api["mitre"]] = api["mitre_name"]
+                for sig in data.get("malware_signatures", []):
+                    if sig.get("family") == "VPN Proxy / Traffic Interceptor":
+                        mitre_map["T1401"] = "Adversary-in-the-Middle"
+                    elif sig.get("family") == "SMS Stealer / 2FA Interceptor":
+                        mitre_map["T1412"] = "Capture SMS Messages"
+                    elif sig.get("family") == "Spyware / Remote Access Trojan (RAT)":
+                        mitre_map["T1430"] = "Location Tracking"
+                        mitre_map["T1429"] = "Audio Capture"
                 data["mitre_mobile_techniques"] = [{"id": k, "name": v} for k, v in mitre_map.items()]
 
                 # 9. Automated Security Compliance Audit Checklist
@@ -2371,6 +2463,62 @@ class ApkAnalyzer(BaseAnalyzer):
             "recommendation": "Migrate all cryptographic operations to AES-256-GCM and SHA-256/SHA-512."
         })
 
+        # 11. Official Store Authenticity
+        ps_status = data.get("online_intel", {}).get("play_store_status")
+        if ps_status == "verified":
+            audit.append({
+                "check": "Store Authenticity",
+                "status": "PASS",
+                "severity": "info",
+                "title": "Verified Google Play Store Application",
+                "description": f"Package identity '{data.get('package_name')}' is indexed and verified in Google Play Store.",
+                "recommendation": "Maintain signature consistency and key rotation through Play App Signing."
+            })
+        elif ps_status == "unlisted_sideloaded":
+            audit.append({
+                "check": "Store Authenticity",
+                "status": "WARN",
+                "severity": "high",
+                "title": "Unlisted / Sideloaded Application",
+                "description": f"Package identity '{data.get('package_name')}' was not found on Google Play Store (sideloaded distribution).",
+                "recommendation": "Verify whether package is intended exclusively for private/enterprise distribution."
+            })
+
+        # 12. Janus Vulnerability (CVE-2017-13156)
+        is_janus = data.get("keystore_audit", {}).get("janus_vulnerability", False)
+        audit.append({
+            "check": "Janus Vulnerability (CVE-2017-13156)",
+            "status": "FAIL" if is_janus else "PASS",
+            "severity": "high" if is_janus else "info",
+            "title": "Janus APK Signature Scheme Immunity",
+            "description": "Vulnerable to DEX header prepending without invalidating signature if signed exclusively with v1 scheme." if is_janus else "Protected by APK Signature Scheme v2/v3 whole-file verification.",
+            "recommendation": "Sign APK with APK Signature Scheme v2/v3/v4 to ensure whole-file cryptographic integrity."
+        })
+
+        # 13. VPN Traffic Interception
+        has_vpn = any("android.net.VpnService" in str(s) or "vpn" in s.get("name", "").lower() for s in data.get("components", {}).get("services", []))
+        if has_vpn:
+            audit.append({
+                "check": "VPN Traffic Interception",
+                "status": "FAIL",
+                "severity": "critical",
+                "title": "Android VpnService Declared",
+                "description": "Application can redirect all device traffic through a local proxy loopback, frequently abused by droppers for TLS interception.",
+                "recommendation": "Remove VpnService unless application is an approved enterprise VPN client."
+            })
+
+        # 14. Binary Protection & Anti-Analysis
+        is_packed = data.get("packer_info", {}).get("is_packed", False)
+        packer_name = data.get("packer_info", {}).get("packer_name", "None")
+        audit.append({
+            "check": "Binary Protection & Obfuscation",
+            "status": "WARN" if is_packed else "PASS",
+            "severity": "medium" if is_packed else "info",
+            "title": f"Code Protector Detection ({packer_name if is_packed else 'Standard Packaging'})",
+            "description": f"Packer signature detected: {packer_name}" if is_packed else "No commercial packers detected in application root/assets.",
+            "recommendation": "Evaluate native unpacker impact on performance and audit dynamic load operations."
+        })
+
         data["security_audit"] = audit
 
     def _analyze_network_security_config(self, zf: zipfile.ZipFile, data: Dict[str, Any], findings: List[Finding]):
@@ -2513,3 +2661,358 @@ class ApkAnalyzer(BaseAnalyzer):
 
         except Exception as e:
             logger.debug(f"Certificate parsing note: {e}")
+
+    def _detect_packers(self, namelist: List[str], data: Dict[str, Any], findings: List[Finding]):
+        """Detects known Android application packers, protectors, and dynamic unpackers."""
+        for packer in ANDROID_PACKERS:
+            matched = []
+            for marker in packer["markers"]:
+                for n in namelist:
+                    if marker in n or n.endswith(marker):
+                        matched.append(n)
+            if matched:
+                data["packer_info"] = {
+                    "is_packed": True,
+                    "packer_name": packer["name"],
+                    "matched_markers": matched[:5],
+                    "description": packer["description"]
+                }
+                findings.append(Finding(
+                    category="evasion",
+                    severity="high",
+                    title=f"Code Protector / Packer Detected: {packer['name']}",
+                    description=f"APK contains binary artifacts matching {packer['name']}: {', '.join(matched[:3])}. {packer['description']}",
+                    details={"packer": packer["name"], "artifacts": matched[:5]}
+                ))
+                break
+
+    def _detect_specialized_malware_signatures(self, andro_apk: Any, data: Dict[str, Any], findings: List[Finding]):
+        """Detects specialized Android malware family behaviors: Banking Trojans, SMS Stealers, RATs, and VPN Hijacking."""
+        signatures = []
+        perms = set(data.get("permissions", []))
+        detected_apis = {a["title"] for a in data.get("dex_info", {}).get("detected_apis", [])}
+
+        # 1. Android VPN Service Hijacking / Local Proxy Dropper
+        vpn_services = []
+        if andro_apk is not None:
+            try:
+                for s in andro_apk.get_services():
+                    filters = andro_apk.get_intent_filters("service", s)
+                    if "android.net.VpnService" in filters.get("action", []):
+                        vpn_services.append(s)
+            except Exception:
+                pass
+        if not vpn_services:
+            for s in data.get("components", {}).get("services", []):
+                s_name = s.get("name", "")
+                if "vpn" in s_name.lower():
+                    vpn_services.append(s_name)
+
+        if vpn_services:
+            sig = {
+                "family": "VPN Proxy / Traffic Interceptor",
+                "title": "VPN-Hijacking Proxy / MitM Service",
+                "severity": "critical",
+                "description": "Registers an Android VpnService to establish a local proxy tunnel. In banking droppers, this is leveraged to bypass SSL pinning and intercept banking API communications.",
+                "indicators": vpn_services
+            }
+            signatures.append(sig)
+            findings.append(Finding(
+                category="active_content",
+                severity="critical",
+                title="Malware Signature: VPN-Hijacking Proxy / Local Interceptor (android.net.VpnService)",
+                description=f"Service '{vpn_services[0]}' registers 'android.net.VpnService'. Allows the application to route all device network traffic through a local loopback to decrypt, inspect, and tamper with banking API traffic.",
+                details={"services": vpn_services}
+            ))
+
+        # 2. Banking Trojan Overlay Cloaking & Task Enumeration
+        has_overlay = "android.permission.SYSTEM_ALERT_WINDOW" in perms or "SYSTEM_ALERT_WINDOW" in str(perms)
+        has_access = any("ACCESSIBILITY" in p for p in perms)
+        has_task_enum = any("Task" in a or "Process" in a for a in detected_apis) or any("getRunningAppProcesses" in s for s in data.get("categorized_strings", {}).get("suspicious_apis", []))
+
+        if has_overlay and (has_access or has_task_enum):
+            sig = {
+                "family": "Banking Trojan (Overlay & Credential Stealer)",
+                "title": "Screen Overlay Hijacking & Background Task Monitoring",
+                "severity": "critical",
+                "description": "Combines SYSTEM_ALERT_WINDOW overlay permissions with accessibility or process monitoring to detect when targeted banking apps open and inject fraudulent login overlays.",
+                "indicators": ["SYSTEM_ALERT_WINDOW", "Accessibility/Task Enumeration"]
+            }
+            signatures.append(sig)
+            findings.append(Finding(
+                category="active_content",
+                severity="critical",
+                title="Malware Signature: Android Banking Trojan (Overlay Cloaking & Task Hijacking)",
+                description="Application combines overlay drawing permissions with accessibility services or task enumeration APIs. Characteristic of banking trojans (e.g., Anatsa, TeaBot, Godfather) injecting spoofed credential login screens over banking applications.",
+                details={"has_overlay": has_overlay, "has_access": has_access, "has_task_enum": has_task_enum}
+            ))
+
+        # 3. 2FA Interceptor & SMS Stealer
+        has_sms_rcv = "android.permission.RECEIVE_SMS" in perms or "RECEIVE_SMS" in str(perms)
+        has_notif_listener = any("NotificationListenerService" in s.get("name", "") for s in data.get("components", {}).get("services", []))
+        if andro_apk is not None and not has_notif_listener:
+            try:
+                for s in andro_apk.get_services():
+                    filters = andro_apk.get_intent_filters("service", s)
+                    if "android.service.notification.NotificationListenerService" in filters.get("action", []):
+                        has_notif_listener = True
+            except Exception:
+                pass
+
+        if has_sms_rcv or has_notif_listener:
+            sig = {
+                "family": "SMS Stealer / 2FA Interceptor",
+                "title": "2FA SMS Interception & Notification Scraping",
+                "severity": "critical",
+                "description": "Intersects SMS traffic or registers a NotificationListenerService to intercept incoming One-Time Passwords (OTPs) and banking verification codes.",
+                "indicators": ["RECEIVE_SMS" if has_sms_rcv else "", "NotificationListenerService" if has_notif_listener else ""]
+            }
+            signatures.append(sig)
+            findings.append(Finding(
+                category="active_content",
+                severity="critical",
+                title="Malware Signature: 2FA Interceptor & SMS Stealer (Priority Hijacking / Notification Scraping)",
+                description="Application declares SMS intercept capability or NotificationListenerService to harvest incoming authentication codes without user awareness.",
+                details={"has_sms_rcv": has_sms_rcv, "has_notif_listener": has_notif_listener}
+            ))
+
+        # 4. Android RAT & Spyware
+        has_audio = "android.permission.RECORD_AUDIO" in perms or "RECORD_AUDIO" in str(perms)
+        has_camera = "android.permission.CAMERA" in perms or "CAMERA" in str(perms)
+        has_location = any("LOCATION" in p for p in perms)
+        has_keylog = any("Accessibility" in a for a in detected_apis) or any("getText" in s for s in data.get("categorized_strings", {}).get("suspicious_apis", []))
+
+        if (has_audio or has_camera) and has_location and (has_access or has_keylog):
+            sig = {
+                "family": "Spyware / Remote Access Trojan (RAT)",
+                "title": "Surreptitious Audio/Camera Recording & Keylogging",
+                "severity": "critical",
+                "description": "Requests covert media recording, continuous geolocation tracking, and accessibility-based keystroke capture, characteristic of Android RATs (e.g., SpyNote, AhMyth, CraxsRAT).",
+                "indicators": ["RECORD_AUDIO/CAMERA", "LOCATION", "Accessibility Keylogging"]
+            }
+            signatures.append(sig)
+            findings.append(Finding(
+                category="active_content",
+                severity="critical",
+                title="Malware Signature: Android Remote Access Trojan (RAT) / Keylogger",
+                description="Application combines background microphone/camera access, continuous GPS location tracking, and accessibility event monitoring to operate as an intrusive surveillance RAT.",
+                details={"audio": has_audio, "camera": has_camera, "location": has_location, "keylogging": has_keylog}
+            ))
+
+        # 5. Device Administrator Anti-Uninstall Persistence
+        has_dev_admin = any("DeviceAdminReceiver" in r.get("name", "") for r in data.get("components", {}).get("receivers", []))
+        if has_dev_admin:
+            sig = {
+                "family": "Anti-Uninstall Persistence",
+                "title": "Device Administrator Elevation",
+                "severity": "high",
+                "description": "Declares DeviceAdminReceiver to hijack administrative device policy, preventing standard application uninstallation.",
+                "indicators": ["DeviceAdminReceiver"]
+            }
+            signatures.append(sig)
+            findings.append(Finding(
+                category="evasion",
+                severity="high",
+                title="Malware Signature: Device Administrator Hijacking (Anti-Uninstall Persistence)",
+                description="Application registers DeviceAdminReceiver. Malware abuses device administrator privileges to block users from uninstalling the package through Android system settings.",
+                details={"has_dev_admin": True}
+            ))
+
+        data["malware_signatures"] = signatures
+
+    def _audit_keystore_vulnerabilities(self, data: Dict[str, Any], findings: List[Finding]):
+        """Audits signing keystore authenticity, brand masquerading, validity spans, and Janus vulnerability."""
+        sig_info = data.get("signing_info", {})
+        issuer = sig_info.get("issuer", "")
+        subject = sig_info.get("subject", "")
+        pkg = data.get("package_name", "")
+        v1 = sig_info.get("has_v1_signature", False)
+        v2v3 = sig_info.get("has_v2_or_v3_signature", False)
+        min_sdk = data.get("min_sdk")
+
+        keystore_audit = {
+            "is_aosp_debug_testkey": sig_info.get("is_debug_key", False),
+            "is_masquerading_identity": False,
+            "masquerade_details": "",
+            "validity_anomaly": False,
+            "validity_details": "",
+            "janus_vulnerability": False,
+            "janus_details": ""
+        }
+
+        # Check Brand Masquerading / Certificate Spoofing
+        known_orgs = {
+            "wikimedia": "org.wikipedia",
+            "google": "com.google",
+            "microsoft": "com.microsoft",
+            "apple": "com.apple",
+            "whatsapp": "com.whatsapp",
+            "telegram": "org.telegram",
+            "facebook": "com.facebook"
+        }
+        subj_lower = (subject + " " + issuer).lower()
+        for org, expected_pkg in known_orgs.items():
+            if org in subj_lower and not pkg.startswith(expected_pkg):
+                keystore_audit["is_masquerading_identity"] = True
+                keystore_audit["masquerade_details"] = f"Certificate claims '{org.capitalize()}' identity in Subject/Issuer, but application package '{pkg}' does not belong to {expected_pkg}."
+                findings.append(Finding(
+                    category="signing",
+                    severity="high",
+                    title="Certificate Identity Masquerading / Spoofed Subject",
+                    description=keystore_audit["masquerade_details"],
+                    details={"issuer": issuer, "subject": subject, "package_name": pkg}
+                ))
+                break
+
+        # Check Janus Vulnerability (CVE-2017-13156)
+        min_sdk_int = int(min_sdk) if min_sdk and str(min_sdk).isdigit() else 21
+        if v1 and not v2v3 and min_sdk_int < 28:
+            keystore_audit["janus_vulnerability"] = True
+            keystore_audit["janus_details"] = "APK is signed exclusively with APK Signature Scheme v1 without v2/v3 block. Vulnerable to Janus (CVE-2017-13156) allowing malicious Dalvik bytecode to be prepended to the APK on Android 5.0-7.1.2."
+            findings.append(Finding(
+                category="signing",
+                severity="high",
+                title="Janus Vulnerability Susceptibility (CVE-2017-13156)",
+                description=keystore_audit["janus_details"],
+                details={"has_v1": v1, "has_v2_or_v3": v2v3, "min_sdk": min_sdk}
+            ))
+
+        # Check Certificate Validity Span Anomaly
+        valid_from = sig_info.get("valid_from", "")
+        valid_until = sig_info.get("valid_until", "")
+        if valid_from and valid_until:
+            try:
+                year_from = int(valid_from[:4])
+                year_until = int(valid_until[:4])
+                span = year_until - year_from
+                if span > 35 or span < 0:
+                    keystore_audit["validity_anomaly"] = True
+                    keystore_audit["validity_details"] = f"Anomalous certificate validity span: {span} years ({valid_from[:10]} to {valid_until[:10]})."
+            except Exception:
+                pass
+
+        data["keystore_audit"] = keystore_audit
+
+    def _extract_exfiltration_tokens_and_pivot_iocs(self, all_strings: Set[str], data: Dict[str, Any], findings: List[Finding]):
+        """Extracts Telegram bot tokens, Discord webhooks, Firebase DBs, and pivots top IoCs through CTI feeds."""
+        joined_text = " \n ".join(all_strings)
+        exfil = {
+            "telegram_bots": [],
+            "discord_webhooks": [],
+            "firebase_databases": []
+        }
+
+        # Telegram Bot Token
+        tg_matches = re.findall(r'api\.telegram\.org/bot([0-9]{8,10}:[a-zA-Z0-9_-]{35})', joined_text)
+        if tg_matches:
+            exfil["telegram_bots"] = list(set(tg_matches))
+            findings.append(Finding(
+                category="active_content",
+                severity="critical",
+                title="Covert Exfiltration Channel: Hardcoded Telegram Bot API Token",
+                description=f"APK embeds {len(exfil['telegram_bots'])} Telegram Bot token(s). Cybercriminals abuse Telegram Bot APIs as a covert Command & Control (C2) and data exfiltration channel.",
+                details={"tokens": [t[:12] + "..." for t in exfil["telegram_bots"]]}
+            ))
+
+        # Discord Webhook
+        discord_matches = re.findall(r'discord(?:app)?\.com/api/webhooks/([0-9]{17,20}/[a-zA-Z0-9_-]{50,75})', joined_text)
+        if discord_matches:
+            exfil["discord_webhooks"] = list(set(discord_matches))
+            findings.append(Finding(
+                category="active_content",
+                severity="high",
+                title="Covert Exfiltration Channel: Discord Webhook Endpoint",
+                description=f"APK embeds {len(exfil['discord_webhooks'])} Discord Webhook(s). Threat actors use Discord webhooks to exfiltrate credentials and device logs.",
+                details={"webhooks": [w[:15] + "..." for w in exfil["discord_webhooks"]]}
+            ))
+
+        # Firebase Realtime Database
+        firebase_matches = re.findall(r'https?://([a-zA-Z0-9-]+)\.firebaseio\.com', joined_text)
+        if firebase_matches:
+            exfil["firebase_databases"] = list(set(firebase_matches))
+            findings.append(Finding(
+                category="network",
+                severity="medium",
+                title="Cloud Backend Endpoint: Firebase Realtime Database",
+                description=f"APK references Firebase databases: {', '.join(exfil['firebase_databases'][:3])}. Test if database rules enforce authentication.",
+                details={"databases": exfil["firebase_databases"]}
+            ))
+
+        data["online_intel"]["exfiltration_tokens"] = exfil
+
+        # Pivot Top Extracted Network IoCs (Domains / IPs) through CTI Aggregator
+        ioc_rep = {
+            "queried_count": 0,
+            "malicious_count": 0,
+            "suspicious_count": 0,
+            "details": []
+        }
+        candidate_iocs = list(data.get("iocs", {}).get("urls", []))[:3] + list(data.get("iocs", {}).get("ips", []))[:3]
+        for ind in candidate_iocs:
+            try:
+                ind_type = "ip" if re.match(r'^\d+\.\d+\.\d+\.\d+$', ind) else ("url" if ind.startswith("http") else "domain")
+                cti = ThreatIntelligenceAggregator.aggregate_intelligence(ind, ind_type)
+                ioc_rep["queried_count"] += 1
+                if cti.get("overall_verdict") == "malicious":
+                    ioc_rep["malicious_count"] += 1
+                    findings.append(Finding(
+                        category="network",
+                        severity="critical",
+                        title=f"Embedded Malicious Network IoC ({cti['indicator']})",
+                        description=f"Network indicator '{cti['indicator']}' embedded in Dalvik bytecode is confirmed malicious across threat feeds (tags: {', '.join(cti.get('threat_tags', [])[:3])}).",
+                        details=cti
+                    ))
+                elif cti.get("overall_verdict") == "suspicious":
+                    ioc_rep["suspicious_count"] += 1
+                ioc_rep["details"].append({
+                    "indicator": ind,
+                    "type": ind_type,
+                    "verdict": cti.get("overall_verdict", "unknown"),
+                    "tags": cti.get("threat_tags", [])
+                })
+            except Exception:
+                pass
+
+        data["online_intel"]["ioc_reputation"] = ioc_rep
+
+    def _perform_online_reputation_probes(self, sha256_hex: str, data: Dict[str, Any], findings: List[Finding]):
+        """Executes live Google Play Store authenticity and multi-feed hash lookups."""
+        pkg = data.get("package_name", "")
+        # 1. Google Play Store Prober
+        if pkg and pkg not in ("Unknown", "Standalone DEX") and "." in pkg:
+            try:
+                play_res = ThreatIntelligenceAggregator.probe_google_play_store(pkg)
+                data["online_intel"]["play_store_status"] = play_res.get("status", "unverified")
+                data["online_intel"]["play_store_title"] = play_res.get("title", "")
+                data["online_intel"]["play_store_details"] = play_res.get("details", "")
+
+                if play_res.get("status") == "unlisted_sideloaded":
+                    findings.append(Finding(
+                        category="structure",
+                        severity="high",
+                        title="Sideloaded / Unverified Android Application (Not Found on Google Play Store)",
+                        description=f"Package identity '{pkg}' is NOT listed in the official Google Play Store directory. Over 95% of Android droppers and banking trojans are distributed out-of-store via sideloading.",
+                        details=play_res
+                    ))
+            except Exception as e:
+                logger.debug(f"Play store probe error: {e}")
+
+        # 2. Multi-Feed Hash Threat Intelligence (MalwareBazaar, VirusTotal, CIRCL)
+        try:
+            cti_res = ThreatIntelligenceAggregator.aggregate_intelligence(sha256_hex, "sha256")
+            data["online_intel"]["overall_verdict"] = cti_res.get("overall_verdict", "unknown")
+            data["online_intel"]["threat_tags"] = cti_res.get("threat_tags", [])
+            data["online_intel"]["malware_families"] = cti_res.get("malware_families", [])
+            data["online_intel"]["feeds"] = cti_res.get("feeds", {})
+
+            if cti_res.get("overall_verdict") == "malicious":
+                fam_str = ", ".join(cti_res.get("malware_families", [])) or ", ".join(cti_res.get("threat_tags", []))
+                findings.append(Finding(
+                    category="active_content",
+                    severity="critical",
+                    title=f"Online Threat Intelligence: Confirmed Malicious Android Binary ({fam_str or 'Malware'})",
+                    description=f"File hash '{sha256_hex}' is flagged as malicious across global threat intelligence feeds. Threat families / tags detected: {fam_str or 'Android Dropper'}.",
+                    details=cti_res
+                ))
+        except Exception as e:
+            logger.debug(f"Hash CTI probe error: {e}")
