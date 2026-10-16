@@ -19,14 +19,65 @@ Features:
 
 import io
 import re
+import math
 import struct
 import zipfile
 import hashlib
+from collections import Counter
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple, Set
 
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
 from app.core.logging_config import logger
+
+# Silence verbose Androguard debug logging from loguru
+try:
+    from loguru import logger as loguru_logger
+    loguru_logger.disable("androguard")
+except Exception:
+    pass
+
+@contextmanager
+def tolerant_zip_environment():
+    """Tolerates malformed extra fields and tampered CRC-32 checksums used in anti-analysis tricks."""
+    tampered_items: List[Tuple[str, str]] = []
+    orig_decode = zipfile.ZipInfo._decodeExtra
+    orig_crc = zipfile.ZipExtFile._update_crc
+
+    def tolerant_decode(self):
+        try:
+            orig_decode(self)
+        except zipfile.BadZipFile as e:
+            tampered_items.append((getattr(self, "filename", "unknown"), f"Malformed ZIP extra field: {e}"))
+
+    def tolerant_crc(self, newdata):
+        try:
+            orig_crc(self, newdata)
+        except zipfile.BadZipFile as e:
+            tampered_items.append((getattr(self, "name", "unknown"), f"Tampered CRC-32 checksum: {e}"))
+
+    zipfile.ZipInfo._decodeExtra = tolerant_decode
+    zipfile.ZipExtFile._update_crc = tolerant_crc
+    try:
+        yield tampered_items
+    finally:
+        zipfile.ZipInfo._decodeExtra = orig_decode
+        zipfile.ZipExtFile._update_crc = orig_crc
+
+def calculate_shannon_entropy(data: bytes) -> float:
+    """Calculate Shannon entropy (0.0 to 8.0) of a byte sequence."""
+    if not data:
+        return 0.0
+    occ: Dict[int, int] = {}
+    for b in data:
+        occ[b] = occ.get(b, 0) + 1
+    ent = 0.0
+    length = len(data)
+    for count in occ.values():
+        p = count / length
+        ent -= p * math.log2(p)
+    return ent
 
 # Try importing Androguard for advanced decompilation and DEX analysis
 try:
@@ -1094,6 +1145,9 @@ class DexParser:
                     try:
                         s = rs.decode('utf-8', errors='ignore')
                         self.strings.append(s)
+                        for c_match in re.findall(r'L([a-zA-Z0-9_/$]+);', s):
+                            if '/' in c_match:
+                                self.classes.append(c_match.replace('/', '.'))
                         if s.startswith("L") and s.endswith(";") and "/" in s:
                             self.classes.append(s[1:-1].replace("/", "."))
                     except Exception:
@@ -1176,10 +1230,34 @@ class EmbeddedSourceAnalyzer:
         (re.compile(r'(?:rawQuery\s*\(|execSQL\s*\()', re.I), "Direct SQL Execution Hook", "suspicious")
     ]
 
+    IGNORED_HTTP_SCHEMAS = (
+        "http://schemas.android.com/",
+        "http://schemas.microsoft.com/",
+        "http://www.w3.org/",
+        "http://xml.apache.org/",
+        "http://java.sun.com/",
+        "http://ns.adobe.com/",
+        "http://purl.org/"
+    )
+
     @classmethod
     def scan_archive_sources(cls, zf: zipfile.ZipFile, max_files: int = 40) -> List[Dict[str, Any]]:
         results = []
-        for item in zf.infolist():
+        # Sort so scripts and code files (.sh, .js, .bundle, .java, .kt, .py) appear before XML layout files
+        def _sort_key(item: zipfile.ZipInfo) -> int:
+            fn = item.filename.lower()
+            if fn.endswith((".sh", ".bat", ".py", ".lua")):
+                return 0
+            if fn.endswith((".bundle", ".js", ".ts", ".jsx", ".tsx")):
+                return 1
+            if fn.endswith((".java", ".kt")):
+                return 2
+            if fn.endswith((".properties", ".json")):
+                return 3
+            return 4
+
+        sorted_items = sorted(zf.infolist(), key=_sort_key)
+        for item in sorted_items:
             if len(results) >= max_files:
                 break
             fname_lower = item.filename.lower()
@@ -1197,21 +1275,27 @@ class EmbeddedSourceAnalyzer:
                     danger = "clean"
 
                     for pat, title, d_level in cls.SECURITY_PATTERNS:
-                        if pat.search(text):
+                        matches = pat.findall(text)
+                        if matches:
+                            if title == "Insecure Cleartext HTTP Protocol":
+                                valid_matches = [m for m in matches if not any(m.lower().startswith(s) for s in cls.IGNORED_HTTP_SCHEMAS)]
+                                if not valid_matches:
+                                    continue
                             findings_list.append(title)
                             if d_level == "malicious":
                                 danger = "malicious"
                             elif d_level == "suspicious" and danger != "malicious":
                                 danger = "suspicious"
 
-                    results.append({
-                        "filename": item.filename,
-                        "file_type": ftype,
-                        "size": item.file_size,
-                        "content_preview": text[:15000],
-                        "suspicious_findings": findings_list,
-                        "danger_level": danger
-                    })
+                    if findings_list or len(results) < 15:
+                        results.append({
+                            "filename": item.filename,
+                            "file_type": ftype,
+                            "size": item.file_size,
+                            "content_preview": text[:15000],
+                            "suspicious_findings": findings_list,
+                            "danger_level": danger
+                        })
                 except Exception:
                     pass
         return results
@@ -1341,7 +1425,7 @@ class ApkAnalyzer(BaseAnalyzer):
         data: Dict[str, Any] = {
             "is_apk": True,
             "filename": filename,
-            "file_size": file_path.stat().st_size,
+            "file_size": Path(file_path).stat().st_size,
             "package_name": "",
             "app_name": "",
             "version_code": "1",
@@ -1503,27 +1587,60 @@ class ApkAnalyzer(BaseAnalyzer):
                 except Exception as ag_err:
                     logger.debug(f"Androguard APK parse note: {ag_err}")
 
-            # 2. Pure-Python Fallback & In-depth Container Dissection
-            with zipfile.ZipFile(file_path, "r") as zf:
-                namelist = zf.namelist()
+            # 2. Resilient Container Dissection & Multi-DEX Processing
+            with tolerant_zip_environment() as tampered_zip_items:
+                if tampered_zip_items:
+                    findings.append(Finding(
+                        category="evasion",
+                        severity="critical",
+                        title="Anti-Analysis ZIP Evasion (Malformed Headers / Tampered CRC)",
+                        description=f"APK archive contains malformed or tampered ZIP structures designed to crash automated analysis tools: {'; '.join(f'{f} ({r})' for f, r in tampered_zip_items[:4])}",
+                        details={"tampered_files": [dict(file=f, reason=r) for f, r in tampered_zip_items]}
+                    ))
+
+                # Open resilient ZIP handle
+                zf = zipfile.ZipFile(file_path, "r")
+
+                def get_apk_bytes(name: str) -> Optional[bytes]:
+                    if andro_apk is not None:
+                        try:
+                            b = andro_apk.get_file(name)
+                            if b:
+                                return b
+                        except Exception:
+                            pass
+                    try:
+                        return zf.read(name)
+                    except Exception:
+                        return None
+
+                namelist = []
+                if andro_apk is not None:
+                    try:
+                        namelist = andro_apk.get_files()
+                    except Exception:
+                        namelist = zf.namelist()
+                else:
+                    namelist = zf.namelist()
 
                 # Parse AndroidManifest.xml if not yet parsed
                 if not data["package_name"] and "AndroidManifest.xml" in namelist:
-                    manifest_bytes = zf.read("AndroidManifest.xml")
-                    axml = AxmlDecoder(manifest_bytes)
-                    if axml.decode():
-                        data["package_name"] = axml.package_name
-                        data["version_code"] = str(axml.version_code or "1")
-                        data["version_name"] = str(axml.version_name or "1.0")
-                        data["min_sdk"] = axml.min_sdk_version
-                        data["target_sdk"] = axml.target_sdk_version
-                        data["compile_sdk"] = axml.compile_sdk_version
-                        data["permissions"] = axml.permissions
-                        data["components"]["activities"] = axml.activities
-                        data["components"]["services"] = axml.services
-                        data["components"]["receivers"] = axml.receivers
-                        data["components"]["providers"] = axml.providers
-                        data["security_flags"].update(axml.application_attributes)
+                    manifest_bytes = get_apk_bytes("AndroidManifest.xml")
+                    if manifest_bytes:
+                        axml = AxmlDecoder(manifest_bytes)
+                        if axml.decode():
+                            data["package_name"] = axml.package_name
+                            data["version_code"] = str(axml.version_code or "1")
+                            data["version_name"] = str(axml.version_name or "1.0")
+                            data["min_sdk"] = axml.min_sdk_version
+                            data["target_sdk"] = axml.target_sdk_version
+                            data["compile_sdk"] = axml.compile_sdk_version
+                            data["permissions"] = axml.permissions
+                            data["components"]["activities"] = axml.activities
+                            data["components"]["services"] = axml.services
+                            data["components"]["receivers"] = axml.receivers
+                            data["components"]["providers"] = axml.providers
+                            data["security_flags"].update(axml.application_attributes)
 
                 # Set SDK labels
                 if data["min_sdk"]:
@@ -1618,42 +1735,73 @@ class ApkAnalyzer(BaseAnalyzer):
                     ))
 
                 # 3. Multi-DEX Processing & Dalvik Bytecode Disassembly
-                dex_files = [n for n in namelist if n.endswith(".dex")]
-                data["dex_info"]["dex_count"] = len(dex_files)
+                dex_file_names = [n for n in namelist if n.endswith(".dex")]
+                data["dex_info"]["dex_count"] = len(dex_file_names)
                 classes_extracted = []
 
-                # Use Androguard DEX & Decompiler if available
-                if ANDROGUARD_AVAILABLE and dex_files:
+                # Filter out dummy/empty stub DEX files (e.g. anti-analysis DEX parser bomb with 400+ stubs)
+                valid_dex_entries: List[Tuple[str, bytes]] = []
+                dummy_dex_count = 0
+                for df in dex_file_names:
+                    raw_dex = get_apk_bytes(df)
+                    if not raw_dex:
+                        continue
+                    if len(raw_dex) <= 112:
+                        dummy_dex_count += 1
+                        continue
+                    valid_dex_entries.append((df, raw_dex))
+
+                if dummy_dex_count > 5:
+                    findings.append(Finding(
+                        category="evasion",
+                        severity="critical",
+                        title="Multi-DEX Parser Bomb / Anti-Analysis Evasion",
+                        description=f"APK bundles {dummy_dex_count} empty Dalvik executable stubs (<=112 bytes) designed to exhaust reverse-engineering parsers and static analysis engines.",
+                        details={"dummy_dex_count": dummy_dex_count}
+                    ))
+
+                # Extract strings & scan MobSF signatures via pure DexParser on all valid DEX files (blazing fast)
+                all_dex_classes = []
+                for df, dex_bytes in valid_dex_entries:
                     try:
+                        dp = DexParser(dex_bytes)
+                        if dp.parse():
+                            for s in dp.strings:
+                                all_strings_collected.add(s)
+                            for c in dp.classes:
+                                all_dex_classes.append(c)
+                            for api in dp.detected_apis:
+                                if not any(a["title"] == api["title"] for a in data["dex_info"]["detected_apis"]):
+                                    data["dex_info"]["detected_apis"].append(api)
+                                    if api.get("severity") in ["critical", "high"]:
+                                        findings.append(Finding(
+                                            category="active_content",
+                                            severity=api["severity"],
+                                            title=f"DEX API: {api['title']}",
+                                            description=f"Dalvik bytecode invokes {api['title']} ({api['count']} references). {api.get('description', '')}",
+                                            details=api
+                                        ))
+                    except Exception as dex_err:
+                        logger.debug(f"DexParser error on {df}: {dex_err}")
+
+                # Use Androguard DEX for method instruction disassembly on primary DEX files
+                if ANDROGUARD_AVAILABLE and valid_dex_entries:
+                    try:
+                        primary_dex_entries = valid_dex_entries[:4]
                         dex_objs = []
-                        for df in dex_files:
-                            dex_bytes = zf.read(df)
+                        for df, dex_bytes in primary_dex_entries:
                             d_obj = AndroguardDEX(dex_bytes)
                             dex_objs.append(d_obj)
-                            for s in d_obj.get_strings():
-                                all_strings_collected.add(s)
 
-                        # Create analysis and decompiler
-                        analysis_obj = AndroguardAnalysis()
-                        for d_obj in dex_objs:
-                            analysis_obj.add(d_obj)
-                        decompiler = None
-                        try:
-                            if dex_objs:
-                                decompiler = DecompilerDAD(dex_objs[0], analysis_obj)
-                        except Exception:
-                            pass
-
-                        # Extract classes and methods
+                        # Extract classes and methods with instruction disassembly
                         for d_obj in dex_objs:
                             for cls_item in d_obj.get_classes():
                                 c_name = cls_item.get_name()
                                 if c_name.startswith("L") and c_name.endswith(";"):
                                     c_name = c_name[1:-1].replace("/", ".")
 
-                                # Prioritize app classes over framework noise
-                                pkg_prefix = data["package_name"] or "com."
-                                is_app_class = c_name.startswith(pkg_prefix) or len(classes_extracted) < 15
+                                pkg_prefix = data["package_name"] or ""
+                                is_app_class = (pkg_prefix and c_name.startswith(pkg_prefix)) or len(classes_extracted) < 15
 
                                 if is_app_class and len(classes_extracted) < 40:
                                     methods_list = []
@@ -1665,32 +1813,29 @@ class ApkAnalyzer(BaseAnalyzer):
                                         except Exception:
                                             pass
 
-                                        m_src = ""
-                                        if decompiler:
-                                            try:
-                                                m_src = decompiler.get_source_method(m)
-                                            except Exception:
-                                                pass
-
                                         methods_list.append({
                                             "name": m.get_name(),
                                             "descriptor": m.get_descriptor(),
                                             "access_flags": m.get_access_flags_string(),
                                             "instructions_count": len(instructions),
                                             "instructions": instructions[:60],
-                                            "source": m_src
+                                            "source": ""
                                         })
 
-                                    cls_src = ""
-                                    if decompiler:
-                                        try:
-                                            cls_src = decompiler.get_source_class(cls_item)
-                                        except Exception:
-                                            pass
+                                    # Build clean reconstructed class preview from instructions
+                                    m_blocks = []
+                                    for m_item in methods_list:
+                                        m_lines = [f"    // Method: {m_item['name']}{m_item['descriptor']} [{m_item['access_flags']}]"]
+                                        for ins in m_item.get("instructions", []):
+                                            m_lines.append(f"    {ins}")
+                                        m_blocks.append("\n".join(m_lines))
+                                    cls_pkg = c_name.rsplit(".", 1)[0] if "." in c_name else ""
+                                    cls_simple = c_name.split(".")[-1]
+                                    cls_src = f"// Reconstructed Dalvik class structure\npackage {cls_pkg};\n\npublic class {cls_simple} {{\n" + "\n\n".join(m_blocks) + "\n}"
 
                                     classes_extracted.append({
                                         "name": c_name,
-                                        "package": c_name.rsplit(".", 1)[0] if "." in c_name else "",
+                                        "package": cls_pkg,
                                         "superclass": cls_item.get_superclassname(),
                                         "access_flags": cls_item.get_access_flags_string(),
                                         "methods_count": len(methods_list),
@@ -1698,47 +1843,72 @@ class ApkAnalyzer(BaseAnalyzer):
                                         "source_code": cls_src
                                     })
 
-                        data["dex_info"]["classes_count"] = sum(len(d.get_classes()) for d in dex_objs)
+                        data["dex_info"]["classes_count"] = len(all_dex_classes) if all_dex_classes else sum(len(d.get_classes()) for d in dex_objs)
                         data["dex_info"]["total_strings_count"] = len(all_strings_collected)
                     except Exception as dex_err:
                         logger.debug(f"Androguard DEX processing note: {dex_err}")
 
                 # Pure-Python DEX Fallback if classes not populated
-                if not classes_extracted and dex_files:
-                    for df in dex_files:
-                        try:
-                            dex_bytes = zf.read(df)
-                            dp = DexParser(dex_bytes)
-                            if dp.parse():
-                                for s in dp.strings:
-                                    all_strings_collected.add(s)
-                                for c in dp.classes[:30]:
-                                    classes_extracted.append({
-                                        "name": c,
-                                        "package": c.rsplit(".", 1)[0] if "." in c else "",
-                                        "superclass": "java.lang.Object",
-                                        "access_flags": "public",
-                                        "methods_count": 0,
-                                        "methods": [],
-                                        "source_code": f"// Class: {c}\n// Dalvik class extracted from bytecode container\npublic class {c.split('.')[-1]} {{\n}}"
-                                    })
-                                data["dex_info"]["total_strings_count"] += len(dp.strings)
-                                data["dex_info"]["classes_count"] += len(dp.classes)
-                                for api in dp.detected_apis:
-                                    if not any(a["title"] == api["title"] for a in data["dex_info"]["detected_apis"]):
-                                        data["dex_info"]["detected_apis"].append(api)
-                                        if api.get("severity") in ["critical", "high"]:
-                                            findings.append(Finding(
-                                                category="active_content",
-                                                severity=api["severity"],
-                                                title=f"DEX API: {api['title']}",
-                                                description=f"Dalvik bytecode invokes {api['title']} ({api['count']} references). {api.get('description', '')}",
-                                                details=api
-                                            ))
-                        except Exception:
-                            pass
+                if not classes_extracted and all_dex_classes:
+                    for c in all_dex_classes[:30]:
+                        classes_extracted.append({
+                            "name": c,
+                            "package": c.rsplit(".", 1)[0] if "." in c else "",
+                            "superclass": "java.lang.Object",
+                            "access_flags": "public",
+                            "methods_count": 0,
+                            "methods": [],
+                            "source_code": f"// Class: {c}\n// Dalvik class extracted from bytecode container\npublic class {c.split('.')[-1]} {{\n}}"
+                        })
+                    data["dex_info"]["classes_count"] = len(all_dex_classes)
+                    data["dex_info"]["total_strings_count"] = len(all_strings_collected)
 
                 data["classes"] = classes_extracted
+
+                # Concealed Package Name inference (AXML Obfuscation check)
+                if not data["package_name"] and (classes_extracted or all_dex_classes):
+                    raw_pool = [c["package"] for c in classes_extracted if c.get("package")] or [
+                        c.rsplit(".", 1)[0] for c in all_dex_classes if "." in c
+                    ]
+                    candidate_pkgs = [
+                        p for p in raw_pool
+                        if not p.startswith(("android.", "androidx.", "java.", "kotlin.", "kotlinx."))
+                    ]
+                    if candidate_pkgs:
+                        inferred_pkg = Counter(candidate_pkgs).most_common(1)[0][0]
+                        data["package_name"] = inferred_pkg
+                        data["online_intel"]["package_name"] = inferred_pkg
+                        findings.append(Finding(
+                            category="evasion",
+                            severity="high",
+                            title="Concealed Application Package Name (AXML Obfuscation)",
+                            description=f"APK manifest omits or scrambles the standard 'package' attribute to thwart automated analysis. Inferred package identity from Dalvik class definitions: '{inferred_pkg}'."
+                        ))
+
+                # High-Entropy Encrypted Asset & Second-Stage Payload Scanner
+                for af in [n for n in namelist if n.startswith(("assets/", "res/raw/"))]:
+                    try:
+                        raw_asset = get_apk_bytes(af)
+                        if raw_asset and len(raw_asset) > 100_000:
+                            ent = calculate_shannon_entropy(raw_asset)
+                            if ent >= 7.85:
+                                findings.append(Finding(
+                                    category="evasion",
+                                    severity="critical",
+                                    title=f"Encrypted / Packed Second-Stage Payload ({af})",
+                                    description=f"Asset '{af}' ({len(raw_asset):,} bytes) exhibits near-maximum Shannon entropy ({ent:.2f}/8.00), indicative of an encrypted second-stage DEX/ELF payload dropped at runtime.",
+                                    details={"asset": af, "size": len(raw_asset), "entropy": round(ent, 4)}
+                                ))
+                            elif raw_asset[:4] in (b"dex\n", b"\x7fELF", b"PK\x03\x04"):
+                                findings.append(Finding(
+                                    category="active_content",
+                                    severity="critical",
+                                    title=f"Hidden Executable Dropper Payload ({af})",
+                                    description=f"File '{af}' is disguised in assets but contains raw executable headers ({raw_asset[:4]!r}).",
+                                    details={"asset": af, "size": len(raw_asset)}
+                                ))
+                    except Exception:
+                        pass
 
                 # 4. Embedded Source Code & Scripts Analysis (.java, .kt, .js, .sh, .xml)
                 embedded_sources = EmbeddedSourceAnalyzer.scan_archive_sources(zf)
@@ -1786,12 +1956,66 @@ class ApkAnalyzer(BaseAnalyzer):
                 # 6. Strings Categorization & Hardcoded Secrets Table
                 self._categorize_all_strings(all_strings_collected, data)
 
-                # 7. Code Signing & Certificate Verification
-                cert_files = [n for n in namelist if n.startswith("META-INF/") and n.upper().endswith((".RSA", ".DSA", ".EC"))]
-                if cert_files:
-                    data["signing_info"]["has_signature"] = True
-                    cert_bytes = zf.read(cert_files[0])
-                    self._parse_x509_certificate(cert_bytes, data["signing_info"], findings)
+                # 7. Code Signing & Certificate Verification (v1 JAR and v2/v3 APK Signing Block)
+                if andro_apk is not None:
+                    try:
+                        data["signing_info"]["has_signature"] = bool(andro_apk.is_signed())
+                        data["signing_info"]["has_v1_signature"] = bool(andro_apk.is_signed_v1())
+                        data["signing_info"]["has_v2_or_v3_signature"] = bool(andro_apk.is_signed_v2() or andro_apk.is_signed_v3())
+
+                        andro_certs = andro_apk.get_certificates()
+                        if andro_certs:
+                            for idx, c in enumerate(andro_certs):
+                                issuer_str = c.issuer.human_friendly if hasattr(c.issuer, "human_friendly") else str(c.issuer)
+                                subject_str = c.subject.human_friendly if hasattr(c.subject, "human_friendly") else str(c.subject)
+                                sha256_fp = c.sha256_fingerprint if hasattr(c, "sha256_fingerprint") else (c.sha256.hex() if hasattr(c, "sha256") else "")
+                                is_debug = "android@android.com" in issuer_str.lower() or "debug" in issuer_str.lower()
+                                is_self = bool(getattr(c, "self_signed", False) or issuer_str == subject_str)
+
+                                cert_entry = {
+                                    "index": idx,
+                                    "issuer": issuer_str,
+                                    "subject": subject_str,
+                                    "serial_number": hex(c.serial_number) if hasattr(c, "serial_number") else "",
+                                    "valid_from": str(getattr(c, "not_valid_before", "")),
+                                    "valid_until": str(getattr(c, "not_valid_after", "")),
+                                    "sha256_fingerprint": sha256_fp,
+                                    "is_debug_key": is_debug,
+                                    "is_self_signed": is_self
+                                }
+                                data["signing_info"]["certificates"].append(cert_entry)
+
+                                if idx == 0:
+                                    data["signing_info"].update({
+                                        "issuer": issuer_str,
+                                        "subject": subject_str,
+                                        "serial_number": hex(c.serial_number) if hasattr(c, "serial_number") else "",
+                                        "valid_from": str(getattr(c, "not_valid_before", "")),
+                                        "valid_until": str(getattr(c, "not_valid_after", "")),
+                                        "sha256_fingerprint": sha256_fp,
+                                        "is_debug_key": is_debug,
+                                        "is_self_signed": is_self
+                                    })
+
+                                if is_debug:
+                                    findings.append(Finding(
+                                        category="signing",
+                                        severity="high",
+                                        title="Signed with Insecure AOSP / Android Debug TestKey",
+                                        description=f"APK is signed with a publicly known test/debug certificate ('{issuer_str}'). Debug-signed applications must never be released in production and indicate either amateur compilation or malware dropper distribution.",
+                                        details=cert_entry
+                                    ))
+                    except Exception as sig_err:
+                        logger.debug(f"Androguard signature extraction error: {sig_err}")
+
+                # Fallback to pure-Python PKCS#7 extraction if certificates still empty
+                if not data["signing_info"]["certificates"]:
+                    cert_files = [n for n in namelist if n.startswith("META-INF/") and n.upper().endswith((".RSA", ".DSA", ".EC"))]
+                    if cert_files:
+                        data["signing_info"]["has_signature"] = True
+                        data["signing_info"]["has_v1_signature"] = True
+                        cert_bytes = zf.read(cert_files[0])
+                        self._parse_x509_certificate(cert_bytes, data["signing_info"], findings)
 
                 # 7b. Network Security Configuration Audit
                 self._analyze_network_security_config(zf, data, findings)
@@ -1847,7 +2071,7 @@ class ApkAnalyzer(BaseAnalyzer):
             "is_apk": False,
             "is_standalone_dex": True,
             "filename": filename,
-            "file_size": file_path.stat().st_size,
+            "file_size": Path(file_path).stat().st_size,
             "package_name": "Standalone DEX",
             "version_code": "1",
             "version_name": "1.0",

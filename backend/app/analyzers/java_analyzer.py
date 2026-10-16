@@ -458,7 +458,7 @@ class JavaAnalyzer(BaseAnalyzer):
         data: Dict[str, Any] = {
             "is_java": True,
             "filename": filename,
-            "file_size": file_path.stat().st_size,
+            "file_size": Path(file_path).stat().st_size,
             "java_type": "unknown", # "source", "class", "jar"
             "java_subtype": "source",
             "package_name": "",

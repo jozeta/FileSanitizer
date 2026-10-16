@@ -447,3 +447,51 @@ def test_jar_deep_forensics_and_class_disassembly(tmp_path: Path):
     assert "CWE-78" in exec_api["cwe"]
 
 
+def test_apk_evasion_and_asset_entropy(tmp_path: Path):
+    """Test multi-DEX parser bomb filtering, package name inference, and encrypted asset detection."""
+    apk_file = tmp_path / "packed_malware.apk"
+
+    # Build minimal valid DEX header (112 bytes)
+    dummy_dex = bytearray(112)
+    dummy_dex[0:8] = b"dex\n035\x00"
+
+    # Build real DEX with classes and a malicious API
+    real_dex = bytearray(112)
+    real_dex[0:8] = b"dex\n035\x00"
+    real_dex.extend(b"Lcom/stealth/trojan/MainActivity; Ldalvik/system/DexClassLoader;->loadClass")
+
+    # High-entropy encrypted payload (simulating encrypted second-stage drop)
+    import os
+    encrypted_blob = os.urandom(120_000)
+
+    with zipfile.ZipFile(apk_file, "w") as zf:
+        # 12 dummy DEX stubs (parser bomb)
+        for i in range(12):
+            zf.writestr(f"classes000{i:02d}.dex", dummy_dex)
+        # Real DEX file
+        zf.writestr("classes.dex", real_dex)
+        # Encrypted asset payload
+        zf.writestr("assets/payload.bin", encrypted_blob)
+
+    analyzer = ApkAnalyzer()
+    res = analyzer.analyze(apk_file, "packed_malware.apk", "application/vnd.android.package-archive")
+
+    assert res.success is True
+    data = res.data
+
+    # Multi-DEX parser bomb finding
+    bomb_finding = next((f for f in res.findings if "Multi-DEX Parser Bomb" in f.title), None)
+    assert bomb_finding is not None
+    assert bomb_finding.severity == "critical"
+
+    # Encrypted payload finding in assets
+    entropy_finding = next((f for f in res.findings if "Encrypted / Packed Second-Stage Payload" in f.title), None)
+    assert entropy_finding is not None
+    assert entropy_finding.severity == "critical"
+    assert "payload.bin" in entropy_finding.title
+
+    # Package inference from Dalvik classes
+    assert data["package_name"] == "com.stealth.trojan"
+
+
+
