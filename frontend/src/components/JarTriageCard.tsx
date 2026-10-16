@@ -8,9 +8,11 @@ import {
   Cpu,
   Package,
   AlertTriangle,
-  ShieldCheck
+  ShieldCheck,
+  Bug
 } from 'lucide-react';
 import { JarTriageInfo, Finding } from '../types';
+import { JavaBehavioralForensics } from './JavaBehavioralForensics';
 
 interface JarTriageCardProps {
   jarInfo?: JarTriageInfo;
@@ -22,7 +24,9 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
   jarInfo,
   filename = 'application.jar'
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'manifest' | 'apis' | 'binaries' | 'packages'>('manifest');
+  const [activeSubTab, setActiveSubTab] = useState<'forensics' | 'manifest' | 'apis' | 'binaries' | 'packages'>(
+    jarInfo?.behavioral_analysis ? 'forensics' : 'manifest'
+  );
   const [copiedManifest, setCopiedManifest] = useState<boolean>(false);
 
   if (!jarInfo) {
@@ -112,6 +116,20 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
 
       {/* Sub Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto text-xs font-semibold">
+        {jarInfo.behavioral_analysis && (
+          <button
+            onClick={() => setActiveSubTab('forensics')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'forensics'
+                ? 'bg-rose-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Bug className="w-3.5 h-3.5 text-rose-300" />
+            <span>Behavioral Forensics (STRRAT Triage)</span>
+          </button>
+        )}
+
         <button
           onClick={() => setActiveSubTab('manifest')}
           className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
@@ -160,6 +178,15 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
           <span>Class Packages ({packages.length})</span>
         </button>
       </div>
+
+      {/* Tab 0: Behavioral Forensics & STRRAT Case Study */}
+      {activeSubTab === 'forensics' && jarInfo.behavioral_analysis && (
+        <JavaBehavioralForensics
+          behavioral={jarInfo.behavioral_analysis}
+          filename={filename}
+          isJar={true}
+        />
+      )}
 
       {/* Tab 1: Manifest & Entry Points */}
       {activeSubTab === 'manifest' && (

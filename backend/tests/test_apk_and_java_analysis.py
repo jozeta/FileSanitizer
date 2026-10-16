@@ -558,3 +558,154 @@ def test_apk_threat_intel_packers_signatures_and_keystore_audit(tmp_path: Path):
 
     # 4. Play Store Status (Unlisted / Sideloaded)
     assert data["online_intel"]["play_store_status"] in ("unlisted_sideloaded", "offline_or_timeout")
+
+
+def test_strrat_and_behavioral_4_pillars_jar_analysis(tmp_path: Path):
+    """
+    Test STRRAT Remote Access Trojan forensic detection and the 4 behavioral pillars
+    based on the SecurityScorecard STRRAT case study:
+    1. 🌐 Internet activity (Socket, C2, telemetry)
+    2. 📂 File access (broad traversal, AppData, browser DBs, .crimson fake ransomware, lock.file, ZIP)
+    3. 🛠 System command execution (Runtime.exec, cmd.exe /c, schtasks.exe persistence)
+    4. 🧩 Hidden or hard-to-review code (Allatori watermark ALLATORIxDEMO, string decryptors, collapsed hierarchy)
+    """
+    jar_file = tmp_path / "strrat_sample.jar"
+
+    manifest_data = (
+        "Manifest-Version: 1.0\r\n"
+        "Main-Class: a.a\r\n"
+        "\r\n"
+    )
+
+    # Build bytecode with constant pool entries matching STRRAT hallmarks
+    cp_entries = [
+        None,
+        {"tag": 7, "index": 2},                                                # 1: Class a/a
+        {"tag": 1, "value": "a/a"},                                            # 2: Utf8 a/a
+        {"tag": 7, "index": 4},                                                # 3: Class java/lang/Object
+        {"tag": 1, "value": "java/lang/Object"},                               # 4: Utf8 java/lang/Object
+        {"tag": 1, "value": "ALLATORIxDEMO"},                                  # 5: Allatori watermark
+        {"tag": 1, "value": "(Ljava/lang/String;)Ljava/lang/String;"},         # 6: Allatori string decrypter
+        {"tag": 1, "value": ".crimson"},                                       # 7: Fake ransomware extension
+        {"tag": 1, "value": "lock.file"},                                      # 8: Instance mutex lockfile
+        {"tag": 1, "value": "Login Data"},                                     # 9: Chrome credential SQLite
+        {"tag": 1, "value": "key4.db"},                                        # 10: Firefox credential database
+        {"tag": 1, "value": "user.home"},                                      # 11: System user folder
+        {"tag": 1, "value": "APPDATA"},                                        # 12: AppData directory
+        {"tag": 1, "value": "cmd.exe /c powershell -enc dGVzdA=="},             # 13: Spawning shell
+        {"tag": 1, "value": "schtasks /create /sc onlogon /tn JavaUpd /tr java"}, # 14: Windows persistence
+        {"tag": 1, "value": "http://c2.strrat-infrastructure.cc:8080/gate.php"}, # 15: C2 URL
+        {"tag": 10, "idx1": 17, "idx2": 19},                                  # 16: MethodRef Runtime.exec
+        {"tag": 7, "index": 18},                                               # 17: Class java/lang/Runtime
+        {"tag": 1, "value": "java/lang/Runtime"},                              # 18: Utf8 java/lang/Runtime
+        {"tag": 12, "idx1": 20, "idx2": 21},                                  # 19: NameAndType exec
+        {"tag": 1, "value": "exec"},                                           # 20: Utf8 exec
+        {"tag": 1, "value": "(Ljava/lang/String;)Ljava/lang/Process;"},        # 21: Utf8 descriptor
+        {"tag": 10, "idx1": 23, "idx2": 25},                                  # 22: MethodRef Socket.connect
+        {"tag": 7, "index": 24},                                               # 23: Class java/net/Socket
+        {"tag": 1, "value": "java/net/Socket"},                                # 24: Utf8 java/net/Socket
+        {"tag": 12, "idx1": 26, "idx2": 27},                                  # 25: NameAndType connect
+        {"tag": 1, "value": "connect"},                                        # 26: Utf8 connect
+        {"tag": 1, "value": "(Ljava/net/SocketAddress;)V"},                    # 27: Utf8 descriptor
+        {"tag": 10, "idx1": 29, "idx2": 31},                                  # 28: MethodRef Files.walkFileTree
+        {"tag": 7, "index": 30},                                               # 29: Class java/nio/file/Files
+        {"tag": 1, "value": "java/nio/file/Files"},                            # 30: Utf8 java/nio/file/Files
+        {"tag": 12, "idx1": 32, "idx2": 33},                                  # 31: NameAndType walkFileTree
+        {"tag": 1, "value": "walkFileTree"},                                   # 32: Utf8 walkFileTree
+        {"tag": 1, "value": "(Ljava/nio/file/Path;Ljava/nio/file/FileVisitor;)Ljava/nio/file/Path;"}, # 33: Utf8
+        {"tag": 10, "idx1": 35, "idx2": 37},                                  # 34: MethodRef ZipOutputStream
+        {"tag": 7, "index": 36},                                               # 35: Class java/util/zip/ZipOutputStream
+        {"tag": 1, "value": "java/util/zip/ZipOutputStream"},                  # 36: Utf8
+        {"tag": 12, "idx1": 38, "idx2": 39},                                  # 37: NameAndType putNextEntry
+        {"tag": 1, "value": "putNextEntry"},                                   # 38: Utf8
+        {"tag": 1, "value": "(Ljava/util/zip/ZipEntry;)V"},                    # 39: Utf8
+    ]
+
+    cp_count = len(cp_entries)
+    buf = bytearray()
+    buf.extend(struct.pack(">IHHH", 0xCAFEBABE, 0, 52, cp_count))
+
+    for item in cp_entries[1:]:
+        tag = item["tag"]
+        buf.append(tag)
+        if tag == 1:
+            val_bytes = item["value"].encode("utf-8")
+            buf.extend(struct.pack(">H", len(val_bytes)))
+            buf.extend(val_bytes)
+        elif tag == 7:
+            buf.extend(struct.pack(">H", item["index"]))
+        elif tag in (10, 12):
+            buf.extend(struct.pack(">HH", item["idx1"], item["idx2"]))
+
+    # access_flags, this_class (1), super_class (3)
+    buf.extend(struct.pack(">HHH", 0x0021, 1, 3))
+    # interfaces_count = 0
+    buf.extend(struct.pack(">H", 0))
+
+    class_bytes = bytes(buf)
+
+    # Build JAR with obfuscated single letter classes
+    with zipfile.ZipFile(jar_file, "w") as zf:
+        zf.writestr("META-INF/MANIFEST.MF", manifest_data)
+        zf.writestr("a/a.class", class_bytes)
+        zf.writestr("a/b.class", class_bytes)
+        zf.writestr("a/c.class", class_bytes)
+        zf.writestr("res/config.dat", b"encrypted_c2_channel_config")
+
+    analyzer = JavaAnalyzer()
+    res = analyzer.analyze(jar_file, "strrat_sample.jar", "application/java-archive")
+
+    assert res.success is True
+    data = res.data
+
+    # Check 4 pillars
+    ba = data["behavioral_analysis"]
+    assert ba is not None
+
+    # Pillar 1: Internet Activity
+    net = ba["internet_activity"]
+    assert net["detected"] is True
+    assert net["verdict"] in ("SUSPICIOUS", "POTENTIAL")
+    assert any("Socket" in c["name"] for c in net["capabilities"])
+    assert any("strrat-infrastructure" in u for u in net["endpoints"])
+
+    # Pillar 2: File Access
+    files = ba["file_access"]
+    assert files["detected"] is True
+    assert files["verdict"] == "SUSPICIOUS"
+    assert any(c["id"] == "credential_harvesting" for c in files["capabilities"])
+    assert any(c["id"] == "ransomware_simulation" for c in files["capabilities"])
+    assert any("Login Data" in p for p in files["targeted_paths"])
+    assert any(".crimson" in p for p in files["targeted_paths"])
+
+    # Pillar 3: Command Execution
+    cmd = ba["command_execution"]
+    assert cmd["detected"] is True
+    assert cmd["verdict"] == "SUSPICIOUS"
+    assert any(c["id"] == "process_spawning" for c in cmd["capabilities"])
+    assert any(c["id"] == "system_persistence_admin" for c in cmd["capabilities"])
+    assert any("schtasks" in c for c in cmd["detected_commands"])
+
+    # Pillar 4: Code Obfuscation
+    obf = ba["code_obfuscation"]
+    assert obf["is_obfuscated"] is True
+    assert obf["verdict"] == "OBFUSCATED"
+    assert any("Allatori" in o for o in obf["obfuscators"])
+    assert any(i["type"] == "watermark" for i in obf["indicators"])
+    assert any(i["type"] == "string_encryption" for i in obf["indicators"])
+
+    # STRRAT Forensic Profile
+    strrat = ba["strrat_heuristics"]
+    assert strrat["is_strrat_candidate"] is True
+    assert strrat["confidence"] == "HIGH"
+    assert len(strrat["matched_indicators"]) >= 4
+
+    # Threat Finding Generated
+    findings_titles = [f.title for f in res.findings]
+    assert any("STRRAT Java RAT" in t for t in findings_titles)
+    assert any("Internet" in t for t in findings_titles)
+    assert any("File Access" in t for t in findings_titles)
+    assert any("Shell Command" in t for t in findings_titles)
+    assert any("Obfuscated Code" in t for t in findings_titles)
+    assert data["risk_level"] == "CRITICAL"
+

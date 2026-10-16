@@ -1420,6 +1420,13 @@ export interface JarTriageInfo {
     mitre?: string;
     mitre_name?: string;
   }>;
+  behavioral_analysis?: JavaBehavioralAnalysis;
+  strrat_profile?: JavaStrratHeuristics;
+  rat_detections?: string[];
+  iocs?: {
+    urls?: string[];
+    ips?: string[];
+  };
 }
 
 
@@ -3852,6 +3859,79 @@ export interface JavaAnalysisData {
   }>;
   risk_score?: number;
   risk_level?: string;
+  behavioral_analysis?: JavaBehavioralAnalysis;
+  strrat_profile?: JavaStrratHeuristics;
+}
+
+export interface JavaBehavioralCapability {
+  id: string;
+  name: string;
+  category: 'internet' | 'file' | 'command' | 'obfuscation';
+  description: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  evidence: string[];
+}
+
+export interface JavaInternetActivity {
+  detected: boolean;
+  score: number;
+  verdict: 'SUSPICIOUS' | 'POTENTIAL' | 'CLEAN';
+  summary: string;
+  capabilities: JavaBehavioralCapability[];
+  endpoints: string[];
+}
+
+export interface JavaFileAccess {
+  detected: boolean;
+  score: number;
+  verdict: 'SUSPICIOUS' | 'POTENTIAL' | 'CLEAN';
+  summary: string;
+  capabilities: JavaBehavioralCapability[];
+  targeted_paths: string[];
+}
+
+export interface JavaCommandExecution {
+  detected: boolean;
+  score: number;
+  verdict: 'SUSPICIOUS' | 'POTENTIAL' | 'CLEAN';
+  summary: string;
+  capabilities: JavaBehavioralCapability[];
+  detected_commands: string[];
+}
+
+export interface JavaObfuscationIndicator {
+  type: string;
+  name: string;
+  severity: string;
+  detail: string;
+}
+
+export interface JavaStrratHeuristics {
+  is_strrat_candidate: boolean;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE';
+  matched_indicators: string[];
+  explanation?: string;
+}
+
+export interface JavaCodeObfuscation {
+  is_obfuscated: boolean;
+  score: number;
+  verdict: 'OBFUSCATED' | 'SUSPICIOUS' | 'CLEAN';
+  summary: string;
+  obfuscators: string[];
+  single_letter_class_ratio?: number;
+  total_classes?: number;
+  obfuscated_classes_count?: number;
+  indicators: JavaObfuscationIndicator[];
+  strrat_heuristics?: JavaStrratHeuristics;
+}
+
+export interface JavaBehavioralAnalysis {
+  internet_activity: JavaInternetActivity;
+  file_access: JavaFileAccess;
+  command_execution: JavaCommandExecution;
+  code_obfuscation: JavaCodeObfuscation;
+  strrat_heuristics?: JavaStrratHeuristics;
 }
 
 

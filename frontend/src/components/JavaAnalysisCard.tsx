@@ -9,9 +9,14 @@ import {
   Bug,
   Binary,
   AlertTriangle,
-  ShieldCheck
+  ShieldCheck,
+  Globe,
+  FolderSearch,
+  Terminal,
+  EyeOff
 } from 'lucide-react';
 import { JavaAnalysisData, Finding } from '../types';
+import { JavaBehavioralForensics } from './JavaBehavioralForensics';
 
 interface JavaAnalysisCardProps {
   javaInfo?: JavaAnalysisData;
@@ -23,7 +28,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
   javaInfo,
   filename = 'application.java'
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'apis' | 'code' | 'binaries' | 'rat'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'behavioral' | 'apis' | 'code' | 'binaries' | 'rat'>('overview');
   const [copiedCode, setCopiedCode] = useState(false);
 
   if (!javaInfo) {
@@ -166,6 +171,18 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
         >
           <Layers className="w-3.5 h-3.5" />
           Overview &amp; Entry Points
+        </button>
+
+        <button
+          onClick={() => setActiveTab('behavioral')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+            activeTab === 'behavioral'
+              ? 'bg-rose-600 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Bug className="w-3.5 h-3.5 text-rose-400" />
+          Behavioral Forensics (STRRAT Triage)
         </button>
 
         <button
@@ -327,7 +344,113 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
               </div>
             </div>
           )}
+
+          {/* Behavioral Forensics Quick Triage (4 Pillars) */}
+          {javaInfo.behavioral_analysis && (
+            <div className="p-5 bg-gradient-to-br from-slate-50 to-slate-100/60 rounded-3xl border border-slate-200 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-rose-600" />
+                    SecurityScorecard Behavioral Forensics Triage
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Static audit across 4 core behavioral pillars (Internet, Filesystem, Commands, Obfuscation).
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('behavioral')}
+                  className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 transition-colors shadow-sm cursor-pointer"
+                >
+                  View Deep Forensics &amp; STRRAT Report →
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="p-3 bg-white rounded-2xl border border-slate-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                      <Globe className="w-3.5 h-3.5 text-sky-600" /> Internet
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                      javaInfo.behavioral_analysis.internet_activity.verdict === 'SUSPICIOUS' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                      javaInfo.behavioral_analysis.internet_activity.verdict === 'POTENTIAL' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      {javaInfo.behavioral_analysis.internet_activity.verdict}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate">
+                    {javaInfo.behavioral_analysis.internet_activity.capabilities.length} capabilities detected
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white rounded-2xl border border-slate-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                      <FolderSearch className="w-3.5 h-3.5 text-amber-600" /> File Access
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                      javaInfo.behavioral_analysis.file_access.verdict === 'SUSPICIOUS' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                      javaInfo.behavioral_analysis.file_access.verdict === 'POTENTIAL' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      {javaInfo.behavioral_analysis.file_access.verdict}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate">
+                    {javaInfo.behavioral_analysis.file_access.capabilities.length} capabilities detected
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white rounded-2xl border border-slate-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                      <Terminal className="w-3.5 h-3.5 text-rose-600" /> Commands
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                      javaInfo.behavioral_analysis.command_execution.verdict === 'SUSPICIOUS' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                      javaInfo.behavioral_analysis.command_execution.verdict === 'POTENTIAL' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      {javaInfo.behavioral_analysis.command_execution.verdict}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate">
+                    {javaInfo.behavioral_analysis.command_execution.capabilities.length} capabilities detected
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white rounded-2xl border border-slate-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                      <EyeOff className="w-3.5 h-3.5 text-purple-600" /> Obfuscation
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                      javaInfo.behavioral_analysis.code_obfuscation.verdict === 'OBFUSCATED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                      javaInfo.behavioral_analysis.code_obfuscation.verdict === 'SUSPICIOUS' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      {javaInfo.behavioral_analysis.code_obfuscation.verdict}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate">
+                    {javaInfo.behavioral_analysis.code_obfuscation.indicators.length} indicators flagged
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Tab: Behavioral Forensics & STRRAT Case Study */}
+      {activeTab === 'behavioral' && (
+        <JavaBehavioralForensics
+          behavioral={javaInfo.behavioral_analysis}
+          filename={filename}
+          isJar={java_subtype === 'jar'}
+        />
       )}
 
       {/* Tab: Dangerous APIs */}

@@ -260,6 +260,16 @@ HIGH_RISK_JAVA_APIS = [
 # Java RAT / Malware Signatures
 JAVA_RAT_SIGNATURES = [
     {
+        "name": "STRRAT Java RAT / Crimson Infostealer (SecurityScorecard Case Study)",
+        "patterns": [
+            re.compile(r'ALLATORIxDEMO', re.I),
+            re.compile(r'\.crimson\b', re.I),
+            re.compile(r'lock\.file|[\d]+lock\.file', re.I),
+            re.compile(r'strrat|str_rat', re.I),
+        ],
+        "severity": "critical"
+    },
+    {
         "name": "jRAT / Jackrum (Cross-Platform RAT)",
         "patterns": [re.compile(r'jrat/|server/Payload\.class|crypto/AES\.class', re.I)],
         "severity": "critical"
@@ -390,6 +400,17 @@ class JavaClassParser:
                 _, this_cls_idx, super_cls_idx = struct.unpack_from(">HHH", self.data, offset)
                 self.class_name = self._resolve_class_name(this_cls_idx)
                 self.super_class_name = self._resolve_class_name(super_cls_idx)
+                offset += 6
+                if offset + 2 <= len(self.data):
+                    interfaces_count = struct.unpack_from(">H", self.data, offset)[0]
+                    offset += 2
+                    for _ in range(interfaces_count):
+                        if offset + 2 <= len(self.data):
+                            iface_idx = struct.unpack_from(">H", self.data, offset)[0]
+                            offset += 2
+                            iface_name = self._resolve_class_name(iface_idx)
+                            if iface_name:
+                                self.interfaces.append(iface_name)
 
             return True
         except Exception as e:
@@ -480,7 +501,9 @@ class JavaAnalyzer(BaseAnalyzer):
             "highlighted_lines": [],
             "mitre_techniques": [],
             "risk_score": 0,
-            "risk_level": "CLEAN"
+            "risk_level": "CLEAN",
+            "behavioral_analysis": None,
+            "strrat_profile": None
         }
 
         # 1. Java Source Code Analysis (.java)
@@ -528,6 +551,670 @@ class JavaAnalyzer(BaseAnalyzer):
         except Exception:
             pass
         return False
+
+    def _audit_behavioral_capabilities(
+        self,
+        strings: List[str],
+        method_calls: List[Dict[str, str]],
+        class_names: List[str],
+        namelist: List[str],
+        manifest_text: str,
+        embedded_binaries: List[str],
+        raw_text_corpus: str,
+        iocs: Dict[str, List[str]]
+    ) -> Dict[str, Any]:
+        """
+        Conducts deep behavioral forensic audit across 4 core pillars based on SecurityScorecard's
+        'How to Analyze Java Malware – A Case Study of STRRAT':
+        1. 🌐 Internet activity (Can this JAR contact external servers?)
+        2. 📂 File access (Can this JAR read, collect, or package files?)
+        3. 🛠 System command execution (Can this JAR run OS-level commands?)
+        4. 🧩 Hidden or hard-to-review code (Is the code unusually hard to inspect?)
+        """
+        # =========================================================================
+        # 1. 🌐 INTERNET ACTIVITY
+        # =========================================================================
+        internet_caps = []
+        raw_socket_evidence = []
+        for m in method_calls:
+            cls = m.get("class", "")
+            if any(s in cls for s in ["java/net/Socket", "java/net/ServerSocket", "java/net/DatagramSocket", "java/nio/channels/SocketChannel", "java/nio/channels/ServerSocketChannel"]):
+                raw_socket_evidence.append(f"{cls.replace('/', '.')}.{m.get('method', '')}")
+        if not raw_socket_evidence and re.search(r'java/net/(?:Server)?Socket|SocketChannel|DatagramSocket', raw_text_corpus):
+            raw_socket_evidence.append("java.net.Socket / ServerSocket raw network socket references")
+
+        if raw_socket_evidence:
+            internet_caps.append({
+                "id": "raw_sockets",
+                "name": "Raw Socket Connections",
+                "category": "internet",
+                "description": "Opens raw low-level TCP/IP or UDP sockets (e.g. for custom C2 protocols, reverse shells, or SOCKS proxying).",
+                "severity": "high",
+                "evidence": list(set(raw_socket_evidence))[:5]
+            })
+
+        http_evidence = []
+        for m in method_calls:
+            cls = m.get("class", "")
+            if any(h in cls for h in ["java/net/HttpURLConnection", "javax/net/ssl/HttpsURLConnection", "java/net/http/HttpClient", "okhttp3", "org/apache/http"]):
+                http_evidence.append(f"{cls.replace('/', '.')}.{m.get('method', '')}")
+        if not http_evidence and re.search(r'HttpURLConnection|HttpsURLConnection|HttpClient|okhttp3|apache/http', raw_text_corpus):
+            http_evidence.append("HTTP/HTTPS Client APIs (HttpURLConnection / HttpClient / OkHttp)")
+
+        if http_evidence:
+            internet_caps.append({
+                "id": "http_requests",
+                "name": "HTTP / Web Client Requests",
+                "category": "internet",
+                "description": "Transmits HTTP/HTTPS requests to remote servers (telemetry, API log uploads, or command polling).",
+                "severity": "medium",
+                "evidence": list(set(http_evidence))[:5]
+            })
+
+        downloader_evidence = []
+        for m in method_calls:
+            cls = m.get("class", "")
+            mth = m.get("method", "")
+            if "URLClassLoader" in cls or "defineClass" in mth:
+                downloader_evidence.append(f"{cls.replace('/', '.')}.{mth}")
+        if not downloader_evidence and re.search(r'URLClassLoader|ClassLoader\.defineClass', raw_text_corpus):
+            downloader_evidence.append("URLClassLoader remote class loader reference")
+
+        if downloader_evidence:
+            internet_caps.append({
+                "id": "payload_downloader",
+                "name": "Remote Code / Payload Downloader",
+                "category": "internet",
+                "description": "Dynamically fetches and executes extra content or Java bytecode from remote URLs (stager behavior).",
+                "severity": "critical",
+                "evidence": list(set(downloader_evidence))[:5]
+            })
+
+        socks_evidence = []
+        if re.search(r'\bsocks(?:5|\b)|proxy_port|SocksSocket|reverse.*proxy', raw_text_corpus, re.I):
+            socks_evidence.append("Reverse SOCKS proxy / port redirection strings detected")
+
+        if socks_evidence:
+            internet_caps.append({
+                "id": "socks_proxy",
+                "name": "Reverse SOCKS Proxy & Tunneling",
+                "category": "internet",
+                "description": "Implements SOCKS proxy tunneling to relay arbitrary threat actor network traffic through the victim.",
+                "severity": "high",
+                "evidence": socks_evidence[:5]
+            })
+
+        endpoint_evidence = []
+        urls = iocs.get("urls", [])
+        ips = iocs.get("ips", [])
+        if urls or ips:
+            endpoint_evidence.extend(urls[:5])
+            endpoint_evidence.extend([f"IP: {ip}" for ip in ips[:3]])
+        if re.search(r'discord\.com/api/webhooks|api\.telegram\.org|pastebin\.com|ngrok\.io|duckdns\.org|checkip|icanhazip', raw_text_corpus, re.I):
+            endpoint_evidence.append("External webhook / dynamic DNS / IP lookup C2 infrastructure")
+
+        if endpoint_evidence:
+            internet_caps.append({
+                "id": "c2_telemetry_endpoints",
+                "name": "Hardcoded Network Endpoints & Telemetry",
+                "category": "internet",
+                "description": "Hardcoded external IP addresses, domain names, or webhook URLs embedded in bytecode/strings.",
+                "severity": "high" if any(x in str(endpoint_evidence).lower() for x in ["webhook", "pastebin", "ngrok", "duckdns"]) else "medium",
+                "evidence": endpoint_evidence[:5]
+            })
+
+        int_score = 0
+        if any(c["id"] == "payload_downloader" for c in internet_caps):
+            int_score += 40
+        if any(c["id"] == "raw_sockets" for c in internet_caps):
+            int_score += 35
+        if any(c["id"] == "socks_proxy" for c in internet_caps):
+            int_score += 30
+        if any(c["id"] == "c2_telemetry_endpoints" for c in internet_caps):
+            int_score += 25
+        if any(c["id"] == "http_requests" for c in internet_caps):
+            int_score += 20
+        int_score = min(100, int_score)
+
+        if int_score >= 60:
+            int_verdict = "SUSPICIOUS"
+            int_summary = "Can contact external servers via raw sockets, proxies, or remote code loaders."
+        elif int_score >= 20:
+            int_verdict = "POTENTIAL"
+            int_summary = "Standard network capabilities detected (HTTP/HTTPS client requests or remote endpoints)."
+        else:
+            int_verdict = "CLEAN"
+            int_summary = "No outbound network activity or external communication capabilities identified."
+
+        internet_activity = {
+            "detected": len(internet_caps) > 0,
+            "score": int_score,
+            "verdict": int_verdict,
+            "summary": int_summary,
+            "capabilities": internet_caps,
+            "endpoints": list(set(urls + ips))[:25]
+        }
+
+        # =========================================================================
+        # 2. 📂 FILE ACCESS
+        # =========================================================================
+        file_caps = []
+        targeted_paths = []
+
+        traversal_evidence = []
+        for m in method_calls:
+            full = m.get("full", "")
+            if any(t in full for t in ["File.listFiles", "File.listRoots", "Files.walkFileTree", "Files.walk", "Files.find", "DirectoryStream"]):
+                traversal_evidence.append(full)
+        if not traversal_evidence and re.search(r'listFiles|listRoots|walkFileTree|DirectoryStream', raw_text_corpus):
+            traversal_evidence.append("Directory traversal APIs (File.listFiles / Files.walkFileTree)")
+
+        if traversal_evidence:
+            file_caps.append({
+                "id": "filesystem_traversal",
+                "name": "Broad Filesystem Traversal & Directory Scanning",
+                "category": "file",
+                "description": "Recursively scans filesystem directories to enumerate user files, documents, and configurations.",
+                "severity": "medium",
+                "evidence": list(set(traversal_evidence))[:5]
+            })
+
+        sensitive_evidence = []
+        for s in strings:
+            if isinstance(s, str) and any(k in s for k in ["user.home", "user.dir", "APPDATA", "LOCALAPPDATA", "USERPROFILE", "ALLUSERSPROFILE", "PROGRAMDATA"]):
+                sensitive_evidence.append(s)
+                targeted_paths.append(s)
+        if not sensitive_evidence and re.search(r'user\.home|APPDATA|LOCALAPPDATA|USERPROFILE', raw_text_corpus):
+            sensitive_evidence.append("System.getProperty('user.home') or %APPDATA% reference")
+            targeted_paths.append("%USERPROFILE% / %APPDATA%")
+
+        if sensitive_evidence:
+            file_caps.append({
+                "id": "sensitive_folders",
+                "name": "Access Outside Normal Application Folders",
+                "category": "file",
+                "description": "Accesses user profile directories, Desktop, Documents, or AppData outside normal workspace bounds.",
+                "severity": "high",
+                "evidence": list(set(sensitive_evidence))[:5]
+            })
+
+        cred_evidence = []
+        cred_patterns = [
+            (r'Login Data', "Chrome/Chromium password store ('Login Data')"),
+            (r'key[34]\.db', "Firefox NSS database ('key4.db')"),
+            (r'logins\.json', "Firefox stored credentials ('logins.json')"),
+            (r'cookies\.sqlite', "Browser cookies vault ('cookies.sqlite')"),
+            (r'places\.sqlite', "Browser history store ('places.sqlite')"),
+            (r'Thunderbird', "Thunderbird email client profiles"),
+            (r'webcredentials', "Windows WebCredentials vault"),
+            (r'Windows Messaging Subsystem', "Outlook account profile credentials")
+        ]
+        for pat, desc in cred_patterns:
+            if re.search(pat, raw_text_corpus, re.I):
+                cred_evidence.append(desc)
+                targeted_paths.append(desc)
+
+        if cred_evidence:
+            file_caps.append({
+                "id": "credential_harvesting",
+                "name": "Browser & Credential Vault Harvesting",
+                "category": "file",
+                "description": "Explicitly targets saved passwords, session cookies, and profile stores for Chrome, Firefox, Edge, or email clients.",
+                "severity": "critical",
+                "evidence": list(set(cred_evidence))[:5]
+            })
+
+        archive_evidence = []
+        for m in method_calls:
+            cls = m.get("class", "")
+            if any(z in cls for z in ["ZipOutputStream", "JarOutputStream", "GZIPOutputStream"]):
+                archive_evidence.append(f"{cls.replace('/', '.')}.{m.get('method', '')}")
+        if not archive_evidence and re.search(r'ZipOutputStream|JarOutputStream', raw_text_corpus):
+            archive_evidence.append("ZipOutputStream archive creation for file staging")
+
+        if archive_evidence:
+            file_caps.append({
+                "id": "archive_packaging",
+                "name": "Packaging Files for Export (ZIP/Archive)",
+                "category": "file",
+                "description": "Compresses gathered files or logs into ZIP archives for staging and exfiltration.",
+                "severity": "medium",
+                "evidence": list(set(archive_evidence))[:5]
+            })
+
+        ransom_evidence = []
+        if re.search(r'\.crimson\b', raw_text_corpus, re.I):
+            ransom_evidence.append("STRRAT fake ransomware extension ('.crimson')")
+            targeted_paths.append("Victim files appended with .crimson extension")
+        if re.search(r'File\.renameTo|Files\.move', raw_text_corpus):
+            ransom_evidence.append("Mass file renaming method (File.renameTo)")
+        if re.search(r'RESTORE_FILES|README.*DECRYPT|HOW_TO_RECOVER', raw_text_corpus, re.I):
+            ransom_evidence.append("Ransom note extortion text")
+
+        if ransom_evidence:
+            file_caps.append({
+                "id": "ransomware_simulation",
+                "name": "Ransomware Simulation & File Extortion (.crimson)",
+                "category": "file",
+                "description": "Appends ransomware extensions (.crimson) or renames files across directories to simulate extortion.",
+                "severity": "critical",
+                "evidence": list(set(ransom_evidence))[:5]
+            })
+
+        dropper_evidence = []
+        if re.search(r'[\d]*lock\.file', raw_text_corpus, re.I):
+            dropper_evidence.append("STRRAT instance lockfile ('lock.file')")
+        if any(b.lower().endswith(('.vbs', '.bat', '.ps1', '.sh', '.exe', '.dll')) for b in embedded_binaries):
+            dropper_evidence.append(f"Bundled executable/script: {', '.join(embedded_binaries[:3])}")
+        for m in method_calls:
+            cls = m.get("class", "")
+            full = m.get("full", "")
+            if "FileOutputStream" in cls or "Files.write" in full:
+                dropper_evidence.append(f"{cls.replace('/', '.')}.{m.get('method', '')}")
+                break
+
+        if dropper_evidence:
+            file_caps.append({
+                "id": "file_dropper_lockfile",
+                "name": "Payload Dropper & Lockfile Mutex",
+                "category": "file",
+                "description": "Drops secondary executable script files (.bat, .vbs) to disk and checks mutex lockfiles.",
+                "severity": "high" if any("lock.file" in e for e in dropper_evidence) else "medium",
+                "evidence": list(set(dropper_evidence))[:5]
+            })
+
+        file_score = 0
+        if any(c["id"] == "credential_harvesting" for c in file_caps):
+            file_score += 45
+        if any(c["id"] == "ransomware_simulation" for c in file_caps):
+            file_score += 40
+        if any(c["id"] == "sensitive_folders" for c in file_caps):
+            file_score += 25
+        if any(c["id"] == "filesystem_traversal" for c in file_caps):
+            file_score += 20
+        if any(c["id"] == "archive_packaging" for c in file_caps):
+            file_score += 20
+        if any(c["id"] == "file_dropper_lockfile" for c in file_caps):
+            file_score += 20
+        file_score = min(100, file_score)
+
+        if file_score >= 60:
+            file_verdict = "SUSPICIOUS"
+            file_summary = "Can scan filesystem, access user home/AppData, and harvest browser credential stores."
+        elif file_score >= 20:
+            file_verdict = "POTENTIAL"
+            file_summary = "Standard file access capabilities detected (reading configs or compressing archives)."
+        else:
+            file_verdict = "CLEAN"
+            file_summary = "No suspicious filesystem traversal, credential access, or file modification identified."
+
+        file_access = {
+            "detected": len(file_caps) > 0,
+            "score": file_score,
+            "verdict": file_verdict,
+            "summary": file_summary,
+            "capabilities": file_caps,
+            "targeted_paths": list(set(targeted_paths))[:20]
+        }
+
+        # =========================================================================
+        # 3. 🛠 SYSTEM COMMAND EXECUTION
+        # =========================================================================
+        cmd_caps = []
+        detected_commands = []
+
+        exec_evidence = []
+        for m in method_calls:
+            full = m.get("full", "")
+            if any(e in full for e in ["Runtime.exec", "ProcessBuilder.start", "ProcessBuilder.<init>"]):
+                exec_evidence.append(full)
+        if not exec_evidence and re.search(r'Runtime(?:\.getRuntime\(\))?\.exec|ProcessBuilder', raw_text_corpus):
+            exec_evidence.append("Runtime.getRuntime().exec() / ProcessBuilder process spawning APIs")
+
+        if exec_evidence:
+            cmd_caps.append({
+                "id": "process_spawning",
+                "name": "Host Operating System Process Execution",
+                "category": "command",
+                "description": "Executes operating system processes via Runtime.exec() or ProcessBuilder.",
+                "severity": "critical",
+                "evidence": list(set(exec_evidence))[:5]
+            })
+
+        shell_evidence = []
+        shell_patterns = [
+            r'cmd(?:\.exe)?\s+/c', r'powershell(?:\.exe)?\b.*?(?:-enc|-executionpolicy|-nop|\.ps1)',
+            r'/bin/(?:ba)?sh\s+-c', r'wscript(?:\.exe)?', r'cscript(?:\.exe)?', r'mshta(?:\.exe)?'
+        ]
+        for pat in shell_patterns:
+            matches = re.findall(pat, raw_text_corpus, re.I)
+            if matches:
+                shell_evidence.append(f"Command shell invocation: '{matches[0]}'")
+                detected_commands.extend(matches[:3])
+
+        for s in strings:
+            if isinstance(s, str) and len(s) > 4 and any(c in s.lower() for c in ["cmd.exe", "powershell", "/bin/sh", "/bin/bash"]):
+                detected_commands.append(s[:120])
+
+        if shell_evidence:
+            cmd_caps.append({
+                "id": "command_shells",
+                "name": "Command Shell Interpreters (cmd.exe / PowerShell / bash)",
+                "category": "command",
+                "description": "Launches Windows cmd.exe, PowerShell, or UNIX bash to execute arbitrary shell scripts.",
+                "severity": "critical",
+                "evidence": list(set(shell_evidence))[:5]
+            })
+
+        admin_evidence = []
+        admin_patterns = [
+            (r'schtasks(?:\.exe)?\s+(?:/create|/run|/delete)', "Windows Task Scheduler persistence (schtasks.exe)"),
+            (r'CurrentVersion\\Run', "Windows Registry Run key autostart persistence"),
+            (r'sc(?:\.exe)?\s+create', "Windows Service installation (sc.exe)"),
+            (r'netsh\s+advfirewall', "Windows Firewall rule modification (netsh)"),
+            (r'vssadmin\s+delete\s+shadows', "Shadow copy deletion (anti-recovery)"),
+            (r'taskkill\s+/f', "Process termination (taskkill)"),
+            (r'attrib\s+\+h', "File attribute hiding (attrib +h)")
+        ]
+        for pat, desc in admin_patterns:
+            if re.search(pat, raw_text_corpus, re.I):
+                admin_evidence.append(desc)
+                detected_commands.append(desc)
+
+        if admin_evidence:
+            cmd_caps.append({
+                "id": "system_persistence_admin",
+                "name": "Persistence & System Administration Utilities",
+                "category": "command",
+                "description": "Configures scheduled tasks (schtasks) or Windows Registry Run keys for persistent reboot survival.",
+                "severity": "critical",
+                "evidence": list(set(admin_evidence))[:5]
+            })
+
+        script_evidence = []
+        if re.search(r'\.(?:bat|vbs|ps1|sh)\b', raw_text_corpus, re.I) and (exec_evidence or shell_evidence):
+            script_evidence.append("Launches external script interpreter (.bat / .vbs / .ps1 / .sh)")
+
+        if script_evidence:
+            cmd_caps.append({
+                "id": "script_launching",
+                "name": "Launching Dropped Secondary Scripts",
+                "category": "command",
+                "description": "Invokes dropped secondary scripts (.bat, .vbs, .ps1) through the host command interpreter.",
+                "severity": "high",
+                "evidence": script_evidence[:5]
+            })
+
+        cmd_score = 0
+        if any(c["id"] == "process_spawning" for c in cmd_caps):
+            cmd_score += 40
+        if any(c["id"] == "system_persistence_admin" for c in cmd_caps):
+            cmd_score += 35
+        if any(c["id"] == "command_shells" for c in cmd_caps):
+            cmd_score += 35
+        if any(c["id"] == "script_launching" for c in cmd_caps):
+            cmd_score += 25
+        cmd_score = min(100, cmd_score)
+
+        if cmd_score >= 60:
+            cmd_verdict = "SUSPICIOUS"
+            cmd_summary = "Can run OS-level commands, spawn cmd.exe/PowerShell, and schedule persistence."
+        elif cmd_score >= 20:
+            cmd_verdict = "POTENTIAL"
+            cmd_summary = "Host process invocation or administrative commands detected."
+        else:
+            cmd_verdict = "CLEAN"
+            cmd_summary = "No operating system command execution or shell launching detected."
+
+        command_execution = {
+            "detected": len(cmd_caps) > 0,
+            "score": cmd_score,
+            "verdict": cmd_verdict,
+            "summary": cmd_summary,
+            "capabilities": cmd_caps,
+            "detected_commands": list(set(detected_commands))[:20]
+        }
+
+        # =========================================================================
+        # 4. 🧩 HIDDEN OR HARD-TO-REVIEW CODE
+        # =========================================================================
+        obfuscators = []
+        indicators = []
+
+        has_allatori = False
+        if "ALLATORIxDEMO" in raw_text_corpus or any(isinstance(s, str) and "ALLATORIxDEMO" in s for s in strings):
+            has_allatori = True
+            obfuscators.append("Allatori Java Obfuscator (Watermark Confirmed)")
+            indicators.append({
+                "type": "watermark",
+                "name": "Allatori Obfuscator Watermark (ALLATORIxDEMO)",
+                "severity": "high",
+                "detail": "Observed 'ALLATORIxDEMO' constant pool identifier, confirming Allatori protection."
+            })
+
+        if re.search(r'_cls|_mth|Zelix|KlassMaster', raw_text_corpus, re.I):
+            obfuscators.append("Zelix KlassMaster (ZKM)")
+            indicators.append({
+                "type": "watermark",
+                "name": "Zelix KlassMaster Obfuscation Markers",
+                "severity": "high",
+                "detail": "Bytecode identifiers and flow flattening match Zelix KlassMaster patterns."
+            })
+
+        if re.search(r'PreEmptive|DashO', raw_text_corpus, re.I):
+            obfuscators.append("PreEmptive DashO")
+
+        total_classes = len(class_names)
+        obfuscated_classes = 0
+        for cn in class_names:
+            simple_name = cn.split("/")[-1].replace(".class", "")
+            if len(simple_name) <= 2 or (simple_name.islower() and len(simple_name) <= 3) or not simple_name.isalnum():
+                obfuscated_classes += 1
+
+        ratio = (obfuscated_classes / total_classes) if total_classes > 0 else 0.0
+        if ratio >= 0.40 and total_classes >= 3:
+            if "ProGuard / Bytecode Collapser" not in obfuscators:
+                obfuscators.append("ProGuard / Bytecode Collapser")
+            indicators.append({
+                "type": "class_structure",
+                "name": "Collapsed Obfuscated Class Hierarchy",
+                "severity": "high",
+                "detail": f"{int(ratio * 100)}% of classes ({obfuscated_classes}/{total_classes}) use short/single-letter identifiers (e.g. a.class, b.class)."
+            })
+
+        has_string_decrypter = False
+        for s in strings:
+            if isinstance(s, str) and s in ["(Ljava/lang/String;)Ljava/lang/String;", "(Ljava/lang/String;I)Ljava/lang/String;"]:
+                has_string_decrypter = True
+                break
+        if not has_string_decrypter and re.search(r'\(Ljava/lang/String;\)Ljava/lang/String;', raw_text_corpus):
+            has_string_decrypter = True
+
+        if has_string_decrypter or has_allatori:
+            indicators.append({
+                "type": "string_encryption",
+                "name": "Encrypted Strings & Decryption Routines",
+                "severity": "high",
+                "detail": "Contains specialized string decryptor method signatures (Ljava/lang/String;)Ljava/lang/String; and multi-byte XOR loops used by Allatori/STRRAT to hide URLs and commands."
+            })
+
+        reflection_evidence = []
+        for m in method_calls:
+            full = m.get("full", "")
+            if any(r in full for r in ["Class.forName", "Method.invoke", "Field.get", "sun.misc.Unsafe"]):
+                reflection_evidence.append(full)
+        if not reflection_evidence and re.search(r'Class\.forName|Method\.invoke|sun/misc/Unsafe', raw_text_corpus):
+            reflection_evidence.append("Class.forName / Method.invoke dynamic reflection")
+
+        if reflection_evidence:
+            indicators.append({
+                "type": "reflection",
+                "name": "Dynamic Reflection & Obfuscated Method Resolution",
+                "severity": "medium",
+                "detail": "Uses Class.forName and Method.invoke to obscure runtime method dispatch from static decompilers."
+            })
+
+        if re.search(r'getResourceAsStream', raw_text_corpus):
+            indicators.append({
+                "type": "hidden_resources",
+                "name": "Hidden Bytecode & Streamed Resource Loading",
+                "severity": "high",
+                "detail": "Invokes getResourceAsStream to dynamically load embedded classes, encrypted payloads, or stubs."
+            })
+
+        obf_score = 0
+        if has_allatori:
+            obf_score += 40
+        if ratio >= 0.40 and total_classes >= 3:
+            obf_score += 30
+        if has_string_decrypter:
+            obf_score += 30
+        if reflection_evidence:
+            obf_score += 20
+        if any(i["type"] == "hidden_resources" for i in indicators):
+            obf_score += 20
+        obf_score = min(100, obf_score)
+
+        is_obfuscated = obf_score >= 35 or len(obfuscators) > 0
+        if obf_score >= 50:
+            obf_verdict = "OBFUSCATED"
+            obf_summary = f"Code is heavily obfuscated ({', '.join(obfuscators) if obfuscators else 'Proprietary'}); exhibits string encryption and collapsed classes."
+        elif obf_score >= 25:
+            obf_verdict = "SUSPICIOUS"
+            obf_summary = "Contains evasion indicators such as dynamic reflection or packed resources."
+        else:
+            obf_verdict = "CLEAN"
+            obf_summary = "Bytecode exhibits standard transparent class names and readable method signatures."
+
+        # STRRAT Heuristic Profile
+        strrat_matches = []
+        if has_allatori:
+            strrat_matches.append("Allatori Java Obfuscator watermark (ALLATORIxDEMO)")
+        if re.search(r'\.crimson\b', raw_text_corpus, re.I):
+            strrat_matches.append("Fake ransomware extension marker ('.crimson')")
+        if re.search(r'[\d]*lock\.file', raw_text_corpus, re.I):
+            strrat_matches.append("Instance exclusivity lockfile ('lock.file')")
+        if cred_evidence:
+            strrat_matches.append(f"Browser/Email SQLite credential store access ({len(cred_evidence)} patterns)")
+        if admin_evidence or re.search(r'schtasks|CurrentVersion\\Run', raw_text_corpus, re.I):
+            strrat_matches.append("Windows Task Scheduler / Registry Run key persistence")
+        if raw_socket_evidence or socks_evidence:
+            strrat_matches.append("Raw TCP socket communication / SOCKS reverse proxy")
+        if shell_evidence or exec_evidence:
+            strrat_matches.append("Operating system shell command execution (cmd.exe / PowerShell)")
+
+        is_strrat_candidate = False
+        strrat_confidence = "NONE"
+        if len(strrat_matches) >= 3 or (has_allatori and (re.search(r'\.crimson', raw_text_corpus) or re.search(r'lock\.file', raw_text_corpus) or cred_evidence)):
+            is_strrat_candidate = True
+            if len(strrat_matches) >= 4 or (has_allatori and re.search(r'\.crimson', raw_text_corpus)):
+                strrat_confidence = "HIGH"
+            else:
+                strrat_confidence = "MEDIUM"
+        elif len(strrat_matches) >= 2:
+            is_strrat_candidate = True
+            strrat_confidence = "LOW"
+
+        strrat_heuristics = {
+            "is_strrat_candidate": is_strrat_candidate,
+            "confidence": strrat_confidence,
+            "matched_indicators": strrat_matches,
+            "explanation": (
+                "Matches hallmark forensic indicators of the STRRAT Remote Access Trojan documented in the SecurityScorecard Case Study: "
+                "Allatori obfuscation, fake ransomware (.crimson) extension simulation, credential harvesting, Task Scheduler persistence, and raw TCP C2 communications."
+                if is_strrat_candidate else "No conclusive STRRAT signature pattern matched."
+            )
+        }
+
+        code_obfuscation = {
+            "is_obfuscated": is_obfuscated,
+            "score": obf_score,
+            "verdict": obf_verdict,
+            "summary": obf_summary,
+            "obfuscators": obfuscators,
+            "single_letter_class_ratio": round(ratio, 2),
+            "total_classes": total_classes,
+            "obfuscated_classes_count": obfuscated_classes,
+            "indicators": indicators,
+            "strrat_heuristics": strrat_heuristics
+        }
+
+        return {
+            "internet_activity": internet_activity,
+            "file_access": file_access,
+            "command_execution": command_execution,
+            "code_obfuscation": code_obfuscation,
+            "strrat_heuristics": strrat_heuristics
+        }
+
+    def _generate_behavioral_findings(self, behavioral: Dict[str, Any], findings: List[Finding], data: Dict[str, Any]):
+        """Generates structured Findings for behavioral risk factors and STRRAT matches."""
+        if not behavioral:
+            return
+
+        strrat = behavioral.get("strrat_heuristics", {})
+        if strrat.get("is_strrat_candidate") and strrat.get("confidence") in ("HIGH", "MEDIUM"):
+            conf = strrat["confidence"]
+            matched_str = ", ".join(strrat.get("matched_indicators", []))
+            findings.append(Finding(
+                category="malware",
+                severity="critical",
+                title=f"Threat Intel Match: STRRAT Java RAT ({conf} Confidence)",
+                description=(
+                    f"Archive/bytecode exhibits textbook forensic indicators of the STRRAT Remote Access Trojan "
+                    f"(SecurityScorecard Case Study). Key hallmarks detected: {matched_str}."
+                ),
+                details=strrat
+            ))
+            rat_name = "STRRAT Java RAT / Crimson Infostealer (SecurityScorecard Case Study)"
+            if rat_name not in data.get("rat_detections", []):
+                data.setdefault("rat_detections", []).append(rat_name)
+
+        int_act = behavioral.get("internet_activity", {})
+        if int_act.get("score", 0) >= 50 or any(c.get("severity") == "critical" for c in int_act.get("capabilities", [])):
+            caps_str = ", ".join([c["name"] for c in int_act.get("capabilities", [])])
+            findings.append(Finding(
+                category="network",
+                severity="high" if int_act.get("score", 0) >= 60 else "medium",
+                title="Forensic Behavioral Finding: 🌐 Suspicious Internet & Server Activity",
+                description=f"{int_act.get('summary', '')} Discovered capabilities: {caps_str}.",
+                details=int_act
+            ))
+
+        file_acc = behavioral.get("file_access", {})
+        if file_acc.get("score", 0) >= 50 or any(c.get("severity") == "critical" for c in file_acc.get("capabilities", [])):
+            is_crit = any(c.get("id") in ("credential_harvesting", "ransomware_simulation") for c in file_acc.get("capabilities", []))
+            caps_str = ", ".join([c["name"] for c in file_acc.get("capabilities", [])])
+            findings.append(Finding(
+                category="filesystem",
+                severity="critical" if is_crit else "high",
+                title="Forensic Behavioral Finding: 📂 Broad File Access & Credential Harvesting",
+                description=f"{file_acc.get('summary', '')} Discovered capabilities: {caps_str}.",
+                details=file_acc
+            ))
+
+        cmd_exec = behavioral.get("command_execution", {})
+        if cmd_exec.get("score", 0) >= 50 or any(c.get("severity") == "critical" for c in cmd_exec.get("capabilities", [])):
+            caps_str = ", ".join([c["name"] for c in cmd_exec.get("capabilities", [])])
+            findings.append(Finding(
+                category="execution",
+                severity="critical",
+                title="Forensic Behavioral Finding: 🛠 Host Operating System Shell Command Execution",
+                description=f"{cmd_exec.get('summary', '')} Discovered capabilities: {caps_str}.",
+                details=cmd_exec
+            ))
+
+        code_obf = behavioral.get("code_obfuscation", {})
+        if code_obf.get("is_obfuscated") and code_obf.get("score", 0) >= 50:
+            obf_str = ", ".join(code_obf.get("obfuscators", [])) if code_obf.get("obfuscators") else "High Obfuscation"
+            ind_str = ", ".join([i["name"] for i in code_obf.get("indicators", [])])
+            findings.append(Finding(
+                category="evasion",
+                severity="high",
+                title=f"Forensic Behavioral Finding: 🧩 Obfuscated Code ({obf_str})",
+                description=f"{code_obf.get('summary', '')} Indicators: {ind_str}.",
+                details=code_obf
+            ))
 
     def _analyze_java_source(self, file_path: Path, data: Dict[str, Any], findings: List[Finding]):
         data["java_type"] = "source"
@@ -610,6 +1297,21 @@ class JavaAnalyzer(BaseAnalyzer):
                         details={"rat_family": rat["name"]}
                     ))
 
+            # 4-Pillar Behavioral Analysis (SecurityScorecard Methodology)
+            raw_corpus = content + " " + " ".join([a.get("code", "") for a in detected_apis])
+            data["behavioral_analysis"] = self._audit_behavioral_capabilities(
+                strings=lines,
+                method_calls=[{"class": a.get("api", ""), "method": a.get("api", ""), "descriptor": "", "full": a.get("api", "")} for a in detected_apis],
+                class_names=[data["class_name"]] if data.get("class_name") else [],
+                namelist=[Path(file_path).name],
+                manifest_text="",
+                embedded_binaries=[],
+                raw_text_corpus=raw_corpus,
+                iocs=data["iocs"]
+            )
+            data["strrat_profile"] = data["behavioral_analysis"]["strrat_heuristics"]
+            self._generate_behavioral_findings(data["behavioral_analysis"], findings, data)
+
         except Exception as e:
             logger.debug(f"Java source analysis error: {e}")
 
@@ -680,6 +1382,43 @@ class JavaAnalyzer(BaseAnalyzer):
                 lines.append("}")
                 data["code_preview"] = "\n".join(lines)
 
+                # Class metadata
+                data["class_info"] = {
+                    "major_version": parser.major_version,
+                    "minor_version": parser.minor_version,
+                    "java_version": parser.java_version_name,
+                    "constant_pool_count": len(parser.constant_pool),
+                    "methods_count": len(parser.method_calls),
+                    "interfaces_count": len(parser.interfaces)
+                }
+
+                # Check Java RAT signatures across strings
+                joined_all = " ".join(parser.strings) + " " + " ".join([m["full"] for m in parser.method_calls])
+                for rat in JAVA_RAT_SIGNATURES:
+                    if any(p.search(joined_all) for p in rat["patterns"]):
+                        data["rat_detections"].append(rat["name"])
+                        findings.append(Finding(
+                            category="malware",
+                            severity=rat["severity"],
+                            title=f"Malicious Java Signature Match: {rat['name']}",
+                            description=f"Class bytecode matches structural signatures associated with {rat['name']}.",
+                            details={"rat_family": rat["name"]}
+                        ))
+
+                # 4-Pillar Behavioral Analysis (SecurityScorecard Methodology)
+                data["behavioral_analysis"] = self._audit_behavioral_capabilities(
+                    strings=parser.strings,
+                    method_calls=parser.method_calls,
+                    class_names=[parser.class_name] if parser.class_name else [],
+                    namelist=[Path(file_path).name],
+                    manifest_text="",
+                    embedded_binaries=[],
+                    raw_text_corpus=joined_all,
+                    iocs=data["iocs"]
+                )
+                data["strrat_profile"] = data["behavioral_analysis"]["strrat_heuristics"]
+                self._generate_behavioral_findings(data["behavioral_analysis"], findings, data)
+
         except Exception as e:
             logger.debug(f"Java class analysis error: {e}")
 
@@ -695,7 +1434,7 @@ class JavaAnalyzer(BaseAnalyzer):
                 data["classes_list"] = [n for n in namelist if n.endswith(".class")][:50]
                 data["embedded_binaries"] = [
                     n for n in namelist
-                    if Path(n).suffix.lower() in [".dll", ".so", ".dylib", ".exe", ".sh", ".bat", ".bin"]
+                    if Path(n).suffix.lower() in [".dll", ".so", ".dylib", ".exe", ".sh", ".bat", ".bin", ".vbs", ".ps1"]
                 ]
 
                 packages = set()
@@ -704,6 +1443,7 @@ class JavaAnalyzer(BaseAnalyzer):
                         packages.add("/".join(n.split("/")[:-1]).replace("/", "."))
                 data["packages_count"] = len(packages)
 
+                manifest_content = ""
                 # Parse META-INF/MANIFEST.MF
                 if "META-INF/MANIFEST.MF" in namelist:
                     manifest_content = zf.read("META-INF/MANIFEST.MF").decode("utf-8", errors="ignore")
@@ -760,15 +1500,52 @@ class JavaAnalyzer(BaseAnalyzer):
                         details={"embedded_binaries": data["embedded_binaries"]}
                     ))
 
-                # Scan contained .class files for high-risk APIs
-                suspicious_apis = []
+                # Scan contained .class files using JavaClassParser
+                class_parsers = []
+                all_class_names = []
+                all_method_calls = []
+                all_strings = []
                 all_urls = set()
+                suspicious_apis = []
 
-                for info in infos[:100]:
-                    if info.filename.endswith(".class") and info.file_size < 1000000:
-                        try:
-                            c_bytes = zf.read(info.filename)
+                class_entries = [i for i in infos if i.filename.endswith(".class") and i.file_size < 5000000]
+                if data.get("main_class"):
+                    main_file = data["main_class"].replace(".", "/") + ".class"
+                    class_entries.sort(key=lambda x: 0 if x.filename == main_file else 1)
+
+                for info in class_entries[:300]:
+                    try:
+                        c_bytes = zf.read(info.filename)
+                        parser = JavaClassParser(c_bytes)
+                        if parser.parse():
+                            class_parsers.append(parser)
+                            all_class_names.append(parser.class_name or info.filename)
+                            all_method_calls.extend(parser.method_calls)
+                            all_strings.extend(parser.strings)
+
+                            joined_methods = " ".join([m["full"] for m in parser.method_calls] + parser.strings)
+                            for api_def in HIGH_RISK_JAVA_APIS:
+                                if api_def["pattern"].search(joined_methods):
+                                    suspicious_apis.append({
+                                        "class_file": info.filename,
+                                        "api": api_def["api"],
+                                        "title": api_def["title"],
+                                        "severity": api_def["severity"],
+                                        "category": api_def.get("category", "execution"),
+                                        "description": api_def["description"],
+                                        "risk_explanation": api_def.get("risk_explanation", ""),
+                                        "remediation": api_def.get("remediation", ""),
+                                        "cwe": api_def.get("cwe", ""),
+                                        "owasp": api_def.get("owasp", ""),
+                                        "mitre": api_def["mitre"],
+                                        "mitre_name": api_def["mitre_name"]
+                                    })
+                            for s in parser.strings:
+                                for u in re.findall(r'https?://[a-zA-Z0-9_\-\.:]+(?:/[^\s\'"<>\\]*)?', s):
+                                    all_urls.add(u)
+                        else:
                             c_text = c_bytes.decode("latin1", errors="ignore")
+                            all_strings.append(c_text[:1000])
                             for api_def in HIGH_RISK_JAVA_APIS:
                                 if api_def["pattern"].search(c_text):
                                     suspicious_apis.append({
@@ -785,8 +1562,24 @@ class JavaAnalyzer(BaseAnalyzer):
                                         "mitre": api_def["mitre"],
                                         "mitre_name": api_def["mitre_name"]
                                     })
-                            for u in re.findall(r'https?://[a-zA-Z0-9_\-\.:]+(?:/[^\s\'"<>\\]*)?', c_text):
-                                all_urls.add(u)
+                    except Exception as e:
+                        logger.debug(f"Error parsing JAR class entry {info.filename}: {e}")
+
+                # Scan resources and text files
+                for info in infos:
+                    if not info.filename.endswith(".class") and info.file_size < 500000:
+                        try:
+                            r_bytes = zf.read(info.filename)
+                            if r_bytes.startswith(b"\xca\xfe\xba\xbe"):
+                                data["embedded_binaries"].append(f"{info.filename} (Hidden Compiled Class)")
+                            elif r_bytes.startswith(b"PK\x03\x04") and info.filename != "META-INF/MANIFEST.MF":
+                                data["embedded_binaries"].append(f"{info.filename} (Hidden Embedded ZIP/JAR)")
+
+                            r_text = r_bytes.decode("utf-8", errors="ignore")
+                            if r_text:
+                                all_strings.append(r_text[:2000])
+                                for u in re.findall(r'https?://[a-zA-Z0-9_\-\.:]+(?:/[^\s\'"<>\\]*)?', r_text):
+                                    all_urls.add(u)
                         except Exception:
                             pass
 
@@ -799,6 +1592,18 @@ class JavaAnalyzer(BaseAnalyzer):
                 data["suspicious_apis"] = suspicious_apis
                 data["dangerous_apis"] = suspicious_apis
                 data["iocs"]["urls"] = list(all_urls)[:50]
+
+                # Class metadata from first valid class or main class
+                if class_parsers:
+                    first_cp = class_parsers[0]
+                    data["class_info"] = {
+                        "major_version": first_cp.major_version,
+                        "minor_version": first_cp.minor_version,
+                        "java_version": first_cp.java_version_name,
+                        "constant_pool_count": len(first_cp.constant_pool),
+                        "methods_count": len(first_cp.method_calls),
+                        "interfaces_count": len(first_cp.interfaces)
+                    }
 
                 # Disassemble main entry class or first .class for rich preview
                 target_class_entry = None
@@ -847,8 +1652,8 @@ class JavaAnalyzer(BaseAnalyzer):
                         details=sample
                     ))
 
-                # Check Java RAT signatures across manifest and filenames
-                joined_all = " ".join(namelist) + " " + data.get("code_preview", "")
+                # Check Java RAT signatures across manifest, filenames, and strings
+                joined_all = " ".join(namelist) + " " + data.get("code_preview", "") + " " + " ".join(all_strings[:2000])
                 for rat in JAVA_RAT_SIGNATURES:
                     if any(p.search(joined_all) for p in rat["patterns"]):
                         data["rat_detections"].append(rat["name"])
@@ -859,6 +1664,26 @@ class JavaAnalyzer(BaseAnalyzer):
                             description=f"Archive contents match structural signatures associated with {rat['name']}.",
                             details={"rat_family": rat["name"]}
                         ))
+
+                # 4-Pillar Behavioral Analysis (SecurityScorecard Methodology)
+                raw_text_corpus = (
+                    " ".join(namelist) + " " +
+                    manifest_content + " " +
+                    " ".join(all_strings) + " " +
+                    " ".join([m["full"] for m in all_method_calls])
+                )
+                data["behavioral_analysis"] = self._audit_behavioral_capabilities(
+                    strings=all_strings,
+                    method_calls=all_method_calls,
+                    class_names=all_class_names,
+                    namelist=namelist,
+                    manifest_text=manifest_content,
+                    embedded_binaries=data["embedded_binaries"],
+                    raw_text_corpus=raw_text_corpus,
+                    iocs=data["iocs"]
+                )
+                data["strrat_profile"] = data["behavioral_analysis"]["strrat_heuristics"]
+                self._generate_behavioral_findings(data["behavioral_analysis"], findings, data)
 
         except Exception as e:
             logger.debug(f"JAR analysis error: {e}")
