@@ -91,8 +91,11 @@ class DomainAnalyzer:
         - Redirection hop trace & credential form detection
         """
         # 1. Normalization & Input Validation
-        norm_ind = UniversalInputNormalizer.normalize(target)
-        clean_target = norm_ind.target_host or cls._normalize_target(target)
+        raw_clean = re.sub(r'[<>\s!]', '', target or '')
+        norm_ind = UniversalInputNormalizer.normalize(raw_clean)
+        clean_target = norm_ind.target_host or cls._normalize_target(raw_clean)
+        if clean_target:
+            clean_target = re.sub(r'[<>\s!]', '', clean_target)
         is_ip = (norm_ind.indicator_type in ("ipv4", "ipv6")) or cls._is_ip_address(clean_target)
 
         res: Dict[str, Any] = {
@@ -546,9 +549,9 @@ class DomainAnalyzer:
         res["typosquatting"] = typo_data
         if typo_data.get("has_live_impersonators"):
             res["risk_flags"].append({
-                "severity": "high",
-                "title": f"Active Resolving Lookalike Domains Detected ({typo_data.get('active_registered_count', 0)})",
-                "description": f"Discovered registered, resolving lookalike domains mimicking {clean_target}. May indicate active phishing or brand impersonation infrastructure."
+                "severity": "low",
+                "title": f"Brand Defense: Resolving Lookalike Domains Detected ({typo_data.get('active_registered_count', 0)})",
+                "description": f"Discovered third-party registered lookalike domains mimicking {clean_target} on the internet. Recommended for external brand protection and proactive phishing takedown monitoring."
             })
 
         # 18c. Technology Version to CISA KEV & EPSS Vulnerability Correlator
@@ -617,6 +620,64 @@ class DomainAnalyzer:
         except Exception as e:
             logger.debug(f"Snapshot differ failed for {clean_target}: {e}")
             res["snapshot_diff"] = {"has_historical_baseline": False}
+
+        # 21. Checklist Forensics Integration (IP Addresses & Domains Checklist)
+        try:
+            from app.analyzers.ip_domain_forensics import (
+                normalize_and_classify_indicator,
+                analyze_dns_configuration,
+                analyze_subdomain_takeover_risk,
+                analyze_email_domain_posture,
+                analyze_tls_cert_forensics,
+                analyze_web_headers_and_exposure,
+                calculate_ip_domain_executive_verdict,
+                generate_ip_domain_offline_tools_guide
+            )
+
+            ind_normal = normalize_and_classify_indicator(target)
+            res["indicator_normalisation"] = ind_normal
+
+            dns_audit = analyze_dns_configuration(res)
+            res["dns_configuration_audit"] = dns_audit
+
+            takeover_audit = analyze_subdomain_takeover_risk(res)
+            res["subdomain_takeover_analysis"] = takeover_audit
+
+            email_audit = analyze_email_domain_posture(res)
+            res["email_domain_posture"] = email_audit
+
+            tls_audit = analyze_tls_cert_forensics(res)
+            res["tls_cert_forensics"] = tls_audit
+
+            web_hdr_audit = analyze_web_headers_and_exposure(res)
+            res["web_headers_and_exposure"] = web_hdr_audit
+
+            verdict_data = calculate_ip_domain_executive_verdict(
+                res, ind_normal, dns_audit, takeover_audit, email_audit, tls_audit, web_hdr_audit
+            )
+            res["checklist_verdict"] = verdict_data
+
+            offline_tools = generate_ip_domain_offline_tools_guide(clean_target, is_ip, primary_ip)
+            res["offline_tools_guide"] = offline_tools
+
+            # Distribute parsed active recon findings into respective domain forensic tab data
+            recon_summary = offline_tools.get("active_recon_summary") or {}
+            if recon_summary:
+                res["active_recon_summary"] = recon_summary
+                if "dns_configuration_audit" in res and recon_summary.get("dns_findings"):
+                    res["dns_configuration_audit"]["active_dig_findings"] = recon_summary["dns_findings"]
+                if "tls_cert_forensics" in res and recon_summary.get("tls_findings"):
+                    res["tls_cert_forensics"]["active_openssl_findings"] = recon_summary["tls_findings"]
+                if "web_headers_and_exposure" in res and recon_summary.get("http_findings"):
+                    res["web_headers_and_exposure"]["active_curl_findings"] = recon_summary["http_findings"]
+                if "indicator_normalisation" in res and recon_summary.get("ip_findings"):
+                    res["indicator_normalisation"]["active_ipaddress_findings"] = recon_summary["ip_findings"]
+                if recon_summary.get("rdap_findings"):
+                    if "whois" not in res or not isinstance(res["whois"], dict):
+                        res["whois"] = {}
+                    res["whois"]["active_rdap_findings"] = recon_summary["rdap_findings"]
+        except Exception as e:
+            logger.debug(f"IP/Domain checklist forensics generation failed for {clean_target}: {e}")
 
         return res
 

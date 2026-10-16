@@ -21,9 +21,23 @@ import {
   FileText,
   Hash,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Archive,
+  Flag,
+  Download,
+  Link2,
+  ShieldCheck,
+  Lock,
+  AlertOctagon
 } from 'lucide-react';
-import { ApkAnalysisData, Finding, ApkClassDetail, ApkEmbeddedSourceFile, ApkComponent, ApkCertificate } from '../types';
+import {
+  ApkAnalysisData,
+  Finding,
+  ApkClassDetail,
+  ApkEmbeddedSourceFile,
+  ApkComponent,
+  ApkCertificate
+} from '../types';
 import { formatBytes } from '../utils/formatters';
 
 const getStandardPermDescription = (perm: string): string => {
@@ -69,7 +83,20 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
   filename = 'application.apk'
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'decompiler' | 'embedded_sources' | 'native_so' | 'permissions' | 'components' | 'dex' | 'strings' | 'certificate' | 'manifest' | 'mitre'
+    | 'overview'
+    | 'decompiler'
+    | 'embedded_sources'
+    | 'native_so'
+    | 'permissions'
+    | 'components'
+    | 'dex'
+    | 'strings'
+    | 'certificate'
+    | 'manifest'
+    | 'mitre'
+    | 'archive_sec'
+    | 'dependencies'
+    | 'secrets_ctf'
   >('overview');
 
   // Permissions Tab State
@@ -113,6 +140,14 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
   const [selectedApiSeverity, setSelectedApiSeverity] = useState<'all' | 'critical' | 'high' | 'medium'>('all');
   const [expandedApiIndex, setExpandedApiIndex] = useState<number | null>(null);
 
+  // Archive Security, SBOM & CTF State
+  const [sbomViewMode, setSbomViewMode] = useState<'table' | 'json'>('table');
+  const [copiedSbom, setCopiedSbom] = useState<boolean>(false);
+  const [copiedFlagIdx, setCopiedFlagIdx] = useState<number | null>(null);
+  const [copiedSecretIdx, setCopiedSecretIdx] = useState<number | null>(null);
+  const [secretSearch, setSecretSearch] = useState<string>('');
+  const [depSearch, setDepSearch] = useState<string>('');
+
   if (!apkInfo) {
     return (
       <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
@@ -152,6 +187,12 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
     embedded_assets = [],
     iocs = { urls: [], ips: [] },
     mitre_mobile_techniques = [],
+    archive_security,
+    dependencies = [],
+    cyclonedx_sbom,
+    secrets_and_ctf,
+    deep_links = [],
+    sensitive_permission_combos = [],
     risk_score = 0,
     risk_level = 'LOW'
   } = apkInfo;
@@ -172,6 +213,24 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
     navigator.clipboard.writeText(text);
     setCopiedKey(id);
     setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const handleCopySbom = () => {
+    if (!cyclonedx_sbom) return;
+    navigator.clipboard.writeText(JSON.stringify(cyclonedx_sbom, null, 2));
+    setCopiedSbom(true);
+    setTimeout(() => setCopiedSbom(false), 2000);
+  };
+
+  const handleDownloadSbom = () => {
+    if (!cyclonedx_sbom) return;
+    const blob = new Blob([JSON.stringify(cyclonedx_sbom, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(package_name || 'android-app').replace(/[^a-zA-Z0-9_-]/g, '_')}_cyclonedx_sbom.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Unified Permission List (Dangerous + Standard Android permissions)
@@ -532,6 +591,44 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
               {totalExported} / {totalComponents}
             </strong>
           </div>
+          {archive_security && (
+            <div className={`p-2 rounded-xl border text-center min-w-[70px] ${
+              archive_security.verdict === 'VULNERABLE'
+                ? 'bg-rose-50 border-rose-200'
+                : archive_security.verdict === 'SUSPICIOUS'
+                ? 'bg-amber-50 border-amber-200'
+                : 'bg-slate-50 border-slate-200'
+            }`}>
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">Archive</span>
+              <strong className={
+                archive_security.verdict === 'VULNERABLE'
+                  ? 'text-rose-600'
+                  : archive_security.verdict === 'SUSPICIOUS'
+                  ? 'text-amber-600'
+                  : 'text-emerald-600'
+              }>
+                {archive_security.verdict}
+              </strong>
+            </div>
+          )}
+          {dependencies.length > 0 && (
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center min-w-[70px]">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">SDKs</span>
+              <strong className="text-indigo-600">{dependencies.length}</strong>
+            </div>
+          )}
+          {secrets_and_ctf && (secrets_and_ctf.total_count > 0 || (secrets_and_ctf.ctf_flags && secrets_and_ctf.ctf_flags.length > 0)) && (
+            <div className={`p-2 rounded-xl border text-center min-w-[70px] ${
+              (secrets_and_ctf.ctf_flags && secrets_and_ctf.ctf_flags.length > 0)
+                ? 'bg-purple-50 border-purple-200'
+                : 'bg-rose-50 border-rose-200'
+            }`}>
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">Secrets/CTF</span>
+              <strong className={(secrets_and_ctf.ctf_flags && secrets_and_ctf.ctf_flags.length > 0) ? 'text-purple-700' : 'text-rose-600'}>
+                {((secrets_and_ctf.ctf_flags || []).length) + ((secrets_and_ctf.secrets || []).length)}
+              </strong>
+            </div>
+          )}
         </div>
       </div>
 
@@ -539,7 +636,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
       <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-100 pb-3">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
             activeTab === 'overview'
               ? 'bg-slate-900 text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -549,9 +646,69 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           Overview &amp; Audit
         </button>
 
+        {archive_security && (
+          <button
+            onClick={() => setActiveTab('archive_sec')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'archive_sec'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Archive className={`w-3.5 h-3.5 ${
+              archive_security.verdict === 'VULNERABLE'
+                ? 'text-rose-500'
+                : archive_security.verdict === 'SUSPICIOUS'
+                ? 'text-amber-500'
+                : 'text-slate-400'
+            }`} />
+            <span>Archive Security</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold uppercase ${
+              archive_security.verdict === 'VULNERABLE'
+                ? 'bg-rose-100 text-rose-800'
+                : archive_security.verdict === 'SUSPICIOUS'
+                ? 'bg-amber-100 text-amber-800'
+                : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              {archive_security.verdict}
+            </span>
+          </button>
+        )}
+
+        {(dependencies.length > 0 || cyclonedx_sbom) && (
+          <button
+            onClick={() => setActiveTab('dependencies')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'dependencies'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Dependencies &amp; SBOM ({dependencies.length})</span>
+            {dependencies.some(d => d.known_vulnerabilities && d.known_vulnerabilities.length > 0) && (
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            )}
+          </button>
+        )}
+
+        {secrets_and_ctf && (secrets_and_ctf.total_count > 0 || (secrets_and_ctf.ctf_flags && secrets_and_ctf.ctf_flags.length > 0) || (secrets_and_ctf.secrets && secrets_and_ctf.secrets.length > 0)) && (
+          <button
+            onClick={() => setActiveTab('secrets_ctf')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'secrets_ctf'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Flag className={`w-3.5 h-3.5 ${(secrets_and_ctf.ctf_flags || []).length > 0 ? 'text-purple-500' : 'text-rose-500'}`} />
+            <span>Secrets &amp; CTF ({((secrets_and_ctf.ctf_flags || []).length) + ((secrets_and_ctf.secrets || []).length)})</span>
+          </button>
+        )}
+
         <button
           onClick={() => setActiveTab('decompiler')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
             activeTab === 'decompiler'
               ? 'bg-slate-900 text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -564,7 +721,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
         {embedded_source_files.length > 0 && (
           <button
             onClick={() => setActiveTab('embedded_sources')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'embedded_sources'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -578,7 +735,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
         {(native_so_details.length > 0 || native_libraries.length > 0) && (
           <button
             onClick={() => setActiveTab('native_so')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'native_so'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -592,7 +749,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
         {!is_standalone_dex && (
           <button
             onClick={() => setActiveTab('permissions')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'permissions'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -606,7 +763,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
         {!is_standalone_dex && (
           <button
             onClick={() => setActiveTab('components')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'components'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -619,7 +776,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
 
         <button
           onClick={() => setActiveTab('dex')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
             activeTab === 'dex'
               ? 'bg-slate-900 text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -632,7 +789,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
         {categorized_strings && (
           <button
             onClick={() => setActiveTab('strings')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'strings'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -646,7 +803,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
         {!is_standalone_dex && (
           <button
             onClick={() => setActiveTab('certificate')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'certificate'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -660,7 +817,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
         {manifest_xml && (
           <button
             onClick={() => setActiveTab('manifest')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'manifest'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -674,7 +831,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
         {mitre_mobile_techniques.length > 0 && (
           <button
             onClick={() => setActiveTab('mitre')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'mitre'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1209,6 +1366,100 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   <div key={i} className="flex items-center gap-1.5 text-rose-700">
                     <AlertTriangle className="w-3 h-3 shrink-0" />
                     <span className="truncate">{asset}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sensitive Permission Combinations (Checklist Sec 2 & 10) */}
+          {sensitive_permission_combos.length > 0 && (
+            <div className="p-5 bg-rose-50/50 rounded-2xl border border-rose-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertOctagon className="w-4 h-4 text-rose-600" />
+                  <h4 className="text-xs font-bold text-rose-900 uppercase tracking-wider">
+                    High-Risk Permission Combinations ({sensitive_permission_combos.length} Detected)
+                  </h4>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 bg-rose-600 text-white rounded-md font-bold uppercase">
+                  Malware Attack Vectors
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {sensitive_permission_combos.map((combo, idx) => (
+                  <div key={idx} className="p-3.5 bg-white rounded-xl border border-rose-200/80 shadow-xs space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="text-xs font-bold text-rose-900">{combo.title}</strong>
+                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
+                        combo.severity === 'critical' ? 'bg-rose-100 text-rose-800' : 'bg-orange-100 text-orange-800'
+                      }`}>
+                        {combo.severity}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">{combo.description}</p>
+                    <div className="flex flex-wrap gap-1 pt-1 font-mono text-[10px]">
+                      {combo.permissions.map((p, pIdx) => (
+                        <span key={pIdx} className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200">
+                          {p.split('.').pop()}
+                        </span>
+                      ))}
+                    </div>
+                    {combo.mitre && (
+                      <div className="text-[10px] text-slate-400 font-mono pt-1">
+                        MITRE Mobile: <span className="text-indigo-600 font-bold">{combo.mitre} ({combo.mitre_name})</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Deep Links & Custom Schemes (Checklist Sec 2 & 3) */}
+          {deep_links.length > 0 && (
+            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-indigo-600" />
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Deep Links &amp; Custom URL Schemes ({deep_links.length})
+                  </h4>
+                </div>
+                {deep_links.some(dl => dl.is_custom_scheme && dl.exported) && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded-md font-bold">
+                    ⚠️ Custom Schemes Exported
+                  </span>
+                )}
+              </div>
+              <div className="divide-y divide-slate-200 bg-white rounded-xl border border-slate-200 overflow-hidden font-mono text-xs">
+                {deep_links.map((dl, idx) => (
+                  <div key={idx} className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold text-xs ${dl.is_custom_scheme ? 'text-amber-700' : 'text-indigo-700'}`}>
+                          {dl.scheme}://{dl.host || '*'}{dl.path_prefix || dl.path_pattern || ''}
+                        </span>
+                        {dl.is_custom_scheme && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded font-sans font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            Custom Scheme
+                          </span>
+                        )}
+                        {dl.exported && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded font-sans font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            Exported
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-slate-500 font-sans block">
+                        Handler: <code className="font-mono text-slate-700">{dl.activity}</code>
+                      </span>
+                    </div>
+                    {dl.is_custom_scheme && dl.exported && (
+                      <span className="text-[10px] font-sans text-amber-700 bg-amber-50/70 p-1.5 rounded border border-amber-200 max-w-xs">
+                        Subject to scheme hijacking and malicious parameter injection.
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -2764,6 +3015,623 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                 </a>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* Tab: Archive Security & Structural Integrity (Checklist Sec 1)            */}
+      {/* ========================================================================= */}
+      {activeTab === 'archive_sec' && archive_security && (
+        <div className="space-y-6">
+          {/* Top Verdict Banner */}
+          <div
+            className={`p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+              archive_security.verdict === 'VULNERABLE'
+                ? 'bg-rose-50 border-rose-300'
+                : archive_security.verdict === 'SUSPICIOUS'
+                ? 'bg-amber-50 border-amber-300'
+                : 'bg-emerald-50 border-emerald-300'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {archive_security.verdict === 'VULNERABLE' ? (
+                <AlertOctagon className="w-8 h-8 text-rose-600 shrink-0" />
+              ) : archive_security.verdict === 'SUSPICIOUS' ? (
+                <AlertTriangle className="w-8 h-8 text-amber-600 shrink-0" />
+              ) : (
+                <ShieldCheck className="w-8 h-8 text-emerald-600 shrink-0" />
+              )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-base font-bold text-slate-900">
+                    APK Archive Structural Security
+                  </h4>
+                  <span
+                    className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
+                      archive_security.verdict === 'VULNERABLE'
+                        ? 'bg-rose-200 text-rose-800'
+                        : archive_security.verdict === 'SUSPICIOUS'
+                        ? 'bg-amber-200 text-amber-800'
+                        : 'bg-emerald-200 text-emerald-800'
+                    }`}
+                  >
+                    {archive_security.verdict}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  {archive_security.verdict === 'VULNERABLE'
+                    ? 'Critical archive structure anomalies detected (Zip Slip traversal, concealed executables, or polyglot header injection).'
+                    : archive_security.verdict === 'SUSPICIOUS'
+                    ? 'Archive contains suspicious duplicate central-directory entries, nested archives, or extraneous trailing data.'
+                    : 'Clean archive structure: no path traversal sequences, compression bomb ratios, or disguised executables.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-mono text-slate-500 shrink-0">
+              <span>Uncompressed: {formatBytes(archive_security.total_uncompressed_bytes)}</span>
+              <span>•</span>
+              <span>Ratio: {archive_security.decompression_ratio}:1</span>
+            </div>
+          </div>
+
+          {/* 4 Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 1. Zip Slip */}
+            <div className={`p-4 rounded-2xl border ${archive_security.zip_slip.detected ? 'bg-rose-50 border-rose-300' : 'bg-slate-50 border-slate-200'}`}>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                Zip Slip Traversal
+              </span>
+              <div className="flex items-center justify-between">
+                <span className={`text-base font-bold font-mono ${archive_security.zip_slip.detected ? 'text-rose-700' : 'text-slate-700'}`}>
+                  {archive_security.zip_slip.detected ? `${archive_security.zip_slip.paths.length} Paths` : 'Clean (0)'}
+                </span>
+                {archive_security.zip_slip.detected ? (
+                  <AlertOctagon className="w-5 h-5 text-rose-600" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                )}
+              </div>
+              <span className="text-[11px] text-slate-500 block mt-1">
+                {archive_security.zip_slip.detected ? 'Path traversal escape sequences' : 'No directory traversal paths'}
+              </span>
+            </div>
+
+            {/* 2. Decompression Ratio */}
+            <div className={`p-4 rounded-2xl border ${archive_security.zip_bomb_risk ? 'bg-rose-50 border-rose-300' : 'bg-slate-50 border-slate-200'}`}>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                Decompression Ratio
+              </span>
+              <div className="flex items-center justify-between">
+                <span className={`text-base font-bold font-mono ${archive_security.zip_bomb_risk ? 'text-rose-700' : 'text-slate-700'}`}>
+                  {archive_security.decompression_ratio}:1
+                </span>
+                {archive_security.zip_bomb_risk ? (
+                  <AlertTriangle className="w-5 h-5 text-rose-600" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                )}
+              </div>
+              <span className="text-[11px] text-slate-500 block mt-1">
+                {archive_security.zip_bomb_risk ? 'Zip Bomb DoS Risk (>50:1)' : 'Normal compression ratio'}
+              </span>
+            </div>
+
+            {/* 3. Duplicate Entries */}
+            <div className={`p-4 rounded-2xl border ${archive_security.duplicate_entries.detected ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'}`}>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                Duplicate Entries
+              </span>
+              <div className="flex items-center justify-between">
+                <span className={`text-base font-bold font-mono ${archive_security.duplicate_entries.detected ? 'text-amber-700' : 'text-slate-700'}`}>
+                  {archive_security.duplicate_entries.entries.length} Duplicates
+                </span>
+                {archive_security.duplicate_entries.detected ? (
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                )}
+              </div>
+              <span className="text-[11px] text-slate-500 block mt-1">
+                {archive_security.duplicate_entries.detected ? 'Central directory collision' : 'Unique archive entry names'}
+              </span>
+            </div>
+
+            {/* 4. Polyglot & Trailing */}
+            <div className={`p-4 rounded-2xl border ${
+              archive_security.polyglot_and_trailing.has_prepended_header || archive_security.polyglot_and_trailing.has_trailing_data
+                ? 'bg-rose-50 border-rose-300'
+                : 'bg-slate-50 border-slate-200'
+            }`}>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                Polyglot &amp; Trailing
+              </span>
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-bold font-mono truncate max-w-[140px] ${
+                  archive_security.polyglot_and_trailing.has_prepended_header || archive_security.polyglot_and_trailing.has_trailing_data
+                    ? 'text-rose-700'
+                    : 'text-slate-700'
+                }`}>
+                  {archive_security.polyglot_and_trailing.has_prepended_header
+                    ? 'Janus Polyglot'
+                    : (archive_security.polyglot_and_trailing.has_trailing_data
+                    ? `+${archive_security.polyglot_and_trailing.trailing_bytes_count}B Past EOCD`
+                    : 'Standard ZIP')}
+                </span>
+                {archive_security.polyglot_and_trailing.has_prepended_header ? (
+                  <AlertOctagon className="w-5 h-5 text-rose-600" />
+                ) : archive_security.polyglot_and_trailing.has_trailing_data ? (
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                ) : (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                )}
+              </div>
+              <span className="text-[11px] text-slate-500 block mt-1">
+                {archive_security.polyglot_and_trailing.has_prepended_header
+                  ? 'Prepended DEX (CVE-2017-13156)'
+                  : (archive_security.polyglot_and_trailing.has_trailing_data
+                  ? 'Extraneous payload after EOCD'
+                  : 'Clean boundary verification')}
+              </span>
+            </div>
+          </div>
+
+          {/* Zip Slip Path Traversal Warning */}
+          {archive_security.zip_slip.detected && (
+            <div className="border border-rose-300 bg-rose-50/50 rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
+                <AlertOctagon className="w-5 h-5 text-rose-600 shrink-0" />
+                <span>Zip Slip Path Traversal Entries ({archive_security.zip_slip.paths.length})</span>
+              </div>
+              <p className="text-xs text-rose-700 leading-relaxed font-sans">
+                The archive contains relative or absolute file paths with directory traversal sequences (<code>../</code>). Unpackers that do not sanitize destination paths will write files outside the target extraction root, leading to arbitrary code execution or system file overwrites.
+              </p>
+              <div className="divide-y divide-rose-200 bg-white rounded-xl border border-rose-200 overflow-hidden font-mono text-xs">
+                {archive_security.zip_slip.paths.map((p, idx) => (
+                  <div key={idx} className="p-3 text-rose-700 break-all flex items-center gap-2">
+                    <span className="text-slate-400 select-none">{idx + 1}.</span>
+                    <span>{p}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Concealed Executables & Extension Mismatches */}
+          {archive_security.extension_mismatches && archive_security.extension_mismatches.length > 0 && (
+            <div className="border border-rose-300 bg-rose-50/40 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
+                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                <span>Concealed Executables &amp; Extension Mismatches ({archive_security.extension_mismatches.length})</span>
+              </div>
+              <p className="text-xs text-rose-700 font-sans">
+                Native ELF libraries, Dalvik DEX files, shell scripts, or Windows binaries disguised with non-executable extensions (e.g., <code>.png</code>, <code>.dat</code>, <code>.xml</code>, <code>.txt</code>). Classic stealth dropper technique.
+              </p>
+              <div className="divide-y divide-rose-200 bg-white rounded-xl border border-rose-200 overflow-hidden font-mono text-xs">
+                {archive_security.extension_mismatches.map((item, idx) => (
+                  <div key={idx} className="p-3.5 space-y-1.5 hover:bg-rose-50/40">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-bold text-slate-900 break-all">{item.filename}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-sans text-[10px]">
+                          Declared: {item.declared_ext}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-sans text-[10px] font-bold">
+                          Actual: {item.actual_type}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-600 font-sans">{item.reason}</p>
+                    <div className="text-[10px] text-slate-400 font-mono">Magic bytes: <code>0x{item.magic_hex}</code></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Polyglot & Trailing Data Details */}
+          {(archive_security.polyglot_and_trailing.has_prepended_header || archive_security.polyglot_and_trailing.has_trailing_data) && (
+            <div className="border border-amber-300 bg-amber-50/50 rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span>Polyglot / Trailing Data Analysis</span>
+              </div>
+              <p className="text-xs text-amber-800 font-sans leading-relaxed">
+                {archive_security.polyglot_and_trailing.details}
+              </p>
+            </div>
+          )}
+
+          {/* Multi-DEX Structural Header Inventory Table */}
+          {archive_security.multi_dex_inventory && archive_security.multi_dex_inventory.length > 0 && (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
+              <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-xs text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-indigo-600" />
+                  <span>Multi-DEX Structural Header Inventory ({archive_security.multi_dex_inventory.length} DEX Files)</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">DEX Version &amp; Symbol Table Counts</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 uppercase font-sans">
+                    <tr>
+                      <th className="py-2.5 px-4">DEX File</th>
+                      <th className="py-2.5 px-3">Version</th>
+                      <th className="py-2.5 px-3">Size</th>
+                      <th className="py-2.5 px-3">Classes</th>
+                      <th className="py-2.5 px-3">Strings</th>
+                      <th className="py-2.5 px-3">Methods</th>
+                      <th className="py-2.5 px-3">Checksum</th>
+                      <th className="py-2.5 px-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {archive_security.multi_dex_inventory.map((dex, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/70">
+                        <td className="py-2.5 px-4 font-bold text-slate-800">{dex.name}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded font-bold text-[11px]">
+                            {dex.dex_version}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600">{formatBytes(dex.size)}</td>
+                        <td className="py-2.5 px-3 text-slate-700 font-semibold">{dex.classes_count.toLocaleString()}</td>
+                        <td className="py-2.5 px-3 text-slate-700">{dex.strings_count.toLocaleString()}</td>
+                        <td className="py-2.5 px-3 text-slate-700">{dex.methods_count.toLocaleString()}</td>
+                        <td className="py-2.5 px-3 text-[11px] text-slate-400 truncate max-w-[100px]" title={dex.checksum}>
+                          {dex.checksum || 'N/A'}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          {dex.is_stub ? (
+                            <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-sans text-[10px] font-bold">
+                              Parser Bomb Stub
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-sans text-[10px] font-bold">
+                              Valid Bytecode
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Duplicate Archive Entries List */}
+          {archive_security.duplicate_entries.detected && (
+            <div className="border border-amber-300 bg-amber-50/40 rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span>Duplicate Central Directory Entries ({archive_security.duplicate_entries.entries.length})</span>
+              </div>
+              <div className="divide-y divide-amber-200 bg-white rounded-xl border border-amber-200 overflow-hidden font-mono text-xs">
+                {archive_security.duplicate_entries.entries.map((d, idx) => (
+                  <div key={idx} className="p-2.5 text-amber-800 break-all">
+                    {d}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Nested Archives */}
+          {archive_security.nested_archives && archive_security.nested_archives.length > 0 && (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
+              <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 font-bold text-xs text-slate-700 flex items-center justify-between">
+                <span>Nested Embedded Archives ({archive_security.nested_archives.length})</span>
+                <span className="text-[10px] text-slate-400 font-mono">Secondary Container Payloads</span>
+              </div>
+              <div className="divide-y divide-slate-100 font-mono text-xs">
+                {archive_security.nested_archives.map((na, idx) => (
+                  <div key={idx} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-50">
+                    <span className="font-bold text-purple-700 break-all">{na.filename}</span>
+                    <div className="flex items-center gap-2 font-sans">
+                      <span className="text-slate-500 text-xs font-mono">{formatBytes(na.size)}</span>
+                      <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-bold">
+                        {na.type}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* Tab: Third-Party Android SDK Inventory & CycloneDX v1.4 SBOM (Sec 8 & 11) */}
+      {/* ========================================================================= */}
+      {activeTab === 'dependencies' && (
+        <div className="space-y-6">
+          {/* Sub Navigation: Table vs CycloneDX JSON */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSbomViewMode('table')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                  sbomViewMode === 'table' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                SDKs &amp; Dependencies ({dependencies.length})
+              </button>
+              <button
+                onClick={() => setSbomViewMode('json')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                  sbomViewMode === 'json' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                CycloneDX v1.4 SBOM (JSON)
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCopySbom}
+                disabled={!cyclonedx_sbom}
+                className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {copiedSbom ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedSbom ? 'Copied SBOM' : 'Copy CycloneDX'}</span>
+              </button>
+
+              <button
+                onClick={handleDownloadSbom}
+                disabled={!cyclonedx_sbom}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export JSON</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Vulnerable SDK Alerts */}
+          {dependencies.some(d => d.known_vulnerabilities && d.known_vulnerabilities.length > 0) && (
+            <div className="border border-rose-300 bg-rose-50/40 rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-rose-900 font-bold text-sm">
+                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                <span>Known Vulnerable Android SDKs Detected</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {dependencies
+                  .filter(d => d.known_vulnerabilities && d.known_vulnerabilities.length > 0)
+                  .map((dep, idx) => (
+                    <div key={idx} className="bg-white border border-rose-200 rounded-xl p-3.5 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-xs font-bold text-slate-900">{dep.name}</strong>
+                        <span className="text-[10px] px-2 py-0.5 bg-rose-600 text-white rounded font-bold uppercase">
+                          Vulnerable
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-rose-700 font-mono">
+                        {dep.known_vulnerabilities?.map((v, vIdx) => (
+                          <div key={vIdx}>• {v}</div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* View Mode: Table */}
+          {sbomViewMode === 'table' && (
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={depSearch}
+                  onChange={(e) => setDepSearch(e.target.value)}
+                  placeholder="Filter detected SDKs & dependencies..."
+                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
+                <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-xs text-slate-700 flex items-center justify-between">
+                  <span>Detected Third-Party Android Libraries &amp; Frameworks ({dependencies.length})</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Dalvik Package &amp; Namespace Matching</span>
+                </div>
+                {dependencies.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400">
+                    No third-party Android SDKs or framework signatures detected.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 font-mono text-xs">
+                    {dependencies
+                      .filter(d => !depSearch.trim() || d.name.toLowerCase().includes(depSearch.toLowerCase()) || d.group.toLowerCase().includes(depSearch.toLowerCase()))
+                      .map((dep, idx) => (
+                        <div key={idx} className="p-3.5 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <Package className="w-4 h-4 text-indigo-600 shrink-0" />
+                              <strong className="text-slate-900 text-xs">{dep.name}</strong>
+                              <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-sans font-bold">
+                                {dep.category}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-500 font-sans block">{dep.description}</span>
+                            <span className="text-[10px] text-slate-400 font-mono block">PURL: {dep.purl}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-700 text-[11px] font-bold">
+                              {dep.group}:{dep.artifact}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* View Mode: CycloneDX v1.4 JSON */}
+          {sbomViewMode === 'json' && (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-900 text-emerald-400 font-mono text-xs">
+              <div className="bg-slate-800 px-4 py-2 border-b border-slate-700 flex items-center justify-between text-slate-300">
+                <span className="font-bold flex items-center gap-2">
+                  <FileCode className="w-4 h-4 text-emerald-400" />
+                  CycloneDX v1.4 JSON Software Bill of Materials (SBOM)
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Standard format for dependency supply chain compliance
+                </span>
+              </div>
+              <div className="p-4 max-h-[500px] overflow-y-auto space-y-0.5">
+                {JSON.stringify(cyclonedx_sbom, null, 2).split('\n').map((line, i) => (
+                  <div key={i} className="flex hover:bg-slate-800/60 leading-5">
+                    <span className="w-10 select-none text-slate-600 text-right pr-3 shrink-0 font-sans">
+                      {i + 1}
+                    </span>
+                    <span className="whitespace-pre overflow-x-auto">{line}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* Tab: Secrets & CTF Flags (Checklist Sec 9 & 12)                           */}
+      {/* ========================================================================= */}
+      {activeTab === 'secrets_ctf' && secrets_and_ctf && (
+        <div className="space-y-6">
+          {/* Search Filter */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={secretSearch}
+              onChange={(e) => setSecretSearch(e.target.value)}
+              placeholder="Filter captured CTF flags or credentials..."
+              className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          {/* Captured CTF Flags Banner */}
+          {secrets_and_ctf.ctf_flags && secrets_and_ctf.ctf_flags.length > 0 && (
+            <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-purple-700/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-purple-500/20 rounded-xl">
+                    <Flag className="w-6 h-6 text-purple-300" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold tracking-wide">
+                      Capture The Flag (CTF) Flags Captured ({secrets_and_ctf.ctf_flags.length})
+                    </h4>
+                    <p className="text-xs text-purple-200">
+                      Discovered embedded CTF flags matching mobile security challenge formats.
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full font-mono text-xs font-bold bg-purple-500/30 text-purple-200 border border-purple-400/30">
+                  FLAG CAPTURED
+                </span>
+              </div>
+
+              <div className="divide-y divide-purple-800/40">
+                {secrets_and_ctf.ctf_flags
+                  .filter(flagItem => !secretSearch.trim() || flagItem.flag.toLowerCase().includes(secretSearch.toLowerCase()) || flagItem.type.toLowerCase().includes(secretSearch.toLowerCase()))
+                  .map((flagItem, idx) => (
+                  <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-sm text-yellow-300 break-all select-all">
+                          {flagItem.flag}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-purple-800/60 text-purple-200 font-sans">
+                          {flagItem.type}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-purple-300 font-mono block">
+                        Source: {flagItem.source}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(flagItem.flag);
+                        setCopiedFlagIdx(idx);
+                        setTimeout(() => setCopiedFlagIdx(null), 2000);
+                      }}
+                      className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 rounded-xl text-xs font-semibold text-purple-200 flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
+                    >
+                      {copiedFlagIdx === idx ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      <span>{copiedFlagIdx === idx ? 'Copied Flag' : 'Copy Flag'}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hardcoded Secrets Table */}
+          <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white space-y-0">
+            <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-xs text-slate-700 flex items-center justify-between">
+              <span>Hardcoded Cloud API Keys &amp; Sensitive Credentials ({secrets_and_ctf.secrets?.length || 0})</span>
+              <span className="text-[10px] text-slate-400 font-mono">AWS, Google Cloud, Slack, Discord, Telegram, Private Keys</span>
+            </div>
+
+            {(!secrets_and_ctf.secrets || secrets_and_ctf.secrets.length === 0) ? (
+              <div className="p-8 text-center text-xs text-slate-400">
+                No high-confidence hardcoded cloud tokens, API keys, or private key headers found.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 font-mono text-xs">
+                {secrets_and_ctf.secrets
+                  .filter(sec => !secretSearch.trim() || sec.type.toLowerCase().includes(secretSearch.toLowerCase()) || sec.value.toLowerCase().includes(secretSearch.toLowerCase()))
+                  .map((sec, idx) => (
+                  <div key={idx} className="p-3.5 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50">
+                    <div className="space-y-1 max-w-xl">
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-4 h-4 text-rose-600 shrink-0" />
+                        <strong className="text-xs font-bold text-slate-900 font-sans">{sec.type}</strong>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase font-sans ${
+                          sec.severity === 'critical' ? 'bg-rose-100 text-rose-800' : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {sec.severity}
+                        </span>
+                      </div>
+                      <div className="text-rose-700 font-bold break-all select-all text-xs bg-rose-50/60 p-1.5 rounded border border-rose-100">
+                        {sec.value}
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-sans block">
+                        Location: {sec.source}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(sec.value);
+                        setCopiedSecretIdx(idx);
+                        setTimeout(() => setCopiedSecretIdx(null), 2000);
+                      }}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-sans font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                    >
+                      {copiedSecretIdx === idx ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      <span>{copiedSecretIdx === idx ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 """
 Automated Forensic Deobfuscator & String Decoding Engine.
-Supports CyberChef-style operations for Malware Research, CTF, Incident Response, and Vulnerability Analysis:
+Supports Security Decoder operations for Malware Research, CTF, Incident Response, and Vulnerability Analysis:
 - Single-byte XOR brute-force scanner with plaintext anchor matching
 - Recursive Base64 decoder (supporting UTF-16LE PowerShell -EncodedCommand and ASCII)
 - Hex stream decoder

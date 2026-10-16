@@ -431,9 +431,26 @@ class JobManager:
             elif lower_name.endswith((".java", ".class", ".jar")) or job.category == "java":
                 fmt_key = "java"
 
-            # Record disabled checks for this job's format so UI can hide corresponding data
+            # Record disabled checks for this job's format and globally so UI can hide corresponding data
             disabled_checks = [k for k, v in settings_store.get_format_checks(fmt_key).items() if not v]
-            job.disabled_checks = disabled_checks
+            for gk, gv in (settings_store.get_global_checks() or {}).items():
+                if not gv:
+                    disabled_checks.append(gk)
+                    if gk == "clamav_enabled":
+                        disabled_checks.append("check_clamav")
+                    elif gk == "yara_enabled":
+                        disabled_checks.append("check_yara")
+                    elif gk == "virustotal_enabled":
+                        disabled_checks.append("check_virustotal")
+                    elif gk == "crowdstrike_enabled":
+                        disabled_checks.append("check_crowdstrike")
+                    elif gk == "circl_hashlookup_enabled":
+                        disabled_checks.append("check_circl")
+                    elif gk == "malwarebazaar_enabled":
+                        disabled_checks.append("check_malwarebazaar")
+                    elif gk == "alienvault_otx_enabled":
+                        disabled_checks.append("check_alienvault_otx")
+            job.disabled_checks = list(dict.fromkeys(disabled_checks))
 
             # 2. ClamAV Antivirus Scanner
             t_step2 = time.time()
@@ -589,8 +606,80 @@ class JobManager:
                 from app.analyzers.domain_analyzer import DomainAnalyzer
                 job.current_step_label = "Domain Intelligence & Reconnaissance"
                 job.progress = 48
+                # Determine clean target indicator: prioritize existing job.domain_info target or job.filename
+                target_str = (getattr(job, "domain_info", {}) or {}).get("target") or job.filename
+                preloaded_info = None
+                try:
+                    txt_content = original_path.read_text(encoding="utf-8", errors="ignore").strip()
+                    if txt_content.startswith("{") and txt_content.endswith("}"):
+                        import json
+                        loaded_json = json.loads(txt_content)
+                        if isinstance(loaded_json, dict) and ("target" in loaded_json or "domain_info" in loaded_json):
+                            preloaded_info = loaded_json.get("domain_info") or loaded_json
+                            target_str = preloaded_info.get("target") or target_str
+                    # Only parse plain text files that do NOT start with HTML/XML markup
+                    elif not txt_content.startswith("<") and not txt_content.lower().startswith("<!doctype"):
+                        for line in txt_content.splitlines():
+                            line_s = line.strip()
+                            if line_s and not line_s.startswith("#") and not line_s.startswith("//") and not line_s.startswith("<"):
+                                from app.network.input_normalizer import UniversalInputNormalizer, InputType
+                                norm = UniversalInputNormalizer.normalize(line_s)
+                                if norm.indicator_type in (InputType.DOMAIN, InputType.IPV4, InputType.IPV6, InputType.CIDR, InputType.URL):
+                                    target_str = norm.target_host or norm.normalized_value or line_s
+                                    break
+                except Exception:
+                    pass
+
+                # Sanitize target_str: strip any rogue brackets, whitespace, or markup remnants
+                if target_str:
+                    target_str = re.sub(r'[<>\s!]', '', target_str)
+                if not target_str or target_str.lower() in ("doctype", "html", "doctyphtml"):
+                    fallback_clean = re.sub(r'[<>\s!]', '', job.filename or "")
+                    target_str = fallback_clean if fallback_clean and fallback_clean.lower() not in ("doctype", "html") else "domain.target"
+
+                # Keep job.filename clean and synced with target_str
+                job.filename = target_str
+
                 if not getattr(job, "domain_info", None):
-                    job.domain_info = DomainAnalyzer.analyze(job.filename, deep=True)
+                    if preloaded_info:
+                        try:
+                            from app.analyzers.ip_domain_forensics import (
+                                normalize_and_classify_indicator,
+                                analyze_dns_configuration,
+                                analyze_subdomain_takeover_risk,
+                                analyze_email_domain_posture,
+                                analyze_tls_cert_forensics,
+                                analyze_web_headers_and_exposure,
+                                calculate_ip_domain_executive_verdict,
+                                generate_ip_domain_offline_tools_guide
+                            )
+                            ind_norm = normalize_and_classify_indicator(target_str)
+                            preloaded_info["indicator_normalisation"] = ind_norm
+                            dns_aud = analyze_dns_configuration(preloaded_info)
+                            preloaded_info["dns_configuration_audit"] = dns_aud
+                            take_aud = analyze_subdomain_takeover_risk(preloaded_info)
+                            preloaded_info["subdomain_takeover_analysis"] = take_aud
+                            em_aud = analyze_email_domain_posture(preloaded_info)
+                            preloaded_info["email_domain_posture"] = em_aud
+                            tl_aud = analyze_tls_cert_forensics(preloaded_info)
+                            preloaded_info["tls_cert_forensics"] = tl_aud
+                            wb_aud = analyze_web_headers_and_exposure(preloaded_info)
+                            preloaded_info["web_headers_and_exposure"] = wb_aud
+                            verd = calculate_ip_domain_executive_verdict(
+                                preloaded_info, ind_norm, dns_aud, take_aud, em_aud, tl_aud, wb_aud
+                            )
+                            preloaded_info["checklist_verdict"] = verd
+                            off_tools = generate_ip_domain_offline_tools_guide(
+                                target_str,
+                                preloaded_info.get("is_ip", False),
+                                preloaded_info.get("network", {}).get("ip")
+                            )
+                            preloaded_info["offline_tools_guide"] = off_tools
+                        except Exception as p_err:
+                            logger.debug(f"Preloaded checklist forensics note: {p_err}")
+                        job.domain_info = preloaded_info
+                    else:
+                        job.domain_info = DomainAnalyzer.analyze(target_str, deep=True)
                 for rf in (job.domain_info or {}).get("risk_flags", []):
                     findings.append(Finding(
                         category="reputation",
@@ -601,7 +690,7 @@ class JobManager:
                     ))
                 try:
                     from app.network.url_fetcher import URLFileFetcher
-                    report_html = URLFileFetcher._build_domain_report_html(job.filename, job.domain_info or {})
+                    report_html = URLFileFetcher._build_domain_report_html(target_str, job.domain_info or {})
                     original_path.write_bytes(report_html)
                     job.file_size = len(report_html)
                 except Exception as b_err:
@@ -843,11 +932,23 @@ class JobManager:
                     "modules": mods
                 }
 
+            java_code_entry = None
+            if analysis_data.get("java", {}).get("code_modules"):
+                mods = analysis_data["java"]["code_modules"]
+                java_code_entry = {
+                    "type": "java",
+                    "language": "java",
+                    "code": mods[0].get("code", "") if mods else analysis_data.get("java", {}).get("code_preview", ""),
+                    "modules": mods
+                }
+
             job.extracted_code = (
-                script_code_entry
+                java_code_entry
+                or script_code_entry
                 or analysis_data.get("office", {}).get("extracted_code")
                 or analysis_data.get("pdf", {}).get("extracted_code")
                 or analysis_data.get("active_content", {}).get("extracted_code")
+                or getattr(job, "extracted_code", None)
             )
 
             step_timings.append({
@@ -1037,48 +1138,51 @@ class JobManager:
                         job.hybrid_analysis = None
 
                     # AlienVault OTX (Open Threat Exchange) Pulse Check
-                    from app.analyzers.reputation_client import AlienVaultOTXClient
-                    otx_res = AlienVaultOTXClient.check_indicator("FileHash-SHA256", sha256)
-                    job.alienvault_otx = otx_res
-                    checks_executed.append("AlienVault OTX Pulse Intelligence")
-                    network_lookups_count += 1
-                    services_contacted.append("AlienVault OTX")
-                    if otx_res.get("pulse_count", 0) > 0:
-                        pulse_names_str = ", ".join(otx_res.get("pulse_names", [])[:3])
-                        tags_str = ", ".join(otx_res.get("tags", [])[:5])
-                        findings.append(Finding(
-                            category="reputation",
-                            severity="critical",
-                            title=f"AlienVault OTX Pulse Hit ({otx_res.get('pulse_count')} Threat Pulses)",
-                            description=(
-                                f"File SHA-256 is tracked in AlienVault Open Threat Exchange pulses. "
-                                f"Pulses: {pulse_names_str or 'Threat Intel'}. Tags: {tags_str or 'Malware'}."
-                            ),
-                            details=otx_res
-                        ))
+                    if settings_store.is_global_enabled("alienvault_otx_enabled"):
+                        from app.analyzers.reputation_client import AlienVaultOTXClient
+                        otx_res = AlienVaultOTXClient.check_indicator("FileHash-SHA256", sha256)
+                        job.alienvault_otx = otx_res
+                        checks_executed.append("AlienVault OTX Pulse Intelligence")
+                        network_lookups_count += 1
+                        services_contacted.append("AlienVault OTX")
+                        if otx_res.get("pulse_count", 0) > 0:
+                            pulse_names_str = ", ".join(otx_res.get("pulse_names", [])[:3])
+                            tags_str = ", ".join(otx_res.get("tags", [])[:5])
+                            findings.append(Finding(
+                                category="reputation",
+                                severity="critical",
+                                title=f"AlienVault OTX Pulse Hit ({otx_res.get('pulse_count')} Threat Pulses)",
+                                description=(
+                                    f"File SHA-256 is tracked in AlienVault Open Threat Exchange pulses. "
+                                    f"Pulses: {pulse_names_str or 'Threat Intel'}. Tags: {tags_str or 'Malware'}."
+                                ),
+                                details=otx_res
+                            ))
+                    else:
+                        job.alienvault_otx = None
                 except Exception as he:
                     logger.debug(f"Extended hash reputation note: {he}")
 
-                if not job.circl and sha256:
+                if not job.circl and sha256 and settings_store.is_global_enabled("circl_hashlookup_enabled"):
                     job.circl = {
                         "configured": True,
                         "status": "NOT_CHECKED" if not settings_store.is_external_allowed("allow_threat_intel_lookups") else "UNKNOWN",
                         "is_nsrl": False,
                         "search_url": f"https://hashlookup.circl.lu/search/{sha256}"
                     }
-                if not job.threatfox and sha256:
+                if not job.threatfox and sha256 and settings_store.is_external_allowed("allow_threat_intel_lookups"):
                     job.threatfox = {
                         "configured": True,
                         "status": "NOT_CHECKED" if not settings_store.is_external_allowed("allow_threat_intel_lookups") else "CLEAN",
                         "search_url": f"https://threatfox.abuse.ch/browse.php?search=ioc%3A{sha256}"
                     }
-                if not job.malwarebazaar and sha256:
+                if not job.malwarebazaar and sha256 and settings_store.is_global_enabled("malwarebazaar_enabled"):
                     job.malwarebazaar = {
                         "configured": True,
                         "status": "NOT_CHECKED" if not settings_store.is_external_allowed("allow_threat_intel_lookups") else "CLEAN",
                         "search_url": f"https://bazaar.abuse.ch/sample/{sha256}/"
                     }
-                if not job.alienvault_otx and sha256:
+                if not job.alienvault_otx and sha256 and settings_store.is_global_enabled("alienvault_otx_enabled"):
                     otx_key = settings_store.get_api_key("alienvault_otx_api_key") or settings.ALIENVAULT_OTX_API_KEY
                     job.alienvault_otx = {
                         "configured": bool(otx_key),
@@ -1352,7 +1456,9 @@ class JobManager:
                     office_info=job.office_info,
                     pdf_info=job.pdf_info,
                     evtx_info=getattr(job, "evtx_info", None),
-                    lnk_info=getattr(job, "lnk_info", None)
+                    lnk_info=getattr(job, "lnk_info", None),
+                    java_info=getattr(job, "java_info", None),
+                    jar_info=getattr(job, "jar_info", None)
                 )
                 job.anti_analysis = anti_analysis_res
                 if anti_analysis_res.get("evasion_detected"):

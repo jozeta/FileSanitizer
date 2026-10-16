@@ -319,6 +319,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     # UI and Dashboard Display Preferences
     "ui_preferences": {
         "show_telemetry_diagnostics": False,  # Hidden by default
+        "check_for_updates": True,           # Check GitHub for new versions on startup
     },
     # Pluggable Service API Keys
     "api_keys": {
@@ -1051,6 +1052,8 @@ class SettingsStore:
             current = dict(self._data.get("ui_preferences", DEFAULT_SETTINGS.get("ui_preferences", {})))
             if "show_telemetry_diagnostics" in config:
                 current["show_telemetry_diagnostics"] = bool(config["show_telemetry_diagnostics"])
+            if "check_for_updates" in config:
+                current["check_for_updates"] = bool(config["check_for_updates"])
             self._data["ui_preferences"] = current
             self._save()
 
@@ -1143,6 +1146,11 @@ class SettingsStore:
         """Return all check flags for a given format category."""
         self._check_reload()
         return dict(self._data.get("format_checks", {}).get(category, {}))
+
+    def get_global_checks(self) -> Dict[str, bool]:
+        """Return all global scanner engine flags."""
+        self._check_reload()
+        return dict(self._data.get("global_checks", {}))
 
     def is_global_enabled(self, key: str) -> bool:
         """Query if a global scanner (clamav, yara, virustotal) is enabled."""

@@ -10,9 +10,12 @@ import { SettingsView } from './components/SettingsView';
 import { DisclaimerModal } from './components/DisclaimerModal';
 import { UploadProgressModal } from './components/UploadProgressModal';
 import { DragDropOverlay } from './components/DragDropOverlay';
+import { NewVersionModal } from './components/NewVersionModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { DecoderView } from './components/DecoderView';
+import { SelectionDecoderPopup } from './components/SelectionDecoderPopup';
 import { AlertTriangle, Info } from 'lucide-react';
-import { apiClient } from './api/client';
+import { apiClient, UpdateCheckResult } from './api/client';
 import { WorkspaceJob, JobDetail, IncidentCorrelationData } from './types';
 import { APP_VERSION } from './version';
 
@@ -20,15 +23,43 @@ export const App: React.FC = () => {
   const cachedJobsRef = useRef<Record<string, JobDetail>>({});
   const cachedCorrelationRef = useRef<IncidentCorrelationData | null>(null);
 
+  const [decoderInput, setDecoderInput] = useState<string>('');
+  const [decoderResetKey, setDecoderResetKey] = useState<number>(0);
+  const lastSentToDecoderRef = useRef<{ text: string; time: number }>({ text: '', time: 0 });
+
+  const handlePipeToDecoder = (text: string) => {
+    if (!text) return;
+    const now = Date.now();
+    // Guard against duplicate event firing within 500ms for exact same text
+    if (lastSentToDecoderRef.current.text === text && now - lastSentToDecoderRef.current.time < 500) {
+      return;
+    }
+    lastSentToDecoderRef.current = { text, time: now };
+    setDecoderInput((prev) => (prev ? `${prev}\n${text}` : text));
+    setCurrentView('decoder');
+  };
+
   const [currentView, setCurrentView] = useState<ViewTab>(() => {
     try {
       const p = new URLSearchParams(window.location.search).get('view');
-      if (p === 'settings' || p === 'how-it-works' || p === 'supported-formats' || p === 'sanitizer') {
+      if (p === 'settings' || p === 'decoder' || p === 'how-it-works' || p === 'supported-formats' || p === 'sanitizer') {
         return p as ViewTab;
       }
     } catch {}
     return 'sanitizer';
   });
+
+  // Listen for custom "fs-send-to-decoder" event anywhere in the app
+  useEffect(() => {
+    const handleEvent = (e: any) => {
+      const text = e.detail?.text || '';
+      if (text) {
+        handlePipeToDecoder(text);
+      }
+    };
+    window.addEventListener('fs-send-to-decoder', handleEvent);
+    return () => window.removeEventListener('fs-send-to-decoder', handleEvent);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<string | null>(() => {
     try {
@@ -76,6 +107,66 @@ export const App: React.FC = () => {
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
   const [duplicateNotice, setDuplicateNotice] = useState<{ message: string; type: 'warning' | 'info' } | null>(null);
 
+  // GitHub Version & Update Notification States
+  const [newVersionInfo, setNewVersionInfo] = useState<UpdateCheckResult | null>(null);
+  const [isNewVersionModalOpen, setIsNewVersionModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkUpdatesOnStartup = async () => {
+      try {
+        const storedPref = localStorage.getItem('fs_check_for_updates');
+        if (storedPref === 'false') return;
+
+        const uiPref = await apiClient.getUiPreferences().catch(() => null);
+        if (uiPref?.ui_preferences?.check_for_updates === false) {
+          localStorage.setItem('fs_check_for_updates', 'false');
+          return;
+        }
+
+        const res = await apiClient.checkForUpdates(false);
+        if (isMounted && res.success && res.has_update && res.latest_version) {
+          setNewVersionInfo(res);
+          const dismissedVersion = sessionStorage.getItem('fs_update_dismissed_version');
+          if (dismissedVersion !== res.latest_version) {
+            setIsNewVersionModalOpen(true);
+          }
+        }
+      } catch (err) {
+        console.debug('Startup update check failed:', err);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      checkUpdatesOnStartup();
+    }, 1000);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  const handleDismissUpdate = () => {
+    if (newVersionInfo?.latest_version) {
+      sessionStorage.setItem('fs_update_dismissed_version', newVersionInfo.latest_version);
+    }
+    setIsNewVersionModalOpen(false);
+  };
+
+  const handleDisableFutureChecks = async () => {
+    localStorage.setItem('fs_check_for_updates', 'false');
+    window.dispatchEvent(new CustomEvent('fs-settings-changed', {
+      detail: { check_for_updates: false }
+    }));
+    const token = localStorage.getItem('fs_admin_token');
+    if (token) {
+      await apiClient.updateUiPreferences(token, { check_for_updates: false }).catch(() => {});
+    }
+    setIsNewVersionModalOpen(false);
+  };
+
   useEffect(() => {
     if (duplicateNotice) {
       const timer = setTimeout(() => {
@@ -97,6 +188,8 @@ export const App: React.FC = () => {
       setWorkspaceJobs([]);
       setActiveTab(null);
       setCurrentView('sanitizer');
+      setDecoderInput('');
+      setDecoderResetKey((prev) => prev + 1);
     }
 
     // 0. Client-side check for max file size (100 MB limit)
@@ -309,6 +402,8 @@ export const App: React.FC = () => {
     setWorkspaceJobs([]);
     setActiveTab(null);
     setCurrentView('sanitizer');
+    setDecoderInput('');
+    setDecoderResetKey((prev) => prev + 1);
   };
 
   // Helper to extract file count from DataTransfer
@@ -440,6 +535,8 @@ export const App: React.FC = () => {
         }}
         onOpenDisclaimer={() => setIsDisclaimerOpen(true)}
         onReset={handleReset}
+        hasUpdate={Boolean(newVersionInfo?.has_update)}
+        onOpenUpdateModal={() => setIsNewVersionModalOpen(true)}
       />
 
       {/* Duplicate Prevention Notification Toast */}
@@ -489,6 +586,12 @@ export const App: React.FC = () => {
             <div className="max-w-[96rem] mx-auto px-4 py-8">
               <SettingsView onBack={() => setCurrentView('sanitizer')} />
             </div>
+          ) : currentView === 'decoder' ? (
+            <DecoderView
+              key={decoderResetKey}
+              initialInput={decoderInput}
+              onClearInitialInput={() => setDecoderInput('')}
+            />
           ) : currentView === 'how-it-works' ? (
             <HowItWorks 
               onGoToSanitizer={() => setCurrentView('sanitizer')}
@@ -555,6 +658,11 @@ export const App: React.FC = () => {
         onClose={() => setIsDisclaimerOpen(false)}
       />
 
+      {/* Floating Selection Tooltip for Quick Send to Decoder */}
+      <SelectionDecoderPopup
+        onSendToDecoder={handlePipeToDecoder}
+      />
+
       {/* Global Drag-and-Drop Ingestion Overlay with Dual-Zone Single File / Multi-File Ingestion */}
       <DragDropOverlay
         isOpen={isDraggingOverWindow}
@@ -578,6 +686,14 @@ export const App: React.FC = () => {
           progress={uploadProgress}
         />
       )}
+
+      {/* New Version Update Notification Modal */}
+      <NewVersionModal
+        isOpen={isNewVersionModalOpen}
+        onClose={handleDismissUpdate}
+        updateInfo={newVersionInfo}
+        onDisableFutureChecks={handleDisableFutureChecks}
+      />
     </div>
   );
 };

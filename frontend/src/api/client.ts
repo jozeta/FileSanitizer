@@ -1,4 +1,21 @@
 import { JobDetail, StructuredMetadata, UrlItem, SanitizationOptions, ValidationComparison, DetectionRules, IncidentCorrelationData, PdfStreamInspection, EnrichIocsResponse } from '../types';
+import { APP_VERSION } from '../version';
+
+export interface UpdateCheckResult {
+  success: boolean;
+  has_update: boolean;
+  current_version: string;
+  latest_version?: string;
+  release_name?: string;
+  release_notes?: string;
+  published_at?: string;
+  html_url?: string;
+  source?: string;
+  external_blocked?: boolean;
+  message?: string;
+  error?: string;
+  checked_at?: string;
+}
 
 const API_BASE = '/api';
 
@@ -333,13 +350,41 @@ export const apiClient = {
     return res.json();
   },
 
-  async getUiPreferences(): Promise<{ success: boolean; ui_preferences: { show_telemetry_diagnostics: boolean } }> {
+  async getUiPreferences(): Promise<{ success: boolean; ui_preferences: { show_telemetry_diagnostics?: boolean; check_for_updates?: boolean } }> {
     try {
       const res = await fetch(`${API_BASE}/settings/ui-preferences`);
-      if (!res.ok) return { success: false, ui_preferences: { show_telemetry_diagnostics: false } };
+      if (!res.ok) return { success: false, ui_preferences: { show_telemetry_diagnostics: false, check_for_updates: true } };
       return res.json();
     } catch {
-      return { success: false, ui_preferences: { show_telemetry_diagnostics: false } };
+      return { success: false, ui_preferences: { show_telemetry_diagnostics: false, check_for_updates: true } };
+    }
+  },
+
+  async checkForUpdates(force = false): Promise<UpdateCheckResult> {
+    try {
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const simVersion = urlParams?.get('simulate_update') || urlParams?.get('simulate_version');
+      const params = new URLSearchParams();
+      if (force) params.set('force', 'true');
+      if (simVersion) params.set('simulate_version', simVersion);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(`${API_BASE}/settings/check-update${qs}`);
+      if (!res.ok) {
+        return {
+          success: false,
+          has_update: false,
+          current_version: APP_VERSION,
+          error: `HTTP ${res.status}`,
+        };
+      }
+      return res.json();
+    } catch (e: any) {
+      return {
+        success: false,
+        has_update: false,
+        current_version: APP_VERSION,
+        error: e.message || 'Network request failed',
+      };
     }
   },
 

@@ -63,7 +63,7 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
         setOperationResult(data);
       }
     } catch (err) {
-      console.error('CyberChef operation failed:', err);
+      console.error('Decoder operation failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +85,7 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
                 Automated Forensic Deobfuscator & String Decoder
               </h3>
               <span className="text-xs bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full font-mono font-semibold">
-                CyberChef / XOR & Base64
+                Forensic Decoder / XOR & Base64
               </span>
             </div>
             <p className="text-xs text-slate-500 font-normal">
@@ -234,10 +234,10 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
             placeholder="Paste obfuscated base64, hex stream, or XOR encrypted script text here..."
             className="w-full h-28 p-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 font-mono text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-y"
           />
-          {/* CyberChef Quick Actions Toolbar */}
+          {/* Decoder Quick Actions Toolbar */}
           <div className="space-y-1.5 pt-1">
             <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
-              CyberChef Quick Forensic Operations:
+              Decoder Quick Forensic Operations:
             </span>
             <div className="flex flex-wrap gap-1.5">
               {[

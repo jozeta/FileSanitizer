@@ -20,6 +20,8 @@ FILE_SIGNATURES = [
     (b"%PDF-", "application/pdf", "pdf"),
     (b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1", "application/x-ole-storage", "doc"),  # OLE Compound File (legacy Office)
     (b"{\\rtf", "application/rtf", "rtf"),
+    (b"\xE4\x52\x5C\x7B\x82\xD8\xA5\x4D\xAF\x68\xD7\x0C\x7D\x33\xF8\xF4", "application/onenote", "one"),  # Microsoft OneNote Section
+    (b"\xA1\x2F\x42\x43\x66\x0B\x4C\x48\xAC\x07\x04\xDE\x4D\x4C\x2A\x29", "application/onenote", "onetoc2"),  # Microsoft OneNote Table of Contents
     # Archives / OpenXML
     (b"PK\x03\x04", "application/zip", "zip"),  # Also base for docx, xlsx, pptx, odt, etc.
     (b"7z\xBC\xAF\x27\x1C", "application/x-7z-compressed", "7z"),
@@ -144,6 +146,32 @@ def detect_file_type(file_path: Path, filename: str) -> Tuple[str, str, str]:
     if script_check:
         return script_check
 
+    fn_lower = filename.lower()
+    # Check Domain / Network Infrastructure Target (.domain, .ip, .cidr, .hostname)
+    if fn_lower.endswith((".domain", ".ip", ".cidr", ".hostname")):
+        return "text/x-domain-intelligence", "domain", "Domain & Network Infrastructure Target"
+    if fn_lower.endswith(".txt") and (fn_lower.startswith("domain") or fn_lower.startswith("target") or fn_lower.startswith("ip_") or fn_lower.startswith("ioc") or "checklist" in fn_lower):
+        try:
+            sample_txt = header.decode('utf-8', errors='ignore').strip()
+            first_l = sample_txt.splitlines()[0].strip() if sample_txt else ""
+            if first_l and not first_l.startswith("#"):
+                from app.network.input_normalizer import UniversalInputNormalizer, InputType
+                norm = UniversalInputNormalizer.normalize(first_l)
+                if norm.indicator_type in (InputType.DOMAIN, InputType.IPV4, InputType.IPV6, InputType.CIDR):
+                    return "text/x-domain-intelligence", "domain", "Domain & Network Infrastructure Target"
+        except Exception:
+            pass
+
+    # Check Network Packet Captures (.pcap, .pcapng, .cap)
+    if fn_lower.endswith((".pcap", ".cap")):
+        return "application/vnd.tcpdump.pcap", "pcap", "Network Packet Capture (PCAP)"
+    if fn_lower.endswith(".pcapng"):
+        return "application/x-pcapng", "pcap", "PCAP Next Generation (PCAPNG)"
+
+    # Check Windows Event Logs (.evtx)
+    if fn_lower.endswith(".evtx"):
+        return "application/x-windows-event-log", "evtx", "Windows Event Log (EVTX)"
+
     # Check text / XML / SVG / HTML
     text_check = inspect_text_type(header)
     if text_check:
@@ -154,20 +182,13 @@ def detect_file_type(file_path: Path, filename: str) -> Tuple[str, str, str]:
     if email_check:
         return email_check
 
-    # Check Network Packet Captures (.pcap, .pcapng, .cap)
-    fn_lower = filename.lower()
-    if fn_lower.endswith((".pcap", ".cap")):
-        return "application/vnd.tcpdump.pcap", "pcap", "Network Packet Capture (PCAP)"
-    if fn_lower.endswith(".pcapng"):
-        return "application/x-pcapng", "pcap", "PCAP Next Generation (PCAPNG)"
-
-    # Check Windows Event Logs (.evtx)
-    if fn_lower.endswith(".evtx"):
-        return "application/x-windows-event-log", "evtx", "Windows Event Log (EVTX)"
-
     # Check Windows Shell Link Shortcut (.lnk)
     if fn_lower.endswith(".lnk") or header.startswith(b"\x4C\x00\x00\x00\x01\x14\x02\x00"):
         return "application/x-ms-shortcut", "lnk", "Windows Shortcut (LNK)"
+
+    # Check Microsoft OneNote (.one, .onetoc2)
+    if fn_lower.endswith((".one", ".onetoc2")) or header.startswith(b"\xE4\x52\x5C\x7B\x82\xD8\xA5\x4D\xAF\x68\xD7\x0C\x7D\x33\xF8\xF4") or header.startswith(b"\xA1\x2F\x42\x43\x66\x0B\x4C\x48\xAC\x07\x04\xDE\x4D\x4C\x2A\x29"):
+        return "application/onenote", "office", "Microsoft OneNote Document (ONE)"
 
     # Check Position-Independent Shellcode (.sc, .shellcode, or binary buffers)
     if fn_lower.endswith((".sc", ".shellcode")):
@@ -351,7 +372,7 @@ def categorize_mime(mime: str) -> str:
         return "pdf"
     if any(office_sub in mime for office_sub in [
         "wordprocessing", "spreadsheet", "presentation", "msword", "vnd.ms-excel",
-        "vnd.ms-powerpoint", "opendocument", "ole-storage", "rtf"
+        "vnd.ms-powerpoint", "opendocument", "ole-storage", "rtf", "onenote", "msonenote"
     ]):
         return "office"
     if mime in [

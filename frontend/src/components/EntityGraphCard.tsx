@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { EntityGraphData, EntityGraphNode } from '../types';
 import { InvestigateAssetButton } from './InvestigateAssetButton';
+import { groupSimilarNodesInGraph } from '../utils/entityNormalizer';
 
 export const HIGHLIGHT_COLOR_OPTIONS = [
   { value: '#f59e0b', label: 'Amber / Gold' },
@@ -96,6 +97,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   const [hideIsolatedNodes, setHideIsolatedNodes] = useState<boolean>(false);
   const [hideBenignNodes, setHideBenignNodes] = useState<boolean>(false);
   const [showEmptyNodes, setShowEmptyNodes] = useState<boolean>(false);
+  const [mergeSimilarNodes, setMergeSimilarNodes] = useState<boolean>(true);
 
   // Selection & Inspector
   const [selectedNode, setSelectedNode] = useState<EntityGraphNode | null>(null);
@@ -363,20 +365,25 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     );
   }, [graphData?.edges, visibleNodeIds]);
 
+  // Group similar nodes together (e.g. http://www.google.com, www.google.com, google.com)
+  const { nodes: processedNodes, edges: processedEdges, mergedCount } = useMemo(() => {
+    return groupSimilarNodesInGraph(filteredNodes, filteredEdges, mergeSimilarNodes);
+  }, [filteredNodes, filteredEdges, mergeSimilarNodes]);
+
+  const activeVisibleNodeIds = useMemo(() => new Set(processedNodes.map(n => n.id)), [processedNodes]);
+
   // Select all visible nodes connected to a node (excluding root/file nodes), and close the inspector
   const handleSelectConnectedNodes = (nodeId: string) => {
     const connectedIds = new Set<string>();
-    const allEdges = graphData?.edges || [];
-    const allNodes = graphData?.nodes || [];
-    const nodeMap = new Map<string, any>(allNodes.map((n) => [n.id, n]));
+    const nodeMap = new Map<string, any>(processedNodes.map((n) => [n.id, n]));
 
-    allEdges.forEach((edge: any) => {
+    processedEdges.forEach((edge: any) => {
       let otherId: string | null = null;
       if (edge.source === nodeId) otherId = edge.target;
       else if (edge.target === nodeId) otherId = edge.source;
 
       if (otherId) {
-        if (!visibleNodeIds.has(otherId)) return;
+        if (!activeVisibleNodeIds.has(otherId)) return;
         const otherNode = nodeMap.get(otherId);
         if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && otherId !== 'root') {
           connectedIds.add(otherId);
@@ -390,17 +397,16 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
 
   // Connected visible node count for selectedNode (excluding root/file nodes)
   const selectedNodeConnectedCount = useMemo(() => {
-    if (!selectedNode || !graphData?.edges) return 0;
-    const allNodes = graphData?.nodes || [];
-    const nodeMap = new Map<string, any>(allNodes.map((n) => [n.id, n]));
+    if (!selectedNode || !processedEdges) return 0;
+    const nodeMap = new Map<string, any>(processedNodes.map((n) => [n.id, n]));
     const connected = new Set<string>();
 
-    graphData.edges.forEach((edge: any) => {
+    processedEdges.forEach((edge: any) => {
       let otherId: string | null = null;
       if (edge.source === selectedNode.id) otherId = edge.target;
       else if (edge.target === selectedNode.id) otherId = edge.source;
 
-      if (otherId && visibleNodeIds.has(otherId)) {
+      if (otherId && activeVisibleNodeIds.has(otherId)) {
         const otherNode = nodeMap.get(otherId);
         if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && otherId !== 'root') {
           connected.add(otherId);
@@ -408,7 +414,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       }
     });
     return connected.size;
-  }, [selectedNode, graphData?.edges, graphData?.nodes, visibleNodeIds]);
+  }, [selectedNode, processedEdges, processedNodes, activeVisibleNodeIds]);
 
   // Smooth mouse scroll wheel & trackpad pinch-zoom centered on cursor
   useEffect(() => {
@@ -700,10 +706,10 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
 
   // Re-layout & redraw graph automatically when visible nodes, edges, layout mode, sort mode, or proximity changes
   useEffect(() => {
-    if (filteredNodes.length > 0) {
+    if (processedNodes.length > 0) {
       const { positions, clusterLabels } = calculateLayout(
-        filteredNodes,
-        filteredEdges,
+        processedNodes,
+        processedEdges,
         layoutMode,
         sortMode,
         1200,
@@ -716,12 +722,12 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       setNodePositions({});
       setCategoryClusterLabels([]);
     }
-  }, [filteredNodes, filteredEdges, layoutMode, sortMode, nodeProximity]);
+  }, [processedNodes, processedEdges, layoutMode, sortMode, nodeProximity]);
 
   // Quick Select Group by Type
   const selectAllOfType = (typeKey: string) => {
     if (typeKey === 'all') {
-      setSelectedNodeIds(new Set(filteredNodes.map(n => n.id)));
+      setSelectedNodeIds(new Set(processedNodes.map(n => n.id)));
       return;
     }
     if (typeKey === 'none') {
@@ -730,29 +736,29 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       return;
     }
     if (typeKey === 'intel') {
-      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['threat_intel', 'threat_signature', 'keyword', 'watchlist_keyword'].includes(n.type)).map(n => n.id)));
+      setSelectedNodeIds(new Set(processedNodes.filter(n => ['threat_intel', 'threat_signature', 'keyword', 'watchlist_keyword'].includes(n.type)).map(n => n.id)));
       return;
     }
     if (typeKey === 'network') {
-      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['url', 'domain', 'ip', 'hostname', 'computer', 'geolocation', 'asn', 'network', 'flow', 'protocol'].includes(n.type)).map(n => n.id)));
+      setSelectedNodeIds(new Set(processedNodes.filter(n => ['url', 'domain', 'ip', 'hostname', 'computer', 'geolocation', 'asn', 'network', 'flow', 'protocol'].includes(n.type)).map(n => n.id)));
       return;
     }
     if (typeKey === 'payloads') {
-      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['embedded_file', 'hash'].includes(n.type)).map(n => n.id)));
+      setSelectedNodeIds(new Set(processedNodes.filter(n => ['embedded_file', 'hash'].includes(n.type)).map(n => n.id)));
       return;
     }
     if (typeKey === 'technique') {
-      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['technique', 'similar_sample'].includes(n.type)).map(n => n.id)));
+      setSelectedNodeIds(new Set(processedNodes.filter(n => ['technique', 'similar_sample'].includes(n.type)).map(n => n.id)));
       return;
     }
     if (typeKey === 'identity') {
-      setSelectedNodeIds(new Set(filteredNodes.filter(n => ['user', 'computer', 'auth_policy', 'email', 'name', 'person'].includes(n.type)).map(n => n.id)));
+      setSelectedNodeIds(new Set(processedNodes.filter(n => ['user', 'computer', 'auth_policy', 'email', 'name', 'person'].includes(n.type)).map(n => n.id)));
       return;
     }
     if (typeKey === 'invert') {
       setSelectedNodeIds(prev => {
         const next = new Set<string>();
-        filteredNodes.forEach(n => {
+        processedNodes.forEach(n => {
           if (!prev.has(n.id)) next.add(n.id);
         });
         return next;
@@ -853,10 +859,10 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     setPan({ x: 0, y: 0 });
     setSelectedNode(null);
     setSelectedNodeIds(new Set());
-    if (filteredNodes.length > 0) {
+    if (processedNodes.length > 0) {
       const { positions, clusterLabels } = calculateLayout(
-        filteredNodes,
-        filteredEdges,
+        processedNodes,
+        processedEdges,
         layoutMode,
         sortMode,
         1200,
@@ -1161,11 +1167,37 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
               )}
             </label>
 
+            {/* Group Similar Nodes Checkbox */}
+            <label
+              id="entity-graph-merge-similar-label"
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer select-none shadow-2xs ${
+                mergeSimilarNodes
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+              title="When checked, normalizes and groups equivalent indicators (e.g. http://www.google.com, www.google.com, google.com). Unchecked keeps all nodes separate."
+            >
+              <input
+                type="checkbox"
+                id="entity-graph-merge-similar"
+                checked={mergeSimilarNodes}
+                onChange={(e) => setMergeSimilarNodes(e.target.checked)}
+                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+              />
+              <Layers className="w-3.5 h-3.5" />
+              <span>Group Similar Nodes</span>
+              {mergeSimilarNodes && mergedCount > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold bg-indigo-200/80 text-indigo-900">
+                  -{mergedCount}
+                </span>
+              )}
+            </label>
+
             {/* Live Stats */}
             <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-600 border border-slate-200 font-mono">
-              <span><strong className="text-slate-900">{filteredNodes.length}</strong> / {graphData.nodes.length} nodes</span>
+              <span><strong className="text-slate-900">{processedNodes.length}</strong> / {graphData.nodes.length} nodes</span>
               <span className="text-slate-300">•</span>
-              <span><strong className="text-slate-900">{filteredEdges.length}</strong> lines</span>
+              <span><strong className="text-slate-900">{processedEdges.length}</strong> lines</span>
             </div>
           </div>
 
@@ -1394,7 +1426,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
               ))}
 
             {/* Edges */}
-            {filteredEdges.map((edge, idx) => {
+            {processedEdges.map((edge, idx) => {
               const srcPos = nodePositions[edge.source];
               const tgtPos = nodePositions[edge.target];
               if (!srcPos || !tgtPos) return null;
@@ -1462,7 +1494,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
             })}
 
             {/* Nodes */}
-            {filteredNodes.map(node => {
+            {processedNodes.map(node => {
               const pos = nodePositions[node.id];
               if (!pos) return null;
 
@@ -1546,7 +1578,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                     r={radius}
                     fill={styling.fill}
                     stroke={styling.stroke}
-                    strokeWidth={isRoot ? 3 : (isHovered ? 2.5 : 1.8)}
+                    strokeWidth={isRoot ? 3 : (node.groupedCount && node.groupedCount > 1 ? 4 : (isHovered ? 2.5 : 1.8))}
                     className="filter drop-shadow-xs transition-colors"
                   />
 
@@ -1608,6 +1640,30 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                       ? 'PROC'
                       : node.type.substring(0, 4).toUpperCase()}
                   </text>
+
+                  {/* Grouped Nodes Badge */}
+                  {node.groupedCount && node.groupedCount > 1 && (
+                    <g transform={`translate(${radius * 0.72}, ${-radius * 0.72})`}>
+                      <circle
+                        r={9}
+                        fill="#4f46e5"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                        className="filter drop-shadow-xs"
+                      />
+                      <text
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fill="#ffffff"
+                        fontWeight="700"
+                        fontSize="9.5"
+                        fontFamily="ui-monospace, monospace"
+                        className="pointer-events-none select-none"
+                      >
+                        {node.groupedCount}
+                      </text>
+                    </g>
+                  )}
 
                   {/* Node Label Below */}
                   <g transform={`translate(0, ${radius + 14})`}>
@@ -1780,6 +1836,38 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   <p className="text-[11px] text-indigo-700">
                     Observed across {selectedNode.details?.observed_in_files?.length || 2} separate EVTX logs, indicating shared identity or lateral movement.
                   </p>
+                </div>
+              )}
+
+              {/* Grouped Variants Display */}
+              {selectedNode.groupedCount && selectedNode.groupedCount > 1 && (
+                <div className="p-3 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between text-indigo-900 font-bold text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Consolidated Group</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800 text-[10px] font-mono">
+                      {selectedNode.groupedCount} variants
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-indigo-700 leading-snug">
+                    Similar indicator variants normalized and grouped together:
+                  </p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {(selectedNode.groupedVariants || []).map((v: string, i: number) => (
+                      <div key={i} className="text-[11px] font-mono bg-white/90 px-2.5 py-1 rounded-lg border border-indigo-100 text-slate-800 break-all select-all flex items-center justify-between gap-1.5">
+                        <span>{v}</span>
+                        <button
+                          onClick={() => copyToClipboard(v, `variant_${i}`)}
+                          className="text-slate-400 hover:text-indigo-600 shrink-0 cursor-pointer"
+                          title="Copy variant"
+                        >
+                          {copiedKey === `variant_${i}` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

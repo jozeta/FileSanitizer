@@ -29,6 +29,8 @@ class AntiAnalysisDetector:
         pdf_info: Optional[Dict[str, Any]] = None,
         evtx_info: Optional[Dict[str, Any]] = None,
         lnk_info: Optional[Dict[str, Any]] = None,
+        java_info: Optional[Dict[str, Any]] = None,
+        jar_info: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         techniques: List[Dict[str, Any]] = []
 
@@ -56,7 +58,11 @@ class AntiAnalysisDetector:
         if lnk_info or category == "lnk" or filename.lower().endswith(".lnk"):
             cls._scan_lnk(lnk_info or {}, file_bytes, techniques)
 
-        # 7. Raw file bytes fallback check
+        # 7. Java & JAR checks
+        if java_info or jar_info or category in ["java", "jar"] or filename.lower().endswith((".jar", ".class", ".war", ".ear")):
+            cls._scan_java(java_info or {}, jar_info or {}, file_bytes, techniques)
+
+        # 8. Raw file bytes fallback check
         text_content = file_bytes[:1000000].decode("latin-1", errors="ignore")
         cls._scan_text_heuristics(text_content, techniques)
 
@@ -553,4 +559,79 @@ class AntiAnalysisDetector:
                 "severity": "high",
                 "evidence": f"Matched artifact strings: {', '.join(set(sandbox_artifacts))}",
                 "mitre_id": "T1497.001"
+            })
+
+    @classmethod
+    def _scan_java(cls, java_info: Dict[str, Any], jar_info: Dict[str, Any], file_bytes: bytes, techniques: List[Dict[str, Any]]):
+        info = jar_info or java_info or {}
+        raw_text = file_bytes[:2000000].decode("latin-1", errors="ignore")
+
+        # 1. JVM Anti-Debugging Checks
+        if re.search(r"(?i)(?:-Xdebug|-agentlib:jdwp|-Xrunjdwp|isDebuggerAttached|jdwp=transport)", raw_text):
+            techniques.append({
+                "category": "Anti-Debugging",
+                "name": "JVM Remote Debugger Detection (-agentlib:jdwp / JDWP)",
+                "description": "Checks JVM startup arguments or runtime status to detect active Java Debug Wire Protocol (JDWP) debuggers.",
+                "severity": "critical",
+                "evidence": "Matches JDWP debug agent / runtime attachment keywords",
+                "mitre_id": "T1622"
+            })
+        if re.search(r"(?i)ManagementFactory\.getRuntimeMXBean\(\)\.getInputArguments", raw_text) or "getInputArguments" in raw_text:
+            techniques.append({
+                "category": "Anti-Debugging",
+                "name": "JVM Runtime Argument Inspection (InputArguments Query)",
+                "description": "Inspects JVM command-line flags and agent parameters to detect hooked debuggers or security monitoring agents.",
+                "severity": "high",
+                "evidence": "RuntimeMXBean.getInputArguments() invoked",
+                "mitre_id": "T1622"
+            })
+
+        # 2. Virtual Machine & Hypervisor Fingerprinting
+        mac_oui_matches = re.findall(r"(?i)\b(00:05:69|00:0c:29|00:50:56|08:00:27|00:1c:42|52:54:00)\b", raw_text)
+        if mac_oui_matches or re.search(r"(?i)(?:VBoxGuest|vboxservice|vboxtray|vmtoolsd|vmware-vmx|qemu-ga)", raw_text):
+            evidence_str = f"MAC OUI: {', '.join(set(mac_oui_matches))}" if mac_oui_matches else "Virtualization service/driver string"
+            techniques.append({
+                "category": "Anti-VM / Sandbox Guardrail",
+                "name": "Virtual Machine Hypervisor Fingerprinting (VMware / VirtualBox)",
+                "description": "Enumerates hardware MAC addresses, hypervisor service names, or guest tools to identify virtual sandboxes.",
+                "severity": "high",
+                "evidence": evidence_str,
+                "mitre_id": "T1497.001"
+            })
+
+        # 3. Sandbox User & Hostname Guardrails
+        sb_users = re.findall(r"(?i)\b(malware|sandbox|cuckoo|sample|virus|maltest|john-pc|currentuser)\b", raw_text)
+        if re.search(r"(?i)user\.name|os\.name|os\.arch|availableProcessors", raw_text) and sb_users:
+            techniques.append({
+                "category": "Anti-VM / Sandbox Guardrail",
+                "name": "Host Environment & Username Guardrail",
+                "description": "Inspects system properties (user.name, os.name) against hardcoded analysis sandbox accounts.",
+                "severity": "high",
+                "evidence": f"Queries user.name/os.name matching sandbox tags: {', '.join(set(sb_users)[:3])}",
+                "mitre_id": "T1497"
+            })
+
+        # 4. Sleep Acceleration & Timing Attacks
+        if "Thread.sleep" in raw_text or "sleep(" in raw_text:
+            if "currentTimeMillis" in raw_text or "nanoTime" in raw_text:
+                techniques.append({
+                    "category": "Sandbox Sleep Evasion",
+                    "name": "Java Timing Delta / Sleep Warping Check",
+                    "description": "Measures elapsed system time around Thread.sleep to detect sandbox execution acceleration.",
+                    "severity": "medium",
+                    "evidence": "Thread.sleep measured with System.currentTimeMillis() / nanoTime()",
+                    "mitre_id": "T1497.003"
+                })
+
+        # 5. Obfuscation & Bytecode Flow Mangling
+        obf = info.get("behavioral_analysis", {}).get("code_obfuscation", {})
+        if obf.get("is_obfuscated") or "ALLATORIxDEMO" in raw_text:
+            obf_names = ", ".join(obf.get("obfuscators", ["Allatori / Flow Flattening"]))
+            techniques.append({
+                "category": "Defense Evasion",
+                "name": f"Java Bytecode Obfuscation ({obf_names})",
+                "description": "Employs commercial or specialized bytecode protectors to defeat decompilers and static analysis.",
+                "severity": "high",
+                "evidence": f"Obfuscator markers: {obf_names}",
+                "mitre_id": "T1027"
             })

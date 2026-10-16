@@ -855,8 +855,456 @@ DEX_API_SIGNATURES = [
         "owasp_mobile": "M2: Insecure Data Storage",
         "mitre": "T1414",
         "mitre_name": "Credentials from Web Browsers / Clipboard"
+    },
+    # Insecure Storage / World-Readable/Writable (CWE-276, CWE-732)
+    {
+        "pattern": re.compile(r'MODE_WORLD_READABLE|MODE_WORLD_WRITEABLE|getSharedPreferences\([^,]+,\s*[12]\)|openOrCreateDatabase\([^,]+,\s*[12]', re.I),
+        "api": "MODE_WORLD_READABLE / MODE_WORLD_WRITEABLE",
+        "title": "Insecure World-Readable/Writable Storage (CWE-276)",
+        "severity": "critical",
+        "category": "storage",
+        "description": "Configures SharedPreferences or SQLite databases with world-readable (0x0001) or world-writable (0x0002) permissions.",
+        "risk_explanation": "Any other application on the device can read or overwrite private application preferences, sensitive credentials, tokens, and local databases.",
+        "remediation": "Use MODE_PRIVATE (0x0000) or EncryptedSharedPreferences from AndroidX Security library.",
+        "cwe": "CWE-276: Incorrect Default Permissions",
+        "owasp_mobile": "M2: Insecure Data Storage",
+        "mitre": "T1409",
+        "mitre_name": "Access Stored Application Data"
+    },
+    # WebView File Access from URLs (CWE-79, CWE-200)
+    {
+        "pattern": re.compile(r'setAllowFileAccessFromFileURLs\s*\(\s*true\s*\)|setAllowUniversalAccessFromFileURLs\s*\(\s*true\s*\)', re.I),
+        "api": "setAllowUniversalAccessFromFileURLs(true)",
+        "title": "WebView Universal / File Access from URLs Enabled",
+        "severity": "critical",
+        "category": "webview",
+        "description": "Allows JavaScript running in a file:// scheme context to access content from any origin, including other local files.",
+        "risk_explanation": "Permits attackers who trick the WebView into rendering a local HTML file to steal private databases, cookies, and local cached tokens (Same-Origin Policy bypass).",
+        "remediation": "Call setAllowUniversalAccessFromFileURLs(false) and setAllowFileAccessFromFileURLs(false).",
+        "cwe": "CWE-346: Origin Validation Error",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1418",
+        "mitre_name": "Software Discovery"
+    },
+    {
+        "pattern": re.compile(r'setSafeBrowsingEnabled\s*\(\s*false\s*\)', re.I),
+        "api": "setSafeBrowsingEnabled(false)",
+        "title": "WebView Safe Browsing Protection Disabled",
+        "severity": "medium",
+        "category": "webview",
+        "description": "Explicitly disables Google Safe Browsing malware and phishing protections for WebView instances.",
+        "risk_explanation": "Users browsing web content inside the application will not be warned about known phishing sites, malicious APK downloads, or exploit kits.",
+        "remediation": "Keep Safe Browsing enabled: setSafeBrowsingEnabled(true).",
+        "cwe": "CWE-693: Protection Mechanism Failure",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1418",
+        "mitre_name": "Software Discovery"
+    },
+    # Dynamic Native Library Loading (CWE-114)
+    {
+        "pattern": re.compile(r'System;->loadLibrary|System;->load\s*\(|System\.loadLibrary|System\.load\(', re.I),
+        "api": "System.loadLibrary() / System.load()",
+        "title": "Dynamic Native JNI Library Loading",
+        "severity": "low",
+        "category": "code_loading",
+        "description": "Loads native shared libraries (.so) into Dalvik runtime process space.",
+        "risk_explanation": "Malware frequently wraps malicious payload routines in native C/C++ libraries (.so) to evade Dalvik bytecode decompilers and static analysis heuristics.",
+        "remediation": "Audit bundled native .so libraries for imported symbols, JNI exports, and hardening mitigations.",
+        "cwe": "CWE-114: Process Control",
+        "owasp_mobile": "M7: Client Code Quality",
+        "mitre": "T1437",
+        "mitre_name": "Dynamic Code Loading"
+    },
+    # Screen Recording & Media Projection (CWE-200)
+    {
+        "pattern": re.compile(r'MediaProjectionManager|createVirtualDisplay|MediaProjection;->start', re.I),
+        "api": "MediaProjectionManager / createVirtualDisplay",
+        "title": "Real-Time Screen Capture & Streaming (MediaProjection)",
+        "severity": "critical",
+        "category": "surveillance",
+        "description": "Captures real-time device screen framebuffer contents using Android MediaProjection APIs.",
+        "risk_explanation": "Used by advanced Android spyware (Predator, Pegasus, CraxsRAT) to live-stream the victim's device screen to C2 servers.",
+        "remediation": "Ensure MediaProjection is only used in authorized screen-sharing or accessibility applications with explicit foreground disclosure.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1426",
+        "mitre_name": "Screen Capture"
+    },
+    # Static PRNG Seeding (CWE-338)
+    {
+        "pattern": re.compile(r'SecureRandom;->setSeed\s*\([B|I|J]|new\s+Random\s*\(', re.I),
+        "api": "SecureRandom.setSeed() / Insecure Random",
+        "title": "Insecure Pseudo-Random Number Generation (Predictable Seeds)",
+        "severity": "high",
+        "category": "crypto",
+        "description": "Applies a predictable seed to SecureRandom or uses java.util.Random for security-critical values.",
+        "risk_explanation": "Manually seeding SecureRandom resets its entropy pool to a deterministic state, making generated session tokens, encryption keys, and IVs predictable by adversaries.",
+        "remediation": "Do not call setSeed() with static data; allow SecureRandom to self-seed from /dev/urandom.",
+        "cwe": "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator",
+        "owasp_mobile": "M5: Insufficient Cryptography",
+        "mitre": "T1573",
+        "mitre_name": "Encrypted Channel"
     }
 ]
+
+# Sensitive Permission Combinations (Malware & Spyware Signatures)
+SENSITIVE_PERMISSION_COMBOS = [
+    {
+        "id": "OVERLAY_AND_ACCESSIBILITY",
+        "title": "Banking Trojan Overlay & Accessibility Keylogging Combination",
+        "severity": "critical",
+        "required": ["android.permission.SYSTEM_ALERT_WINDOW", "android.permission.BIND_ACCESSIBILITY_SERVICE"],
+        "description": "Combines screen overlay injection (SYSTEM_ALERT_WINDOW) with accessibility keystroke capture and ATS (BIND_ACCESSIBILITY_SERVICE). Hallmark signature of sophisticated mobile banking trojans (Anatsa, TeaBot, SharkBot).",
+        "mitre": "T1448",
+        "mitre_name": "Abuse Accessibility Features"
+    },
+    {
+        "id": "AUTOSTART_AND_SMS",
+        "title": "Reboot Persistence & Stealth SMS Interception / Toll Fraud",
+        "severity": "critical",
+        "required": ["android.permission.RECEIVE_BOOT_COMPLETED"],
+        "any_of": ["android.permission.SEND_SMS", "android.permission.RECEIVE_SMS", "android.permission.READ_SMS"],
+        "description": "Executes autonomously at boot and intercepts/transmits SMS messages in the background. Typical of mobile toll fraud trojans and 2FA interceptors.",
+        "mitre": "T1402",
+        "mitre_name": "Broadcast Receivers / Access SMS"
+    },
+    {
+        "id": "AV_SURVEILLANCE",
+        "title": "Comprehensive Audio & Visual Wiretapping (Spyware / RAT)",
+        "severity": "critical",
+        "required": ["android.permission.RECORD_AUDIO", "android.permission.CAMERA"],
+        "description": "Simultaneously requests ambient microphone recording and camera video capture without requiring user presence. Typical of spyware and commercial surveillance toolkits.",
+        "mitre": "T1417",
+        "mitre_name": "Audio / Video Capture"
+    },
+    {
+        "id": "LOCATION_AND_AUDIO",
+        "title": "Covert Geolocation Tracking & Audio Eavesdropping",
+        "severity": "critical",
+        "required": ["android.permission.RECORD_AUDIO"],
+        "any_of": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_BACKGROUND_LOCATION"],
+        "description": "Combines continuous physical GPS tracking with microphone recording, enabling 24/7 ambient eavesdropping of the user's whereabouts.",
+        "mitre": "T1430",
+        "mitre_name": "Location Tracking / Audio Capture"
+    },
+    {
+        "id": "INSTALLER_AND_INTERNET",
+        "title": "Autonomous Remote Dropper / Secondary Payload Downloader",
+        "severity": "critical",
+        "required": ["android.permission.REQUEST_INSTALL_PACKAGES", "android.permission.INTERNET"],
+        "description": "Allows application to download external packages over the Internet and prompt silent or trick installs, characteristic of mobile droppers.",
+        "mitre": "T1476",
+        "mitre_name": "Deliver Malicious App via Other Means"
+    },
+    {
+        "id": "ADMIN_AND_OVERLAY",
+        "title": "Device Administrator Screen Lockout & Ransomware Combination",
+        "severity": "critical",
+        "required": ["android.permission.BIND_DEVICE_ADMIN", "android.permission.SYSTEM_ALERT_WINDOW"],
+        "description": "Combines Device Administration rights with overlay drawing to lock down the screen and prevent removal, characteristic of mobile ransomware.",
+        "mitre": "T1407",
+        "mitre_name": "Device Administrator Privileges"
+    },
+    {
+        "id": "CONTACTS_AND_TELEPHONY_HARVEST",
+        "title": "Mass Identity & Address Book Harvesting",
+        "severity": "high",
+        "required": ["android.permission.READ_CONTACTS"],
+        "any_of": ["android.permission.READ_PHONE_STATE", "android.permission.READ_CALL_LOG", "android.permission.GET_ACCOUNTS"],
+        "description": "Collects user identity, phone numbers, contact book entries, and call metadata, often exfiltrated for predatory lending or extortion schemes.",
+        "mitre": "T1432",
+        "mitre_name": "Access Contact List"
+    }
+]
+
+# Third-Party Android SDK Catalog for Supply Chain & CycloneDX SBOM
+ANDROID_SDK_CATALOG = [
+    {
+        "id": "firebase-core",
+        "name": "Firebase Core / Analytics",
+        "group": "com.google.firebase",
+        "artifact": "firebase-analytics",
+        "category": "Analytics & Cloud",
+        "patterns": ["com.google.firebase.", "com/google/firebase/"],
+        "description": "Google Firebase mobile backend and analytics SDK."
+    },
+    {
+        "id": "firebase-messaging",
+        "name": "Firebase Cloud Messaging (FCM)",
+        "group": "com.google.firebase",
+        "artifact": "firebase-messaging",
+        "category": "Cloud Messaging",
+        "patterns": ["com.google.firebase.messaging", "FirebaseMessagingService"],
+        "description": "Google Cloud Messaging push notifications."
+    },
+    {
+        "id": "play-services-ads",
+        "name": "Google Mobile Ads (AdMob)",
+        "group": "com.google.android.gms",
+        "artifact": "play-services-ads",
+        "category": "Monetization & Advertising",
+        "patterns": ["com.google.android.gms.ads", "com/google/android/gms/ads/"],
+        "description": "Google AdMob advertising and monetization SDK."
+    },
+    {
+        "id": "play-services-base",
+        "name": "Google Play Services Base",
+        "group": "com.google.android.gms",
+        "artifact": "play-services-base",
+        "category": "Platform Services",
+        "patterns": ["com.google.android.gms.common", "com/google/android/gms/common/"],
+        "description": "Google Play Services core runtime client."
+    },
+    {
+        "id": "okhttp",
+        "name": "Square OkHttp",
+        "group": "com.squareup.okhttp3",
+        "artifact": "okhttp",
+        "category": "Networking & HTTP",
+        "patterns": ["okhttp3.", "com.squareup.okhttp3", "okhttp3/OkHttpClient"],
+        "description": "Square OkHttp HTTP & HTTP/2 client library for Android."
+    },
+    {
+        "id": "retrofit",
+        "name": "Square Retrofit",
+        "group": "com.squareup.retrofit2",
+        "artifact": "retrofit",
+        "category": "Networking & REST",
+        "patterns": ["retrofit2.", "com.squareup.retrofit2"],
+        "description": "Type-safe HTTP REST client for Android and Java."
+    },
+    {
+        "id": "gson",
+        "name": "Google Gson",
+        "group": "com.google.code.gson",
+        "artifact": "gson",
+        "category": "Serialization & JSON",
+        "patterns": ["com.google.gson.", "com/google/gson/"],
+        "description": "Google JSON serialization and deserialization library."
+    },
+    {
+        "id": "glide",
+        "name": "Bumptech Glide",
+        "group": "com.github.bumptech.glide",
+        "artifact": "glide",
+        "category": "Media & Image Loading",
+        "patterns": ["com.bumptech.glide.", "com/bumptech/glide/"],
+        "description": "Fast and efficient image loading and caching framework."
+    },
+    {
+        "id": "picasso",
+        "name": "Square Picasso",
+        "group": "com.squareup.picasso",
+        "artifact": "picasso",
+        "category": "Media & Image Loading",
+        "patterns": ["com.squareup.picasso.", "com/squareup/picasso/"],
+        "description": "Image downloading and caching library for Android."
+    },
+    {
+        "id": "facebook-sdk",
+        "name": "Meta / Facebook Android SDK",
+        "group": "com.facebook.android",
+        "artifact": "facebook-android-sdk",
+        "category": "Social & Attribution",
+        "patterns": ["com.facebook.FacebookSdk", "com.facebook.login", "com/facebook/"],
+        "description": "Meta Facebook authentication, graph API, and analytics."
+    },
+    {
+        "id": "react-native",
+        "name": "Meta React Native",
+        "group": "com.facebook.react",
+        "artifact": "react-native",
+        "category": "Cross-Platform Framework",
+        "patterns": ["com.facebook.react.", "assets/index.android.bundle"],
+        "description": "Meta React Native cross-platform mobile application runtime."
+    },
+    {
+        "id": "flutter",
+        "name": "Google Flutter Engine",
+        "group": "io.flutter",
+        "artifact": "flutter-embedding",
+        "category": "Cross-Platform Framework",
+        "patterns": ["io.flutter.", "libflutter.so", "assets/flutter_assets/"],
+        "description": "Google Flutter cross-platform UI framework and Dart runtime."
+    },
+    {
+        "id": "unity",
+        "name": "Unity 3D Engine",
+        "group": "com.unity3d.player",
+        "artifact": "unity-classes",
+        "category": "Game Engine",
+        "patterns": ["com.unity3d.player.", "libunity.so", "assets/bin/Data/"],
+        "description": "Unity 3D cross-platform game development engine."
+    },
+    {
+        "id": "appsflyer",
+        "name": "AppsFlyer SDK",
+        "group": "com.appsflyer",
+        "artifact": "af-android-sdk",
+        "category": "Attribution & Analytics",
+        "patterns": ["com.appsflyer.", "AppsFlyerLib"],
+        "description": "Mobile attribution, marketing measurement, and deep-linking SDK."
+    },
+    {
+        "id": "adjust",
+        "name": "Adjust SDK",
+        "group": "com.adjust.sdk",
+        "artifact": "adjust-android",
+        "category": "Attribution & Analytics",
+        "patterns": ["com.adjust.sdk.", "com/adjust/sdk/"],
+        "description": "Mobile app attribution and analytics platform."
+    },
+    {
+        "id": "rxjava",
+        "name": "ReactiveX RxJava",
+        "group": "io.reactivex.rxjava3",
+        "artifact": "rxjava",
+        "category": "Reactive Programming",
+        "patterns": ["io.reactivex.", "rx.Observable"],
+        "description": "Reactive Extensions for the JVM."
+    },
+    {
+        "id": "kotlinx-coroutines",
+        "name": "KotlinX Coroutines",
+        "group": "org.jetbrains.kotlinx",
+        "artifact": "kotlinx-coroutines-core",
+        "category": "Concurrency & Asynchrony",
+        "patterns": ["kotlinx.coroutines.", "kotlinx/coroutines/"],
+        "description": "Library support for Kotlin coroutines."
+    },
+    {
+        "id": "androidx-core",
+        "name": "AndroidX Core & AppCompat",
+        "group": "androidx.core",
+        "artifact": "core",
+        "category": "Platform Jetpack",
+        "patterns": ["androidx.core.", "androidx.appcompat."],
+        "description": "AndroidX Jetpack compatibility suite."
+    },
+    {
+        "id": "androidx-room",
+        "name": "AndroidX Room Persistence",
+        "group": "androidx.room",
+        "artifact": "room-runtime",
+        "category": "Data & Persistence",
+        "patterns": ["androidx.room.", "androidx/room/"],
+        "description": "AndroidX Room SQLite object mapping library."
+    },
+    {
+        "id": "fastjson",
+        "name": "Alibaba Fastjson",
+        "group": "com.alibaba",
+        "artifact": "fastjson",
+        "category": "Serialization & JSON",
+        "patterns": ["com.alibaba.fastjson.", "com/alibaba/fastjson/"],
+        "description": "Fast JSON parser and generator for Java.",
+        "known_vulnerabilities": ["CVE-2022-25845 (Deserialization RCE vulnerability in Fastjson < 1.2.83)"]
+    },
+    {
+        "id": "jackson",
+        "name": "FasterXML Jackson",
+        "group": "com.fasterxml.jackson.core",
+        "artifact": "jackson-databind",
+        "category": "Serialization & JSON",
+        "patterns": ["com.fasterxml.jackson.", "com/fasterxml/jackson/"],
+        "description": "Multi-format data-binding library for Java."
+    },
+    {
+        "id": "apache-commons-collections",
+        "name": "Apache Commons Collections",
+        "group": "org.apache.commons",
+        "artifact": "commons-collections4",
+        "category": "Utility Framework",
+        "patterns": ["org.apache.commons.collections", "org/apache/commons/collections"],
+        "description": "Apache Commons Collections data structures.",
+        "known_vulnerabilities": ["CVE-2015-7501 (InvokerTransformer Deserialization RCE in versions < 3.2.2)"]
+    }
+]
+
+# Capture The Flag (CTF) and Secret Extraction Patterns
+CTF_PATTERNS = [
+    (re.compile(r'(?<![a-zA-Z])flag\{[^\}\s]{4,100}\}', re.I), "Standard CTF Flag (flag{...})"),
+    (re.compile(r'(?<![a-zA-Z])ctf\{[^\}\s]{4,100}\}', re.I), "CTF Flag (ctf{...})"),
+    (re.compile(r'(?<![a-zA-Z])picoCTF\{[^\}\s]{4,100}\}', re.I), "PicoCTF Flag"),
+    (re.compile(r'(?<![a-zA-Z])HTB\{[^\}\s]{4,100}\}', re.I), "HackTheBox Flag (HTB{...})"),
+    (re.compile(r'(?<![a-zA-Z])THM\{[^\}\s]{4,100}\}', re.I), "TryHackMe Flag (THM{...})"),
+    (re.compile(r'(?<![a-zA-Z])SEC\{[^\}\s]{4,100}\}', re.I), "Security Flag (SEC{...})"),
+]
+
+SECRET_PATTERNS = [
+    (re.compile(r'\bAIza[0-9A-Za-z\-_]{30,40}\b'), "Google Cloud / Maps API Key", "high"),
+    (re.compile(r'\bAKIA[0-9A-Z]{16}\b'), "AWS Access Key ID", "critical"),
+    (re.compile(r'gh[pousr]_[0-9A-Za-z]{36,255}'), "GitHub Personal Access Token", "critical"),
+    (re.compile(r'xox[baprs]-[0-9a-zA-Z]{10,48}'), "Slack Bot / User Token", "critical"),
+    (re.compile(r'https://hooks\.slack\.com/services/T[0-9A-Z]{8}/B[0-9A-Z]{8}/[0-9a-zA-Z]{24}'), "Slack Incoming Webhook", "high"),
+    (re.compile(r'https://discord(?:app)?\.com/api/webhooks/[0-9]{17,20}/[a-zA-Z0-9_\-]{50,75}'), "Discord Webhook URL", "high"),
+    (re.compile(r'\b[0-9]{8,10}:[a-zA-Z0-9_-]{35}\b'), "Telegram Bot API Token", "critical"),
+    (re.compile(r'\b(?:sk|pk)_(?:live|test)_[0-9a-zA-Z]{24,34}\b'), "Stripe API Key", "critical"),
+    (re.compile(r'\bAC[a-f0-9]{32}\b'), "Twilio Account SID", "high"),
+    (re.compile(r'\bSG\.[0-9A-Za-z\-_]{22}\.[0-9A-Za-z\-_]{43}\b'), "SendGrid API Key", "critical"),
+    (re.compile(r'-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'), "Cryptographic Private Key", "critical"),
+    (re.compile(r'\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b'), "JSON Web Token (JWT)", "medium"),
+]
+
+def generate_cyclonedx_android_sbom(data: Dict[str, Any], detected_sdks: List[Dict[str, Any]], file_hash_sha256: str) -> Dict[str, Any]:
+    """Generates a standard CycloneDX v1.4 JSON Software Bill of Materials (SBOM) for an Android package."""
+    import uuid
+    pkg_name = data.get("package_name") or "unknown-android-package"
+    ver_name = data.get("version_name") or "1.0"
+
+    bom = {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.4",
+        "serialNumber": f"urn:uuid:{uuid.uuid4()}",
+        "version": 1,
+        "metadata": {
+            "timestamp": "2026-10-16T12:00:00Z",
+            "tools": [
+                {
+                    "vendor": "FileSanitizer",
+                    "name": "ApkAnalyzer",
+                    "version": "2.0"
+                }
+            ],
+            "component": {
+                "bom-ref": f"pkg:apk/{pkg_name}@{ver_name}",
+                "type": "application",
+                "name": pkg_name,
+                "version": ver_name,
+                "hashes": [
+                    {
+                        "alg": "SHA-256",
+                        "content": file_hash_sha256
+                    }
+                ],
+                "description": f"Android Application Package ({data.get('app_name') or pkg_name})"
+            }
+        },
+        "components": []
+    }
+
+    for sdk in detected_sdks:
+        purl = f"pkg:maven/{sdk['group']}/{sdk['artifact']}@{sdk.get('version', 'unknown')}"
+        comp = {
+            "bom-ref": purl,
+            "type": "library",
+            "group": sdk["group"],
+            "name": sdk["name"],
+            "version": sdk.get("version", "detected"),
+            "description": sdk.get("description", ""),
+            "purl": purl,
+            "properties": [
+                {"name": "category", "value": sdk.get("category", "General SDK")},
+                {"name": "detection_method", "value": "Static Dalvik Namespace & Asset Inspection"}
+            ]
+        }
+        if sdk.get("known_vulnerabilities"):
+            comp["vulnerabilities"] = [
+                {"id": v.split()[0], "description": v} for v in sdk["known_vulnerabilities"]
+            ]
+        bom["components"].append(comp)
+
+    return bom
 
 
 class AxmlDecoder:
@@ -888,6 +1336,7 @@ class AxmlDecoder:
         self.services: List[Dict[str, Any]] = []
         self.receivers: List[Dict[str, Any]] = []
         self.providers: List[Dict[str, Any]] = []
+        self.deep_links: List[Dict[str, Any]] = []
         self.application_attributes: Dict[str, Any] = {}
         self.is_valid_axml: bool = False
 
@@ -971,6 +1420,23 @@ class AxmlDecoder:
             self.receivers.append({"name": rcv, "exported": 'android:exported="true"' in txt})
         for prv in re.findall(r'<provider[^>]*android:name\s*=\s*["\']([^"\']+)["\']', txt):
             self.providers.append({"name": prv, "exported": 'android:exported="true"' in txt})
+
+        # Deep Links / Custom Schemes in plaintext XML fallback
+        for act_block in re.finditer(r'<activity[^>]*android:name\s*=\s*["\']([^"\']+)["\'][^>]*>(.*?)</activity>', txt, re.DOTALL):
+            act_name = act_block.group(1)
+            act_content = act_block.group(2)
+            is_exp = 'android:exported="true"' in act_block.group(0)
+            for d_scheme in re.findall(r'<data[^>]*android:scheme\s*=\s*["\']([^"\']+)["\']', act_content):
+                host_m = re.search(r'android:host\s*=\s*["\']([^"\']+)["\']', act_content)
+                path_m = re.search(r'android:path\s*=\s*["\']([^"\']+)["\']', act_content)
+                self.deep_links.append({
+                    "activity": act_name,
+                    "scheme": d_scheme,
+                    "host": host_m.group(1) if host_m else "",
+                    "path": path_m.group(1) if path_m else "",
+                    "is_custom_scheme": d_scheme.lower() not in ("http", "https"),
+                    "exported": is_exp
+                })
 
     def _parse_string_pool(self, offset: int, chunk_size: int):
         try:
@@ -1095,6 +1561,61 @@ class DexParser:
         self.urls: Set[str] = set()
         self.ips: Set[str] = set()
         self.detected_apis: List[Dict[str, Any]] = []
+
+    def get_header_info(self) -> Dict[str, Any]:
+        """Extracts complete Dalvik Executable (.dex) header metadata and structural statistics."""
+        if len(self.data) < 0x70 or not self.data.startswith(b"dex\n"):
+            return {
+                "is_valid": False,
+                "version": "",
+                "file_size": len(self.data),
+                "header_size": 0,
+                "checksum": "",
+                "signature": "",
+                "string_ids_size": 0,
+                "type_ids_size": 0,
+                "proto_ids_size": 0,
+                "field_ids_size": 0,
+                "method_ids_size": 0,
+                "class_defs_size": 0,
+                "is_stub": len(self.data) <= 112
+            }
+        try:
+            version = self.data[4:7].decode("ascii", errors="ignore")
+            checksum = f"0x{struct.unpack_from('<I', self.data, 0x08)[0]:08x}"
+            signature = self.data[0x0C:0x20].hex()
+            file_size, header_size, endian_tag = struct.unpack_from("<III", self.data, 0x20)
+            string_ids_size = struct.unpack_from("<I", self.data, 0x38)[0]
+            type_ids_size = struct.unpack_from("<I", self.data, 0x40)[0]
+            proto_ids_size = struct.unpack_from("<I", self.data, 0x48)[0]
+            field_ids_size = struct.unpack_from("<I", self.data, 0x50)[0]
+            method_ids_size = struct.unpack_from("<I", self.data, 0x58)[0]
+            class_defs_size = struct.unpack_from("<I", self.data, 0x60)[0]
+
+            is_stub = (len(self.data) <= 112) or (class_defs_size == 0)
+
+            return {
+                "is_valid": True,
+                "version": version,
+                "file_size": file_size,
+                "header_size": header_size,
+                "checksum": checksum,
+                "signature": signature,
+                "string_ids_size": string_ids_size,
+                "type_ids_size": type_ids_size,
+                "proto_ids_size": proto_ids_size,
+                "field_ids_size": field_ids_size,
+                "method_ids_size": method_ids_size,
+                "class_defs_size": class_defs_size,
+                "is_stub": is_stub
+            }
+        except Exception:
+            return {
+                "is_valid": False,
+                "version": "",
+                "file_size": len(self.data),
+                "is_stub": len(self.data) <= 112
+            }
 
     def parse(self, max_strings: int = 10000) -> bool:
         if len(self.data) < 0x70 or not self.data.startswith(b"dex\n"):
@@ -1507,7 +2028,15 @@ class ApkAnalyzer(BaseAnalyzer):
                 for ifilter in act.findall("intent-filter"):
                     actions = [a.get(f"{ns}name") for a in ifilter.findall("action") if a.get(f"{ns}name")]
                     cats = [c.get(f"{ns}name") for c in ifilter.findall("category") if c.get(f"{ns}name")]
-                    filters.append({"actions": actions, "categories": cats})
+                    data_tags = []
+                    for dtag in ifilter.findall("data"):
+                        d_scheme = dtag.get(f"{ns}scheme") or ""
+                        d_host = dtag.get(f"{ns}host") or ""
+                        d_path = dtag.get(f"{ns}path") or dtag.get(f"{ns}pathPrefix") or dtag.get(f"{ns}pathPattern") or ""
+                        d_mime = dtag.get(f"{ns}mimeType") or ""
+                        if d_scheme or d_host or d_path or d_mime:
+                            data_tags.append({"scheme": d_scheme, "host": d_host, "path": d_path, "mime": d_mime})
+                    filters.append({"actions": actions, "categories": cats, "data": data_tags})
                 is_exp = (act_exp.lower() == "true") if act_exp is not None else (len(filters) > 0)
                 is_main = any("android.intent.action.MAIN" in f.get("actions", []) for f in filters)
                 is_launcher = any("android.intent.category.LAUNCHER" in f.get("categories", []) for f in filters)
@@ -1522,6 +2051,22 @@ class ApkAnalyzer(BaseAnalyzer):
                 })
         if parsed_activities:
             data["components"]["activities"] = parsed_activities
+            deep_links = []
+            for act in parsed_activities:
+                for ifilter in act.get("intent_filters", []):
+                    for d in ifilter.get("data", []):
+                        sch = d.get("scheme", "")
+                        if sch:
+                            deep_links.append({
+                                "activity": act.get("name", ""),
+                                "scheme": sch,
+                                "host": d.get("host", ""),
+                                "path": d.get("path", ""),
+                                "is_custom_scheme": sch.lower() not in ("http", "https"),
+                                "exported": act.get("exported", False)
+                            })
+            if deep_links:
+                data["deep_links"] = deep_links
 
         # Services
         parsed_services = []
@@ -1748,6 +2293,35 @@ class ApkAnalyzer(BaseAnalyzer):
                 "ips": []
             },
             "mitre_mobile_techniques": [],
+            "archive_security": {
+                "zip_slip": {"detected": False, "paths": []},
+                "decompression_ratio": 1.0,
+                "zip_bomb_risk": False,
+                "total_uncompressed_bytes": 0,
+                "total_compressed_bytes": 0,
+                "duplicate_entries": {"detected": False, "entries": []},
+                "extension_mismatches": [],
+                "polyglot_and_trailing": {
+                    "has_trailing_data": False,
+                    "trailing_bytes_count": 0,
+                    "has_prepended_header": False,
+                    "prepended_type": "",
+                    "details": ""
+                },
+                "nested_archives": [],
+                "multi_dex_inventory": [],
+                "verdict": "CLEAN"
+            },
+            "dependencies": [],
+            "cyclonedx_sbom": {},
+            "secrets_and_ctf": {
+                "detected": False,
+                "ctf_flags": [],
+                "secrets": [],
+                "total_count": 0
+            },
+            "deep_links": [],
+            "sensitive_permission_combos": [],
             "risk_score": 0,
             "risk_level": "CLEAN"
         }
@@ -1823,6 +2397,9 @@ class ApkAnalyzer(BaseAnalyzer):
                 # Open resilient ZIP handle
                 zf = zipfile.ZipFile(file_path, "r")
 
+                # 2a. Comprehensive Structural Archive Security Audit (Checklist Sec 1)
+                self._inspect_archive_security(file_path, zf, andro_apk, data, findings)
+
                 def get_apk_bytes(name: str) -> Optional[bytes]:
                     if andro_apk is not None:
                         try:
@@ -1874,6 +2451,8 @@ class ApkAnalyzer(BaseAnalyzer):
                                     data["components"]["receivers"] = axml.receivers
                                 if not data["components"]["providers"]:
                                     data["components"]["providers"] = axml.providers
+                                if not data["deep_links"] and getattr(axml, "deep_links", None):
+                                    data["deep_links"] = axml.deep_links
                                 for k, v in axml.application_attributes.items():
                                     data["security_flags"][k] = v
                                     if k == "allowBackup":
@@ -1934,6 +2513,9 @@ class ApkAnalyzer(BaseAnalyzer):
                             details={"permission": clean_p, "mitre": spec.get("mitre")}
                         ))
                 data["dangerous_permissions"] = danger_perms_list
+
+                # Evaluate Sensitive Permission Combinations (Checklist Sec 2 & 3)
+                self._evaluate_sensitive_permission_combos(data, findings)
 
                 # Update component counts
                 acts = data["components"]["activities"]
@@ -2314,11 +2896,20 @@ class ApkAnalyzer(BaseAnalyzer):
                 # 7g. Live Google Play Authenticity & Multi-Feed CTI Probing
                 self._perform_online_reputation_probes(sha256_hex, data, findings)
 
+                # 7h. Android SDK Inventory & CycloneDX v1.4 SBOM (Checklist Sec 8 & 11)
+                self._detect_sdks_and_generate_sbom(all_strings_collected, all_dex_classes, namelist, sha256_hex, data, findings)
+
+                # 7i. Capture The Flag (CTF) Flags & Hardcoded Cloud Credentials Audit (Checklist Sec 9 & 12)
+                self._scan_secrets_and_ctf(all_strings_collected, namelist, zf, data, findings)
+
                 # 8. Synthesize MITRE ATT&CK for Mobile Techniques
                 mitre_map = {}
                 for dp in data["dangerous_permissions"]:
                     if dp.get("mitre"):
                         mitre_map[dp["mitre"]] = dp["mitre_name"]
+                for sc in data.get("sensitive_permission_combos", []):
+                    if sc.get("mitre"):
+                        mitre_map[sc["mitre"]] = sc["mitre_name"]
                 for api in data["dex_info"]["detected_apis"]:
                     if api.get("mitre"):
                         mitre_map[api["mitre"]] = api["mitre_name"]
@@ -2418,6 +3009,35 @@ class ApkAnalyzer(BaseAnalyzer):
             },
             "iocs": {"urls": [], "ips": []},
             "mitre_mobile_techniques": [],
+            "archive_security": {
+                "zip_slip": {"detected": False, "paths": []},
+                "decompression_ratio": 1.0,
+                "zip_bomb_risk": False,
+                "total_uncompressed_bytes": Path(file_path).stat().st_size,
+                "total_compressed_bytes": Path(file_path).stat().st_size,
+                "duplicate_entries": {"detected": False, "entries": []},
+                "extension_mismatches": [],
+                "polyglot_and_trailing": {
+                    "has_trailing_data": False,
+                    "trailing_bytes_count": 0,
+                    "has_prepended_header": False,
+                    "prepended_type": "",
+                    "details": ""
+                },
+                "nested_archives": [],
+                "multi_dex_inventory": [],
+                "verdict": "CLEAN"
+            },
+            "dependencies": [],
+            "cyclonedx_sbom": {},
+            "secrets_and_ctf": {
+                "detected": False,
+                "ctf_flags": [],
+                "secrets": [],
+                "total_count": 0
+            },
+            "deep_links": [],
+            "sensitive_permission_combos": [],
             "risk_score": 0,
             "risk_level": "LOW"
         }
@@ -2428,6 +3048,19 @@ class ApkAnalyzer(BaseAnalyzer):
 
             dp = DexParser(dex_bytes)
             if dp.parse():
+                hdr = dp.get_header_info()
+                data["archive_security"]["multi_dex_inventory"].append({
+                    "name": filename,
+                    "size": Path(file_path).stat().st_size,
+                    "dex_version": hdr.get("version", "035"),
+                    "checksum": hdr.get("checksum", ""),
+                    "signature": hdr.get("signature", ""),
+                    "classes_count": hdr.get("class_defs_size", len(dp.classes)),
+                    "strings_count": hdr.get("string_ids_size", len(dp.strings)),
+                    "methods_count": hdr.get("method_ids_size", 0),
+                    "is_stub": hdr.get("is_stub", False)
+                })
+
                 data["dex_info"]["total_strings_count"] = len(dp.strings)
                 data["dex_info"]["classes_count"] = len(dp.classes)
                 data["dex_info"]["detected_apis"] = dp.detected_apis
@@ -2448,6 +3081,8 @@ class ApkAnalyzer(BaseAnalyzer):
                 data["classes"] = classes_list
 
                 self._categorize_all_strings(set(dp.strings), data)
+                self._detect_sdks_and_generate_sbom(set(dp.strings), dp.classes, [], sha256, data, findings)
+                self._scan_secrets_and_ctf(set(dp.strings), [], None, data, findings)
 
                 for api in dp.detected_apis:
                     findings.append(Finding(
@@ -2727,6 +3362,70 @@ class ApkAnalyzer(BaseAnalyzer):
             "title": f"Code Protector Detection ({packer_name if is_packed else 'Standard Packaging'})",
             "description": f"Packer signature detected: {packer_name}" if is_packed else "No commercial packers detected in application root/assets.",
             "recommendation": "Evaluate native unpacker impact on performance and audit dynamic load operations."
+        })
+
+        # 15. Archive Structural Integrity & Evasion (Checklist Sec 1)
+        arch_sec = data.get("archive_security", {})
+        arch_vuln = arch_sec.get("verdict") == "VULNERABLE"
+        arch_susp = arch_sec.get("verdict") == "SUSPICIOUS"
+        audit.append({
+            "check": "Archive Structural Integrity",
+            "status": "FAIL" if arch_vuln else ("WARN" if arch_susp else "PASS"),
+            "severity": "critical" if arch_vuln else ("high" if arch_susp else "info"),
+            "title": f"APK Archive Structure ({arch_sec.get('verdict', 'CLEAN')})",
+            "description": "Critical structural anomalies detected (Zip Slip, Zip Bomb, concealed executables, or polyglot headers)." if arch_vuln else ("Suspicious archive structures (trailing data, duplicate entries, or nested archives)." if arch_susp else "ZIP container structure and entry metadata comply with standard Android packaging conventions."),
+            "recommendation": "Inspect and sanitize archive entry paths and remove polyglots or hidden executables."
+        })
+
+        # 16. Sensitive Permission Combinations (Checklist Sec 2 & 3)
+        combos = data.get("sensitive_permission_combos", [])
+        has_combos = len(combos) > 0
+        audit.append({
+            "check": "Sensitive Permission Combinations",
+            "status": "FAIL" if any(c["severity"] == "critical" for c in combos) else ("WARN" if has_combos else "PASS"),
+            "severity": "critical" if any(c["severity"] == "critical" for c in combos) else ("high" if has_combos else "info"),
+            "title": f"Permission Synergy Analysis ({len(combos)} Dangerous Combos Detected)" if has_combos else "Permission Synergy Compliant",
+            "description": f"Detected malicious permission synergies: {', '.join(c['title'] for c in combos[:2])}." if has_combos else "No hazardous permission pairings (e.g. autostart+SMS, overlay+accessibility, mic+camera) detected.",
+            "recommendation": "Decouple dangerous permission pairings and adhere to the principle of least privilege."
+        })
+
+        # 17. Deep Links & Custom Schemes (Checklist Sec 2 & 3)
+        deep_links = data.get("deep_links", [])
+        exported_custom = [dl for dl in deep_links if dl.get("is_custom_scheme") and dl.get("exported")]
+        sample_schemes = ', '.join(f"{d.get('scheme')}://" for d in exported_custom[:3])
+        audit.append({
+            "check": "Deep Link IPC Attack Surface",
+            "status": "WARN" if exported_custom else "PASS",
+            "severity": "medium" if exported_custom else "info",
+            "title": f"Deep Link Custom Schemes ({len(exported_custom)} Exported Custom Schemes)" if exported_custom else "Deep Links Secure",
+            "description": f"Exported activities handle custom URL schemes ({sample_schemes}), exposed to app link spoofing and untrusted parameter injection." if exported_custom else "Deep links enforce standard HTTPS app links or non-exported handlers.",
+            "recommendation": "Enforce Android App Links with SHA-256 assetlinks.json verification or require permission checks."
+        })
+
+        # 18. Hardcoded Secrets & CTF Flags (Checklist Sec 9 & 12)
+        sec_info = data.get("secrets_and_ctf", {})
+        sec_count = len(sec_info.get("secrets", []))
+        flags_count = len(sec_info.get("ctf_flags", []))
+        has_secrets = sec_count > 0 or flags_count > 0
+        audit.append({
+            "check": "Embedded Secrets & CTF Artifacts",
+            "status": "FAIL" if sec_count > 0 else ("WARN" if flags_count > 0 else "PASS"),
+            "severity": "critical" if sec_count > 0 else ("high" if flags_count > 0 else "info"),
+            "title": f"Hardcoded Secrets ({sec_count} Secrets, {flags_count} CTF Flags)" if has_secrets else "No Static Credentials Discovered",
+            "description": f"Found embedded sensitive API keys, cloud tokens, or CTF flags in Dalvik bytecode string pool or assets." if has_secrets else "No hardcoded AWS, Google Cloud, private keys, or tokens identified in bytecode strings.",
+            "recommendation": "Store sensitive API secrets securely in Android Keystore or fetch dynamically via authenticated backend."
+        })
+
+        # 19. Supply Chain & Vulnerable Dependencies (Checklist Sec 8 & 11)
+        deps = data.get("dependencies", [])
+        vuln_deps = [d for d in deps if d.get("known_vulnerabilities")]
+        audit.append({
+            "check": "Supply Chain & Dependency Security",
+            "status": "FAIL" if vuln_deps else "PASS",
+            "severity": "critical" if vuln_deps else "info",
+            "title": f"Third-Party SDK Vulnerabilities ({len(vuln_deps)} Vulnerable SDKs Detected)" if vuln_deps else f"Third-Party SDKs ({len(deps)} Identified, All Clean)",
+            "description": f"Identified bundled libraries with known CVE advisories: {', '.join(d['name'] for d in vuln_deps)}." if vuln_deps else f"Detected {len(deps)} third-party Android libraries/frameworks with no active known CVE advisories.",
+            "recommendation": "Update outdated third-party SDKs to secure patched versions."
         })
 
         data["security_audit"] = audit
@@ -3226,3 +3925,427 @@ class ApkAnalyzer(BaseAnalyzer):
                 ))
         except Exception as e:
             logger.debug(f"Hash CTI probe error: {e}")
+
+    def _inspect_archive_security(self, file_path: Path, zf: zipfile.ZipFile, andro_apk: Any, data: Dict[str, Any], findings: List[Finding]):
+        """
+        Inspects structural archive security, Zip Slip, duplicate entries, compression ratio,
+        concealed executables, polyglot & trailing data, and multi-DEX headers.
+        """
+        arch_sec = {
+            "zip_slip": {"detected": False, "paths": []},
+            "decompression_ratio": 1.0,
+            "zip_bomb_risk": False,
+            "total_uncompressed_bytes": 0,
+            "total_compressed_bytes": 0,
+            "duplicate_entries": {"detected": False, "entries": []},
+            "extension_mismatches": [],
+            "polyglot_and_trailing": {
+                "has_trailing_data": False,
+                "trailing_bytes_count": 0,
+                "has_prepended_header": False,
+                "prepended_type": "",
+                "details": ""
+            },
+            "nested_archives": [],
+            "multi_dex_inventory": [],
+            "verdict": "CLEAN"
+        }
+
+        # 1. Zip Slip / Path Traversal
+        slip_paths = []
+        for item in zf.infolist():
+            fn = item.filename
+            if fn.startswith("/") or fn.startswith("\\") or "../" in fn or "..\\" in fn:
+                slip_paths.append(fn)
+        if slip_paths:
+            arch_sec["zip_slip"]["detected"] = True
+            arch_sec["zip_slip"]["paths"] = slip_paths[:20]
+            findings.append(Finding(
+                category="structure",
+                severity="critical",
+                title="Zip Slip / Path Traversal Vulnerability Detected",
+                description=f"APK archive contains {len(slip_paths)} entry path(s) with directory traversal sequences ('../' or absolute paths), enabling arbitrary filesystem overwrites during package extraction.",
+                details={"paths": slip_paths[:10]}
+            ))
+
+        # 2. Decompression Ratio & Zip Bomb Risk
+        total_uncompressed = sum(item.file_size for item in zf.infolist())
+        total_compressed = sum(item.compress_size for item in zf.infolist())
+        arch_sec["total_uncompressed_bytes"] = total_uncompressed
+        arch_sec["total_compressed_bytes"] = total_compressed
+        if total_compressed > 0:
+            ratio = total_uncompressed / total_compressed
+            arch_sec["decompression_ratio"] = round(ratio, 2)
+            if ratio > 50 and total_uncompressed > 20 * 1024 * 1024:
+                arch_sec["zip_bomb_risk"] = True
+                findings.append(Finding(
+                    category="structure",
+                    severity="critical",
+                    title="Zip Bomb / High Decompression Ratio Detected",
+                    description=f"APK exhibits an abnormal compression ratio of {ratio:.1f}:1 ({total_uncompressed / (1024*1024):.1f} MB uncompressed vs {total_compressed / (1024*1024):.1f} MB compressed), risking Denial of Service / resource exhaustion.",
+                    details={"ratio": round(ratio, 2), "uncompressed": total_uncompressed, "compressed": total_compressed}
+                ))
+
+        # 3. Duplicate Central Directory Entries
+        raw_names = zf.namelist()
+        name_counts = Counter(raw_names)
+        dups = [name for name, count in name_counts.items() if count > 1]
+        if dups:
+            arch_sec["duplicate_entries"]["detected"] = True
+            arch_sec["duplicate_entries"]["entries"] = dups[:20]
+            findings.append(Finding(
+                category="structure",
+                severity="medium",
+                title="Duplicate ZIP Archive Entries Detected",
+                description=f"Archive contains {len(dups)} duplicate entry name(s) ({', '.join(dups[:3])}). Ambiguities in central directory parsing can be exploited to bypass security scanners or deliver alternate payloads to different Android runtime loaders.",
+                details={"duplicates": dups[:10]}
+            ))
+
+        # 4. Extension & Magic Byte Mismatches (Concealed Executables)
+        mismatches = []
+        for item in zf.infolist()[:120]:
+            if item.is_dir() or item.file_size < 4:
+                continue
+            fn = item.filename
+            fn_lower = fn.lower()
+            ext = Path(fn_lower).suffix
+            if ext in [".png", ".jpg", ".jpeg", ".gif", ".webp", ".mp3", ".wav", ".txt", ".json", ".xml", ".dat", ".bin", ".pdf", ".svg", ".properties"]:
+                try:
+                    head = zf.read(fn)[:64]
+                    if head.startswith(b"\x7fELF"):
+                        mismatches.append({
+                            "filename": fn,
+                            "declared_ext": ext,
+                            "actual_type": "ELF Shared Library / Executable (.so)",
+                            "magic_hex": head[:8].hex(),
+                            "reason": "Embedded native ELF executable disguised with benign non-executable extension."
+                        })
+                    elif head.startswith(b"dex\n"):
+                        mismatches.append({
+                            "filename": fn,
+                            "declared_ext": ext,
+                            "actual_type": "Dalvik Executable (.dex)",
+                            "magic_hex": head[:8].hex(),
+                            "reason": "Dalvik bytecode executable disguised with benign non-executable extension."
+                        })
+                    elif head.startswith(b"PK\x03\x04") and not fn.startswith("META-INF/"):
+                        mismatches.append({
+                            "filename": fn,
+                            "declared_ext": ext,
+                            "actual_type": "ZIP / APK / JAR Archive",
+                            "magic_hex": head[:8].hex(),
+                            "reason": "ZIP archive disguised with non-archive extension."
+                        })
+                    elif head.startswith(b"#!") or (b"/bin/sh" in head or b"/bin/bash" in head):
+                        mismatches.append({
+                            "filename": fn,
+                            "declared_ext": ext,
+                            "actual_type": "Unix Shell Script",
+                            "magic_hex": head[:8].hex(),
+                            "reason": "Executable shell script disguised with non-script extension."
+                        })
+                    elif head.startswith(b"MZ"):
+                        mismatches.append({
+                            "filename": fn,
+                            "declared_ext": ext,
+                            "actual_type": "Windows PE Executable (.exe/.dll)",
+                            "magic_hex": head[:8].hex(),
+                            "reason": "Windows PE binary disguised inside mobile package."
+                        })
+                    elif head.startswith(b"\xca\xfe\xba\xbe"):
+                        mismatches.append({
+                            "filename": fn,
+                            "declared_ext": ext,
+                            "actual_type": "Java Compiled Bytecode (.class)",
+                            "magic_hex": head[:8].hex(),
+                            "reason": "Compiled Java class file disguised with non-Java extension."
+                        })
+                except Exception:
+                    pass
+
+        arch_sec["extension_mismatches"] = mismatches
+        for m in mismatches:
+            findings.append(Finding(
+                category="evasion",
+                severity="critical",
+                title=f"Concealed Executable / Extension Mismatch: {Path(m['filename']).name}",
+                description=f"Entry '{m['filename']}' declares extension '{m['declared_ext']}', but actual header magic confirms it is a {m['actual_type']}. Hallmark stealth dropper technique.",
+                details=m
+            ))
+
+        # 5. Polyglot and Trailing Data Inspection
+        try:
+            file_size = Path(file_path).stat().st_size
+            with open(file_path, "rb") as f:
+                head = f.read(64)
+                if head.startswith(b"dex\n"):
+                    arch_sec["polyglot_and_trailing"]["has_prepended_header"] = True
+                    arch_sec["polyglot_and_trailing"]["prepended_type"] = "Dalvik DEX (Janus CVE-2017-13156)"
+                    arch_sec["polyglot_and_trailing"]["details"] = "File begins with Dalvik DEX header magic (dex\\n) before ZIP structures. Classic Janus Polyglot APK attack (CVE-2017-13156)."
+                    findings.append(Finding(
+                        category="evasion",
+                        severity="critical",
+                        title="Janus Polyglot APK Detected (DEX Header Prepended / CVE-2017-13156)",
+                        description="APK begins with Dalvik DEX magic (dex\\n) followed by ZIP local headers. This polyglot construct exploits Android ART/Dalvik and PackageManager parser discrepancies to execute modified bytecode without invalidating v1 signatures.",
+                        details={"prepended_magic": head[:8].hex()}
+                    ))
+                elif head.startswith(b"\x7fELF"):
+                    arch_sec["polyglot_and_trailing"]["has_prepended_header"] = True
+                    arch_sec["polyglot_and_trailing"]["prepended_type"] = "ELF Executable"
+                    arch_sec["polyglot_and_trailing"]["details"] = "File begins with ELF executable header magic before ZIP structures."
+                    findings.append(Finding(
+                        category="evasion",
+                        severity="critical",
+                        title="ELF Polyglot APK Detected (Prepended Native Binary)",
+                        description="APK begins with ELF header magic (\\x7fELF) prepended to ZIP container.",
+                        details={"prepended_magic": head[:8].hex()}
+                    ))
+
+                # Check trailing data past EOCD
+                search_len = min(file_size, 65536)
+                f.seek(file_size - search_len)
+                tail = f.read(search_len)
+                eocd_idx = tail.rfind(b"PK\x05\x06")
+                if eocd_idx != -1:
+                    eocd_pos = (file_size - search_len) + eocd_idx
+                    if eocd_pos + 22 <= file_size:
+                        comment_len = struct.unpack_from("<H", tail, eocd_idx + 20)[0]
+                        expected_end = eocd_pos + 22 + comment_len
+                        if file_size > expected_end + 32:
+                            trailing_bytes = file_size - expected_end
+                            arch_sec["polyglot_and_trailing"]["has_trailing_data"] = True
+                            arch_sec["polyglot_and_trailing"]["trailing_bytes_count"] = trailing_bytes
+                            arch_sec["polyglot_and_trailing"]["details"] = f"Archive contains {trailing_bytes} extraneous byte(s) appended after ZIP End of Central Directory."
+                            findings.append(Finding(
+                                category="evasion",
+                                severity="high",
+                                title="Extraneous Trailing Data Appended Past ZIP EOCD",
+                                description=f"APK contains {trailing_bytes} byte(s) of trailing data appended past the ZIP End of Central Directory. Droppers leverage trailing bytes to store encrypted secondary payloads or C2 configs without corrupting ZIP extraction.",
+                                details={"trailing_bytes": trailing_bytes, "expected_end": expected_end, "actual_size": file_size}
+                            ))
+        except Exception as e:
+            logger.debug(f"Polyglot/trailing check error: {e}")
+
+        # 6. Nested Archives
+        for item in zf.infolist():
+            fn = item.filename
+            fn_lower = fn.lower()
+            if any(fn_lower.endswith(ext) for ext in [".apk", ".jar", ".zip", ".aar", ".war"]):
+                if not fn.startswith("META-INF/"):
+                    arch_sec["nested_archives"].append({
+                        "filename": fn,
+                        "size": item.file_size,
+                        "type": Path(fn_lower).suffix[1:].upper()
+                    })
+
+        # 7. Multi-DEX Structural Inventory
+        dex_items = [i for i in zf.infolist() if i.filename.lower().endswith(".dex")]
+        for d_item in dex_items:
+            try:
+                raw_dex = zf.read(d_item.filename)
+                dp = DexParser(raw_dex)
+                hdr = dp.get_header_info()
+                arch_sec["multi_dex_inventory"].append({
+                    "name": d_item.filename,
+                    "size": d_item.file_size,
+                    "dex_version": hdr.get("version", "035"),
+                    "checksum": hdr.get("checksum", ""),
+                    "signature": hdr.get("signature", ""),
+                    "classes_count": hdr.get("class_defs_size", 0),
+                    "strings_count": hdr.get("string_ids_size", 0),
+                    "methods_count": hdr.get("method_ids_size", 0),
+                    "is_stub": hdr.get("is_stub", False)
+                })
+            except Exception:
+                arch_sec["multi_dex_inventory"].append({
+                    "name": d_item.filename,
+                    "size": d_item.file_size,
+                    "dex_version": "unknown",
+                    "checksum": "",
+                    "signature": "",
+                    "classes_count": 0,
+                    "strings_count": 0,
+                    "methods_count": 0,
+                    "is_stub": d_item.file_size <= 112
+                })
+
+        # Overall Archive Security Verdict
+        if arch_sec["zip_slip"]["detected"] or arch_sec["zip_bomb_risk"] or len(arch_sec["extension_mismatches"]) > 0 or arch_sec["polyglot_and_trailing"]["has_prepended_header"]:
+            arch_sec["verdict"] = "VULNERABLE"
+        elif arch_sec["duplicate_entries"]["detected"] or arch_sec["polyglot_and_trailing"]["has_trailing_data"] or len(arch_sec["nested_archives"]) > 0:
+            arch_sec["verdict"] = "SUSPICIOUS"
+        else:
+            arch_sec["verdict"] = "CLEAN"
+
+        data["archive_security"] = arch_sec
+
+    def _evaluate_sensitive_permission_combos(self, data: Dict[str, Any], findings: List[Finding]):
+        """Evaluates sensitive combinations of permissions frequently leveraged by malware."""
+        perms = set(data.get("permissions", []))
+        triggered = []
+
+        for combo in SENSITIVE_PERMISSION_COMBOS:
+            req = combo["required"]
+            if all(r in perms for r in req):
+                any_of = combo.get("any_of")
+                if not any_of or any(a in perms for a in any_of):
+                    matched_perms = [p for p in perms if p in req or (any_of and p in any_of)]
+                    combo_entry = {
+                        "id": combo["id"],
+                        "title": combo["title"],
+                        "severity": combo["severity"],
+                        "permissions": matched_perms,
+                        "description": combo["description"],
+                        "mitre": combo.get("mitre"),
+                        "mitre_name": combo.get("mitre_name")
+                    }
+                    triggered.append(combo_entry)
+                    findings.append(Finding(
+                        category="permission",
+                        severity=combo["severity"],
+                        title=f"Sensitive Permission Combination: {combo['title']}",
+                        description=f"App simultaneously requests: {', '.join(matched_perms)}. {combo['description']}",
+                        details=combo_entry
+                    ))
+
+        data["sensitive_permission_combos"] = triggered
+
+    def _detect_sdks_and_generate_sbom(self, all_strings: Set[str], all_dex_classes: List[str], namelist: List[str], sha256_hex: str, data: Dict[str, Any], findings: List[Finding]):
+        """Detects third-party Android SDKs and libraries, and generates a CycloneDX v1.4 SBOM."""
+        detected_sdks = []
+        seen_sdk_ids = set()
+
+        classes_set = set(all_dex_classes)
+        joined_classes = " \n ".join(all_dex_classes)
+        joined_names = " \n ".join(namelist)
+
+        for sdk in ANDROID_SDK_CATALOG:
+            sdk_id = sdk["id"]
+            if sdk_id in seen_sdk_ids:
+                continue
+
+            matched = False
+            for pat in sdk["patterns"]:
+                if any(pat in c for c in classes_set) or pat in joined_names or pat in joined_classes:
+                    matched = True
+                    break
+                if not matched:
+                    for s in all_strings:
+                        if pat in s:
+                            matched = True
+                            break
+                if matched:
+                    break
+
+            if matched:
+                seen_sdk_ids.add(sdk_id)
+                entry = {
+                    "id": sdk_id,
+                    "name": sdk["name"],
+                    "group": sdk["group"],
+                    "artifact": sdk["artifact"],
+                    "category": sdk["category"],
+                    "version": sdk.get("version", "detected"),
+                    "description": sdk["description"],
+                    "purl": f"pkg:maven/{sdk['group']}/{sdk['artifact']}",
+                    "known_vulnerabilities": sdk.get("known_vulnerabilities", [])
+                }
+                detected_sdks.append(entry)
+
+                if sdk.get("known_vulnerabilities"):
+                    for vuln in sdk["known_vulnerabilities"]:
+                        findings.append(Finding(
+                            category="dependency",
+                            severity="critical",
+                            title=f"Vulnerable Android Library Dependency: {sdk['name']}",
+                            description=f"Application bundles {sdk['name']} with known security advisory: {vuln}.",
+                            details={"sdk": sdk["name"], "vulnerability": vuln}
+                        ))
+
+        data["dependencies"] = detected_sdks
+        data["cyclonedx_sbom"] = generate_cyclonedx_android_sbom(data, detected_sdks, sha256_hex)
+
+    def _scan_secrets_and_ctf(self, all_strings: Set[str], namelist: List[str], zf: Optional[zipfile.ZipFile], data: Dict[str, Any], findings: List[Finding]):
+        """Scans Dalvik string pool, manifest, configuration files, and assets for CTF flags and sensitive credentials."""
+        ctf_flags = []
+        secrets = []
+        seen_flags = set()
+        seen_secrets = set()
+
+        # 1. CTF Flags in Dalvik bytecode string pool
+        for s in all_strings:
+            for pat, flag_type in CTF_PATTERNS:
+                for match in pat.findall(s):
+                    if match not in seen_flags:
+                        seen_flags.add(match)
+                        ctf_flags.append({
+                            "flag": match,
+                            "type": flag_type,
+                            "source": "Dalvik Bytecode String Pool"
+                        })
+                        findings.append(Finding(
+                            category="security_risk",
+                            severity="high",
+                            title=f"CTF Flag Captured: {match}",
+                            description=f"Discovered {flag_type} embedded directly in Dalvik bytecode string pool: '{match}'.",
+                            details={"flag": match, "type": flag_type}
+                        ))
+
+        # Check small text assets and XML configs for CTF flags if zf available
+        if zf is not None:
+            for name in namelist:
+                if name.endswith((".xml", ".json", ".txt", ".properties", ".html", ".js")) and not name.startswith("res/drawable"):
+                    try:
+                        info = zf.getinfo(name)
+                        if info.file_size < 200_000:
+                            content = zf.read(name).decode("utf-8", errors="ignore")
+                            for pat, flag_type in CTF_PATTERNS:
+                                for match in pat.findall(content):
+                                    if match not in seen_flags:
+                                        seen_flags.add(match)
+                                        ctf_flags.append({
+                                            "flag": match,
+                                            "type": flag_type,
+                                            "source": name
+                                        })
+                                        findings.append(Finding(
+                                            category="security_risk",
+                                            severity="high",
+                                            title=f"CTF Flag Captured: {match}",
+                                            description=f"Discovered {flag_type} embedded in file '{name}': '{match}'.",
+                                            details={"flag": match, "type": flag_type, "file": name}
+                                        ))
+                    except Exception:
+                        pass
+
+        # 2. Hardcoded Secrets & Cloud Credentials
+        for s in all_strings:
+            if len(s) < 10 or len(s) > 300:
+                continue
+            for pat, sec_type, sev in SECRET_PATTERNS:
+                match = pat.search(s)
+                if match:
+                    val = match.group(0)
+                    if val not in seen_secrets:
+                        seen_secrets.add(val)
+                        secrets.append({
+                            "type": sec_type,
+                            "value": val,
+                            "severity": sev,
+                            "source": "Dalvik Bytecode String Pool"
+                        })
+                        if sev in ["critical", "high"]:
+                            findings.append(Finding(
+                                category="security_risk",
+                                severity=sev,
+                                title=f"Hardcoded Secret: {sec_type}",
+                                description=f"Found hardcoded {sec_type} in Dalvik bytecode: '{val[:16]}...'",
+                                details={"type": sec_type, "value": val[:30]}
+                            ))
+
+        data["secrets_and_ctf"] = {
+            "detected": bool(ctf_flags or secrets),
+            "ctf_flags": ctf_flags,
+            "secrets": secrets,
+            "total_count": len(ctf_flags) + len(secrets)
+        }

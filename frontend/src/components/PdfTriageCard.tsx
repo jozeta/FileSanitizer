@@ -22,7 +22,11 @@ import {
   ShieldCheck,
   FileArchive,
   Cpu,
-  Mail
+  Mail,
+  EyeOff,
+  Lock,
+  Shield,
+  Link2
 } from 'lucide-react';
 import {
   PdfTriageInfo,
@@ -49,6 +53,7 @@ interface PdfTriageCardProps {
   workspaceJobs?: any[];
   onSelectJob?: (newJobId: string) => void;
   embeddedFiles?: EmbeddedFileItem[];
+  disabledChecks?: string[];
 }
 
 const getTagDescription = (tag: string): string => {
@@ -122,10 +127,28 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
   workspaceJobs,
   onSelectJob,
   embeddedFiles: propsEmbeddedFiles,
+  disabledChecks = [],
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'tokens' | 'internals' | 'javascript' | 'actions' | 'embedded' | 'anti_analysis'>('tokens');
+  const isCheckDisabled = (chk: string) => (disabledChecks || []).includes(chk);
+  const canShowTokens = !isCheckDisabled('check_didier_pdfid');
+  const [activeSubTab, setActiveSubTab] = useState<'tokens' | 'internals' | 'javascript' | 'actions' | 'concealed' | 'forensics' | 'embedded' | 'anti_analysis'>(canShowTokens ? 'tokens' : 'internals');
+
+  useEffect(() => {
+    if (activeSubTab === 'tokens' && isCheckDisabled('check_didier_pdfid')) {
+      setActiveSubTab('internals');
+    } else if (activeSubTab === 'javascript' && isCheckDisabled('check_javascript')) {
+      setActiveSubTab('internals');
+    } else if (activeSubTab === 'actions' && (isCheckDisabled('check_launch_actions') && isCheckDisabled('check_open_actions'))) {
+      setActiveSubTab('internals');
+    } else if (activeSubTab === 'embedded' && isCheckDisabled('check_embedded_files')) {
+      setActiveSubTab('internals');
+    } else if (activeSubTab === 'anti_analysis' && (isCheckDisabled('check_anti_analysis') || isCheckDisabled('anti_analysis_enabled'))) {
+      setActiveSubTab('internals');
+    }
+  }, [activeSubTab, disabledChecks]);
   const [selectedStreamIdx, setSelectedStreamIdx] = useState<number>(0);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const [showDeobfuscatedJs, setShowDeobfuscatedJs] = useState<boolean>(false);
 
   // Embedded Files State
   const [embeddedItems, setEmbeddedItems] = useState<EmbeddedFileItem[]>(propsEmbeddedFiles || []);
@@ -155,7 +178,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
   const [copiedModalDict, setCopiedModalDict] = useState<boolean>(false);
 
   // Internals table search & filter state
-  const [internalsFilter, setInternalsFilter] = useState<'all' | 'streams' | 'suspicious' | 'text'>('all');
+  const [internalsFilter, setInternalsFilter] = useState<'all' | 'streams' | 'suspicious' | 'text' | 'entropy'>('all');
   const [internalsSearch, setInternalsSearch] = useState<string>('');
 
   // Handle escape key to close modals
@@ -206,7 +229,13 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
     incremental_updates = 0,
     javascript_streams = [],
     extracted_code,
-    pdfid_token_details = {}
+    pdfid_token_details = {},
+    structure_forensics,
+    digital_signatures = [],
+    concealed_content,
+    action_chains = [],
+    carved_attachments = [],
+    js_analysis
   } = pdfInfo || {};
 
   const effectiveEmbeddedFiles = useMemo<EmbeddedFileItem[]>(() => {
@@ -484,6 +513,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
       if (internalsFilter === 'streams' && !obj.is_stream) return false;
       if (internalsFilter === 'suspicious' && !obj.is_suspicious) return false;
       if (internalsFilter === 'text' && !obj.is_text) return false;
+      if (internalsFilter === 'entropy' && (!obj.is_stream || (obj.entropy || 0) <= 7.5)) return false;
 
       if (internalsSearch.trim()) {
         const query = internalsSearch.toLowerCase().trim();
@@ -590,17 +620,19 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
 
       {/* Sub Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto text-xs font-semibold">
-        <button
-          onClick={() => setActiveSubTab('tokens')}
-          className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'tokens'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Zap className="w-3.5 h-3.5 text-amber-500" />
-          <span>Didier Stevens PDFiD Tokens</span>
-        </button>
+        {!isCheckDisabled('check_didier_pdfid') && (
+          <button
+            onClick={() => setActiveSubTab('tokens')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'tokens'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>Didier Stevens PDFiD Tokens</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveSubTab('internals')}
@@ -614,63 +646,115 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
           <span>PDF Internals &amp; Streams ({totalObjects})</span>
         </button>
 
+        {!isCheckDisabled('check_javascript') && (
+          <button
+            onClick={() => setActiveSubTab('javascript')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'javascript'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Code className="w-3.5 h-3.5 text-rose-500" />
+            <span>JavaScript Streams ({javascript_streams.length})</span>
+          </button>
+        )}
+
+        {!(isCheckDisabled('check_launch_actions') && isCheckDisabled('check_open_actions')) && (
+          <button
+            onClick={() => setActiveSubTab('actions')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'actions'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <PlayCircle className="w-3.5 h-3.5 text-blue-500" />
+            <span>Action Chains ({action_chains.length || (has_open_action || has_launch ? '!' : 0)})</span>
+          </button>
+        )}
+
         <button
-          onClick={() => setActiveSubTab('javascript')}
+          onClick={() => setActiveSubTab('concealed')}
           className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'javascript'
+            activeSubTab === 'concealed'
               ? 'bg-slate-900 text-white'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <Code className="w-3.5 h-3.5 text-rose-500" />
-          <span>JavaScript Streams ({javascript_streams.length})</span>
+          <EyeOff className="w-3.5 h-3.5 text-indigo-500" />
+          <span>Concealed &amp; Phishing</span>
+          {Boolean(
+            (concealed_content?.white_text_count || 0) +
+            (concealed_content?.deceptive_link_count || 0) +
+            (concealed_content?.tiny_font_count || 0) > 0
+          ) && (
+            <span className="px-1.5 py-0.2 bg-indigo-500 text-white rounded-full text-[10px] font-bold">
+              {(concealed_content?.white_text_count || 0) +
+                (concealed_content?.deceptive_link_count || 0) +
+                (concealed_content?.tiny_font_count || 0)}
+            </span>
+          )}
         </button>
 
         <button
-          onClick={() => setActiveSubTab('actions')}
+          onClick={() => setActiveSubTab('forensics')}
           className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'actions'
+            activeSubTab === 'forensics'
               ? 'bg-slate-900 text-white'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          <PlayCircle className="w-3.5 h-3.5 text-blue-500" />
-          <span>Auto-Execution &amp; /Launch</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('embedded')}
-          className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'embedded'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Embedded Files ({effectiveEmbeddedFiles.length})</span>
-          {dangerousEmbeddedCount > 0 && (
+          <Shield className="w-3.5 h-3.5 text-amber-500" />
+          <span>Structure &amp; Signatures</span>
+          {Boolean(
+            structure_forensics?.has_overlay ||
+            structure_forensics?.is_polyglot ||
+            digital_signatures.some(s => s.has_shadow_attack)
+          ) && (
             <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-bold animate-pulse">
-              {dangerousEmbeddedCount}
+              !
             </span>
           )}
         </button>
 
-        <button
-          onClick={() => setActiveSubTab('anti_analysis')}
-          className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'anti_analysis'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
-          <span>Anti-Analysis &amp; Evasion</span>
-          {Boolean(antiAnalysis?.techniques && antiAnalysis.techniques.length > 0) && (
-            <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-bold">
-              {antiAnalysis?.techniques.length}
-            </span>
-          )}
-        </button>
+        {!isCheckDisabled('check_embedded_files') && (
+          <button
+            onClick={() => setActiveSubTab('embedded')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'embedded'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <FileArchive className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Embedded Files ({effectiveEmbeddedFiles.length})</span>
+            {dangerousEmbeddedCount > 0 && (
+              <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-bold animate-pulse">
+                {dangerousEmbeddedCount}
+              </span>
+            )}
+          </button>
+        )}
+
+        {!isCheckDisabled('check_anti_analysis') && !isCheckDisabled('anti_analysis_enabled') && (
+          <button
+            onClick={() => setActiveSubTab('anti_analysis')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'anti_analysis'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+            <span>Anti-Analysis &amp; Evasion</span>
+            {Boolean(antiAnalysis?.techniques && antiAnalysis.techniques.length > 0) && (
+              <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-bold">
+                {antiAnalysis?.techniques.length}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Tab 1: Didier Stevens PDFiD Tokens */}
@@ -821,6 +905,16 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
               >
                 Text &amp; Code Streams
               </button>
+              <button
+                onClick={() => setInternalsFilter('entropy')}
+                className={`px-2.5 py-1 rounded-xl font-medium transition-colors cursor-pointer ${
+                  internalsFilter === 'entropy'
+                    ? 'bg-amber-600 text-white font-bold'
+                    : 'text-slate-600 hover:bg-slate-200/60'
+                }`}
+              >
+                High Entropy &gt; 7.5 ({pdfObjects.filter(o => o.is_stream && (o.entropy || 0) > 7.5).length})
+              </button>
             </div>
 
             <div className="relative w-full sm:w-64">
@@ -861,6 +955,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     <th className="px-3.5 py-2">Container</th>
                     <th className="px-3.5 py-2">Filter</th>
                     <th className="px-3.5 py-2 text-right">Stream Size</th>
+                    <th className="px-3.5 py-2 text-right">Entropy</th>
                     <th className="px-3.5 py-2">Indicators / Flags</th>
                     <th className="px-3.5 py-2 text-center">Action</th>
                   </tr>
@@ -895,6 +990,24 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                       <td className="px-3.5 py-2 text-right font-sans">
                         {obj.size > 0 ? `${(obj.size / 1024).toFixed(1)} KB` : '-'}
                       </td>
+                      <td className="px-3.5 py-2 text-right">
+                        {obj.is_stream && obj.entropy !== undefined ? (
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ${
+                              obj.entropy > 7.5
+                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                : obj.entropy > 6.0
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}
+                            title={`Shannon Entropy: ${obj.entropy.toFixed(3)} / 8.000`}
+                          >
+                            {obj.entropy.toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-sans text-[11px]">-</span>
+                        )}
+                      </td>
                       <td className="px-3.5 py-2">
                         {obj.is_suspicious ? (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white animate-pulse">
@@ -917,7 +1030,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                   ))}
                   {filteredInternalsObjects.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-slate-400 font-sans">
+                      <td colSpan={8} className="px-4 py-8 text-center text-slate-400 font-sans">
                         No PDF objects matched the selected filters.
                       </td>
                     </tr>
@@ -932,6 +1045,56 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
       {/* Tab 2: JavaScript Streams & Code Viewer */}
       {activeSubTab === 'javascript' && (
         <div className="space-y-4">
+          {/* Dangerous Acrobat JavaScript APIs */}
+          {js_analysis?.dangerous_apis && js_analysis.dangerous_apis.length > 0 && (
+            <div className="p-4 bg-rose-50/70 border border-rose-200 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-rose-950 text-xs">
+                  <ShieldAlert className="w-4 h-4 text-rose-600" />
+                  <span>Dangerous Acrobat JavaScript APIs Detected ({js_analysis.dangerous_apis.length})</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
+                  High Exploit Risk
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                {js_analysis.dangerous_apis.map((apiItem, aIdx) => (
+                  <div key={aIdx} className="p-2.5 bg-white border border-rose-200 rounded-xl text-xs space-y-1 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-rose-700">{apiItem.api}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        apiItem.risk === 'critical' ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {apiItem.risk}
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">{apiItem.description}</p>
+                    {apiItem.mitre && (
+                      <span className="inline-block text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                        MITRE {apiItem.mitre}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Shellcode Indicators */}
+          {js_analysis?.shellcode_indicators && js_analysis.shellcode_indicators.length > 0 && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 flex items-start gap-2 shadow-2xs">
+              <ShieldAlert className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <strong className="block font-bold">Memory Corruption &amp; Shellcode Patterns Detected:</strong>
+                <ul className="list-disc list-inside mt-1 space-y-0.5 text-[11px]">
+                  {js_analysis.shellcode_indicators.map((ind, iIdx) => (
+                    <li key={iIdx}>{ind}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {javascript_streams.length === 0 && !extracted_code ? (
             <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-500">
               No JavaScript streams discovered in this PDF document.
@@ -969,20 +1132,43 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
               <div className="lg:col-span-3 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50 text-slate-800 font-mono text-xs">
                 <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-800">Stream #{currentStream?.stream_id}</span>
-                    <span className="text-[11px] text-slate-500">({currentStream?.size} bytes)</span>
+                    <span className="font-bold text-slate-800">
+                      {showDeobfuscatedJs ? 'Deobfuscated JavaScript Stream' : `Stream #${currentStream?.stream_id}`}
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      ({(showDeobfuscatedJs && js_analysis?.deobfuscated_code ? js_analysis.deobfuscated_code.length : (currentStream?.size || 0))} bytes)
+                    </span>
+                    {js_analysis?.deobfuscated_applied && (
+                      <span className="text-[10px] bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-full font-semibold">
+                        Deobfuscation Available
+                      </span>
+                    )}
                   </div>
-                  <button
-                    onClick={() => currentStream && handleCopyCode(currentStream.code)}
-                    className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-[11px] font-sans font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedCode ? 'Copied' : 'Copy JS'}</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {js_analysis?.deobfuscated_applied && (
+                      <button
+                        onClick={() => setShowDeobfuscatedJs(!showDeobfuscatedJs)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-sans font-semibold transition-colors cursor-pointer border ${
+                          showDeobfuscatedJs
+                            ? 'bg-purple-600 text-white border-purple-700'
+                            : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'
+                        }`}
+                      >
+                        {showDeobfuscatedJs ? '✓ Showing Deobfuscated' : 'View Deobfuscated JS'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleCopyCode(showDeobfuscatedJs && js_analysis?.deobfuscated_code ? js_analysis.deobfuscated_code : (currentStream?.code || ''))}
+                      className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-[11px] font-sans font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedCode ? 'Copied' : 'Copy JS'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-4 max-h-[500px] overflow-y-auto space-y-0.5 bg-white">
-                  {(currentStream?.code || '').split('\n').map((line, lIdx) => (
+                  {((showDeobfuscatedJs && js_analysis?.deobfuscated_code ? js_analysis.deobfuscated_code : (currentStream?.code || ''))).split('\n').map((line, lIdx) => (
                     <div key={lIdx} className="flex hover:bg-slate-50 leading-5">
                       <span className="w-10 select-none text-slate-400 text-right pr-3 shrink-0">
                         {lIdx + 1}
@@ -997,17 +1183,17 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
         </div>
       )}
 
-      {/* Tab 3: Actions & Auto-Open */}
+      {/* Tab 3: Actions & Execution Chains */}
       {activeSubTab === 'actions' && (
         <div className="space-y-4 text-xs">
           <div className="p-4 bg-rose-50/50 border border-rose-200 rounded-2xl space-y-2">
             <h4 className="font-bold text-rose-950 flex items-center gap-2">
               <PlayCircle className="w-4 h-4 text-rose-600" />
-              <span>Automatic Execution Hooks (/OpenAction &amp; /AA)</span>
+              <span>Automatic Execution Hooks &amp; Action Chains</span>
             </h4>
             <p className="text-rose-900 leading-relaxed">
-              PDF files support auto-executing scripts or launching applications upon document open, page transition, or bookmark click.
-              Malicious documents leverage /OpenAction and /AA to detonate payloads without requiring user interaction.
+              PDF files support auto-executing scripts or launching applications upon document open, page transition, bookmark click, or field validation.
+              Attackers chain /OpenAction, /AA, and /Next sequences to execute shellcode or exfiltrate data silently.
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <span
@@ -1024,7 +1210,357 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
               >
                 {has_launch ? '⚠️ /Launch Present (RCE Vector)' : '✓ No /Launch'}
               </span>
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                {action_chains.length} Hook{action_chains.length !== 1 ? 's' : ''} Identified
+              </span>
             </div>
+          </div>
+
+          {/* Action Chains Table */}
+          {action_chains && action_chains.length > 0 ? (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <PlayCircle className="w-4 h-4 text-blue-600" />
+                  <span>Execution Action Manifest ({action_chains.length})</span>
+                </div>
+                <span className="text-[11px] text-slate-500 font-mono">Catalog, Annotation, and Lifecycle Triggers</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="bg-slate-50 text-[11px] text-slate-500 uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="px-3.5 py-2">Trigger Event Hook</th>
+                      <th className="px-3.5 py-2">Scope</th>
+                      <th className="px-3.5 py-2">Action Type</th>
+                      <th className="px-3.5 py-2">Raw Snippet</th>
+                      <th className="px-3.5 py-2 text-center">Severity</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {action_chains.map((act, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="px-3.5 py-2 font-bold text-slate-800 font-sans">{act.trigger_hook}</td>
+                        <td className="px-3.5 py-2 text-slate-600 font-sans">{act.scope}</td>
+                        <td className="px-3.5 py-2 font-semibold text-rose-700 font-sans">{act.action_type}</td>
+                        <td className="px-3.5 py-2 text-slate-500 truncate max-w-xs" title={act.raw_snippet}>
+                          {act.raw_snippet || '-'}
+                        </td>
+                        <td className="px-3.5 py-2 text-center">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            act.severity === 'critical'
+                              ? 'bg-rose-600 text-white animate-pulse'
+                              : act.severity === 'high'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {act.severity}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-500">
+              ✓ No automatic execution hooks, event lifecycle triggers, or /Next action chains discovered.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Concealed & Phishing Inspection */}
+      {activeSubTab === 'concealed' && (
+        <div className="space-y-4 text-xs">
+          {/* Summary Badges */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans font-bold">White-on-White</span>
+              <strong className={concealed_content?.white_text_count ? 'text-rose-600 text-base' : 'text-slate-800 text-base'}>
+                {concealed_content?.white_text_count || 0}
+              </strong>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans font-bold">Sub-Pixel (&lt;1pt)</span>
+              <strong className={concealed_content?.tiny_font_count ? 'text-rose-600 text-base' : 'text-slate-800 text-base'}>
+                {concealed_content?.tiny_font_count || 0}
+              </strong>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans font-bold">Off-Page</span>
+              <strong className={concealed_content?.off_page_count ? 'text-amber-600 text-base' : 'text-slate-800 text-base'}>
+                {concealed_content?.off_page_count || 0}
+              </strong>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans font-bold">Invisible (3 Tr)</span>
+              <strong className={concealed_content?.has_invisible_render_mode ? 'text-rose-600 text-base' : 'text-emerald-600 text-base'}>
+                {concealed_content?.has_invisible_render_mode ? 'Detected' : 'None'}
+              </strong>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans font-bold">Phish Mismatches</span>
+              <strong className={concealed_content?.deceptive_link_count ? 'text-rose-600 text-base' : 'text-slate-800 text-base'}>
+                {concealed_content?.deceptive_link_count || 0}
+              </strong>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans font-bold">OCG Layers</span>
+              <strong className="text-slate-800 text-base">
+                {concealed_content?.has_ocg ? (concealed_content?.ocg_layers?.length || 'Yes') : 'None'}
+              </strong>
+            </div>
+          </div>
+
+          {/* Deceptive Phishing Hyperlink Mismatch Table */}
+          {concealed_content?.deceptive_links && concealed_content.deceptive_links.length > 0 && (
+            <div className="border border-rose-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="bg-rose-50 px-4 py-2.5 border-b border-rose-200 font-bold text-rose-950 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-rose-600" />
+                  <span>Deceptive Phishing Hyperlink Mismatches ({concealed_content.deceptive_links.length})</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
+                  Phishing / Brand Spoofing
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="bg-slate-50 text-[11px] text-slate-500 uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="px-3.5 py-2">Page</th>
+                      <th className="px-3.5 py-2">Visible Label Domain</th>
+                      <th className="px-3.5 py-2">Actual Destination Domain</th>
+                      <th className="px-3.5 py-2">Full Target URI</th>
+                      <th className="px-3.5 py-2 text-center">Verdict</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {concealed_content.deceptive_links.map((dl, idx) => (
+                      <tr key={idx} className="hover:bg-rose-50/30">
+                        <td className="px-3.5 py-2 font-bold text-slate-700">p.{dl.page}</td>
+                        <td className="px-3.5 py-2 font-semibold text-blue-700 font-sans">{dl.display_domain}</td>
+                        <td className="px-3.5 py-2 font-semibold text-rose-700 font-sans">{dl.target_domain}</td>
+                        <td className="px-3.5 py-2 text-slate-600 truncate max-w-xs" title={dl.destination_uri}>
+                          {dl.destination_uri}
+                        </td>
+                        <td className="px-3.5 py-2 text-center">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white">
+                            Spoofed Link
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Concealed & Invisible Text Spans Table */}
+          {((concealed_content?.white_text_spans?.length || 0) + (concealed_content?.tiny_font_spans?.length || 0) + (concealed_content?.off_page_spans?.length || 0) > 0) ? (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <EyeOff className="w-4 h-4 text-indigo-600" />
+                  <span>Concealed &amp; Evasion Text Spans Discovered</span>
+                </div>
+                <span className="text-[11px] text-slate-500 font-mono">Hidden Prompt Injection / Scraping Evasion</span>
+              </div>
+              <div className="overflow-x-auto max-h-80">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="bg-slate-50 text-[11px] text-slate-500 uppercase border-b border-slate-200 sticky top-0">
+                    <tr>
+                      <th className="px-3.5 py-2">Page</th>
+                      <th className="px-3.5 py-2">Technique</th>
+                      <th className="px-3.5 py-2">Extracted Hidden Text</th>
+                      <th className="px-3.5 py-2">Font &amp; Size</th>
+                      <th className="px-3.5 py-2">Coordinates / Color</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(concealed_content?.white_text_spans || []).map((s, idx) => (
+                      <tr key={`white-${idx}`} className="hover:bg-indigo-50/30">
+                        <td className="px-3.5 py-2 font-bold text-slate-700">p.{s.page}</td>
+                        <td className="px-3.5 py-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            White-on-White
+                          </span>
+                        </td>
+                        <td className="px-3.5 py-2 text-slate-800 font-sans font-medium">{s.text}</td>
+                        <td className="px-3.5 py-2 text-slate-500">{s.font} ({s.size}pt)</td>
+                        <td className="px-3.5 py-2 text-slate-500 font-mono">{s.color_hex || '#FFFFFF'}</td>
+                      </tr>
+                    ))}
+                    {(concealed_content?.tiny_font_spans || []).map((s, idx) => (
+                      <tr key={`tiny-${idx}`} className="hover:bg-indigo-50/30">
+                        <td className="px-3.5 py-2 font-bold text-slate-700">p.{s.page}</td>
+                        <td className="px-3.5 py-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            Sub-Pixel Font
+                          </span>
+                        </td>
+                        <td className="px-3.5 py-2 text-slate-800 font-sans font-medium">{s.text}</td>
+                        <td className="px-3.5 py-2 text-rose-600 font-bold">{s.size} pt</td>
+                        <td className="px-3.5 py-2 text-slate-500 font-mono">[{s.bbox.join(', ')}]</td>
+                      </tr>
+                    ))}
+                    {(concealed_content?.off_page_spans || []).map((s, idx) => (
+                      <tr key={`off-${idx}`} className="hover:bg-indigo-50/30">
+                        <td className="px-3.5 py-2 font-bold text-slate-700">p.{s.page}</td>
+                        <td className="px-3.5 py-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                            Off-Page Bounds
+                          </span>
+                        </td>
+                        <td className="px-3.5 py-2 text-slate-800 font-sans font-medium">{s.text}</td>
+                        <td className="px-3.5 py-2 text-slate-500">{s.size} pt</td>
+                        <td className="px-3.5 py-2 text-slate-500 font-mono">[{s.bbox.join(', ')}]</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-500">
+              ✓ No concealed white-on-white text, sub-pixel fonts, or off-page rendering detected.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Structure Forensics & Signatures */}
+      {activeSubTab === 'forensics' && (
+        <div className="space-y-4 text-xs">
+          {/* Dual Format Polyglot Card */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={`p-4 rounded-2xl border ${
+              structure_forensics?.is_polyglot
+                ? 'bg-rose-50 border-rose-300'
+                : 'bg-emerald-50/60 border-emerald-200'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold flex items-center gap-1.5 text-slate-900">
+                  <Layers className="w-4 h-4 text-blue-600" />
+                  <span>Polyglot Dual-Format Inspection</span>
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                  structure_forensics?.is_polyglot ? 'bg-rose-600 text-white animate-pulse' : 'bg-emerald-600 text-white'
+                }`}>
+                  {structure_forensics?.is_polyglot ? 'Polyglot Detected' : 'Valid PDF Container'}
+                </span>
+              </div>
+              <p className="text-slate-600 text-[11px] leading-relaxed">
+                {structure_forensics?.is_polyglot
+                  ? `File contains prepended foreign binary wrapper (${structure_forensics.polyglot_type}) before %PDF- header (offset ${structure_forensics.header_offset}). Evades binary format filters.`
+                  : 'File begins directly with standard %PDF- header at offset 0 without prepended binary wrappers or dual-execution containers.'}
+              </p>
+            </div>
+
+            {/* Incremental Updates & Revisions */}
+            <div className="p-4 rounded-2xl border border-slate-200 bg-white">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold flex items-center gap-1.5 text-slate-900">
+                  <RefreshCw className="w-4 h-4 text-purple-600" />
+                  <span>Incremental Revisions (%%EOF)</span>
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                  {structure_forensics?.eof_count || eof_count} Revisions
+                </span>
+              </div>
+              <p className="text-slate-600 text-[11px] leading-relaxed">
+                {(structure_forensics?.eof_count || eof_count) > 1
+                  ? 'Multiple incremental updates discovered. Attackers append updates to overwrite existing catalog references or execute Shadow Attacks.'
+                  : 'Single revision document without incremental updates or appended object modifications.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Trailing Overlay Card */}
+          {structure_forensics?.has_overlay ? (
+            <div className="p-4 bg-rose-50/70 border border-rose-300 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-rose-950">
+                  <ShieldAlert className="w-4 h-4 text-rose-600" />
+                  <span>Trailing Overlay Data Past Final %%EOF Marker</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white uppercase">
+                    {structure_forensics.overlay_threat} Threat
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-900 text-white">
+                    Entropy: {structure_forensics.overlay_entropy?.toFixed(2)} / 8.0
+                  </span>
+                </div>
+              </div>
+              <p className="text-rose-900 leading-relaxed font-sans text-xs">
+                {structure_forensics.overlay_desc} ({structure_forensics.overlay_size} bytes appended after end of document).
+              </p>
+              {structure_forensics.overlay_hex && (
+                <div className="border border-slate-300 rounded-xl overflow-hidden bg-slate-950 p-3 font-mono text-[11px] text-emerald-400 max-h-48 overflow-y-auto">
+                  <pre>{structure_forensics.overlay_hex}</pre>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl text-xs text-emerald-800 flex items-center justify-between">
+              <span>✓ No extraneous binary data or hidden overlays detected past the final %%EOF token.</span>
+              <span className="text-[11px] font-mono text-emerald-700">Clean Trailer</span>
+            </div>
+          )}
+
+          {/* Digital Signatures & Shadow Attack Analysis */}
+          <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+            <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-blue-600" />
+                <span>Cryptographic Digital Signatures &amp; Shadow Attacks ({digital_signatures.length})</span>
+              </div>
+              <span className="text-[11px] text-slate-500 font-mono">/Type /Sig &amp; /ByteRange Forensics</span>
+            </div>
+            {digital_signatures.length === 0 ? (
+              <div className="p-6 text-center text-slate-500 text-xs font-sans">
+                No cryptographic digital signature (/Sig) dictionaries found in document.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="bg-slate-50 text-[11px] text-slate-500 uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="px-3.5 py-2">XRef</th>
+                      <th className="px-3.5 py-2">Signer Identity</th>
+                      <th className="px-3.5 py-2">Filter</th>
+                      <th className="px-3.5 py-2">ByteRange</th>
+                      <th className="px-3.5 py-2 text-center">Shadow Attack Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {digital_signatures.map((sig, sIdx) => (
+                      <tr key={sIdx} className={sig.has_shadow_attack ? 'bg-rose-50/50' : 'hover:bg-slate-50'}>
+                        <td className="px-3.5 py-2 font-bold text-slate-600">#{sig.xref}</td>
+                        <td className="px-3.5 py-2 font-semibold text-slate-800 font-sans">{sig.signer}</td>
+                        <td className="px-3.5 py-2 text-slate-600">{sig.subfilter}</td>
+                        <td className="px-3.5 py-2 text-slate-500">[{sig.byte_range.join(', ')}]</td>
+                        <td className="px-3.5 py-2 text-center">
+                          {sig.has_shadow_attack ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white animate-pulse">
+                              ⚠️ Shadow Attack ({sig.shadow_bytes_count} modified bytes)
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                              ✓ Range Valid
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1336,6 +1872,55 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Carved Attachments Table */}
+          {carved_attachments && carved_attachments.length > 0 && (
+            <div className="mt-4 border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Binary className="w-4 h-4 text-emerald-600" />
+                  <span>Payload Stream Binary Carving &amp; Classification ({carved_attachments.length})</span>
+                </div>
+                <span className="text-[11px] text-slate-500 font-mono">PE Executables, Scripts, Macros &amp; Archives</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="bg-slate-50 text-[11px] text-slate-500 uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="px-3.5 py-2">Filename</th>
+                      <th className="px-3.5 py-2">Classification</th>
+                      <th className="px-3.5 py-2">Size</th>
+                      <th className="px-3.5 py-2">SHA-256 Hash</th>
+                      <th className="px-3.5 py-2 text-center">Threat Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {carved_attachments.map((cat, cIdx) => (
+                      <tr key={cIdx} className={cat.is_threat ? 'bg-rose-50/40 hover:bg-rose-50/70' : 'hover:bg-slate-50'}>
+                        <td className="px-3.5 py-2 font-bold text-slate-800">{cat.filename}</td>
+                        <td className="px-3.5 py-2 font-sans font-semibold text-slate-700">{cat.classification}</td>
+                        <td className="px-3.5 py-2 font-sans text-slate-600">{cat.size_formatted}</td>
+                        <td className="px-3.5 py-2 text-slate-500 text-[11px]">
+                          <span title={cat.sha256}>{truncateHash(cat.sha256, 8, 8)}</span>
+                        </td>
+                        <td className="px-3.5 py-2 text-center">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            cat.threat_level === 'critical'
+                              ? 'bg-rose-600 text-white animate-pulse'
+                              : cat.threat_level === 'suspicious'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {cat.threat_level}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

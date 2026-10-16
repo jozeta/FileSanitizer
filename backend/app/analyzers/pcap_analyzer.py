@@ -36,6 +36,17 @@ from app.core.embedded_extractor import (
     is_payload_dangerous,
     format_file_size
 )
+from app.analyzers.pcap_forensics import (
+    audit_capture_integrity,
+    generate_zeek_logs,
+    evaluate_suricata_ids_rules,
+    analyze_dns_forensics,
+    analyze_advanced_beaconing,
+    analyze_exfiltration_and_covert_channels,
+    analyze_recon_and_lateral_movement,
+    inspect_protocol_anomalies,
+    calculate_pcap_verdict
+)
 import math
 import collections
 
@@ -128,11 +139,22 @@ class PcapAnalyzer(BaseAnalyzer):
                 description=f"The capture file {filename} contains valid headers but zero decipherable packet frames.",
                 details={"file_format": format_desc, "raw_size": len(raw_bytes)}
             ))
+            empty_integrity = audit_capture_integrity(raw_bytes, filename, is_pcapng, [])
+            empty_verdict = calculate_pcap_verdict(empty_integrity, {}, [], {}, {}, {}, {}, {}, findings)
             return AnalyzerResult(
                 analyzer_name=self.name,
                 success=True,
                 findings=findings,
                 data={
+                    "pcap_verdict": empty_verdict,
+                    "capture_integrity": empty_integrity,
+                    "zeek_logs": {"conn_log": [], "dns_log": [], "ssl_log": [], "x509_log": [], "files_log": []},
+                    "ids_alerts": [],
+                    "dns_forensics": {"total_queries_analyzed": 0, "nxdomain_count": 0, "nxdomain_ratio_percent": 0.0, "nxdomain_burst_detected": False, "dga_candidates": [], "tunneling_queries": [], "fast_flux_domains": [], "top_queried_slds": []},
+                    "beaconing_analysis": {"detected_beacon_count": 0, "beaconing_sessions": []},
+                    "exfiltration_analysis": {"ratio_anomalies": [], "icmp_tunneling_packets": [], "cloud_exfiltration_events": [], "has_high_confidence_exfiltration": False},
+                    "lateral_movement": {"scans_detected": [], "lateral_movement_events": [], "has_active_reconnaissance": False, "has_lateral_movement": False},
+                    "protocol_anomalies": {"arp_spoofing_alerts": [], "dhcp_servers_detected": [], "rogue_dhcp_detected": False, "ntp_amplifications": [], "modbus_industrial_events": [], "quic_sessions_count": 0, "cleartext_credentials_count": 0},
                     "summary": {
                         "packet_count": 0,
                         "duration_seconds": 0.0,
@@ -161,8 +183,124 @@ class PcapAnalyzer(BaseAnalyzer):
         # Dissect packets, reassemble streams, carve files, and aggregate telemetry
         dissection = self._dissect_capture(packets, workspace)
 
-        # Build Security Findings
+        # Build Security Findings from dissection
         findings.extend(dissection["findings"])
+
+        # Comprehensive Forensics Checklist
+        integrity_info = audit_capture_integrity(raw_bytes, filename, is_pcapng, packets)
+        zeek_logs = generate_zeek_logs(
+            dissection.get("flows", {}),
+            dissection["dns_queries"],
+            dissection["tls_sessions"],
+            dissection["carved_files"],
+            dissection["transferred_files"]
+        )
+        ids_alerts = evaluate_suricata_ids_rules(
+            packets,
+            dissection.get("flows", {}),
+            dissection["http_transactions"],
+            dissection["dns_queries"],
+            dissection["credentials"]
+        )
+        dns_forensics = analyze_dns_forensics(
+            dissection["dns_queries"],
+            dissection.get("flows", {})
+        )
+        beaconing_info = analyze_advanced_beaconing(
+            dissection.get("flows", {}),
+            dissection.get("flow_timestamps", {})
+        )
+        exfiltration_info = analyze_exfiltration_and_covert_channels(
+            dissection.get("flows", {}),
+            packets,
+            dissection["http_transactions"],
+            dissection["transferred_files"],
+            dissection["carved_files"]
+        )
+        lateral_info = analyze_recon_and_lateral_movement(
+            dissection.get("flows", {}),
+            packets,
+            integrity_info
+        )
+        protocol_anomalies = inspect_protocol_anomalies(
+            packets,
+            dissection.get("flows", {}),
+            dissection["credentials"],
+            dissection["http_transactions"]
+        )
+        pcap_verdict = calculate_pcap_verdict(
+            integrity_info,
+            zeek_logs,
+            ids_alerts,
+            dns_forensics,
+            beaconing_info,
+            exfiltration_info,
+            lateral_info,
+            protocol_anomalies,
+            findings
+        )
+
+        # Convert critical & high Suricata IDS alerts into Security Findings
+        for alert in ids_alerts:
+            if alert["severity"] in (1, 2):
+                findings.append(Finding(
+                    category="intrusion_detection",
+                    severity="critical" if alert["severity"] == 1 else "high",
+                    title=f"IDS Alert: {alert['msg']}",
+                    description=f"Suricata-compatible signature matched in stream ({alert['protocol']} {alert['src_ip']}:{alert['src_port']} -> {alert['dst_ip']}:{alert['dst_port']}). Matched snippet: {alert['matched_snippet']}",
+                    details=alert
+                ))
+
+        # Convert DNS tunneling & DGA candidates to Findings if not already flagged
+        for dt in dns_forensics.get("tunneling_queries", []):
+            if not any(f.details and f.details.get("domain") == dt["domain"] for f in findings):
+                findings.append(Finding(
+                    category="network",
+                    severity="critical",
+                    title=f"DNS Covert Tunnel: {dt['domain'][:35]}",
+                    description=f"DNS query '{dt['domain']}' matched covert tunneling heuristics. Reason: {dt['reason']}",
+                    details=dt
+                ))
+
+        for dga in dns_forensics.get("dga_candidates", []):
+            if not any(f.details and f.details.get("domain") == dga["domain"] for f in findings):
+                findings.append(Finding(
+                    category="network",
+                    severity="high",
+                    title=f"DGA Algorithmic Domain: {dga['domain'][:35]}",
+                    description=f"Domain '{dga['domain']}' displays high Shannon entropy ({dga['entropy']} bits) and algorithmic consonant patterns.",
+                    details=dga
+                ))
+
+        # Convert Port Scans & Lateral Movement to Findings
+        for sc in lateral_info.get("scans_detected", []):
+            findings.append(Finding(
+                category="reconnaissance",
+                severity="high" if sc["threat_level"] == "HIGH" else "medium",
+                title=f"Reconnaissance Activity: {sc['scan_type']}",
+                description=f"Source host {sc['scanner_ip']} performed network reconnaissance scanning.",
+                details=sc
+            ))
+
+        for lat in lateral_info.get("lateral_movement_events", []):
+            if lat.get("admin_share") or lat.get("severity") in ("CRITICAL", "HIGH"):
+                findings.append(Finding(
+                    category="lateral_movement",
+                    severity="critical" if lat.get("severity") == "CRITICAL" else "high",
+                    title=f"Lateral Movement: {lat['source_ip']} -> {lat['destination_ip']} ({lat['protocol_name']})",
+                    description=f"Internal administrative east-west traffic observed. Target port: {lat['target_port']}. Share: {lat.get('admin_share') or 'N/A'}",
+                    details=lat
+                ))
+
+        # Convert ARP Spoofing / Protocol Anomalies
+        for arp in protocol_anomalies.get("arp_spoofing_alerts", []):
+            findings.append(Finding(
+                category="network",
+                severity="critical",
+                title=f"ARP Cache Poisoning: {arp['target_ip']}",
+                description=f"Multiple MAC addresses claimed ownership of IP {arp['target_ip']} ({', '.join(arp['conflicting_mac_addresses'])}).",
+                details=arp
+            ))
 
         # Extract URLs for reputation and pipeline checks
         for u in dissection["urls"]:
@@ -173,6 +311,15 @@ class PcapAnalyzer(BaseAnalyzer):
             success=True,
             findings=findings,
             data={
+                "pcap_verdict": pcap_verdict,
+                "capture_integrity": integrity_info,
+                "zeek_logs": zeek_logs,
+                "ids_alerts": ids_alerts,
+                "dns_forensics": dns_forensics,
+                "beaconing_analysis": beaconing_info,
+                "exfiltration_analysis": exfiltration_info,
+                "lateral_movement": lateral_info,
+                "protocol_anomalies": protocol_anomalies,
                 "summary": dissection["summary"],
                 "protocols": dissection["protocols"],
                 "top_endpoints": dissection["top_endpoints"],
@@ -1098,7 +1245,9 @@ class PcapAnalyzer(BaseAnalyzer):
             "terminal_sessions": terminal_sessions[:30],
             "emails": emails[:30],
             "urls": extracted_urls,
-            "findings": findings
+            "findings": findings,
+            "flows": flows,
+            "flow_timestamps": flow_timestamps
         }
 
     # -------------------------------------------------------------------------

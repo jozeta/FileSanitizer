@@ -1,4 +1,6 @@
+import hashlib
 import re
+import struct
 import zipfile
 from pathlib import Path
 from typing import Dict, Any, List, Set, Optional
@@ -7,6 +9,96 @@ from app.core.logging_config import logger
 from oletools.olevba import VBA_Parser
 import defusedxml.minidom as safe_minidom
 from app.analyzers.didier_oledump import DidierOledumpAnalyzer
+
+
+def inspect_carved_payload(payload: bytes, filename: str = "") -> Dict[str, Any]:
+    """Inspect raw binary stream carved from OLE, RTF, or OneNote container."""
+    sha256 = hashlib.sha256(payload).hexdigest()
+    fn_lower = filename.lower()
+
+    # 1. PE Executable check
+    if payload.startswith(b"MZ") and len(payload) >= 64:
+        e_lfanew = struct.unpack_from("<I", payload, 60)[0]
+        if e_lfanew + 4 <= len(payload) and payload[e_lfanew:e_lfanew+4] == b"PE\x00\x00":
+            return {
+                "carved_type": "Windows Executable (PE / EXE / DLL)",
+                "carved_size": len(payload),
+                "carved_sha256": sha256,
+                "suspicious": True
+            }
+        return {
+            "carved_type": "DOS Executable / MZ Binary",
+            "carved_size": len(payload),
+            "carved_sha256": sha256,
+            "suspicious": True
+        }
+
+    # 2. Windows Shell Link (.lnk)
+    if payload.startswith(b"\x4C\x00\x00\x00\x01\x14\x02\x00") or fn_lower.endswith(".lnk"):
+        return {
+            "carved_type": "Windows Shell Link (LNK Shortcut)",
+            "carved_size": len(payload),
+            "carved_sha256": sha256,
+            "suspicious": True
+        }
+
+    # 3. ZIP / PK Archive
+    if payload.startswith(b"PK\x03\x04"):
+        return {
+            "carved_type": "ZIP / Compound Archive",
+            "carved_size": len(payload),
+            "carved_sha256": sha256,
+            "suspicious": any(fn_lower.endswith(ext) for ext in [".zip", ".jar", ".apk", ".iso"])
+        }
+
+    # 4. Text / Script inspection
+    sample_text = payload[:2048].decode("utf-8", errors="ignore").lower()
+    if "@echo off" in sample_text or "cmd /c" in sample_text or fn_lower.endswith((".bat", ".cmd")):
+        return {
+            "carved_type": "Windows Batch Script (BAT/CMD)",
+            "carved_size": len(payload),
+            "carved_sha256": sha256,
+            "suspicious": True
+        }
+    if "<hta:application" in sample_text or fn_lower.endswith(".hta"):
+        return {
+            "carved_type": "HTML Application (HTA Payload)",
+            "carved_size": len(payload),
+            "carved_sha256": sha256,
+            "suspicious": True
+        }
+    if any(k in sample_text for k in ["wscript.shell", "createobject", "scripting.filesystemobject"]) or fn_lower.endswith((".vbs", ".vbe", ".js", ".jse", ".wsf")):
+        return {
+            "carved_type": "VBScript / JScript Payload",
+            "carved_size": len(payload),
+            "carved_sha256": sha256,
+            "suspicious": True
+        }
+    if any(k in sample_text for k in ["powershell", "-executionpolicy", "invoke-expression", "bypass"]) or fn_lower.endswith(".ps1"):
+        return {
+            "carved_type": "PowerShell Script (PS1 Payload)",
+            "carved_size": len(payload),
+            "carved_sha256": sha256,
+            "suspicious": True
+        }
+
+    # Extension based risk
+    risky_exts = (".exe", ".dll", ".bat", ".cmd", ".vbs", ".vbe", ".js", ".jse", ".hta", ".ps1", ".scr", ".pif", ".com", ".cpl", ".wsf")
+    if any(fn_lower.endswith(ext) for ext in risky_exts):
+        return {
+            "carved_type": f"Suspicious Payload ({fn_lower.rsplit('.', 1)[-1].upper()})",
+            "carved_size": len(payload),
+            "carved_sha256": sha256,
+            "suspicious": True
+        }
+
+    return {
+        "carved_type": "Binary Data / Embedded Object",
+        "carved_size": len(payload),
+        "carved_sha256": sha256,
+        "suspicious": False
+    }
+
 
 
 VBA_CAPABILITY_PATTERNS = {
@@ -60,9 +152,13 @@ class OfficeAnalyzer(BaseAnalyzer):
             "vba_capabilities": {},
             "vba_stomping": {"is_stomped": False, "details": []},
             "vba_purging": {"is_purged": False, "details": []},
+            "mraptor": None,
+            "oleid_indicators": [],
             "xlm_macros": {"has_xlm_macros": False, "details": []},
-            "rtf_exploits": {"is_rtf": False, "has_exploits": False, "details": []},
+            "rtf_exploits": {"is_rtf": False, "has_exploits": False, "details": [], "carved_payloads": []},
+            "rtf_objects": [],
             "ole_forensics": {},
+            "onenote_analysis": None,
             "has_activex": False,
             "activex_objects": [],
             "has_ole_objects": False,
@@ -158,6 +254,41 @@ class OfficeAnalyzer(BaseAnalyzer):
                         ),
                         details={"capabilities": capabilities}
                     ))
+
+                # MacroRaptor Heuristics (AWX Flags: AutoExec, Write/Drop, Execute)
+                try:
+                    import oletools.mraptor as mraptor
+                    if combined_source_code.strip():
+                        mr = mraptor.MacroRaptor(combined_source_code)
+                        mr.scan()
+                        flags = mr.get_flags()
+                        mraptor_res = {
+                            "suspicious": mr.suspicious,
+                            "flags": flags,
+                            "autoexec": mr.autoexec,
+                            "autoexec_match": mr.autoexec_match,
+                            "write": mr.write,
+                            "write_match": mr.write_match,
+                            "execute": mr.execute,
+                            "execute_match": mr.execute_match,
+                            "matches": mr.matches
+                        }
+                        data["mraptor"] = mraptor_res
+                        if mr.suspicious:
+                            matched_str = ", ".join(mr.matches) if mr.matches else flags
+                            findings.append(Finding(
+                                category="macro",
+                                severity="critical" if ("A" in flags and "X" in flags) else "high",
+                                title=f"MacroRaptor Suspicious Macro Heuristic Detected (Flags: {flags})",
+                                description=(
+                                    f"MacroRaptor static heuristics identified suspicious high-risk macro execution sequence: "
+                                    f"Flags: {flags} (AutoExec: {mr.autoexec}, Write/Drop: {mr.write}, Execute: {mr.execute}). "
+                                    f"Matched keywords: {matched_str}."
+                                ),
+                                details=mraptor_res
+                            ))
+                except Exception as mr_e:
+                    logger.debug(f"MacroRaptor scan error: {mr_e}")
 
                 # VBA Stomping Check: Compare P-code presence vs extracted source code
                 try:
@@ -262,6 +393,34 @@ class OfficeAnalyzer(BaseAnalyzer):
                                                     if matched_caps:
                                                         caps[cap_cat] = matched_caps
                                                 data["vba_capabilities"] = caps
+                                            if not data.get("mraptor"):
+                                                try:
+                                                    import oletools.mraptor as mraptor
+                                                    mr = mraptor.MacroRaptor(combined)
+                                                    mr.scan()
+                                                    flags = mr.get_flags()
+                                                    mraptor_res = {
+                                                        "suspicious": mr.suspicious,
+                                                        "flags": flags,
+                                                        "autoexec": mr.autoexec,
+                                                        "autoexec_match": mr.autoexec_match,
+                                                        "write": mr.write,
+                                                        "write_match": mr.write_match,
+                                                        "execute": mr.execute,
+                                                        "execute_match": mr.execute_match,
+                                                        "matches": mr.matches
+                                                    }
+                                                    data["mraptor"] = mraptor_res
+                                                    if mr.suspicious:
+                                                        findings.append(Finding(
+                                                            category="macro",
+                                                            severity="critical" if ("A" in flags and "X" in flags) else "high",
+                                                            title=f"MacroRaptor Suspicious Macro Heuristic Detected (Flags: {flags})",
+                                                            description=f"MacroRaptor static heuristics flagged macro execution sequence (Flags: {flags}).",
+                                                            details=mraptor_res
+                                                        ))
+                                                except Exception:
+                                                    pass
                                     except Exception as e:
                                         logger.debug(f"Fallback VBA extraction note: {e}")
                         if "activex" in lower_name:
@@ -621,13 +780,69 @@ class OfficeAnalyzer(BaseAnalyzer):
                 rtf_full = file_path.read_bytes()
                 rtf_findings = []
                 rtf_carved_payloads = []
+                rtf_parsed_objects = []
+
+                # Programmatic object extraction via oletools.rtfobj
+                try:
+                    import oletools.rtfobj as rtfobj
+                    parser = rtfobj.RtfObjParser(rtf_full)
+                    parser.parse()
+                    for idx, obj in enumerate(parser.objects):
+                        class_name = getattr(obj, "class_name", "") or "Unknown"
+                        clsid = getattr(obj, "clsid", "") or ""
+                        clsid_desc = getattr(obj, "clsid_desc", "") or ""
+                        format_id = getattr(obj, "format_id", 0)
+                        is_package = getattr(obj, "is_package", False)
+                        filename = getattr(obj, "filename", "") or ""
+                        src_path = getattr(obj, "src_path", "") or ""
+                        temp_path = getattr(obj, "temp_path", "") or ""
+                        oledata_size = getattr(obj, "oledata_size", 0) or len(getattr(obj, "oledata", b"") or b"")
+
+                        obj_rec = {
+                            "id": idx + 1,
+                            "format_id": format_id,
+                            "class_name": class_name,
+                            "size": oledata_size,
+                            "is_package": is_package,
+                            "filename": filename,
+                            "src_path": src_path,
+                            "temp_path": temp_path,
+                            "clsid": clsid,
+                            "clsid_desc": clsid_desc,
+                        }
+
+                        payload_data = getattr(obj, "olepkgdata", None) or getattr(obj, "oledata", None)
+                        if payload_data:
+                            carved = inspect_carved_payload(payload_data, filename)
+                            obj_rec.update(carved)
+                            if carved.get("suspicious"):
+                                rtf_findings.append(f"Carved Suspicious Payload ({carved.get('carved_type')}) in RTF Object #{idx+1} ({filename or class_name})")
+                                rtf_carved_payloads.append(f"{carved.get('carved_type')} ({filename or class_name})")
+
+                        clsid_upper = clsid.upper()
+                        class_lower = class_name.lower()
+                        if "0002CE02-0000-0000-C000-000000000046" in clsid_upper or "equation" in class_lower:
+                            rtf_findings.append("Equation Editor 3.0 Exploit Vector (CVE-2017-11882 / CVE-2018-0802)")
+                        if "00000316-0000-0000-C000-000000000046" in clsid_upper or "00000315-0000-0000-C000-000000000046" in clsid_upper:
+                            rtf_findings.append("Composite Moniker / HTA Remote Code Execution (CVE-2017-0199 / CVE-2017-8570)")
+                        if "F414C260-6AC0-11CF-B6D1-00AA00BBBB58" in clsid_upper:
+                            rtf_findings.append("VBScript Engine Use-After-Free CLSID (CVE-2018-8174)")
+
+                        if is_package or "package" in class_lower:
+                            data["has_ole_objects"] = True
+                            data["ole_objects"].append(f"RTF Package: {filename or class_name}")
+
+                        rtf_parsed_objects.append(obj_rec)
+                    data["rtf_objects"] = rtf_parsed_objects
+                except Exception as rtf_p_err:
+                    logger.debug(f"rtfobj parse error: {rtf_p_err}")
 
                 # Equation Editor CLSID (CVE-2017-11882 / CVE-2018-0802)
-                if re.search(rb"(?i)0002CE02-0000-0000-C000-000000000046", rtf_full):
+                if re.search(rb"(?i)0002CE02-0000-0000-C000-000000000046|\\objclass\s+Equation|\bEquation\.3\b", rtf_full) and not any("Equation Editor" in f for f in rtf_findings):
                     rtf_findings.append("Equation Editor 3.0 Memory Corruption Exploit (CVE-2017-11882 / CVE-2018-0802)")
 
                 # Composite Moniker / HTA Handler (CVE-2017-0199 / CVE-2017-8570)
-                if re.search(rb"(?i)00000316-0000-0000-C000-000000000046|00000315-0000-0000-C000-000000000046", rtf_full):
+                if re.search(rb"(?i)00000316-0000-0000-C000-000000000046|00000315-0000-0000-C000-000000000046", rtf_full) and not any("Composite Moniker" in f for f in rtf_findings):
                     rtf_findings.append("Composite Moniker / HTA Remote Code Execution (CVE-2017-0199 / CVE-2017-8570)")
 
                 # MonikerLink Outlook / Office NTLM Relay & Code Execution (CVE-2024-21413)
@@ -639,7 +854,7 @@ class OfficeAnalyzer(BaseAnalyzer):
                     rtf_findings.append("Follina MSDT Remote Code Execution (CVE-2022-30190)")
 
                 # VBScript Engine Corrupted Moniker (CVE-2018-8174)
-                if re.search(rb"(?i)F414C260-6AC0-11CF-B6D1-00AA00BBBB58", rtf_full):
+                if re.search(rb"(?i)F414C260-6AC0-11CF-B6D1-00AA00BBBB58", rtf_full) and not any("VBScript Engine" in f for f in rtf_findings):
                     rtf_findings.append("VBScript Engine Use-After-Free CLSID (CVE-2018-8174)")
 
                 # MSHTML CAB / ActiveX container (CVE-2021-40444)
@@ -663,9 +878,9 @@ class OfficeAnalyzer(BaseAnalyzer):
                 if hex_escapes > 100:
                     rtf_findings.append(f"High Density RTF Hex Escaping ({hex_escapes} escaped tokens)")
 
-                # RTF \objdata binary stream inspection
+                # RTF \objdata binary stream inspection fallback
                 objdata_matches = re.findall(rb"(?i)\\objdata\s+([0-9a-fA-F\s]{64,})", rtf_full)
-                if objdata_matches:
+                if objdata_matches and not rtf_carved_payloads:
                     for idx, hex_raw in enumerate(objdata_matches[:3]):
                         clean_hex = re.sub(rb"\s+", b"", hex_raw)
                         try:
@@ -680,15 +895,17 @@ class OfficeAnalyzer(BaseAnalyzer):
                             pass
 
                 if rtf_findings:
+                    unique_findings = list(dict.fromkeys(rtf_findings))
+                    unique_carved = list(dict.fromkeys(rtf_carved_payloads))
                     data["rtf_exploits"]["has_exploits"] = True
-                    data["rtf_exploits"]["details"] = rtf_findings
-                    data["rtf_exploits"]["carved_payloads"] = rtf_carved_payloads
+                    data["rtf_exploits"]["details"] = unique_findings
+                    data["rtf_exploits"]["carved_payloads"] = unique_carved
                     findings.append(Finding(
                         category="structure",
                         severity="critical",
-                        title=f"RTF Weaponized Exploitation Vectors Detected ({len(rtf_findings)})",
-                        description=f"Identified weaponized Rich Text Format (RTF) exploit structures: {', '.join(rtf_findings)}.",
-                        details={"exploits": rtf_findings, "carved_payloads": rtf_carved_payloads}
+                        title=f"RTF Weaponized Exploitation Vectors Detected ({len(unique_findings)})",
+                        description=f"Identified weaponized Rich Text Format (RTF) exploit structures: {', '.join(unique_findings)}.",
+                        details={"exploits": unique_findings, "carved_payloads": unique_carved, "objects_count": len(rtf_parsed_objects)}
                     ))
         except Exception as rtf_e:
             logger.debug(f"RTF exploit scan note: {rtf_e}")
@@ -820,7 +1037,208 @@ class OfficeAnalyzer(BaseAnalyzer):
                 details=data["metadata"]
             ))
 
-        # 3. Didier Stevens oledump-style deep stream analysis
+        # 4. Microsoft OneNote (.one / .onetoc2) Package Forensics & Payload Carving
+        try:
+            with open(file_path, "rb") as of_f:
+                head_bytes = of_f.read(256)
+            is_onenote = (
+                head_bytes.startswith(b"\xE4\x52\x5C\x7B\x82\xD8\xA5\x4D\xAF\x68\xD7\x0C\x7D\x33\xF8\xF4") or
+                head_bytes.startswith(b"\xA1\x2F\x42\x43\x66\x0B\x4C\x48\xAC\x07\x04\xDE\x4D\x4C\x2A\x29") or
+                filename.lower().endswith((".one", ".onetoc2"))
+            )
+            if is_onenote:
+                full_bytes = file_path.read_bytes()
+                onenote_attachments = []
+                suspicious_exts = set()
+                offset = 0
+                file_store_guid = b"\xE7\x16\xE3\xBD\x65\x26\x11\x45\xA4\xC4\x8D\x4D\x0B\x7A\x9E\xAC"
+
+                while True:
+                    idx = full_bytes.find(file_store_guid, offset)
+                    if idx == -1:
+                        break
+                    offset = idx + 16
+                    if idx + 24 <= len(full_bytes):
+                        cb_len = struct.unpack_from("<Q", full_bytes, idx + 16)[0]
+                        payload_start = idx + 36
+                        if 0 < cb_len < 100_000_000 and payload_start + cb_len <= len(full_bytes):
+                            payload_data = full_bytes[payload_start : payload_start + cb_len]
+                            window = full_bytes[max(0, idx - 512) : min(len(full_bytes), payload_start + cb_len + 512)]
+                            fn_match = re.search(rb'([a-zA-Z0-9_\-\.]{2,40}\.(?:exe|bat|cmd|vbs|vbe|hta|ps1|js|wsf|scr|lnk|zip|iso))', window, re.IGNORECASE)
+                            carved_fn = fn_match.group(1).decode('latin-1') if fn_match else f"attachment_{len(onenote_attachments)+1}.bin"
+                            c_info = inspect_carved_payload(payload_data, carved_fn)
+
+                            onenote_attachments.append({
+                                "filename": carved_fn,
+                                "file_type": c_info["carved_type"],
+                                "size": len(payload_data),
+                                "sha256": c_info["carved_sha256"],
+                                "suspicious": c_info["suspicious"],
+                                "offset": idx
+                            })
+                            if c_info["suspicious"]:
+                                ext = carved_fn.rsplit(".", 1)[-1].lower() if "." in carved_fn else "bin"
+                                suspicious_exts.add(ext)
+
+                data["onenote_analysis"] = {
+                    "is_onenote": True,
+                    "embedded_attachments": onenote_attachments,
+                    "suspicious_extensions": list(suspicious_exts)
+                }
+
+                if suspicious_exts:
+                    findings.append(Finding(
+                        category="exploit",
+                        severity="critical",
+                        title=f"OneNote Weaponized Attachment Dropper Detected ({len(onenote_attachments)} attachment(s))",
+                        description=(
+                            f"OneNote document packages dangerous executable or script attachment(s): {', '.join([a['filename'] for a in onenote_attachments if a['suspicious']])}. "
+                            "Adversaries abuse OneNote (.one) attachments to evade Mark-of-the-Web (MOTW) security controls and deliver malware."
+                        ),
+                        details={"attachments": onenote_attachments, "suspicious_extensions": list(suspicious_exts)}
+                    ))
+                elif onenote_attachments:
+                    findings.append(Finding(
+                        category="structure",
+                        severity="medium",
+                        title=f"OneNote Embedded File Attachments Carved ({len(onenote_attachments)} file(s))",
+                        description=f"Carved {len(onenote_attachments)} embedded FileDataStoreObject attachment(s) from OneNote container.",
+                        details={"attachments": onenote_attachments}
+                    ))
+        except Exception as on_err:
+            logger.debug(f"OneNote analysis error: {on_err}")
+
+        # 5. Legacy Compound File Binary (CFB / OLE2) Forensics via olefile
+        try:
+            import olefile
+            if olefile.isOleFile(file_path):
+                ole = olefile.OleFileIO(str(file_path))
+                cfb_streams = []
+                cfb_anomalies = []
+                clsids = []
+
+                for entry in ole.listdir(streams=True, storages=True):
+                    entry_name = "/".join(entry)
+                    entry_type = ole.get_type(entry)
+                    type_str = "stream" if entry_type == olefile.STGTY_STREAM else "storage" if entry_type == olefile.STGTY_STORAGE else "root"
+                    size = ole.get_size(entry) if entry_type == olefile.STGTY_STREAM else 0
+                    ctime = ole.getctime(entry)
+                    mtime = ole.getmtime(entry)
+                    clsid = ole.getclsid(entry)
+
+                    ctime_str = ctime.isoformat() if ctime else None
+                    mtime_str = mtime.isoformat() if mtime else None
+
+                    if clsid and clsid not in clsids:
+                        clsids.append(clsid)
+
+                    # Check for suspicious stream names (unprintable characters or hidden stream markers)
+                    if any(ord(c) < 32 and c not in ('\x01', '\x03', '\x05') for c in entry_name):
+                        cfb_anomalies.append(f"Non-printable or control characters in stream path: {repr(entry_name)}")
+
+                    # Timestamp anomalies
+                    if mtime and mtime.year < 1980:
+                        cfb_anomalies.append(f"Pre-1980 or null epoch modification timestamp on stream '{entry_name}': {mtime_str}")
+
+                    cfb_streams.append({
+                        "path": entry_name,
+                        "type": type_str,
+                        "size": size,
+                        "ctime": ctime_str,
+                        "mtime": mtime_str,
+                        "clsid": clsid
+                    })
+
+                # Extract OLE metadata if available
+                try:
+                    meta = ole.get_metadata()
+                    ole_meta = {}
+                    if meta.author: ole_meta["author"] = meta.author
+                    if meta.last_saved_by: ole_meta["last_saved_by"] = meta.last_saved_by
+                    if meta.create_time: ole_meta["create_time"] = meta.create_time.isoformat()
+                    if meta.last_saved_time: ole_meta["last_saved_time"] = meta.last_saved_time.isoformat()
+                    if meta.total_edit_time: ole_meta["total_edit_time"] = meta.total_edit_time
+                    if meta.creating_application: ole_meta["creating_application"] = meta.creating_application
+                    if ole_meta:
+                        if not data.get("metadata"):
+                            data["metadata"] = ole_meta
+                        else:
+                            for k, v in ole_meta.items():
+                                if k not in data["metadata"]:
+                                    data["metadata"][k] = v
+                except Exception:
+                    pass
+
+                data["ole_forensics"] = {
+                    "is_ole_file": True,
+                    "sector_size": getattr(ole, "sector_size", 512),
+                    "minisector_size": getattr(ole, "minisector_size", 64),
+                    "streams_count": len(cfb_streams),
+                    "streams": cfb_streams,
+                    "clsids": clsids,
+                    "anomalies": cfb_anomalies
+                }
+
+                if cfb_anomalies:
+                    findings.append(Finding(
+                        category="structure",
+                        severity="high",
+                        title=f"CFB / OLE Storage Forensic Anomalies Detected ({len(cfb_anomalies)})",
+                        description=f"Identified structured storage forensic discrepancies: {'; '.join(cfb_anomalies[:3])}.",
+                        details={"anomalies": cfb_anomalies}
+                    ))
+                ole.close()
+        except Exception as ole_e:
+            logger.debug(f"CFB forensic inspection error: {ole_e}")
+
+        # 6. OleID Structured Indicator Analysis
+        try:
+            import oletools.oleid as oleid
+            oid = oleid.OleID(str(file_path))
+            indicators = oid.check()
+            oleid_list = []
+            for ind in indicators:
+                val_str = str(ind.value)
+                risk_str = str(ind.risk).lower()
+                oleid_list.append({
+                    "id": ind.id,
+                    "name": ind.name,
+                    "type": str(ind.type.__name__ if hasattr(ind.type, '__name__') else ind.type),
+                    "value": val_str,
+                    "description": getattr(ind, "description", "") or "",
+                    "risk": risk_str
+                })
+                if risk_str in ["high", "critical"]:
+                    findings.append(Finding(
+                        category="structure",
+                        severity=risk_str,
+                        title=f"OleID Security Indicator: {ind.name}",
+                        description=getattr(ind, "description", f"OleID flagged document property '{ind.name}' with risk '{risk_str}'."),
+                        details={"indicator": ind.id, "value": val_str, "risk": risk_str}
+                    ))
+            data["oleid_indicators"] = oleid_list
+        except Exception as oid_err:
+            logger.debug(f"OleID scan error: {oid_err}")
+
+        # 7. Multi-Format DDE Command Injection via oletools.msodde
+        try:
+            import oletools.msodde as msodde
+            dde_res = msodde.process_file(str(file_path), field_filter_mode=msodde.FIELD_FILTER_DDE)
+            if dde_res and isinstance(dde_res, str) and dde_res.strip():
+                clean_dde = dde_res.strip()
+                if clean_dde not in data["dde_injections"]:
+                    data["dde_injections"].append(clean_dde)
+                findings.append(Finding(
+                    category="active_content",
+                    severity="critical",
+                    title="Dynamic Data Exchange (DDE) Command Execution Formula Detected",
+                    description=f"Extracted DDE formula executing external operating system commands: {clean_dde[:300]}.",
+                    details={"dde_command": clean_dde, "tool": "oletools.msodde", "mitre_technique": "T1204.002"}
+                ))
+        except Exception as msodde_err:
+            logger.debug(f"msodde execution check note: {msodde_err}")
+
+        # 8. Didier Stevens oledump-style deep stream analysis
         try:
             oledump_res = DidierOledumpAnalyzer.analyze_file(file_path)
             data["oledump"] = oledump_res

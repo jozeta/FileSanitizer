@@ -104,6 +104,16 @@ class UniversalInputNormalizer:
                 ssrf_reason="Input is empty"
             )
 
+        # Reject HTML tags, doctype declarations, and markup
+        if clean.startswith("<") or "<" in clean or ">" in clean or clean.lower().startswith("<!doctype"):
+            return NormalizedIndicator(
+                clean,
+                InputType.UNKNOWN,
+                clean,
+                is_safe_destination=False,
+                ssrf_reason="Markup or HTML content is not a valid network indicator"
+            )
+
         # 1. Check for Hashes (MD5, SHA1, SHA256)
         if re.fullmatch(r'[a-fA-F0-9]{32}', clean):
             return NormalizedIndicator(clean, InputType.HASH, clean.lower(), details={"hash_type": "MD5"})
@@ -180,8 +190,8 @@ class UniversalInputNormalizer:
             return NormalizedIndicator(clean, InputType.UNKNOWN, clean, is_safe_destination=False, ssrf_reason=f"Failed to parse URL/domain: {e}")
 
         hostname = (parsed.hostname or "").strip().rstrip(".").lower()
-        if not hostname:
-            return NormalizedIndicator(clean, InputType.UNKNOWN, clean, is_safe_destination=False, ssrf_reason="Invalid host format")
+        if not hostname or any(c in hostname for c in "<>!\"';{}()[]\\^|*? \t\r\n"):
+            return NormalizedIndicator(clean, InputType.UNKNOWN, clean, is_safe_destination=False, ssrf_reason="Invalid host format / contains disallowed characters")
 
         # Punycode & IDNA normalization
         idna_domain, puny_details = cls._normalize_idna(hostname)

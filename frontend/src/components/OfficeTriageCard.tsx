@@ -13,7 +13,9 @@ import {
   EyeOff,
   Lock,
   Table,
-  ExternalLink
+  ExternalLink,
+  FileText,
+  FileArchive
 } from 'lucide-react';
 import { OfficeTriageInfo, Finding, AntiAnalysisInfo } from '../types';
 import { AntiAnalysisInspectorCard } from './AntiAnalysisInspectorCard';
@@ -27,6 +29,7 @@ interface OfficeTriageCardProps {
   antiAnalysis?: AntiAnalysisInfo;
   workspaceJobs?: any[];
   onSelectJob?: (newJobId: string) => void;
+  disabledChecks?: string[];
 }
 
 export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
@@ -36,8 +39,40 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
   antiAnalysis,
   workspaceJobs,
   onSelectJob,
+  disabledChecks = [],
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'macros' | 'capabilities' | 'stomping' | 'ole' | 'relationships' | 'excel' | 'powerpoint' | 'anti_analysis'>('macros');
+  const isCheckDisabled = (chk: string) => (disabledChecks || []).includes(chk);
+
+  const isRtf = Boolean(officeInfo?.rtf_exploits?.is_rtf || (officeInfo?.rtf_objects && officeInfo.rtf_objects.length > 0) || filename.toLowerCase().endsWith('.rtf'));
+  const isOneNote = Boolean(officeInfo?.onenote_analysis?.is_onenote || filename.toLowerCase().match(/\.(one|onetoc2)$/));
+  const canShowMacros = !isCheckDisabled('check_vba_macros');
+  const initialTab = isOneNote
+    ? 'onenote'
+    : (isRtf && !officeInfo?.has_macros)
+    ? 'rtf_exploits'
+    : canShowMacros
+    ? 'macros'
+    : !isCheckDisabled('check_ole_objects')
+    ? 'ole'
+    : 'relationships';
+
+  const [activeSubTab, setActiveSubTab] = useState<'macros' | 'capabilities' | 'stomping' | 'ole' | 'rtf_exploits' | 'relationships' | 'excel' | 'powerpoint' | 'onenote' | 'anti_analysis'>(initialTab);
+
+  React.useEffect(() => {
+    if (activeSubTab === 'macros' && isCheckDisabled('check_vba_macros')) {
+      setActiveSubTab(!isCheckDisabled('check_ole_objects') ? 'ole' : 'relationships');
+    } else if (activeSubTab === 'capabilities' && isCheckDisabled('check_vba_macros')) {
+      setActiveSubTab('ole');
+    } else if (activeSubTab === 'stomping' && isCheckDisabled('check_vba_stomping')) {
+      setActiveSubTab(canShowMacros ? 'macros' : 'ole');
+    } else if (activeSubTab === 'ole' && isCheckDisabled('check_ole_objects')) {
+      setActiveSubTab(canShowMacros ? 'macros' : 'relationships');
+    } else if (activeSubTab === 'relationships' && (isCheckDisabled('check_external_relationships') && isCheckDisabled('check_remote_templates'))) {
+      setActiveSubTab(canShowMacros ? 'macros' : 'ole');
+    } else if (activeSubTab === 'anti_analysis' && (isCheckDisabled('check_anti_analysis') || isCheckDisabled('anti_analysis_enabled'))) {
+      setActiveSubTab(canShowMacros ? 'macros' : 'ole');
+    }
+  }, [activeSubTab, disabledChecks]);
   const [selectedModuleIdx, setSelectedModuleIdx] = useState<number>(0);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
@@ -48,6 +83,12 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
     vba_capabilities = {},
     vba_stomping = { is_stomped: false },
     vba_purging = { is_purged: false },
+    mraptor,
+    oleid_indicators = [],
+    rtf_exploits = { is_rtf: false, has_exploits: false },
+    rtf_objects = [],
+    ole_forensics = {},
+    onenote_analysis,
     activex_objects = [],
     ole_objects = [],
     remote_templates = [],
@@ -141,9 +182,24 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                   VBA Macros Active
                 </span>
               )}
+              {mraptor?.suspicious && (
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-rose-600 text-white animate-pulse">
+                  ⚠️ MacroRaptor [{mraptor.flags}]
+                </span>
+              )}
               {vba_stomping.is_stomped && (
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-purple-50 text-purple-700 border border-purple-300">
                   ⚠️ VBA Stomped (P-Code)
+                </span>
+              )}
+              {rtf_exploits?.has_exploits && (
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-rose-50 text-rose-700 border border-rose-300 animate-pulse">
+                  ⚠️ RTF Weaponized ({rtf_exploits.details?.length || 1})
+                </span>
+              )}
+              {onenote_analysis?.suspicious_extensions && onenote_analysis.suspicious_extensions.length > 0 && (
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-purple-50 text-purple-700 border border-purple-300 animate-pulse">
+                  ⚠️ OneNote Dropper ({onenote_analysis.suspicious_extensions.join(', ')})
                 </span>
               )}
               {excelAnalysis?.very_hidden_sheets && excelAnalysis.very_hidden_sheets.length > 0 && (
@@ -168,17 +224,37 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
               )}
             </div>
             <p className="text-xs text-slate-500">
-              Deep static inspection of VBA macro streams, olevba modules, P-code stomping, OLE objects, and remote templates.
+              Deep static inspection of VBA macro streams, olevba modules, MacroRaptor heuristics, OLE objects, RTF exploits, and remote templates.
             </p>
           </div>
         </div>
 
         {/* Quick Metrics Badges */}
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center min-w-[70px]">
-            <span className="text-[10px] uppercase text-slate-400 block font-sans">Modules</span>
-            <strong className="text-slate-900">{macro_modules.length}</strong>
-          </div>
+          {has_macros && (
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center min-w-[70px]">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">Modules</span>
+              <strong className="text-slate-900">{macro_modules.length}</strong>
+            </div>
+          )}
+          {mraptor && (
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center min-w-[70px]">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">MacroRaptor</span>
+              <strong className={mraptor.suspicious ? 'text-rose-600' : 'text-emerald-600'}>{mraptor.flags}</strong>
+            </div>
+          )}
+          {isRtf && (
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center min-w-[70px]">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">RTF Objects</span>
+              <strong className={rtf_objects.length > 0 ? 'text-indigo-600' : 'text-slate-900'}>{rtf_objects.length}</strong>
+            </div>
+          )}
+          {isOneNote && (
+            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center min-w-[70px]">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">Attachments</span>
+              <strong className="text-purple-600">{onenote_analysis?.embedded_attachments?.length || 0}</strong>
+            </div>
+          )}
           <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-center min-w-[70px]">
             <span className="text-[10px] uppercase text-slate-400 block font-sans">Capabilities</span>
             <strong className={capabilitiesCount > 0 ? 'text-amber-600' : 'text-slate-900'}>{capabilitiesCount}</strong>
@@ -227,65 +303,92 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
 
       {/* Sub Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto text-xs font-semibold">
-        <button
-          onClick={() => setActiveSubTab('macros')}
-          className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'macros'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Code className="w-3.5 h-3.5" />
-          <span>VBA Modules ({macro_modules.length})</span>
-        </button>
+        {!isCheckDisabled('check_vba_macros') && (
+          <button
+            onClick={() => setActiveSubTab('macros')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'macros'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Code className="w-3.5 h-3.5" />
+            <span>VBA Modules ({macro_modules.length})</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveSubTab('capabilities')}
-          className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'capabilities'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Zap className="w-3.5 h-3.5 text-amber-500" />
-          <span>VBA Capabilities ({capabilitiesCount})</span>
-        </button>
+        {!isCheckDisabled('check_vba_macros') && (
+          <button
+            onClick={() => setActiveSubTab('capabilities')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'capabilities'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>VBA Capabilities ({capabilitiesCount})</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveSubTab('stomping')}
-          className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'stomping'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <ShieldAlert className="w-3.5 h-3.5 text-purple-500" />
-          <span>Stomping &amp; Evasion {vba_stomping.is_stomped && '⚠️'}</span>
-        </button>
+        {!isCheckDisabled('check_vba_stomping') && (
+          <button
+            onClick={() => setActiveSubTab('stomping')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'stomping'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-purple-500" />
+            <span>Stomping &amp; Evasion {vba_stomping.is_stomped && '⚠️'}</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveSubTab('ole')}
-          className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'ole'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5 text-blue-500" />
-          <span>OLE Streams &amp; Objects</span>
-        </button>
+        {!isCheckDisabled('check_ole_objects') && (
+          <button
+            onClick={() => setActiveSubTab('ole')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'ole'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-blue-500" />
+            <span>OLE Forensics &amp; OleID</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveSubTab('relationships')}
-          className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'relationships'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <Globe className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Templates &amp; External URLs ({remote_templates.length + urls.length})</span>
-        </button>
+        {(isRtf || rtf_exploits.has_exploits || rtf_objects.length > 0) && (
+          <button
+            onClick={() => setActiveSubTab('rtf_exploits')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'rtf_exploits'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5 text-rose-500" />
+            <span>
+              RTF Exploits &amp; Objects
+              {rtf_exploits.has_exploits ? ' ⚠️' : rtf_objects.length > 0 ? ` (${rtf_objects.length})` : ''}
+            </span>
+          </button>
+        )}
+
+        {!(isCheckDisabled('check_external_relationships') && isCheckDisabled('check_remote_templates')) && (
+          <button
+            onClick={() => setActiveSubTab('relationships')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'relationships'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Templates &amp; External URLs ({remote_templates.length + urls.length})</span>
+          </button>
+        )}
 
         {(excelAnalysis || filename.match(/\.(xlsx?|xlsm)$/i)) && (
           <button
@@ -321,22 +424,41 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
           </button>
         )}
 
-        <button
-          onClick={() => setActiveSubTab('anti_analysis')}
-          className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
-            activeSubTab === 'anti_analysis'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
-          <span>Anti-Analysis & Evasion</span>
-          {Boolean(antiAnalysis?.techniques && antiAnalysis.techniques.length > 0) && (
-            <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-bold">
-              {antiAnalysis?.techniques.length}
+        {(isOneNote || onenote_analysis?.is_onenote) && (
+          <button
+            onClick={() => setActiveSubTab('onenote')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'onenote'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <FileArchive className="w-3.5 h-3.5 text-purple-500" />
+            <span>
+              OneNote Attachments
+              {onenote_analysis?.suspicious_extensions && onenote_analysis.suspicious_extensions.length > 0 ? ' ⚠️' : (onenote_analysis?.embedded_attachments?.length ? ` (${onenote_analysis.embedded_attachments.length})` : '')}
             </span>
-          )}
-        </button>
+          </button>
+        )}
+
+        {!isCheckDisabled('check_anti_analysis') && !isCheckDisabled('anti_analysis_enabled') && (
+          <button
+            onClick={() => setActiveSubTab('anti_analysis')}
+            className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'anti_analysis'
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+            <span>Anti-Analysis & Evasion</span>
+            {Boolean(antiAnalysis?.techniques && antiAnalysis.techniques.length > 0) && (
+              <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-bold">
+                {antiAnalysis?.techniques.length}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Tab 1: VBA Modules & Code Viewer */}
@@ -367,6 +489,51 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* MacroRaptor Heuristics Alert Card */}
+              {mraptor && (
+                <div className={`p-4 rounded-2xl border ${mraptor.suspicious ? 'bg-rose-50/70 border-rose-300' : 'bg-slate-50 border-slate-200'} space-y-2`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className={`w-4 h-4 ${mraptor.suspicious ? 'text-rose-600' : 'text-slate-500'}`} />
+                      <span className="font-bold text-xs uppercase tracking-wide text-slate-800">
+                        MacroRaptor Static Heuristic Analysis
+                      </span>
+                    </div>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      mraptor.suspicious ? 'bg-rose-600 text-white animate-pulse' : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {mraptor.suspicious ? `⚠️ SUSPICIOUS MACRO SEQUENCE (${mraptor.flags})` : '✓ BENIGN HEURISTICS'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    MacroRaptor correlates automated execution hooks [A], filesystem droppers [W], and command execution [X] primitives.
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-xs">
+                    <div className={`p-2 rounded-xl border ${mraptor.autoexec ? 'bg-white border-amber-300 text-amber-900 font-bold' : 'bg-slate-100/50 border-slate-200 text-slate-400'}`}>
+                      <div className="text-[10px] uppercase font-sans font-bold">AutoExec [A]</div>
+                      <div className="truncate">{mraptor.autoexec ? (mraptor.autoexec_match || 'Detected') : 'None'}</div>
+                    </div>
+                    <div className={`p-2 rounded-xl border ${mraptor.write ? 'bg-white border-rose-300 text-rose-900 font-bold' : 'bg-slate-100/50 border-slate-200 text-slate-400'}`}>
+                      <div className="text-[10px] uppercase font-sans font-bold">Write / Drop [W]</div>
+                      <div className="truncate">{mraptor.write ? (mraptor.write_match || 'Detected') : 'None'}</div>
+                    </div>
+                    <div className={`p-2 rounded-xl border ${mraptor.execute ? 'bg-white border-rose-300 text-rose-900 font-bold' : 'bg-slate-100/50 border-slate-200 text-slate-400'}`}>
+                      <div className="text-[10px] uppercase font-sans font-bold">Execution [X]</div>
+                      <div className="truncate">{mraptor.execute ? (mraptor.execute_match || 'Detected') : 'None'}</div>
+                    </div>
+                  </div>
+                  {mraptor.matches && mraptor.matches.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {mraptor.matches.map((kw, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono font-semibold text-slate-700">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -543,9 +710,102 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
         </div>
       )}
 
-      {/* Tab 4: OLE Streams */}
+      {/* Tab 4: OLE Streams, OleID & Forensics */}
       {activeSubTab === 'ole' && (
         <div className="space-y-4 text-xs">
+          {/* OleID Structured Indicators */}
+          {oleid_indicators && oleid_indicators.length > 0 && (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-indigo-600" />
+                  <span>OleID Risk Indicators ({oleid_indicators.length})</span>
+                </div>
+                <span className="text-[11px] font-normal text-slate-500 font-mono">oletools.oleid</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="bg-slate-50 text-[11px] text-slate-500 uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="px-3.5 py-2">Indicator Name</th>
+                      <th className="px-3.5 py-2">Value</th>
+                      <th className="px-3.5 py-2">Risk Verdict</th>
+                      <th className="px-3.5 py-2">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {oleid_indicators.map((ind, idx) => {
+                      const isHigh = ind.risk === 'high' || ind.risk === 'critical';
+                      const isMed = ind.risk === 'medium';
+                      return (
+                        <tr key={idx} className={isHigh ? 'bg-rose-50/50' : isMed ? 'bg-amber-50/40' : 'hover:bg-slate-50'}>
+                          <td className="px-3.5 py-2 font-semibold text-slate-800">{ind.name}</td>
+                          <td className="px-3.5 py-2 text-slate-700">{ind.value}</td>
+                          <td className="px-3.5 py-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                              isHigh ? 'bg-rose-600 text-white' : isMed ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {ind.risk}
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-2 text-slate-500 font-sans text-[11px]">{ind.description || '-'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* CFB / OLE2 Structured Storage Forensics */}
+          {ole_forensics?.is_ole_file && ole_forensics.streams && (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-blue-600" />
+                  <span>CFB / OLE2 Structured Storage Hierarchy ({ole_forensics.streams.length} entries)</span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] font-mono text-slate-500">
+                  <span>Sector: {ole_forensics.sector_size || 512}B</span>
+                  <span>Minisector: {ole_forensics.minisector_size || 64}B</span>
+                </div>
+              </div>
+              {ole_forensics.anomalies && ole_forensics.anomalies.length > 0 && (
+                <div className="p-3 bg-rose-50 border-b border-rose-200 text-xs text-rose-900 space-y-1">
+                  <strong className="block font-bold">Storage Forensic Anomalies Detected:</strong>
+                  {ole_forensics.anomalies.map((a, i) => (
+                    <div key={i} className="font-mono text-[11px]">• {a}</div>
+                  ))}
+                </div>
+              )}
+              <div className="overflow-x-auto max-h-72">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="bg-slate-50 text-[11px] text-slate-500 uppercase border-b border-slate-200 sticky top-0">
+                    <tr>
+                      <th className="px-3.5 py-2">Stream / Storage Path</th>
+                      <th className="px-3.5 py-2">Type</th>
+                      <th className="px-3.5 py-2 text-right">Size</th>
+                      <th className="px-3.5 py-2">Modified (mtime)</th>
+                      <th className="px-3.5 py-2">CLSID</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {ole_forensics.streams.map((st, i) => (
+                      <tr key={i} className="hover:bg-slate-50">
+                        <td className="px-3.5 py-1.5 font-semibold text-slate-800 break-all">{st.path}</td>
+                        <td className="px-3.5 py-1.5 text-slate-500 uppercase text-[10px] font-sans">{st.type}</td>
+                        <td className="px-3.5 py-1.5 text-right font-sans">{st.size ? `${(st.size / 1024).toFixed(1)} KB` : '-'}</td>
+                        <td className="px-3.5 py-1.5 text-slate-500 font-sans text-[11px]">{st.mtime ? new Date(st.mtime).toLocaleString() : '-'}</td>
+                        <td className="px-3.5 py-1.5 text-[10px] text-slate-400 break-all">{st.clsid || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Didier Stevens oledump Streams */}
           {oledumpData && oledumpData.streams && oledumpData.streams.length > 0 && (
             <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
@@ -710,6 +970,129 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Tab: RTF Weaponized Exploits & Carved Objects */}
+      {activeSubTab === 'rtf_exploits' && (
+        <div className="space-y-5 text-xs">
+          {/* Exploit Vectors Banner */}
+          {rtf_exploits?.has_exploits ? (
+            <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl space-y-2">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-rose-600 text-white rounded-xl shrink-0 mt-0.5">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-rose-950">
+                    RTF Weaponized Exploit Structures Identified ({rtf_exploits.details?.length || 0})
+                  </h4>
+                  <p className="text-rose-800 leading-relaxed mt-0.5">
+                    This document contains weaponized Rich Text Format (RTF) control words, CLSIDs, or embedded OLE payloads tailored to exploit known Microsoft Office memory corruption and RCE vulnerabilities.
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {rtf_exploits.details?.map((det, idx) => (
+                      <span key={idx} className="px-2.5 py-1 bg-white border border-rose-300 text-rose-900 rounded-lg font-bold text-xs shadow-2xs">
+                        ⚠️ {det}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-600 flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>No known weaponized RTF exploit structures (CVE-2017-11882, CVE-2017-0199, etc.) detected.</span>
+            </div>
+          )}
+
+          {/* Carved Payloads Alert */}
+          {rtf_exploits?.carved_payloads && rtf_exploits.carved_payloads.length > 0 && (
+            <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl space-y-1.5">
+              <h4 className="font-bold text-amber-950 text-xs flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-600" />
+                <span>Carved Binary &amp; Script Payloads:</span>
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {rtf_exploits.carved_payloads.map((cp, idx) => (
+                  <span key={idx} className="px-2.5 py-0.5 bg-white border border-amber-300 text-amber-900 rounded-lg font-mono text-[11px] font-semibold">
+                    {cp}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Extracted RTF Objects Table */}
+          {rtf_objects && rtf_objects.length > 0 ? (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-indigo-600" />
+                  <span>Extracted RTF Objects via oletools.rtfobj ({rtf_objects.length})</span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500">rtfobj</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="bg-slate-50 text-[11px] text-slate-500 uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="px-3.5 py-2">#</th>
+                      <th className="px-3.5 py-2">Class Name</th>
+                      <th className="px-3.5 py-2">Package / Filename</th>
+                      <th className="px-3.5 py-2">CLSID &amp; Description</th>
+                      <th className="px-3.5 py-2 text-right">Size</th>
+                      <th className="px-3.5 py-2">Carved Payload</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {rtf_objects.map((obj, idx) => {
+                      const isRisky = obj.suspicious || (obj.clsid && obj.clsid.includes('0002CE02'));
+                      return (
+                        <tr key={idx} className={isRisky ? 'bg-rose-50/50' : 'hover:bg-slate-50'}>
+                          <td className="px-3.5 py-2 text-slate-500">{obj.id || idx + 1}</td>
+                          <td className="px-3.5 py-2 font-semibold text-slate-800">{obj.class_name}</td>
+                          <td className="px-3.5 py-2 text-slate-700">
+                            {obj.filename || (obj.is_package ? 'Package' : '-')}
+                          </td>
+                          <td className="px-3.5 py-2">
+                            <div className="text-[11px] text-slate-700">{obj.clsid_desc || obj.clsid || '-'}</div>
+                            {obj.clsid && obj.clsid_desc && <div className="text-[10px] text-slate-400">{obj.clsid}</div>}
+                          </td>
+                          <td className="px-3.5 py-2 text-right font-sans">
+                            {obj.size ? `${(obj.size / 1024).toFixed(1)} KB` : '0 B'}
+                          </td>
+                          <td className="px-3.5 py-2">
+                            {obj.carved_type ? (
+                              <div>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  obj.suspicious ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-700'
+                                }`}>
+                                  {obj.carved_type}
+                                </span>
+                                {obj.carved_sha256 && (
+                                  <div className="text-[9px] text-slate-400 font-mono mt-0.5 truncate max-w-[120px]" title={obj.carved_sha256}>
+                                    {obj.carved_sha256.substring(0, 10)}...
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-500">
+              No embedded OLE or Package objects found in RTF container.
+            </div>
+          )}
         </div>
       )}
 
@@ -1025,7 +1408,82 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
         </div>
       )}
 
-      {/* Tab 8: Anti-Analysis & Macro Evasion */}
+      {/* Tab: OneNote Package & Carved Attachments */}
+      {activeSubTab === 'onenote' && (
+        <div className="space-y-5 text-xs">
+          <div className="p-4 bg-purple-50 border border-purple-300 rounded-2xl space-y-2">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-purple-600 text-white rounded-xl shrink-0 mt-0.5">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-purple-950">
+                  Microsoft OneNote Packaging &amp; Mark-of-the-Web (MOTW) Evasion Forensics
+                </h4>
+                <p className="text-purple-900 leading-relaxed mt-0.5">
+                  OneNote packages (<code className="font-mono bg-purple-100 px-1 py-0.5 rounded text-purple-950">.one</code>) store embedded file attachments inside <span className="font-semibold">FileDataStoreObject</span> streams. When a user double-clicks an embedded attachment in OneNote, Windows may execute the payload without triggering the default Mark-of-the-Web (MOTW) or Microsoft Word/Excel macro runtime security policies.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {onenote_analysis?.embedded_attachments && onenote_analysis.embedded_attachments.length > 0 ? (
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-purple-600" />
+                  <span>Carved OneNote Attachments ({onenote_analysis.embedded_attachments.length})</span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500">FileDataStoreObject</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="bg-slate-50 text-[11px] text-slate-500 uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="px-3.5 py-2">Filename</th>
+                      <th className="px-3.5 py-2">Payload Classification</th>
+                      <th className="px-3.5 py-2 text-right">Size</th>
+                      <th className="px-3.5 py-2">SHA-256 Hash</th>
+                      <th className="px-3.5 py-2 text-center">Threat Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {onenote_analysis.embedded_attachments.map((att, idx) => (
+                      <tr key={idx} className={att.suspicious ? 'bg-rose-50/50' : 'hover:bg-slate-50'}>
+                        <td className="px-3.5 py-2 font-bold text-slate-800">{att.filename}</td>
+                        <td className="px-3.5 py-2 text-slate-700">{att.file_type}</td>
+                        <td className="px-3.5 py-2 text-right font-sans">
+                          {(att.size / 1024).toFixed(1)} KB
+                        </td>
+                        <td className="px-3.5 py-2 text-slate-500 select-all font-mono text-[11px]">
+                          {att.sha256}
+                        </td>
+                        <td className="px-3.5 py-2 text-center">
+                          {att.suspicious ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white animate-pulse">
+                              ⚠️ WEAPONIZED
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                              Benign
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-500">
+              No embedded FileDataStoreObject attachments detected in OneNote structure.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Anti-Analysis & Macro Evasion */}
       {activeSubTab === 'anti_analysis' && (
         <div className="pt-2">
           <AntiAnalysisInspectorCard

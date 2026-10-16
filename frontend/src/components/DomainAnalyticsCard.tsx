@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DomainIntelligence } from '../types';
 import { apiClient } from '../api/client';
 import { InvestigateAssetButton } from './InvestigateAssetButton';
@@ -43,30 +43,117 @@ import {
   XCircle,
   ChevronDown,
   ChevronUp,
-  Star
+  Star,
+  Cloud
 } from 'lucide-react';
+
+export const CLOUD_TAKEOVER_SIGNATURES = [
+  {
+    provider: 'AWS S3',
+    serviceType: 'Object Storage / Static Website Hosting',
+    cnamePattern: '*.s3.amazonaws.com, *.s3-website*.amazonaws.com',
+    cnameRegex: '\\.s3(?:-website)?(?:-[a-z0-9-]+)?\\.amazonaws\\.com$',
+    fingerprint: 'NoSuchBucket',
+    unclaimedStatus: 'unclaimed_bucket',
+    severity: 'high',
+    remediation: 'Claim the S3 bucket in the matching AWS region or remove the dangling CNAME record immediately.'
+  },
+  {
+    provider: 'GitHub Pages',
+    serviceType: 'Static Site / Documentation Hosting',
+    cnamePattern: '*.github.io',
+    cnameRegex: '\\.github\\.io$',
+    fingerprint: "There isn't a GitHub Pages site here",
+    unclaimedStatus: 'unclaimed_repo',
+    severity: 'high',
+    remediation: 'Verify repository CNAME setting on GitHub or delete the dangling DNS CNAME record.'
+  },
+  {
+    provider: 'Heroku',
+    serviceType: 'Cloud Platform as a Service (PaaS)',
+    cnamePattern: '*.herokudns.com, *.herokuapp.com',
+    cnameRegex: '\\.(?:herokudns|herokuapp)\\.com$',
+    fingerprint: 'No such app',
+    unclaimedStatus: 'unclaimed_app',
+    severity: 'high',
+    remediation: 'Point CNAME to active Heroku application or remove the DNS record.'
+  },
+  {
+    provider: 'Azure Web Apps',
+    serviceType: 'Azure App Service / Web Hosting',
+    cnamePattern: '*.azurewebsites.net',
+    cnameRegex: '\\.azurewebsites\\.net$',
+    fingerprint: '404 Web Site not found',
+    unclaimedStatus: 'unclaimed_azure_app',
+    severity: 'high',
+    remediation: 'Bind custom domain in Azure portal or delete the unlinked CNAME record.'
+  },
+  {
+    provider: 'Shopify',
+    serviceType: 'E-Commerce Platform & Online Stores',
+    cnamePattern: '*.myshopify.com',
+    cnameRegex: '\\.myshopify\\.com$',
+    fingerprint: 'Sorry, this shop is currently unavailable',
+    unclaimedStatus: 'unclaimed_store',
+    severity: 'medium',
+    remediation: 'Verify Shopify custom domain mapping or remove stale DNS record.'
+  },
+  {
+    provider: 'Zendesk',
+    serviceType: 'Customer Support & Help Center Portal',
+    cnamePattern: '*.zendesk.com',
+    cnameRegex: '\\.zendesk\\.com$',
+    fingerprint: 'Help Center Closed',
+    unclaimedStatus: 'unclaimed_helpcenter',
+    severity: 'medium',
+    remediation: 'Re-link Zendesk help center or remove host mapping.'
+  },
+  {
+    provider: 'Fastly',
+    serviceType: 'Edge Cloud Content Delivery Network (CDN)',
+    cnamePattern: '*.fastly.net',
+    cnameRegex: '\\.fastly\\.net$',
+    fingerprint: 'Fastly error: unknown domain',
+    unclaimedStatus: 'unclaimed_cdn',
+    severity: 'high',
+    remediation: 'Configure service on Fastly or delete CNAME.'
+  },
+  {
+    provider: 'Surge.sh',
+    serviceType: 'Static Web Publishing',
+    cnamePattern: '*.surge.sh',
+    cnameRegex: '\\.surge\\.sh$',
+    fingerprint: 'project not found',
+    unclaimedStatus: 'unclaimed_surge_project',
+    severity: 'high',
+    remediation: 'Publish surge project under domain or remove CNAME.'
+  }
+];
 
 interface DomainAnalyticsCardProps {
   domainInfo: DomainIntelligence;
   thumbnailUrl?: string;
   jobId?: string;
   onNavigateToJob?: (jobId: string) => void;
+  disabledChecks?: string[];
 }
 
 export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
   domainInfo: initialDomainInfo,
   thumbnailUrl,
   jobId,
-  onNavigateToJob
+  onNavigateToJob,
+  disabledChecks = []
 }) => {
   const [domainInfo, setDomainInfo] = useState<DomainIntelligence>(initialDomainInfo);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'relations' | 'email_sec' | 'archive' | 'bgp_pdns' | 'recon' | 'surface' | 'tls' | 'dns' | 'web' | 'cti' | 'exposure' | 'vulnerabilities' | 'typosquatting'
+    'overview' | 'normalisation' | 'takeover' | 'relations' | 'email_sec' | 'archive' | 'bgp_pdns' | 'recon' | 'surface' | 'tls' | 'dns' | 'web' | 'cti' | 'exposure' | 'vulnerabilities' | 'typosquatting'
   >('overview');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [subdomainSearch, setSubdomainSearch] = useState('');
   const [isScanningPorts, setIsScanningPorts] = useState(false);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
+  const [isScoreHovered, setIsScoreHovered] = useState<boolean>(false);
 
   // Attack Surface Subdomains Filtering State
   const [subdomainStatusFilter, setSubdomainStatusFilter] = useState<'all' | 'active' | 'unresolving'>('all');
@@ -96,6 +183,25 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
   // Web Exposure Filter State
   const [exposureCategoryFilter, setExposureCategoryFilter] = useState<string>('all');
   const [exposureSearch, setExposureSearch] = useState<string>('');
+
+  // Cloud Provider Takeover Signatures Search & Filter State
+  const [signatureSearch, setSignatureSearch] = useState<string>('');
+  const [signatureProviderFilter, setSignatureProviderFilter] = useState<string>('all');
+
+  // Enforce redirection away from disabled checks/tabs
+  useEffect(() => {
+    const disabledMap: Record<string, string[]> = {
+      takeover: ['check_subdomains'],
+      surface: ['check_subdomains'],
+      email_sec: ['check_mx_reputation'],
+      tls: ['check_ssl_tls_cert'],
+      dns: ['check_dns_records'],
+      cti: ['check_virustotal', 'virustotal_enabled'],
+    };
+    if (disabledChecks && disabledMap[activeTab]?.some(dc => disabledChecks.includes(dc))) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, disabledChecks]);
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -160,6 +266,15 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
   const trackingPivots = domainInfo.tracking_pivots;
   const snapshotDiff = domainInfo.snapshot_diff;
 
+  // IP & Domain Checklist Forensics
+  const checklistVerdict = domainInfo.checklist_verdict;
+  const normalisation = domainInfo.indicator_normalisation;
+  const takeoverAnalysis = domainInfo.subdomain_takeover_analysis;
+  const dnsAudit = domainInfo.dns_configuration_audit;
+  const emailPosture = domainInfo.email_domain_posture;
+  const tlsForensics = domainInfo.tls_cert_forensics;
+  const webExposureAudit = domainInfo.web_headers_and_exposure;
+
   // Filter subdomains for surface map with provenance & status awareness
   const filteredSubdomains = (surface?.subdomains || []).filter(s => {
     const q = subdomainSearch.toLowerCase();
@@ -214,6 +329,19 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
       return false;
     }
     return true;
+  });
+
+  // Filtered Cloud Takeover Signatures
+  const filteredSignatures = CLOUD_TAKEOVER_SIGNATURES.filter(sig => {
+    const q = signatureSearch.toLowerCase();
+    const matchesSearch = !q ||
+      sig.provider.toLowerCase().includes(q) ||
+      sig.serviceType.toLowerCase().includes(q) ||
+      sig.cnamePattern.toLowerCase().includes(q) ||
+      sig.fingerprint.toLowerCase().includes(q) ||
+      sig.unclaimedStatus.toLowerCase().includes(q);
+    const matchesProvider = signatureProviderFilter === 'all' || sig.provider === signatureProviderFilter;
+    return matchesSearch && matchesProvider;
   });
 
   const getScoreColor = (level: string = 'clean') => {
@@ -361,6 +489,282 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
         </div>
       </div>
 
+      {/* ----------------- EXECUTIVE SECURITY VERDICT BANNER ----------------- */}
+      {checklistVerdict && (
+        <div className={`p-5 border-b transition-all ${
+          checklistVerdict.verdict === 'Malicious'
+            ? 'bg-rose-50/90 border-rose-200'
+            : checklistVerdict.verdict === 'Suspicious' || checklistVerdict.verdict === 'Vulnerable / Misconfigured'
+            ? 'bg-amber-50/90 border-amber-200'
+            : checklistVerdict.verdict === 'Private / Internal Indicator'
+            ? 'bg-indigo-50/90 border-indigo-200'
+            : 'bg-emerald-50/90 border-emerald-200'
+        }`}>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className={`p-2.5 rounded-xl shadow-xs ${
+                checklistVerdict.verdict === 'Malicious'
+                  ? 'bg-rose-600 text-white'
+                  : checklistVerdict.verdict === 'Suspicious' || checklistVerdict.verdict === 'Vulnerable / Misconfigured'
+                  ? 'bg-amber-600 text-white'
+                  : checklistVerdict.verdict === 'Private / Internal Indicator'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-emerald-600 text-white'
+              }`}>
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Executive Security Verdict
+                  </span>
+                  <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                    checklistVerdict.severity === 'critical'
+                      ? 'bg-rose-200 text-rose-900 border border-rose-300'
+                      : checklistVerdict.severity === 'high'
+                      ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                      : checklistVerdict.severity === 'medium'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : checklistVerdict.severity === 'low'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}>
+                    {checklistVerdict.severity}
+                  </span>
+                </div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
+                  {checklistVerdict.verdict}
+                </h2>
+              </div>
+            </div>
+
+            {/* Risk Score & Confidence Gauges with Interactive Hovering Breakdown */}
+            <div
+              data-domain-risk-card="true"
+              className="relative"
+              onMouseEnter={() => setIsScoreHovered(true)}
+              onMouseLeave={() => setIsScoreHovered(false)}
+            >
+              <div
+                onClick={() => setIsScoreHovered(prev => !prev)}
+                className="flex items-center gap-4 bg-white/95 hover:bg-white backdrop-blur-xs p-3 px-4 rounded-xl border border-slate-200/90 hover:border-blue-400 shadow-2xs transition-all cursor-pointer select-none group"
+              >
+                <div>
+                  <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-slate-400 group-hover:text-blue-600 transition-colors">
+                    <span>Risk Score</span>
+                    <Info className="w-3 h-3 text-blue-500" />
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className={`text-2xl font-black ${
+                      checklistVerdict.risk_score >= 70 ? 'text-rose-600' :
+                      checklistVerdict.risk_score >= 40 ? 'text-amber-600' :
+                      checklistVerdict.risk_score >= 20 ? 'text-yellow-600' : 'text-emerald-600'
+                    }`}>
+                      {checklistVerdict.risk_score}
+                    </span>
+                    <span className="text-xs text-slate-400 font-bold">/100</span>
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-slate-200"></div>
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Confidence</div>
+                  <div className="text-xl font-bold text-slate-700">
+                    {checklistVerdict.confidence_score}%
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Hovering Breakdown Popover */}
+              {isScoreHovered && (
+                <div className="absolute right-0 top-full mt-2 w-[440px] max-w-[95vw] z-50 p-4 rounded-2xl bg-slate-900 border border-slate-700 text-white shadow-2xl space-y-3 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        Risk Score Aspect Breakdown
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                      {checklistVerdict.risk_score}/100 • {checklistVerdict.verdict}
+                    </span>
+                  </div>
+
+                  {checklistVerdict.risk_breakdown?.summary_explanation && (
+                    <p className="text-[11px] text-slate-300 leading-relaxed bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60">
+                      {checklistVerdict.risk_breakdown.summary_explanation}
+                    </p>
+                  )}
+
+                  {/* 4 Dimension Progress Bars */}
+                  {checklistVerdict.risk_breakdown && (
+                    <div className="space-y-2.5 text-xs bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                      {/* Threat Intel */}
+                      <div>
+                        <div className="flex justify-between text-[11px] font-semibold text-slate-300 mb-1">
+                          <span>Threat Intelligence (40%)</span>
+                          <span className="font-mono text-emerald-400">
+                            {checklistVerdict.risk_breakdown.threat_intelligence.score}/100 • {checklistVerdict.risk_breakdown.threat_intelligence.level}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${checklistVerdict.risk_breakdown.threat_intelligence.score >= 65 ? 'bg-rose-500' : checklistVerdict.risk_breakdown.threat_intelligence.score >= 35 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${Math.max(4, checklistVerdict.risk_breakdown.threat_intelligence.score)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Infrastructure */}
+                      <div>
+                        <div className="flex justify-between text-[11px] font-semibold text-slate-300 mb-1">
+                          <span>Infrastructure Reputation (25%)</span>
+                          <span className="font-mono text-sky-400">
+                            {checklistVerdict.risk_breakdown.infrastructure_reputation.score}/100 • {checklistVerdict.risk_breakdown.infrastructure_reputation.level}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${checklistVerdict.risk_breakdown.infrastructure_reputation.score >= 50 ? 'bg-rose-500' : checklistVerdict.risk_breakdown.infrastructure_reputation.score >= 25 ? 'bg-amber-500' : 'bg-sky-500'}`}
+                            style={{ width: `${Math.max(4, checklistVerdict.risk_breakdown.infrastructure_reputation.score)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Cryptographic Trust */}
+                      <div>
+                        <div className="flex justify-between text-[11px] font-semibold text-slate-300 mb-1">
+                          <span>Cryptographic Trust (20%)</span>
+                          <span className="font-mono text-purple-400">
+                            {checklistVerdict.risk_breakdown.cryptographic_trust.score}/100 • {checklistVerdict.risk_breakdown.cryptographic_trust.level}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${checklistVerdict.risk_breakdown.cryptographic_trust.score >= 40 ? 'bg-rose-500' : checklistVerdict.risk_breakdown.cryptographic_trust.score >= 20 ? 'bg-amber-500' : 'bg-purple-500'}`}
+                            style={{ width: `${Math.max(4, checklistVerdict.risk_breakdown.cryptographic_trust.score)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Exposure & Hardening */}
+                      <div>
+                        <div className="flex justify-between text-[11px] font-semibold text-slate-300 mb-1">
+                          <span>Exposure & Hardening (15%)</span>
+                          <span className="font-mono text-amber-400">
+                            {checklistVerdict.risk_breakdown.exposure_and_hardening.score}/100 • {checklistVerdict.risk_breakdown.exposure_and_hardening.level}
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${checklistVerdict.risk_breakdown.exposure_and_hardening.score >= 40 ? 'bg-rose-500' : checklistVerdict.risk_breakdown.exposure_and_hardening.score >= 20 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${Math.max(4, checklistVerdict.risk_breakdown.exposure_and_hardening.score)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Factor Details List */}
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Evaluated Factors & Points:
+                    </span>
+                    {Object.values(checklistVerdict.risk_breakdown || {})
+                      .filter(val => typeof val === 'object' && Array.isArray((val as any).factors))
+                      .flatMap((val: any) => val.factors || [])
+                      .slice(0, 6)
+                      .map((factor: any, fIdx: number) => (
+                        <div key={fIdx} className="flex items-start justify-between gap-2 text-[11px] p-2 rounded-lg bg-slate-800/70 border border-slate-700/50">
+                          <div className="space-y-0.5">
+                            <div className="font-semibold text-slate-200">{factor.name}</div>
+                            <div className="text-[10px] text-slate-400 leading-tight">{factor.detail}</div>
+                          </div>
+                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                            factor.type === 'penalty' ? 'bg-rose-900/60 text-rose-300 border border-rose-700' :
+                            factor.type === 'credit' ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700' :
+                            'bg-slate-700 text-slate-300'
+                          }`}>
+                            {factor.points > 0 ? `+${factor.points} pts` : factor.type === 'credit' ? 'CLEAN' : '0 pts'}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Threat Tags */}
+          {checklistVerdict.threat_tags && checklistVerdict.threat_tags.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap mt-3 pt-3 border-t border-slate-200/70">
+              <span className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                <Tag className="w-3 h-3 text-slate-400" /> Threat Tags:
+              </span>
+              {checklistVerdict.threat_tags.map((t, idx) => (
+                <span key={idx} className="text-xs px-2 py-0.5 bg-white border border-slate-200 rounded-md font-mono text-slate-700 shadow-2xs">
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* MITRE ATT&CK & Rationale Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            {/* Rationale */}
+            <div className="bg-white/95 p-3.5 rounded-xl border border-slate-200/80 text-xs shadow-2xs">
+              <div className="font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-blue-600" />
+                Assessment Rationale:
+              </div>
+              <ul className="space-y-1.5 text-slate-700">
+                {checklistVerdict.rationale?.map((r, idx) => (
+                  <li key={idx} className="flex items-start gap-1.5 leading-relaxed">
+                    <span className="text-blue-500 font-bold mt-0.5">•</span>
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* MITRE & Containment */}
+            <div className="bg-white/95 p-3.5 rounded-xl border border-slate-200/80 text-xs shadow-2xs space-y-2.5">
+              {checklistVerdict.mitre_techniques && checklistVerdict.mitre_techniques.length > 0 && (
+                <div>
+                  <div className="font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                    MITRE ATT&CK Mapping:
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {checklistVerdict.mitre_techniques.map((m, idx) => (
+                      <span key={idx} className="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-800 font-mono text-[11px]" title={m.name}>
+                        <strong>{m.id}</strong>: {m.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {checklistVerdict.containment_checklist && checklistVerdict.containment_checklist.length > 0 && (
+                <div>
+                  <div className="font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    Actionable Containment &amp; Hardening:
+                  </div>
+                  <ul className="space-y-1 text-slate-700">
+                    {checklistVerdict.containment_checklist.slice(0, 3).map((c, idx) => (
+                      <li key={idx} className="flex items-start gap-1.5 text-[11px]">
+                        <Check className="w-3 h-3 text-emerald-600 mt-0.5 shrink-0" />
+                        <span>{c}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ----------------- MULTI-DIMENSIONAL RISK GAUGES ----------------- */}
       {scores && (
         <div className="bg-slate-50/70 p-5 border-b border-slate-200">
@@ -462,6 +866,51 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
           <span>Overview</span>
         </button>
 
+        {/* INDICATOR NORMALISATION */}
+        <button
+          onClick={() => setActiveTab('normalisation')}
+          className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'normalisation'
+              ? 'border-blue-600 text-blue-600 bg-blue-50/40'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <FileCode className="w-3.5 h-3.5 text-blue-600" />
+          <span>Indicator Normalisation</span>
+          {normalisation?.ip_classification && (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-blue-100 text-blue-800">
+              {normalisation.indicator_type.toUpperCase()}
+            </span>
+          )}
+        </button>
+
+        {/* SUBDOMAIN TAKEOVER */}
+        {!disabledChecks?.includes('check_subdomains') && (
+          <button
+            onClick={() => setActiveTab('takeover')}
+            className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'takeover'
+                ? 'border-rose-600 text-rose-600 bg-rose-50/40'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+            <span>Subdomain Takeover</span>
+            {(() => {
+              const count = (takeoverAnalysis?.candidates?.length ?? takeoverAnalysis?.dangling_cnames?.length ?? (takeoverAnalysis?.claimable_count || 0));
+              return count > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse">
+                  {count} Vuln
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-100 text-slate-600">
+                  {takeoverAnalysis?.evaluated_count || 0}
+                </span>
+              );
+            })()}
+          </button>
+        )}
+
         {/* RELATED INFRASTRUCTURE TAB */}
         <button
           onClick={() => setActiveTab('relations')}
@@ -487,20 +936,22 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
         </button>
 
         {/* EMAIL SECURITY */}
-        <button
-          onClick={() => setActiveTab('email_sec')}
-          className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'email_sec'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Mail className="w-3.5 h-3.5" />
-          <span>Email &amp; DMARC</span>
-          {emailSec?.spoofability?.status === 'VULNERABLE' && (
-            <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-          )}
-        </button>
+        {!disabledChecks?.includes('check_mx_reputation') && (
+          <button
+            onClick={() => setActiveTab('email_sec')}
+            className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'email_sec'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Mail className="w-3.5 h-3.5" />
+            <span>Email &amp; DMARC</span>
+            {emailSec?.spoofability?.status === 'VULNERABLE' && (
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+            )}
+          </button>
+        )}
 
         {/* WEB ARCHIVE */}
         <button
@@ -563,41 +1014,47 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
           ) : null}
         </button>
 
-        <button
-          onClick={() => setActiveTab('surface')}
-          className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'surface'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Radio className="w-3.5 h-3.5" />
-          <span>Attack Surface ({surface?.total_discovered || 0})</span>
-        </button>
+        {!disabledChecks?.includes('check_subdomains') && (
+          <button
+            onClick={() => setActiveTab('surface')}
+            className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'surface'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            <span>Attack Surface ({surface?.total_discovered || 0})</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveTab('tls')}
-          className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'tls'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Lock className="w-3.5 h-3.5" />
-          <span>TLS &amp; Certificates</span>
-        </button>
+        {!disabledChecks?.includes('check_ssl_tls_cert') && (
+          <button
+            onClick={() => setActiveTab('tls')}
+            className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'tls'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>TLS &amp; Certificates</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveTab('dns')}
-          className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'dns'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Server className="w-3.5 h-3.5" />
-          <span>DNS &amp; DNSSEC</span>
-        </button>
+        {!disabledChecks?.includes('check_dns_records') && (
+          <button
+            onClick={() => setActiveTab('dns')}
+            className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'dns'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Server className="w-3.5 h-3.5" />
+            <span>DNS &amp; DNSSEC</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('web')}
@@ -611,17 +1068,19 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
           <span>Web Fingerprint</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('cti')}
-          className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === 'cti'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Shield className="w-3.5 h-3.5" />
-          <span>Threat Feeds (CTI)</span>
-        </button>
+        {!disabledChecks?.includes('check_virustotal') && !disabledChecks?.includes('virustotal_enabled') && (
+          <button
+            onClick={() => setActiveTab('cti')}
+            className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'cti'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Threat Feeds (CTI)</span>
+          </button>
+        )}
 
         {/* WEB EXPOSURE */}
         <button
@@ -725,13 +1184,15 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
 
             {/* Key Infrastructure Attributes Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Registration &amp; Registrar</span>
-                <p className="text-sm font-semibold text-slate-800">{whois.registrar || 'Unknown Registrar'}</p>
-                <p className="text-xs text-slate-500 font-mono">
-                  Created: {whois.registration_date ? new Date(whois.registration_date).toLocaleDateString() : 'Unknown'}
-                </p>
-              </div>
+              {!disabledChecks?.includes('check_whois_rdap') && (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Registration &amp; Registrar</span>
+                  <p className="text-sm font-semibold text-slate-800">{whois.registrar || 'Unknown Registrar'}</p>
+                  <p className="text-xs text-slate-500 font-mono">
+                    Created: {whois.registration_date ? new Date(whois.registration_date).toLocaleDateString() : 'Unknown'}
+                  </p>
+                </div>
+              )}
 
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Autonomous System &amp; Host</span>
@@ -741,17 +1202,23 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Security Controls Posture</span>
-                <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                  <span>DNSSEC: {advDns?.dnssec?.enabled ? 'Signed' : 'Unsigned'}</span>
-                  <span>•</span>
-                  <span>Headers: {web?.security_headers?.grade || 'F'}</span>
-                </p>
-                <p className="text-xs text-slate-500 font-mono">
-                  Email DMARC: {emailSec?.dmarc?.policy ? `p=${emailSec.dmarc.policy}` : 'None'}
-                </p>
-              </div>
+              {(!disabledChecks?.includes('check_dns_records') || !disabledChecks?.includes('check_mx_reputation')) && (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Security Controls Posture</span>
+                  <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                    {!disabledChecks?.includes('check_dns_records') && (
+                      <span>DNSSEC: {advDns?.dnssec?.enabled ? 'Signed' : 'Unsigned'}</span>
+                    )}
+                    {!disabledChecks?.includes('check_dns_records') && <span>•</span>}
+                    <span>Headers: {web?.security_headers?.grade || 'F'}</span>
+                  </p>
+                  {!disabledChecks?.includes('check_mx_reputation') && (
+                    <p className="text-xs text-slate-500 font-mono">
+                      Email DMARC: {emailSec?.dmarc?.policy ? `p=${emailSec.dmarc.policy}` : 'None'}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Forward-Confirmed Reverse DNS (FCrDNS) Verification Card */}
@@ -1475,6 +1942,47 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {/* Email Domain Posture & SPF Limits Audit */}
+                {emailPosture && (
+                  <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Mail className="w-4 h-4 text-blue-600" />
+                        <span>Email Infrastructure Posture &amp; SPF Limits Audit</span>
+                      </h5>
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300">
+                        {emailPosture.overall_posture || (emailPosture.is_spoofable ? 'Vulnerable / Spoofable' : 'Hardened / Enforced')}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="p-3 bg-white rounded-lg border border-blue-100">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">SPF Lookups Count</span>
+                        <p className={`text-base font-bold mt-0.5 ${emailPosture.spf?.lookup_limit_exceeded ? 'text-rose-600' : 'text-slate-800'}`}>
+                          {emailPosture.spf?.lookup_count || 0} / 10 limit
+                        </p>
+                        <p className="text-[10px] text-slate-500">Qualifier: {emailPosture.spf?.qualifier || emailPosture.spf?.all_qualifier || '(none)'} ({emailPosture.spf?.qualifier_safety || 'Standard'})</p>
+                      </div>
+
+                      <div className="p-3 bg-white rounded-lg border border-blue-100">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">DMARC Enforcement</span>
+                        <p className={`text-base font-bold mt-0.5 ${emailPosture.dmarc?.is_enforced ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {emailPosture.dmarc?.is_enforced ? 'Enforced (' + emailPosture.dmarc?.policy + ')' : 'Audit Only (' + (emailPosture.dmarc?.policy || 'none') + ')'}
+                        </p>
+                        <p className="text-[10px] text-slate-500">Subdomains: {emailPosture.dmarc?.subdomain_policy || 'inherit'}</p>
+                      </div>
+
+                      <div className="p-3 bg-white rounded-lg border border-blue-100">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">MTA-STS &amp; TLS-RPT</span>
+                        <p className="text-base font-bold text-slate-800 mt-0.5">
+                          {(emailPosture.mta_sts?.enabled || emailPosture.mta_sts?.published) ? 'MTA-STS Enabled' : 'No MTA-STS'}
+                        </p>
+                        <p className="text-[10px] text-slate-500">TLS-RPT: {(emailPosture.tls_rpt?.enabled || emailPosture.tls_rpt?.published) ? 'Configured' : 'Missing'}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -2809,6 +3317,251 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   </div>
                 </div>
 
+                {/* Supported Cipher Suites & Cryptographic Posture Audit */}
+                {(() => {
+                  const cipherAudit = tls.cipher_suites_audit || tlsForensics?.cipher_suites_audit;
+                  if (!cipherAudit || !cipherAudit.ciphers || cipherAudit.ciphers.length === 0) return null;
+                  return (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h5 className="font-bold text-slate-800 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                            <Key className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Supported Cipher Suites &amp; Cryptographic Posture</span>
+                          </h5>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Audit of server-supported TLS cipher suites, Perfect Forward Secrecy (PFS) key exchanges, and vulnerability evaluations.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-white text-slate-700 border border-slate-200 shadow-2xs">
+                            {cipherAudit.supported_count} Supported
+                          </span>
+                          {cipherAudit.has_weak_ciphers ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse">
+                              ⚠️ {cipherAudit.weak_ciphers_count} Insecure / Weak Supported
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              ✓ Modern Ciphers Enforced
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Weak Ciphers Warning Alert */}
+                      {cipherAudit.has_weak_ciphers && (
+                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 text-xs flex items-start gap-2.5">
+                          <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="font-bold">Cryptographic Downgrade &amp; Vulnerability Alert: </strong>
+                            <span>
+                              This server supports {cipherAudit.weak_ciphers_count} legacy or flawed cipher suite(s) ({cipherAudit.weak_ciphers.map(c => c.name).join(', ')}). Attackers on-path can force cipher downgrade, exploit CBC padding or Sweet32 collisions, or decrypt recorded traffic if static RSA keys are later compromised.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Supported Ciphers Table */}
+                      <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px]">
+                            <tr>
+                              <th className="py-2.5 px-3">Cipher Suite Name</th>
+                              <th className="py-2.5 px-2.5">Protocol</th>
+                              <th className="py-2.5 px-2.5">Key Exchange / PFS</th>
+                              <th className="py-2.5 px-2.5">Encryption / MAC</th>
+                              <th className="py-2.5 px-2.5">Support Status</th>
+                              <th className="py-2.5 px-2.5">Evaluation</th>
+                              <th className="py-2.5 px-3">Why it is Bad or Good (Technical Flaw Analysis)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {cipherAudit.ciphers.map((c, cIdx) => (
+                              <tr
+                                key={cIdx}
+                                className={`transition-colors ${
+                                  c.active_negotiated
+                                    ? 'bg-blue-50/40 font-semibold'
+                                    : c.is_weak && c.supported
+                                    ? 'bg-rose-50/40 hover:bg-rose-50/70'
+                                    : 'hover:bg-slate-50/50'
+                                }`}
+                              >
+                                <td className="py-2 px-3 text-slate-800 break-all">
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{c.name}</span>
+                                    {c.active_negotiated && (
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                        Active
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-2 px-2.5 text-slate-600 font-sans text-[11px] whitespace-nowrap">
+                                  {c.protocol}
+                                </td>
+                                <td className="py-2 px-2.5 whitespace-nowrap font-sans text-[11px]">
+                                  <span className={c.key_exchange.includes('PFS') ? 'text-emerald-700 font-semibold' : 'text-amber-700'}>
+                                    {c.key_exchange}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-2.5 text-slate-600 font-sans text-[11px] whitespace-nowrap">
+                                  {c.encryption} ({c.mac})
+                                </td>
+                                <td className="py-2 px-2.5 whitespace-nowrap">
+                                  {c.supported ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                      Supported
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] text-slate-400 bg-slate-100 border border-slate-200">
+                                      Disabled
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-2 px-2.5 whitespace-nowrap">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                                    c.status === 'RECOMMENDED'
+                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                      : c.status === 'ACCEPTABLE'
+                                      ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                      : c.status === 'WEAK'
+                                      ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                      : 'bg-rose-100 text-rose-800 border-rose-300'
+                                  }`}>
+                                    {c.status}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-[11px] font-sans leading-relaxed text-slate-700 max-w-md">
+                                  <span className={c.is_weak ? 'text-rose-900 font-medium' : 'text-slate-600'}>
+                                    {c.explanation}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Certificate Forensics & CT Log Audit */}
+                {tlsForensics && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3.5 text-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <h5 className="font-bold text-slate-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Certificate Forensics &amp; CT Log Audit</span>
+                      </h5>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider font-mono border ${
+                        tlsForensics.matches_target
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse'
+                      }`}>
+                        {tlsForensics.matches_target ? '✓ RFC 6125 Valid Match' : '⚠ Hostname Mismatch Detected'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Hostname Matching</span>
+                        <p className={`font-bold mt-0.5 ${tlsForensics.matches_target ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {tlsForensics.matches_target ? 'Matches Target Name' : 'Hostname Mismatch'}
+                        </p>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Certificate Transparency</span>
+                        <p className="font-bold text-slate-800 mt-0.5">{tlsForensics.ct_log_count || tls.ct_logs?.total_certificates_found || 0} CT Logs Seen</p>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Wildcard Certificate</span>
+                        <p className="font-bold text-slate-800 mt-0.5">{tlsForensics.is_wildcard ? 'Wildcard (*.)' : 'Standard FQDN'}</p>
+                      </div>
+                    </div>
+
+                    {/* In-depth Hostname Validation: How & Why Analysis Card */}
+                    <div className={`p-4 rounded-xl border space-y-3 ${
+                      tlsForensics.matches_target
+                        ? 'bg-white border-emerald-200 shadow-2xs'
+                        : 'bg-rose-50/50 border-rose-200 shadow-xs'
+                    }`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          {tlsForensics.matches_target ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                          )}
+                          <span className="font-bold text-slate-900 text-xs">
+                            Hostname Validation Diagnostics (RFC 6125 &amp; RFC 5280)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] font-mono">
+                          <span className="text-slate-500">Target: <strong className="text-slate-800">{domainInfo.target}</strong></span>
+                          <span className="text-slate-300">|</span>
+                          <span className="text-slate-500">Cert CN: <strong className="text-slate-800">{tls.live_cert.subject?.common_name || 'N/A'}</strong></span>
+                        </div>
+                      </div>
+
+                      {/* How & Why Callouts */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        {/* How it Matches / Mismatches */}
+                        <div className="p-3 bg-slate-50/80 rounded-lg border border-slate-200/80 space-y-1">
+                          <div className="flex items-center gap-1.5 text-slate-700 font-bold text-[11px] uppercase tracking-wider">
+                            <Info className="w-3.5 h-3.5 text-blue-600" />
+                            <span>How it {tlsForensics.matches_target ? 'Matches' : 'Mismatches'}</span>
+                          </div>
+                          <p className="text-slate-700 text-xs leading-relaxed font-sans">
+                            {tlsForensics.hostname_validation?.how || (
+                              tlsForensics.matches_target
+                                ? `Requested hostname '${domainInfo.target}' matches the presented TLS certificate identity.`
+                                : `Target '${domainInfo.target}' does not match certificate Subject Common Name ('${tls.live_cert.subject?.common_name || 'N/A'}') or any of its ${tls.live_cert.sans?.length || 0} Subject Alternative Names.`
+                            )}
+                          </p>
+                        </div>
+
+                        {/* Why this occurs and security implications */}
+                        <div className={`p-3 rounded-lg border space-y-1 ${
+                          tlsForensics.matches_target
+                            ? 'bg-emerald-50/50 border-emerald-200/80 text-emerald-950'
+                            : 'bg-rose-50/70 border-rose-200 text-rose-950'
+                        }`}>
+                          <div className="flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider">
+                            {tlsForensics.matches_target ? (
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                            )}
+                            <span className={tlsForensics.matches_target ? 'text-emerald-800' : 'text-rose-800'}>
+                              Why &amp; Technical Root Cause
+                            </span>
+                          </div>
+                          <p className="text-xs leading-relaxed font-sans">
+                            {tlsForensics.hostname_validation?.why || (
+                              tlsForensics.matches_target
+                                ? 'RFC 6125 §6.4 establishes Subject Alternative Names (dNSName) as the primary authoritative identity for TLS validation. All modern browsers and HTTP clients accept this match unconditionally.'
+                                : 'Under RFC 6125 §6.4.4 and CA/Browser Forum rules, connecting clients immediately abort connections when the requested hostname is not authorized by the certificate SAN extension (triggering ERR_CERT_COMMON_NAME_INVALID / SSL_ERROR_BAD_CERT_DOMAIN).'
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Remediation & Guidance if mismatch */}
+                      {!tlsForensics.matches_target && (
+                        <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold">Remediation Guidance: </span>
+                            <span>{tlsForensics.hostname_validation?.remediation || 'Verify DNS A/AAAA records point to the correct web server, or reissue the TLS certificate with this domain added to the Subject Alternative Name (SAN) extension.'}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Subject Alternative Names (SANs) */}
                 {tls.live_cert.sans && tls.live_cert.sans.length > 0 && (
                   <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
@@ -3028,6 +3781,41 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                 )}
               </div>
 
+              {/* DNS Architecture & TTL Heuristics Audit */}
+              {dnsAudit && (
+                <div className="mt-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <Server className="w-3.5 h-3.5 text-blue-600" />
+                      <span>DNS Architecture &amp; TTL Heuristics Audit</span>
+                    </span>
+                    {(dnsAudit.fast_flux_suspect || (dnsAudit as any).ttl_analysis?.fast_flux_suspect) && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse">
+                        Fast-Flux Suspect
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="p-2 bg-white rounded border border-slate-200">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Low TTL / Fast Flux</span>
+                      <p className={`font-bold mt-0.5 ${(dnsAudit.low_ttl_detected || (dnsAudit as any).ttl_analysis?.low_ttl_detected) ? 'text-amber-600' : 'text-slate-800'}`}>
+                        {(dnsAudit.low_ttl_detected || (dnsAudit as any).ttl_analysis?.low_ttl_detected) ? `Low TTL (${dnsAudit.min_ttl ?? (dnsAudit as any).ttl_analysis?.min_ttl_seconds ?? 30}s)` : `Normal TTL (${dnsAudit.min_ttl ?? (dnsAudit as any).ttl_analysis?.min_ttl_seconds ?? 300}s)`}
+                      </p>
+                    </div>
+                    <div className="p-2 bg-white rounded border border-slate-200">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Wildcard DNS</span>
+                      <p className="font-bold text-slate-800 mt-0.5">
+                        {(dnsAudit.has_wildcard_dns || (dnsAudit as any).wildcard_dns?.detected) ? `Enabled (${dnsAudit.wildcard_ip || (dnsAudit as any).wildcard_dns?.wildcard_target || 'Active'})` : 'Disabled'}
+                      </p>
+                    </div>
+                    <div className="p-2 bg-white rounded border border-slate-200">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">CNAME Chain Depth</span>
+                      <p className="font-bold text-slate-800 mt-0.5">{(dnsAudit.cname_chain?.length ?? (advDns?.records?.cname?.length || 0))} Hops</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* DS Records Table */}
               {advDns?.dnssec?.ds_records && advDns.dnssec.ds_records.length > 0 && (
                 <div className="mt-4 pt-3 border-t border-emerald-200/80 space-y-2">
@@ -3074,6 +3862,28 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Active DNS Resolver Probe (dig) */}
+            {((dnsAudit?.active_dig_findings && dnsAudit.active_dig_findings.length > 0) || (domainInfo.active_recon_summary?.dns_findings && domainInfo.active_recon_summary.dns_findings.length > 0)) && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h5 className="font-bold text-slate-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <Terminal className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Active DNS Resolver Probe (dig)</span>
+                  </h5>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                    Live Verified Records
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(dnsAudit?.active_dig_findings || domainInfo.active_recon_summary?.dns_findings || []).map((f: string, fIdx: number) => (
+                    <span key={fIdx} className="px-2.5 py-1 rounded-lg text-xs font-mono bg-white border border-slate-200 text-slate-800 shadow-2xs">
+                      ✓ {f}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Forward-Confirmed Reverse DNS (FCrDNS) Verification */}
             {fcrdns && (
@@ -3504,6 +4314,54 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Security Headers Audit & Server Disclosure */}
+                {webExposureAudit && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                    <h5 className="font-bold text-slate-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Security Headers Audit &amp; Server Disclosure</span>
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Server Banner</span>
+                        <p className="font-mono text-slate-800 font-semibold mt-0.5">
+                          {webExposureAudit.server_banner || 'Hidden / Redacted'}
+                        </p>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Missing Critical Headers</span>
+                        <p className="font-medium text-rose-600 mt-0.5">
+                          {((webExposureAudit.missing_security_headers || (webExposureAudit as any).missing_headers || []).length > 0)
+                            ? (webExposureAudit.missing_security_headers || (webExposureAudit as any).missing_headers || []).join(', ')
+                            : 'All standard security headers configured'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Active HTTP Headers & Probe (curl) */}
+                {((webExposureAudit?.active_curl_findings && webExposureAudit.active_curl_findings.length > 0) || (domainInfo.active_recon_summary?.http_findings && domainInfo.active_recon_summary.http_findings.length > 0)) && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h5 className="font-bold text-slate-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                        <Terminal className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Active HTTP Probe &amp; Security Header Extraction (curl)</span>
+                      </h5>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        Live Verified
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(webExposureAudit?.active_curl_findings || domainInfo.active_recon_summary?.http_findings || []).map((f: string, fIdx: number) => (
+                        <span key={fIdx} className="px-2.5 py-1 rounded-lg text-xs font-mono bg-white border border-slate-200 text-slate-800 shadow-2xs">
+                          ✓ {f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* 2. Visual Step-by-Step Redirect Chain */}
                 {web.redirect_chain && web.redirect_chain.length > 0 && (
@@ -4669,6 +5527,455 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
             )}
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* TAB: INDICATOR NORMALISATION & CLASSIFICATION */}
+        {/* ========================================================================= */}
+        {activeTab === 'normalisation' && (
+          <div className="p-6 space-y-6">
+            {/* Header / Intro */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+              <div>
+                <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <FileCode className="w-5 h-5 text-blue-600" />
+                  <span>Indicator Validation &amp; Normalisation Checklist</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Canonical syntax parsing, RFC special-purpose space detection, IDNA/Punycode homoglyphs, and Public Suffix separation.
+                </p>
+              </div>
+              {normalisation?.is_valid && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 self-start">
+                  ✓ Syntax Valid ({normalisation.indicator_type.toUpperCase()})
+                </span>
+              )}
+            </div>
+
+            {/* Indicator Details Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-500">Original Raw Input</span>
+                <p className="text-xs font-mono font-bold text-slate-800 break-all select-all">
+                  {normalisation?.original_input || domainInfo.target}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-blue-50/50 border border-blue-200 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-blue-600">Normalized Canonical Value</span>
+                <p className="text-xs font-mono font-bold text-blue-900 break-all select-all flex items-center justify-between">
+                  <span>{normalisation?.normalized_value || domainInfo.normalized_value || domainInfo.target}</span>
+                  <button
+                    onClick={() => copyToClipboard(normalisation?.normalized_value || domainInfo.target, 'canonical')}
+                    className="text-blue-600 hover:text-blue-800 cursor-pointer ml-1 p-0.5"
+                    title="Copy canonical value"
+                  >
+                    {copiedKey === 'canonical' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-500">Indicator Classification</span>
+                <p className="text-xs font-bold text-slate-800">
+                  {normalisation?.ip_classification || (domainInfo.is_ip ? 'Public IP Address' : 'Internet FQDN')}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-500">Reverse DNS Eligibility</span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                    normalisation?.rdns_eligible
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : 'bg-amber-100 text-amber-800 border border-amber-200'
+                  }`}>
+                    {normalisation?.rdns_eligible ? 'Eligible' : 'Ineligible'}
+                  </span>
+                  <span className="text-[11px] text-slate-500 truncate" title={normalisation?.rdns_eligibility_reason}>
+                    {normalisation?.rdns_eligibility_reason || 'Routable unicast'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Active IP Normalisation & RFC Classification Probe (Python ipaddress) */}
+            {((normalisation?.active_ipaddress_findings && normalisation.active_ipaddress_findings.length > 0) || (domainInfo.active_recon_summary?.ip_findings && domainInfo.active_recon_summary.ip_findings.length > 0)) && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h5 className="font-bold text-slate-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <Terminal className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Active Python ipaddress Engine Verification</span>
+                  </h5>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                    Verified Attributes
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(normalisation?.active_ipaddress_findings || domainInfo.active_recon_summary?.ip_findings || []).map((f: string, fIdx: number) => (
+                    <span key={fIdx} className="px-2.5 py-1 rounded-lg text-xs font-mono bg-white border border-slate-200 text-slate-800 shadow-2xs">
+                      ✓ {f}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Public Suffix List Breakdown (for Domains) */}
+            {normalisation && !domainInfo.is_ip && (
+              <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-3">
+                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Globe className="w-4 h-4 text-blue-600" />
+                  <span>Public Suffix List (PSL) Hierarchical Decomposition</span>
+                </h5>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Subdomain Component</span>
+                    <p className="text-sm font-mono font-bold text-slate-800 mt-0.5">
+                      {normalisation.subdomain || <span className="text-slate-400 font-normal italic">(none)</span>}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-blue-50/60 rounded-lg border border-blue-200">
+                    <span className="text-[10px] uppercase font-bold text-blue-500">Registrable Domain (SLD)</span>
+                    <p className="text-sm font-mono font-bold text-blue-900 mt-0.5">
+                      {normalisation.registrable_domain || domainInfo.target}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Public Suffix / TLD</span>
+                    <p className="text-sm font-mono font-bold text-slate-800 mt-0.5">
+                      {normalisation.public_suffix ? `.${normalisation.public_suffix}` : <span className="text-slate-400 font-normal italic">(none)</span>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Special Use Domains & SSRF Shield */}
+            {normalisation && (normalisation.is_special_use_domain || normalisation.ssrf_risk || normalisation.is_private_rfc1918) && (
+              <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2">
+                <div className="flex items-center gap-2 text-amber-900 font-bold text-xs uppercase tracking-wider">
+                  <ShieldAlert className="w-4 h-4 text-amber-700" />
+                  <span>Boundary Security &amp; SSRF Isolation</span>
+                </div>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  {normalisation.ssrf_mitigation_note || 'This indicator is classified as private or non-routable internal infrastructure. External threat intelligence queries and direct external socket connections are automatically restricted to mitigate Server-Side Request Forgery (SSRF) and data leakage.'}
+                </p>
+                {normalisation.special_use_category && (
+                  <span className="inline-block px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-amber-200/70 text-amber-900 border border-amber-300">
+                    Category: {normalisation.special_use_category}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* IDNA / Punycode & Unicode Homoglyphs */}
+            {(() => {
+              const spoofedList = normalisation?.spoofed_chars || (normalisation as any)?.homoglyphs || [];
+              const hasPunyOrHomo = Boolean(normalisation?.has_punycode || normalisation?.is_punycode || normalisation?.is_homograph || (normalisation as any)?.has_homoglyphs || spoofedList.length > 0);
+              const renderedUnicode = normalisation?.unicode_rendered || (normalisation as any)?.unicode_representation || domainInfo.target;
+
+              if (!hasPunyOrHomo) return null;
+
+              return (
+                <div className="p-5 bg-purple-50/60 border border-purple-200 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+                      <ShieldAlert className="w-4 h-4 text-purple-700" />
+                      <span>Unicode Homoglyph / Confusable Impersonation Analysis</span>
+                    </h5>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                      IDNA Decoded
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 bg-white rounded-lg border border-purple-100">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Punycode Form</span>
+                      <p className="font-mono font-bold text-slate-800 mt-0.5">{normalisation?.normalized_value || domainInfo.target}</p>
+                    </div>
+                    <div className="p-3 bg-white rounded-lg border border-purple-100">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Rendered Unicode</span>
+                      <p className="font-sans text-base font-bold text-purple-900 mt-0.5">{renderedUnicode}</p>
+                    </div>
+                  </div>
+
+                  {spoofedList.length > 0 && (
+                    <div className="overflow-x-auto border border-purple-200 rounded-lg bg-white mt-3">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-purple-100/60 text-purple-900 uppercase font-bold text-[10px]">
+                          <tr>
+                            <th className="py-2 px-3">Spoofed Glyph</th>
+                            <th className="py-2 px-3">Latin Lookalike</th>
+                            <th className="py-2 px-3">Unicode Codepoint</th>
+                            <th className="py-2 px-3">Character Name</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-purple-100 font-mono text-[11px]">
+                          {spoofedList.map((c: any, i: number) => (
+                            <tr key={i} className="hover:bg-purple-50/50">
+                              <td className="py-2 px-3 font-sans text-base font-bold text-rose-600">{c.char}</td>
+                              <td className="py-2 px-3 font-bold text-emerald-700">'{c.latin_lookalike || c.lookalike}'</td>
+                              <td className="py-2 px-3 text-slate-600">{c.codepoint}</td>
+                              <td className="py-2 px-3 font-sans text-slate-700">{c.name}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB: SUBDOMAIN TAKEOVER AUDIT */}
+        {/* ========================================================================= */}
+        {activeTab === 'takeover' && (
+          <div className="p-6 space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-3">
+              <div>
+                <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  <span>Subdomain Takeover &amp; Dangling CNAME Audit</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  5-step automated vulnerability audit detecting orphaned DNS pointers across AWS S3, GitHub Pages, Heroku, Azure, Shopify, and more.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                  (takeoverAnalysis?.has_high_risk_takeover || takeoverAnalysis?.has_takeover_risk || (takeoverAnalysis?.claimable_count || 0) > 0)
+                    ? 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse'
+                    : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                }`}>
+                  {(takeoverAnalysis?.has_high_risk_takeover || takeoverAnalysis?.has_takeover_risk || (takeoverAnalysis?.claimable_count || 0) > 0) ? 'Takeover Risk Detected' : 'No Takeover Risk'}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Metrics */}
+            {(() => {
+              const takeoverCandidates = (takeoverAnalysis?.dangling_cnames || (takeoverAnalysis as any)?.candidates || []) as Array<any>;
+              const claimableCount = takeoverAnalysis?.claimable_count ?? (takeoverAnalysis as any)?.vulnerable_count ?? takeoverCandidates.length;
+              const evaluatedCount = (takeoverAnalysis as any)?.evaluated_count ?? (domainInfo.attack_surface?.subdomains?.length || 0) + 1;
+              return (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-slate-500">Evaluated CNAME Records</span>
+                      <p className="text-2xl font-black text-slate-800">{evaluatedCount}</p>
+                      <p className="text-[11px] text-slate-500">Across discovered subdomains and CNAME chains</p>
+                    </div>
+
+                    <div className={`p-4 border rounded-xl space-y-1 ${
+                      claimableCount > 0
+                        ? 'bg-rose-50/70 border-rose-200'
+                        : 'bg-emerald-50/70 border-emerald-200'
+                    }`}>
+                      <span className="text-[10px] uppercase font-bold text-slate-500">Vulnerable / Unclaimed</span>
+                      <p className={`text-2xl font-black ${
+                        claimableCount > 0 ? 'text-rose-600' : 'text-emerald-700'
+                      }`}>
+                        {claimableCount}
+                      </p>
+                      <p className="text-[11px] text-slate-600">Candidates with matched provider error fingerprints</p>
+                    </div>
+
+                    <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-xl space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-blue-600">Cloud Provider Signatures</span>
+                      <p className="text-2xl font-black text-blue-900">8 Services</p>
+                      <p className="text-[11px] text-blue-700">AWS S3, GitHub Pages, Heroku, Azure, Shopify, Zendesk, Fastly, Surge</p>
+                    </div>
+                  </div>
+
+                  {/* Candidates Table or Empty State */}
+                  {takeoverCandidates.length > 0 ? (
+                    <div className="border border-rose-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                      <div className="p-4 bg-rose-50/60 border-b border-rose-200 flex items-center justify-between">
+                        <div className="font-bold text-xs text-rose-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-600" />
+                          <span>Dangling Subdomain Candidates Identified ({takeoverCandidates.length})</span>
+                        </div>
+                        <span className="text-xs text-rose-700 font-semibold">Immediate Action Required</span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] border-b border-slate-200">
+                            <tr>
+                              <th className="py-2.5 px-4">Subdomain</th>
+                              <th className="py-2.5 px-4">CNAME Pointer Target</th>
+                              <th className="py-2.5 px-4">Cloud Provider</th>
+                              <th className="py-2.5 px-4">Severity</th>
+                              <th className="py-2.5 px-4">Fingerprint Match</th>
+                              <th className="py-2.5 px-4">Remediation Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {takeoverCandidates.map((c, idx) => (
+                              <tr key={idx} className="hover:bg-rose-50/30 transition-colors">
+                                <td className="py-3 px-4 font-mono font-bold text-slate-900">{c.subdomain || c.domain}</td>
+                                <td className="py-3 px-4 font-mono text-slate-600">{c.cname_target}</td>
+                                <td className="py-3 px-4">
+                                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                                    {c.service_provider || c.provider}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                    c.severity === 'high'
+                                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                      : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                  }`}>
+                                    {c.severity}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-slate-700 font-mono text-[11px]">{c.signature || c.fingerprint_match || '-'}</td>
+                                <td className="py-3 px-4 text-slate-800 font-medium">{c.remediation}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-8 border border-dashed border-emerald-200 rounded-xl bg-emerald-50/30 text-center space-y-2">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+                      <h5 className="text-sm font-bold text-emerald-900">Zero Dangling CNAME Records Detected</h5>
+                      <p className="text-xs text-emerald-700 max-w-lg mx-auto">
+                        All evaluated CNAME records and subdomains either point to active legitimate assets or do not expose orphaned cloud bucket/app fingerprints.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Audited Cloud Provider Takeover Signatures & Fingerprint Database */}
+                  <div className="border border-blue-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                    <div className="p-4 bg-blue-50/70 border-b border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <div className="font-bold text-xs text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
+                          <Cloud className="w-4 h-4 text-blue-600" />
+                          <span>Audited Cloud Provider Takeover Signatures ({filteredSignatures.length} of {CLOUD_TAKEOVER_SIGNATURES.length} Active)</span>
+                        </div>
+                        <p className="text-[11px] text-blue-700">
+                          CNAME canonical routing patterns, HTTP response body error fingerprints, and remediation protocols.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={signatureProviderFilter}
+                          onChange={(e) => setSignatureProviderFilter(e.target.value)}
+                          className="px-2.5 py-1 text-xs border border-blue-200 rounded-lg bg-white text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                        >
+                          <option value="all">All Providers ({CLOUD_TAKEOVER_SIGNATURES.length})</option>
+                          {CLOUD_TAKEOVER_SIGNATURES.map((s) => (
+                            <option key={s.provider} value={s.provider}>{s.provider}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="text"
+                          value={signatureSearch}
+                          onChange={(e) => setSignatureSearch(e.target.value)}
+                          placeholder="Search signatures or fingerprints..."
+                          className="px-2.5 py-1 text-xs border border-blue-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500 w-52 font-mono"
+                        />
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] border-b border-slate-200">
+                          <tr>
+                            <th className="py-2.5 px-4">Cloud Provider</th>
+                            <th className="py-2.5 px-4">CNAME Pointer Target Pattern</th>
+                            <th className="py-2.5 px-4">Error Response Body Fingerprint</th>
+                            <th className="py-2.5 px-4">Unclaimed Status</th>
+                            <th className="py-2.5 px-4">Severity</th>
+                            <th className="py-2.5 px-4">Actionable Remediation</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredSignatures.map((sig, sIdx) => (
+                            <tr key={sIdx} className="hover:bg-blue-50/30 transition-colors">
+                              <td className="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 text-blue-900 border border-blue-200">
+                                    {sig.provider}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-slate-500 font-normal block mt-1">{sig.serviceType}</span>
+                              </td>
+                              <td className="py-3 px-4 font-mono text-[11px]">
+                                <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                  {sig.cnamePattern}
+                                </span>
+                                <span className="text-[10px] text-slate-400 block font-mono mt-1 truncate max-w-xs" title={sig.cnameRegex}>
+                                  Regex: {sig.cnameRegex}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="px-2 py-1 rounded font-mono text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 inline-block">
+                                  &quot;{sig.fingerprint}&quot;
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 font-mono text-[11px]">
+                                <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
+                                  {sig.unclaimedStatus}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                  sig.severity === 'high'
+                                    ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                    : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                }`}>
+                                  {sig.severity}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-slate-700 text-[11px] leading-relaxed max-w-sm">
+                                {sig.remediation}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+
+            {/* 5-Step Methodology Card */}
+            <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-3 text-xs">
+              <h5 className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-blue-600" />
+                <span>5-Step Subdomain Takeover Verification Protocol</span>
+              </h5>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-1 text-[11px]">
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <div className="font-bold text-blue-600 mb-0.5">1. CNAME Discovery</div>
+                  <p className="text-slate-600">Scan zone records and Certificate Transparency logs for aliases.</p>
+                </div>
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <div className="font-bold text-blue-600 mb-0.5">2. Canonical Resolution</div>
+                  <p className="text-slate-600">Trace pointer chains to third-party cloud hosting endpoints.</p>
+                </div>
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <div className="font-bold text-blue-600 mb-0.5">3. Fingerprint Match</div>
+                  <p className="text-slate-600">Query HTTP responses for provider 404/unclaimed patterns.</p>
+                </div>
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <div className="font-bold text-blue-600 mb-0.5">4. Safe Verification</div>
+                  <p className="text-slate-600">Inspect zone authority without hostile exploitation.</p>
+                </div>
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <div className="font-bold text-blue-600 mb-0.5">5. Remediation</div>
+                  <p className="text-slate-600">Delete orphaned DNS records or claim resource in tenant.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

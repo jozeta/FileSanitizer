@@ -28,6 +28,18 @@ from collections import Counter
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
 from app.core.logging_config import logger
 from app.core.settings_store import settings_store
+from app.analyzers.evtx_forensics import (
+    audit_evtx_capture_integrity,
+    audit_record_continuity_and_gaps,
+    audit_log_inventory_and_coverage,
+    evaluate_sigma_rules,
+    analyze_authentication_forensics,
+    analyze_account_and_privilege_changes,
+    analyze_lateral_movement_chains,
+    analyze_log_tampering_and_anti_forensics,
+    get_offline_analysis_tools_guide,
+    calculate_evtx_verdict,
+)
 
 # Sensitive & Monitored Event Catalog for Windows IR
 EVENT_CATALOG = {
@@ -737,6 +749,9 @@ class EvtxAnalyzer(BaseAnalyzer):
                 pass
 
         if not all_records:
+            cap_int = audit_evtx_capture_integrity(target_file_path, filename)
+            cov_aud = audit_log_inventory_and_coverage(parsed_files, [])
+            verdict = calculate_evtx_verdict([], findings, [], cov_aud, {}, {}, [])
             return AnalyzerResult(
                 analyzer_name=self.name,
                 success=True,
@@ -744,7 +759,16 @@ class EvtxAnalyzer(BaseAnalyzer):
                 data={
                     "total_events": 0,
                     "parsed_files": parsed_files,
-                    "message": "Zero records parsed from supplied Windows Event Log file(s)."
+                    "message": "Zero records parsed from supplied Windows Event Log file(s).",
+                    "evtx_verdict": verdict,
+                    "capture_integrity": cap_int,
+                    "coverage_audit": cov_aud,
+                    "sigma_alerts": [],
+                    "auth_forensics": {},
+                    "account_management": {},
+                    "lateral_chains": [],
+                    "tampering_analysis": {},
+                    "offline_tools_guide": get_offline_analysis_tools_guide(filename)
                 }
             )
 
@@ -1447,6 +1471,41 @@ class EvtxAnalyzer(BaseAnalyzer):
         if progress_callback:
             progress_callback(100, f"Forensic analysis complete ({len(final_timeline):,} timeline events indexed)")
 
+        # Comprehensive Checklist Forensics & Threat Assessment
+        capture_integrity = audit_evtx_capture_integrity(target_file_path, filename)
+        continuity_audit = audit_record_continuity_and_gaps(all_records)
+        capture_integrity["continuity"] = continuity_audit
+        coverage_audit = audit_log_inventory_and_coverage(parsed_files, all_records)
+        sigma_alerts = evaluate_sigma_rules(all_records)
+        auth_forensics = analyze_authentication_forensics(all_records)
+        account_management = analyze_account_and_privilege_changes(all_records)
+        lateral_chains = analyze_lateral_movement_chains(all_records)
+        tampering_analysis = analyze_log_tampering_and_anti_forensics(all_records)
+        offline_tools_guide = get_offline_analysis_tools_guide(filename)
+
+        # Convert high/critical Sigma alerts to top-level findings if not already represented
+        existing_finding_titles = {f.title for f in findings}
+        for sa in sigma_alerts:
+            if sa["level"] in ["critical", "high"] and not any(sa["title"] in t for t in existing_finding_titles):
+                findings.append(Finding(
+                    category="evtx_sigma",
+                    severity=sa["level"],
+                    title=f"Sigma: {sa['title']} ({sa['match_count']} Match{'es' if sa['match_count'] > 1 else ''})",
+                    description=sa["description"],
+                    details={
+                        "rule_id": sa["rule_id"],
+                        "mitre_technique": sa["mitre_technique"],
+                        "sample_events": sa["sample_events"]
+                    }
+                ))
+                existing_finding_titles.add(sa["title"])
+
+        # Compute Executive EVTX Security Verdict
+        evtx_verdict = calculate_evtx_verdict(
+            all_records, findings, sigma_alerts, coverage_audit,
+            auth_forensics, tampering_analysis, lateral_chains
+        )
+
         return AnalyzerResult(
             analyzer_name=self.name,
             success=True,
@@ -1520,7 +1579,16 @@ class EvtxAnalyzer(BaseAnalyzer):
                 "file_access_audit": file_access_raw,
                 "print_audit": print_audit_raw,
                 "rdp_sessions": rdp_events_raw,
-                "deobfuscated_commands": deobfuscated_cmds_raw
+                "deobfuscated_commands": deobfuscated_cmds_raw,
+                "evtx_verdict": evtx_verdict,
+                "capture_integrity": capture_integrity,
+                "coverage_audit": coverage_audit,
+                "sigma_alerts": sigma_alerts,
+                "auth_forensics": auth_forensics,
+                "account_management": account_management,
+                "lateral_chains": lateral_chains,
+                "tampering_analysis": tampering_analysis,
+                "offline_tools_guide": offline_tools_guide
             }
         )
 

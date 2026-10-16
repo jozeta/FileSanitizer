@@ -34,6 +34,7 @@ import {
   CheckCircle2,
   X,
   Layers,
+  Crosshair,
 } from 'lucide-react';
 import {
   EvtxInfo,
@@ -67,6 +68,7 @@ interface EvtxTriageCardProps {
   onNavigateToPcap?: (pcapJobId?: string, targetIp?: string) => void;
   onSelectJob?: (newJobId: string) => void;
   jobId?: string;
+  disabledChecks?: string[];
 }
 
 // Logon Type descriptive names
@@ -244,7 +246,9 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
   onNavigateToPcap,
   onSelectJob,
   jobId,
+  disabledChecks = [],
 }) => {
+  const isCheckDisabled = (chk: string) => (disabledChecks || []).includes(chk);
   const evtxIocs = useMemo(() => {
     return (evtxInfo?.unique_ips || []).filter(
       (ip) => ip && ip !== '-' && ip !== '127.0.0.1' && ip !== '::1'
@@ -267,7 +271,31 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
     | 'logons'
     | 'persistence'
     | 'anti_analysis'
+    | 'sigma_alerts'
+    | 'integrity_coverage'
+    | 'auth_kerberos'
+    | 'account_privilege'
+    | 'lateral_chains'
+    | 'offline_tools'
   >('timeline');
+
+  useEffect(() => {
+    if (activeTab === 'powershell' && isCheckDisabled('check_powershell_scriptblocks')) {
+      setActiveTab('timeline');
+    } else if (activeTab === 'deobfuscator' && isCheckDisabled('check_powershell_scriptblocks')) {
+      setActiveTab('timeline');
+    } else if (activeTab === 'processes' && isCheckDisabled('check_process_spawning')) {
+      setActiveTab('timeline');
+    } else if (activeTab === 'lateral' && isCheckDisabled('check_network_connections')) {
+      setActiveTab('timeline');
+    } else if (activeTab === 'persistence' && isCheckDisabled('check_scheduled_tasks')) {
+      setActiveTab('timeline');
+    } else if (activeTab === 'account_privilege' && (isCheckDisabled('check_privilege_escalation') && isCheckDisabled('check_account_manipulation'))) {
+      setActiveTab('timeline');
+    } else if (activeTab === 'anti_analysis' && (isCheckDisabled('check_anti_analysis') || isCheckDisabled('anti_analysis_enabled'))) {
+      setActiveTab('timeline');
+    }
+  }, [activeTab, disabledChecks]);
   const [fileAuditCategoryFilter, setFileAuditCategoryFilter] = useState<string>('all');
   const [fileAuditSearch, setFileAuditSearch] = useState<string>('');
   const [storylineCategoryFilter, setStorylineCategoryFilter] = useState<string>('all');
@@ -958,6 +986,117 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Executive EVTX Security Verdict Banner */}
+      {evtxInfo.evtx_verdict && (
+        <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-3 rounded-2xl ${
+                  evtxInfo.evtx_verdict.severity === 'critical'
+                    ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                    : evtxInfo.evtx_verdict.severity === 'high'
+                    ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                    : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                }`}
+              >
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-slate-500">
+                    EXECUTIVE EVTX SECURITY VERDICT
+                  </span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-black font-mono tracking-wider uppercase ${
+                      evtxInfo.evtx_verdict.severity === 'critical'
+                        ? 'bg-rose-600 text-white'
+                        : evtxInfo.evtx_verdict.severity === 'high'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-emerald-600 text-white'
+                    }`}
+                  >
+                    {evtxInfo.evtx_verdict.severity.toUpperCase()}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black font-mono text-slate-900 tracking-tight">
+                  {evtxInfo.evtx_verdict.verdict}
+                </h2>
+              </div>
+            </div>
+
+            {/* Confidence Meter */}
+            <div className="flex items-center gap-4 bg-slate-50 border border-slate-200/80 rounded-2xl p-3 px-4">
+              <div>
+                <span className="text-[10px] font-mono text-slate-500 font-bold block uppercase tracking-wider">
+                  Analysis Confidence
+                </span>
+                <span className="text-xl font-black font-mono text-slate-900">
+                  {evtxInfo.evtx_verdict.confidence_score}%
+                </span>
+              </div>
+              <div className="w-24 bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    evtxInfo.evtx_verdict.confidence_score >= 80 ? 'bg-indigo-600' : 'bg-amber-500'
+                  }`}
+                  style={{ width: `${evtxInfo.evtx_verdict.confidence_score}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Rationale & Containment Guidance */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-slate-500 flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Key Assessment Rationale:</span>
+              </span>
+              <ul className="space-y-1.5 text-slate-700">
+                {evtxInfo.evtx_verdict.key_assessment_rationale.map((r, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    <span className="text-rose-500 font-bold mt-0.5">•</span>
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+              {evtxInfo.evtx_verdict.mitre_attack_techniques.length > 0 && (
+                <div className="pt-2 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">MITRE ATT&amp;CK:</span>
+                  {evtxInfo.evtx_verdict.mitre_attack_techniques.map((t, idx) => (
+                    <span key={idx} className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[10px] font-semibold">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-slate-500 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-rose-600" />
+                <span>Actionable Containment Guidance:</span>
+              </span>
+              <ul className="space-y-1.5 text-slate-700">
+                {evtxInfo.evtx_verdict.containment_guidance.map((g, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>{g}</span>
+                  </li>
+                ))}
+              </ul>
+              {evtxInfo.evtx_verdict.coverage_warning && (
+                <p className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-[11px] mt-2">
+                  <AlertTriangle className="w-3.5 h-3.5 inline mr-1 text-amber-600" />
+                  {evtxInfo.evtx_verdict.coverage_warning}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Banner & Core Metrics */}
       <div className="p-6 bg-white text-slate-900 rounded-3xl shadow-sm border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
@@ -1264,22 +1403,24 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             )}
           </button>
 
-          <button
-            onClick={() => setActiveTab('deobfuscator')}
-            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'deobfuscator'
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <Code2 className="w-4 h-4 text-rose-600" />
-            <span>Command De-obfuscator</span>
-            {deobfuscatedCommandsList.length > 0 && (
-              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-rose-100 text-rose-800 font-mono font-bold">
-                {deobfuscatedCommandsList.length}
-              </span>
-            )}
-          </button>
+          {!isCheckDisabled('check_powershell_scriptblocks') && (
+            <button
+              onClick={() => setActiveTab('deobfuscator')}
+              className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'deobfuscator'
+                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Code2 className="w-4 h-4 text-rose-600" />
+              <span>Command De-obfuscator</span>
+              {deobfuscatedCommandsList.length > 0 && (
+                <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-rose-100 text-rose-800 font-mono font-bold">
+                  {deobfuscatedCommandsList.length}
+                </span>
+              )}
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('entities')}
@@ -1296,50 +1437,56 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             </span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('lateral')}
-            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'lateral'
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <Share2 className="w-4 h-4 text-rose-600" />
-            <span>SMB Lateral Movement</span>
-            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200/80 text-slate-700 font-mono">
-              {lateralMovementList.length}
-            </span>
-          </button>
+          {!isCheckDisabled('check_network_connections') && (
+            <button
+              onClick={() => setActiveTab('lateral')}
+              className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'lateral'
+                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Share2 className="w-4 h-4 text-rose-600" />
+              <span>SMB Lateral Movement</span>
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200/80 text-slate-700 font-mono">
+                {lateralMovementList.length}
+              </span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab('processes')}
-            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'processes'
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <Zap className="w-4 h-4" />
-            <span>Process Creation &amp; LOLBins</span>
-            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200/80 text-slate-700 font-mono">
-              {threats.process_creation?.length || 0}
-            </span>
-          </button>
+          {!isCheckDisabled('check_process_spawning') && (
+            <button
+              onClick={() => setActiveTab('processes')}
+              className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'processes'
+                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Zap className="w-4 h-4" />
+              <span>Process Creation &amp; LOLBins</span>
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200/80 text-slate-700 font-mono">
+                {threats.process_creation?.length || 0}
+              </span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab('powershell')}
-            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'powershell'
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <Terminal className="w-4 h-4" />
-            <span>PowerShell Script Blocks</span>
-            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200/80 text-slate-700 font-mono">
-              {threats.powershell?.length || 0}
-            </span>
-          </button>
+          {!isCheckDisabled('check_powershell_scriptblocks') && (
+            <button
+              onClick={() => setActiveTab('powershell')}
+              className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'powershell'
+                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Terminal className="w-4 h-4" />
+              <span>PowerShell Script Blocks</span>
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200/80 text-slate-700 font-mono">
+                {threats.powershell?.length || 0}
+              </span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('logons')}
@@ -1356,36 +1503,140 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             </span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('persistence')}
-            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'persistence'
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            <span>Services &amp; Scheduled Tasks</span>
-            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200/80 text-slate-700 font-mono">
-              {threats.services_and_tasks?.length || 0}
-            </span>
-          </button>
+          {!isCheckDisabled('check_scheduled_tasks') && (
+            <button
+              onClick={() => setActiveTab('persistence')}
+              className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'persistence'
+                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              <span>Services &amp; Scheduled Tasks</span>
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200/80 text-slate-700 font-mono">
+                {threats.services_and_tasks?.length || 0}
+              </span>
+            </button>
+          )}
+
+          {!isCheckDisabled('check_anti_analysis') && !isCheckDisabled('anti_analysis_enabled') && (
+            <button
+              onClick={() => setActiveTab('anti_analysis')}
+              className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'anti_analysis'
+                  ? 'bg-rose-50 text-rose-700 border-b-2 border-rose-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 text-rose-600" />
+              <span>Anti-Forensics &amp; Tampering</span>
+              {Boolean(antiAnalysis?.techniques && antiAnalysis.techniques.length > 0) && (
+                <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-rose-600 text-white font-mono font-bold">
+                  {antiAnalysis?.techniques.length}
+                </span>
+              )}
+            </button>
+          )}
 
           <button
-            onClick={() => setActiveTab('anti_analysis')}
+            onClick={() => setActiveTab('sigma_alerts')}
             className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'anti_analysis'
+              activeTab === 'sigma_alerts'
                 ? 'bg-rose-50 text-rose-700 border-b-2 border-rose-600'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
             <ShieldAlert className="w-4 h-4 text-rose-600" />
-            <span>Anti-Forensics &amp; Tampering</span>
-            {Boolean(antiAnalysis?.techniques && antiAnalysis.techniques.length > 0) && (
+            <span>Sigma IDS Alerts</span>
+            {Boolean(evtxInfo.sigma_alerts && evtxInfo.sigma_alerts.length > 0) && (
               <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-rose-600 text-white font-mono font-bold">
-                {antiAnalysis?.techniques.length}
+                {evtxInfo.sigma_alerts?.length}
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('integrity_coverage')}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'integrity_coverage'
+                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Layers className="w-4 h-4 text-indigo-600" />
+            <span>Capture Integrity &amp; Coverage</span>
+            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-indigo-100 text-indigo-800 font-mono font-bold">
+              {evtxInfo.coverage_audit?.coverage_score ?? 100}%
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('auth_kerberos')}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'auth_kerberos'
+                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Key className="w-4 h-4 text-amber-600" />
+            <span>Auth &amp; Kerberos Forensics</span>
+            {Boolean(evtxInfo.auth_forensics?.total_failed_logons) && (
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-amber-100 text-amber-800 font-mono font-bold">
+                {evtxInfo.auth_forensics?.total_failed_logons} fails
+              </span>
+            )}
+          </button>
+
+          {!(isCheckDisabled('check_privilege_escalation') && isCheckDisabled('check_account_manipulation')) && (
+            <button
+              onClick={() => setActiveTab('account_privilege')}
+              className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'account_privilege'
+                  ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <User className="w-4 h-4 text-emerald-600" />
+              <span>Account &amp; Privilege Management</span>
+              {Boolean(evtxInfo.account_management?.sensitive_group_additions?.length) && (
+                <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-rose-100 text-rose-800 font-mono font-bold">
+                  {evtxInfo.account_management?.sensitive_group_additions?.length} admins
+                </span>
+              )}
+            </button>
+          )}
+
+          <button
+            onClick={() => setActiveTab('lateral_chains')}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'lateral_chains'
+                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Share2 className="w-4 h-4 text-purple-600" />
+            <span>Lateral Movement Chains</span>
+            {Boolean(evtxInfo.lateral_chains?.length) && (
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-purple-100 text-purple-800 font-mono font-bold">
+                {evtxInfo.lateral_chains?.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('offline_tools')}
+            className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'offline_tools'
+                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Terminal className="w-4 h-4 text-slate-700" />
+            <span>Offline Tools Guide</span>
+            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 text-slate-800 font-mono">
+              CLI
+            </span>
           </button>
         </div>
 
@@ -3768,6 +4019,614 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             ) : (
               <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-500 text-xs">
                 No obfuscated commands requiring normalization detected in analyzed event logs.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 15: Sigma IDS Detection Rules */}
+        {activeTab === 'sigma_alerts' && (
+          <div className="space-y-6">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-rose-600" />
+                  <span>Sigma-Compatible Detection Rules Engine</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  High-fidelity Sigma threat hunting rules evaluating Windows event telemetry for credential theft, defense evasion, and persistence.
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-100 text-rose-800 shrink-0">
+                {evtxInfo.sigma_alerts?.length || 0} Rule Detections
+              </span>
+            </div>
+
+            {evtxInfo.sigma_alerts && evtxInfo.sigma_alerts.length > 0 ? (
+              <div className="space-y-4">
+                {evtxInfo.sigma_alerts.map((alert, idx) => (
+                  <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-black uppercase font-mono tracking-wider ${
+                            alert.level === 'critical'
+                              ? 'bg-rose-600 text-white'
+                              : alert.level === 'high'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-blue-600 text-white'
+                          }`}
+                        >
+                          {alert.level}
+                        </span>
+                        <span className="text-sm font-bold font-mono text-slate-900">{alert.title}</span>
+                        <span className="text-[10px] font-mono text-slate-400">({alert.rule_id})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-mono font-bold">
+                          MITRE {alert.mitre_technique}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold font-mono">
+                          {alert.match_count} match{alert.match_count > 1 ? 'es' : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-600 leading-relaxed">{alert.description}</p>
+
+                    {alert.sample_events && alert.sample_events.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block font-mono">
+                          Matched Event Telemetry (Sample)
+                        </span>
+                        <div className="space-y-1 font-mono text-xs">
+                          {alert.sample_events.map((se, seIdx) => (
+                            <div key={seIdx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold">
+                                  Event {se.event_id}
+                                </span>
+                                <span className="text-slate-500 text-[11px]">{se.timestamp ? formatTimestamp(se.timestamp, timeConfig) : 'N/A'}</span>
+                                <span className="text-slate-700 font-semibold">{se.user || '-'}</span>
+                                <span className="text-slate-400">on</span>
+                                <span className="text-slate-700 font-semibold">{se.computer || '-'}</span>
+                              </div>
+                              <span className="text-slate-600 text-[11px] truncate max-w-md" title={se.command_line || se.summary}>
+                                {se.command_line || se.summary || 'Triggered rule condition'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-500 text-xs">
+                No Sigma detection signatures matched in the analyzed event log dataset.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 16: Capture Integrity & Coverage */}
+        {activeTab === 'integrity_coverage' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono block">
+                  File Format &amp; Header
+                </span>
+                <span className="text-sm font-bold font-mono text-slate-900 block">
+                  {evtxInfo.capture_integrity?.format || 'Windows Event Log'}
+                </span>
+                <span className="text-xs text-slate-500 font-mono block">
+                  Status: {evtxInfo.capture_integrity?.integrity_status || 'INTACT'}
+                </span>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono block">
+                  Telemetry Coverage Score
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-black font-mono text-indigo-600">
+                    {evtxInfo.coverage_audit?.coverage_score ?? 100}%
+                  </span>
+                  <div className="w-24 bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-indigo-600 h-full rounded-full"
+                      style={{ width: `${evtxInfo.coverage_audit?.coverage_score ?? 100}%` }}
+                    />
+                  </div>
+                </div>
+                <span className="text-xs text-slate-500 font-mono block">
+                  {evtxInfo.coverage_audit?.channels_present_count ?? 0} channel(s) detected
+                </span>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono block">
+                  Evidence SHA-256 Hash
+                </span>
+                <span className="text-xs font-mono text-slate-800 truncate block select-all" title={evtxInfo.capture_integrity?.file_hashes.sha256}>
+                  {evtxInfo.capture_integrity?.file_hashes.sha256 || 'N/A'}
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 block">
+                  Size: {formatBytes(evtxInfo.capture_integrity?.file_size || 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Record ID Continuity & Timeline Gaps */}
+            {evtxInfo.capture_integrity?.continuity && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-indigo-600" />
+                  <span>Record ID Sequence Continuity &amp; Timestamp Gaps</span>
+                </h4>
+                {evtxInfo.capture_integrity.continuity.has_continuity_anomalies ? (
+                  <div className="space-y-2">
+                    {evtxInfo.capture_integrity.continuity.record_id_gaps.map((g, idx) => (
+                      <div key={idx} className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-mono">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>Record ID Gap: Missing {g.missing_count} events (from ID {g.from_record_id} to {g.to_record_id})</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-800 text-[10px] font-bold uppercase font-mono">
+                          {g.severity}
+                        </span>
+                      </div>
+                    ))}
+                    {evtxInfo.capture_integrity.continuity.timestamp_gaps.map((tg, idx) => (
+                      <div key={idx} className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-mono">
+                          <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+                          <span>Timeline Gap: {tg.gap_duration_hours} hours of inactivity</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-blue-700">
+                          {tg.from_timestamp} → {tg.to_timestamp}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>No sequence gaps or severe timestamp discontinuities detected in event stream.</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Standard Channels Inventory Table */}
+            {evtxInfo.coverage_audit && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-indigo-600" />
+                    <span>Standard Windows Event Channel Inventory Audit</span>
+                  </h4>
+                  <span className="text-xs text-slate-500 font-mono">
+                    {evtxInfo.coverage_audit.catalog_audit.filter(c => c.present).length} of {evtxInfo.coverage_audit.catalog_audit.length} Present
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-[10px] text-slate-400 uppercase tracking-wider">
+                        <th className="py-2">Channel Name</th>
+                        <th className="py-2">Importance</th>
+                        <th className="py-2">Forensic Role</th>
+                        <th className="py-2 text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {evtxInfo.coverage_audit.catalog_audit.map((ch, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/80">
+                          <td className="py-2.5 font-bold text-slate-800">{ch.channel}</td>
+                          <td className="py-2.5">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              ch.importance === 'critical' ? 'bg-rose-100 text-rose-800' : ch.importance === 'high' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {ch.importance}
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-slate-600 font-sans text-xs">{ch.role}</td>
+                          <td className="py-2.5 text-right">
+                            {ch.present ? (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                                PRESENT
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 font-bold text-[10px]">
+                                ABSENT
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {evtxInfo.coverage_audit.coverage_limitations.length > 0 && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-xs text-amber-900 mt-2">
+                    <span className="font-bold font-mono text-[10px] uppercase text-amber-800 block">
+                      Coverage Limitations &amp; Caveats
+                    </span>
+                    <ul className="space-y-0.5 list-disc list-inside">
+                      {evtxInfo.coverage_audit.coverage_limitations.map((lim, idx) => (
+                        <li key={idx}>{lim}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 17: Auth & Kerberos Forensics */}
+        {activeTab === 'auth_kerberos' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono block">
+                  Successful Logons (4624)
+                </span>
+                <span className="text-2xl font-black font-mono text-emerald-600">
+                  {evtxInfo.auth_forensics?.total_successful_logons ?? 0}
+                </span>
+              </div>
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono block">
+                  Failed Logons (4625)
+                </span>
+                <span className="text-2xl font-black font-mono text-rose-600">
+                  {evtxInfo.auth_forensics?.total_failed_logons ?? 0}
+                </span>
+              </div>
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono block">
+                  Kerberos TGT Requests
+                </span>
+                <span className="text-2xl font-black font-mono text-indigo-600">
+                  {evtxInfo.auth_forensics?.kerberos_forensics.tgt_requests_count ?? 0}
+                </span>
+              </div>
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono block">
+                  Kerberoasting Candidates
+                </span>
+                <span className="text-2xl font-black font-mono text-amber-600">
+                  {evtxInfo.auth_forensics?.kerberos_forensics.kerberoasting_candidates.length ?? 0}
+                </span>
+              </div>
+            </div>
+
+            {/* Logon Types Breakdown */}
+            {evtxInfo.auth_forensics && Object.keys(evtxInfo.auth_forensics.logon_types_breakdown).length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Key className="w-4 h-4 text-indigo-600" />
+                  <span>Logon Types Breakdown (Event ID 4624)</span>
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                  {Object.entries(evtxInfo.auth_forensics.logon_types_breakdown).map(([ltype, cnt]) => {
+                    const desc = LOGON_TYPE_NAMES[ltype] || `Logon Type ${ltype}`;
+                    return (
+                      <div key={ltype} className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span className="text-slate-500 text-[10px] font-bold block truncate" title={desc}>
+                          {desc}
+                        </span>
+                        <span className="text-lg font-black text-slate-900">{cnt}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Password Spraying & Brute Force to Success */}
+            {evtxInfo.auth_forensics && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Password Spraying */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Crosshair className="w-4 h-4 text-rose-600" />
+                    <span>Password Spraying Sources</span>
+                  </h4>
+                  {evtxInfo.auth_forensics.password_spray_sources.length > 0 ? (
+                    <div className="space-y-2 font-mono text-xs">
+                      {evtxInfo.auth_forensics.password_spray_sources.map((ps, idx) => (
+                        <div key={idx} className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold">Source IP: {ps.source_ip}</span>
+                            <span className="px-2 py-0.5 rounded bg-rose-200 text-rose-800 text-[10px] font-bold">
+                              {ps.targeted_accounts_count} accounts targeted
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-600 block truncate" title={ps.targeted_accounts.join(', ')}>
+                            Accounts: {ps.targeted_accounts.join(', ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">No multi-account password spraying sources detected.</p>
+                  )}
+                </div>
+
+                {/* Brute Force to Success */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-600" />
+                    <span>Brute Force Followed by Success</span>
+                  </h4>
+                  {evtxInfo.auth_forensics.brute_force_success.length > 0 ? (
+                    <div className="space-y-2 font-mono text-xs">
+                      {evtxInfo.auth_forensics.brute_force_success.map((bf, idx) => (
+                        <div key={idx} className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold">Account: {bf.target_account}</span>
+                            <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-800 text-[10px] font-bold">
+                              {bf.failure_count} failures before success
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-600 flex items-center justify-between">
+                            <span>First fail: {bf.first_failure}</span>
+                            <span className="text-emerald-700 font-bold">Success: {bf.successful_logon}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">No brute-force attempts with subsequent successful logons observed.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Kerberoasting Candidates Table */}
+            {evtxInfo.auth_forensics && evtxInfo.auth_forensics.kerberos_forensics.kerberoasting_candidates.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Key className="w-4 h-4 text-rose-600" />
+                  <span>Potential Kerberoasting Service Ticket Requests (RC4-HMAC 0x17)</span>
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-[10px] text-slate-400 uppercase">
+                        <th className="py-2">Timestamp</th>
+                        <th className="py-2">Service Principal Name (SPN)</th>
+                        <th className="py-2">Requesting Account</th>
+                        <th className="py-2">Client IP</th>
+                        <th className="py-2 text-right">Encryption</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {evtxInfo.auth_forensics.kerberos_forensics.kerberoasting_candidates.map((k, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="py-2 text-slate-500">{k.timestamp ? formatTimestamp(k.timestamp, timeConfig) : 'N/A'}</td>
+                          <td className="py-2 font-bold text-slate-900">{k.service_name}</td>
+                          <td className="py-2 text-slate-700">{k.account}</td>
+                          <td className="py-2 text-slate-600">{k.ip}</td>
+                          <td className="py-2 text-right text-rose-600 font-bold">{k.encryption_type}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 18: Account & Privilege Management */}
+        {activeTab === 'account_privilege' && (
+          <div className="space-y-6">
+            {/* Sensitive Group Additions */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <User className="w-4 h-4 text-rose-600" />
+                <span>Sensitive Security Group Additions (Event 4728, 4732, 4756)</span>
+              </h4>
+              {evtxInfo.account_management?.sensitive_group_additions && evtxInfo.account_management.sensitive_group_additions.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-[10px] text-slate-400 uppercase">
+                        <th className="py-2">Timestamp</th>
+                        <th className="py-2">Member Added</th>
+                        <th className="py-2">Target Group</th>
+                        <th className="py-2">Group SID</th>
+                        <th className="py-2">Actor Admin</th>
+                        <th className="py-2 text-right">Classification</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {evtxInfo.account_management.sensitive_group_additions.map((ga, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="py-2 text-slate-500">{ga.timestamp ? formatTimestamp(ga.timestamp, timeConfig) : 'N/A'}</td>
+                          <td className="py-2 font-bold text-rose-800">{ga.member_added}</td>
+                          <td className="py-2 font-bold text-slate-900">{ga.group_name}</td>
+                          <td className="py-2 text-slate-500 text-[11px]">{ga.group_sid || '-'}</td>
+                          <td className="py-2 text-slate-700">{ga.actor}</td>
+                          <td className="py-2 text-right">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              ga.is_sensitive_group ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {ga.is_sensitive_group ? 'CRITICAL SENSITIVE' : 'STANDARD'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">No accounts added to elevated administrative security groups.</p>
+              )}
+            </div>
+
+            {/* Users Created & Password Resets */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <User className="w-4 h-4 text-indigo-600" />
+                  <span>User Accounts Created (4720)</span>
+                </h4>
+                {evtxInfo.account_management?.users_created && evtxInfo.account_management.users_created.length > 0 ? (
+                  <div className="space-y-2 font-mono text-xs">
+                    {evtxInfo.account_management.users_created.map((uc, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-slate-900 block">{uc.created_user}</span>
+                          <span className="text-[10px] text-slate-500">Created by: {uc.actor}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {uc.timestamp ? formatTimestamp(uc.timestamp, timeConfig) : 'N/A'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">No new user accounts created on host.</p>
+                )}
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-amber-600" />
+                  <span>Password Reset Attempts (4724)</span>
+                </h4>
+                {evtxInfo.account_management?.password_resets && evtxInfo.account_management.password_resets.length > 0 ? (
+                  <div className="space-y-2 font-mono text-xs">
+                    {evtxInfo.account_management.password_resets.map((pr, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-slate-900 block">{pr.target_account}</span>
+                          <span className="text-[10px] text-slate-500">Reset by: {pr.actor}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {pr.timestamp ? formatTimestamp(pr.timestamp, timeConfig) : 'N/A'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">No administrative password resets observed.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 19: Lateral Movement Chains */}
+        {activeTab === 'lateral_chains' && (
+          <div className="space-y-6">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Share2 className="w-4 h-4 text-rose-600" />
+                <span>Multi-Stage Lateral Movement Attack Chains</span>
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Correlates sequential attack stages: Failed Logons → Remote Logon (Type 3/10) → Admin Share Access (C$, ADMIN$) → Remote Service/Task Creation → Suspicious Execution.
+              </p>
+            </div>
+
+            {evtxInfo.lateral_chains && evtxInfo.lateral_chains.length > 0 ? (
+              <div className="space-y-4">
+                {evtxInfo.lateral_chains.map((chain, idx) => (
+                  <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div>
+                        <span className="text-xs font-bold text-slate-500 uppercase font-mono tracking-wider">Target Endpoint:</span>
+                        <h4 className="text-base font-bold font-mono text-slate-900">{chain.target_host}</h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold uppercase font-mono">
+                          {chain.severity}
+                        </span>
+                        <span className="text-xs font-mono text-slate-500">Source: {chain.source_ip} ({chain.sample_actor})</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
+                      {chain.stages_detected.map((stg, sidx) => (
+                        <React.Fragment key={sidx}>
+                          <span className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 font-bold text-slate-800">
+                            {stg}
+                          </span>
+                          {sidx < chain.stages_detected.length - 1 && (
+                            <span className="text-slate-400 font-bold">→</span>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+
+                    {chain.payload_dropped && (
+                      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-mono text-rose-900">
+                        <span className="font-bold">Remote Staging Payload Dropped: </span>
+                        <span>{chain.payload_dropped}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-500 text-xs">
+                No multi-stage lateral movement attack sequences detected across analyzed hosts.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 20: Offline Tools Guide */}
+        {activeTab === 'offline_tools' && (
+          <div className="space-y-6">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-indigo-600" />
+                <span>Forensic Offline Analysis CLI Commands Reference</span>
+              </h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Ready-to-run commands for analyzing this evidence file across industry-standard Windows, Linux, and macOS triage tools.
+              </p>
+            </div>
+
+            {evtxInfo.offline_tools_guide && (
+              <div className="space-y-4">
+                {Object.entries(evtxInfo.offline_tools_guide).map(([k, item]) => {
+                  if (!item) return null;
+                  return (
+                    <div key={k} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900">{item.title}</h4>
+                          <span className="text-xs text-slate-500">{item.purpose}</span>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(item.command, `cli_${k}`)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-mono flex items-center gap-1.5 cursor-pointer"
+                        >
+                          {copiedId === `cli_${k}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>Copy Command</span>
+                        </button>
+                      </div>
+
+                      <div className="p-3 bg-slate-900 rounded-xl font-mono text-indigo-300 text-xs overflow-x-auto select-all border border-slate-800">
+                        {item.command}
+                      </div>
+
+                      <p className="text-[11px] text-slate-500 italic">{item.notes}</p>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

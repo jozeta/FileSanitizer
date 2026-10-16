@@ -10,6 +10,14 @@ from app.analyzers.binary_decompiler import BinaryDecompiler
 from app.analyzers.api_hashing_detector import ApiHashingDetector
 from app.analyzers.xref_engine import XrefEngine
 from app.analyzers.call_graph_engine import CallGraphEngine
+from app.analyzers.pe_forensics import (
+    classify_pe_overlay,
+    inspect_dll_forensics,
+    inspect_dotnet_assembly,
+    inspect_pe_vulnerabilities_and_legacy_crt,
+    correlate_pe_capabilities,
+    calculate_pe_verdict
+)
 from app.core.logging_config import logger
 
 SUSPICIOUS_WIN32_APIS = {
@@ -195,7 +203,13 @@ class ExecutableAnalyzer(BaseAnalyzer):
             "digital_signature": "Unknown",
             "compiler": "Unknown",
             "overlay_size": 0,
-            "urls": []
+            "urls": [],
+            "pe_verdict": {},
+            "pe_capabilities": [],
+            "dll_forensics": {},
+            "dotnet_assembly": {},
+            "pe_vulnerabilities": {},
+            "overlay_forensics": {}
         }
 
         try:
@@ -667,21 +681,32 @@ class ExecutableAnalyzer(BaseAnalyzer):
 
         overlay_size = 0
         overlay_entropy = 0.0
+        overlay_info = {
+            "has_overlay": False,
+            "size": 0,
+            "entropy": 0.0,
+            "classified_type": "None",
+            "hex_preview": ""
+        }
         if overlay_offset:
             overlay_size = max(0, len(file_bytes) - overlay_offset)
             if overlay_size > 0:
                 overlay_data = file_bytes[overlay_offset:]
                 overlay_entropy = calculate_shannon_entropy(overlay_data)
                 data["overlay_size"] = overlay_size
+                overlay_info = classify_pe_overlay(overlay_data)
 
-                if overlay_size > 512:
+                if overlay_size > 512 or overlay_entropy >= 7.2 or "MZ" in overlay_info["classified_type"]:
+                    is_crit = "MZ" in overlay_info["classified_type"] or overlay_entropy >= 7.5
                     findings.append(Finding(
                         category="structure",
-                        severity="medium",
-                        title=f"Executable Overlay Data Detected ({overlay_size} bytes, Entropy: {overlay_entropy})",
-                        description="Additional binary data was appended past the declared PE sections. Malicious droppers often store encrypted payloads or configurations in overlays."
+                        severity="critical" if is_crit else "medium",
+                        title=f"PE Overlay Detected: {overlay_info['classified_type']} ({overlay_size} bytes, Entropy: {overlay_entropy})",
+                        description=f"Appended trailing data past declared PE sections. Payload classified as: {overlay_info['classified_type']}.",
+                        details=overlay_info
                     ))
 
+        data["overlay_forensics"] = overlay_info
         data["size_analysis"] = {
             "physical_size": len(file_bytes),
             "declared_virtual_size": getattr(pe.OPTIONAL_HEADER, "SizeOfImage", 0) if hasattr(pe, "OPTIONAL_HEADER") else 0,
@@ -690,7 +715,9 @@ class ExecutableAnalyzer(BaseAnalyzer):
             "has_overlay": bool(overlay_size > 0),
             "overlay_offset": hex(overlay_offset) if overlay_offset else "0x0",
             "overlay_size": overlay_size,
-            "overlay_entropy": overlay_entropy
+            "overlay_entropy": overlay_entropy,
+            "classified_type": overlay_info.get("classified_type", "None"),
+            "hex_preview": overlay_info.get("hex_preview", "")
         }
 
         # ---------------------------------------------------------------------
@@ -1165,6 +1192,128 @@ class ExecutableAnalyzer(BaseAnalyzer):
                 title="Unsigned Executable Binary",
                 description="The Windows executable lacks an embedded Authenticode digital signature."
             ))
+
+        # ---------------------------------------------------------------------
+        # 13. DLL-Specific Forensics, Exports, Proxy DLL & TLS Callbacks
+        # ---------------------------------------------------------------------
+        try:
+            dll_forensics = inspect_dll_forensics(pe, file_bytes, file_path.name)
+            data["dll_forensics"] = dll_forensics
+            if dll_forensics.get("has_tls_callbacks"):
+                findings.append(Finding(
+                    category="active_content",
+                    severity="high",
+                    title=f"Pre-Execution TLS Callbacks Detected ({len(dll_forensics['tls_callbacks'])} callbacks)",
+                    description="PE defines Thread Local Storage (TLS) callbacks that execute before DllMain or the entry point. Attackers commonly abuse TLS callbacks for anti-debugging checks, dynamic unpacking, and stealth initialization.",
+                    details={"tls_callbacks": dll_forensics["tls_callbacks"]}
+                ))
+            if dll_forensics.get("sideloading_risk", {}).get("is_common_target_dll"):
+                risk_lvl = dll_forensics["sideloading_risk"]["risk_level"].lower()
+                findings.append(Finding(
+                    category="structure",
+                    severity="critical" if risk_lvl == "critical" else "high",
+                    title=f"High-Risk DLL Sideloading Target: {dll_forensics['sideloading_risk']['target_match_name']}",
+                    description=f"{dll_forensics['sideloading_risk']['description']} Common host processes: {', '.join(dll_forensics['sideloading_risk']['common_host_processes'])}.",
+                    details=dll_forensics["sideloading_risk"]
+                ))
+            if dll_forensics.get("has_proxy_exports"):
+                findings.append(Finding(
+                    category="structure",
+                    severity="high",
+                    title=f"Proxy DLL Forwarded Exports ({dll_forensics['forwarded_export_count']} forwarded)",
+                    description="DLL forwards legitimate export ordinals/names to external system DLLs while containing local execution code. Classic proxy DLL pattern used in DLL hijacking.",
+                    details={"forwarded_exports": dll_forensics["forwarded_exports"][:10]}
+                ))
+        except Exception as dll_err:
+            logger.debug(f"DLL forensics error: {dll_err}")
+            data["dll_forensics"] = {"is_dll": False}
+
+        # ---------------------------------------------------------------------
+        # 14. .NET / Managed Assembly Forensics
+        # ---------------------------------------------------------------------
+        try:
+            dotnet_info = inspect_dotnet_assembly(pe, file_bytes)
+            data["dotnet_assembly"] = dotnet_info
+            if dotnet_info.get("is_dotnet"):
+                if dotnet_info.get("detected_obfuscators"):
+                    findings.append(Finding(
+                        category="anti_analysis",
+                        severity="high",
+                        title=f".NET Obfuscator Detected ({', '.join(dotnet_info['detected_obfuscators'])})",
+                        description="Managed .NET assembly is protected with commercial or malware obfuscator to prevent decompilation.",
+                        details={"obfuscators": dotnet_info["detected_obfuscators"]}
+                    ))
+                for sf in dotnet_info.get("suspicious_features", []):
+                    if sf["severity"] in ["CRITICAL", "HIGH"]:
+                        findings.append(Finding(
+                            category="active_content",
+                            severity=sf["severity"].lower(),
+                            title=f".NET Feature: {sf['api']} ({sf['category']})",
+                            description=sf["description"]
+                        ))
+        except Exception as net_err:
+            logger.debug(f".NET forensics error: {net_err}")
+            data["dotnet_assembly"] = {"is_dotnet": False}
+
+        # ---------------------------------------------------------------------
+        # 15. PE Vulnerability & Legacy CRT Functions Analysis
+        # ---------------------------------------------------------------------
+        try:
+            pe_vulns = inspect_pe_vulnerabilities_and_legacy_crt(
+                pe,
+                data.get("imports", {}),
+                data.get("sections", []),
+                raw_str=raw_str
+            )
+            data["pe_vulnerabilities"] = pe_vulns
+            if pe_vulns.get("legacy_crt_apis"):
+                crit_crt = any(a["severity"] == "CRITICAL" for a in pe_vulns["legacy_crt_apis"])
+                findings.append(Finding(
+                    category="structure",
+                    severity="high" if crit_crt else "medium",
+                    title=f"Dangerous Legacy C Runtime Functions ({len(pe_vulns['legacy_crt_apis'])} APIs)",
+                    description=f"Binary imports memory-unsafe C runtime functions susceptible to buffer overflows: {', '.join([a['api'] for a in pe_vulns['legacy_crt_apis'][:6]])}.",
+                    details={"legacy_apis": pe_vulns["legacy_crt_apis"]}
+                ))
+        except Exception as vuln_err:
+            logger.debug(f"PE vulnerability analysis error: {vuln_err}")
+            data["pe_vulnerabilities"] = {}
+
+        # ---------------------------------------------------------------------
+        # 16. Capability Correlation (MITRE ATT&CK aligned)
+        # ---------------------------------------------------------------------
+        try:
+            capabilities = correlate_pe_capabilities(data.get("imports", {}), data.get("strings", {}), data.get("sections", []), raw_str)
+            data["pe_capabilities"] = capabilities
+            for cap in capabilities:
+                if cap["severity"] in ["CRITICAL", "HIGH"]:
+                    findings.append(Finding(
+                        category="active_content",
+                        severity=cap["severity"].lower(),
+                        title=f"Malware Capability: {cap['name']} ({cap['mitre_attack']})",
+                        description=f"{cap['description']} Supporting evidence: {', '.join(cap['evidence'][:5])}.",
+                        details=cap
+                    ))
+        except Exception as cap_err:
+            logger.debug(f"Capabilities correlation error: {cap_err}")
+            data["pe_capabilities"] = []
+
+        # ---------------------------------------------------------------------
+        # 17. Executive PE Security Verdict Model
+        # ---------------------------------------------------------------------
+        try:
+            pe_verdict = calculate_pe_verdict(data, findings, data.get("pe_capabilities", []), data.get("pe_vulnerabilities", {}))
+            data["pe_verdict"] = pe_verdict
+        except Exception as verd_err:
+            logger.debug(f"Verdict calculation error: {verd_err}")
+            data["pe_verdict"] = {
+                "verdict": "Inconclusive",
+                "severity": "low",
+                "confidence_score": 50,
+                "rationale": ["PE analysis completed with limited signals."],
+                "mitre_techniques": [],
+                "containment_recommendations": []
+            }
 
         pe.close()
 

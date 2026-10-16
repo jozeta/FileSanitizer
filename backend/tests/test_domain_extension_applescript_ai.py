@@ -126,7 +126,7 @@ def test_ai_image_verifier_synthetic_detection(tmp_path: Path):
     assert "blurry, deformed" in res["prompt_metadata"]["negative_prompt"]
 
 
-def test_cyberchef_deobfuscator_operations():
+def test_security_decoder_operations():
     # Test ROT47
     text = "Hello World 123"
     rot47_enc = Deobfuscator.rot47(text)

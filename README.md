@@ -2,7 +2,7 @@
 
 > **"Don't trust the file. Wash it first."** *(featuring 30+ dynamic cybersecurity slogans rotating on every reload)*
 
-[![Release](https://img.shields.io/badge/release-v2.3.0-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
+[![Release](https://img.shields.io/badge/release-v2.4.0-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
 [![Python](https://img.shields.io/badge/python-3.11-brightgreen.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
@@ -940,13 +940,41 @@ When two or more Windows Event Log (`.evtx`) files are uploaded into the inciden
 * **Animated Upload Progression Graphic:** Integrated progress bar featuring fluid pulse animations, transfer rate calculation (MB/s), and real-time uploaded byte counters.
 * **Multi-Gigabyte Log & Capture Streaming:** Specifically optimized for multi-gigabyte forensic disk images, EVTX event log archives, and large PCAP network dumps without browser UI freezing.
 
-### Ultimate Detection Test Suite Generator
-* Generates 27 multi-vector test files (`backend/generate_all_ultimate_detection_files.py`) covering all supported formats with full artifact coverage:
-  * Office VBA stomping, XLM 4.0 macros, DDE execution, RTF exploits
-  * PDF /Launch hooks, JavaScript streams, AcroForms, embedded file payloads
-  * Multi-architecture PE/ELF binaries with Capstone entry point disassembly
-  * **Test Windows PE (`ultimate_detectio.exe`)**: Built with embedded `.ico` icon resources, embedded `.docx`, embedded `.zip`, embedded `.pdf`, Rich Header MD5, and high-entropy overlay payloads.
-  * Browser extension `.crx`, AppleScript `.applescript` and compiled `.scpt`, and synthetic AI images with C2PA and Stable Diffusion metadata.
+### Security Decoder (Air-Gapped & Client-Side)
+FileSanitizer includes a dedicated **Security Decoder** designed for instant, zero-network-leakage forensic string manipulation, encoding, decoding, threat indicator defanging, and hash calculations.
+
+* **Air-Gapped & Zero Network Transmission:** All transformations run 100% locally in the analyst's browser. Sensitive keys, internal tokens, and proprietary payloads are never transmitted across the network or logged to disk.
+* **44+ Forensic Operations Grouped by Category Headlines:**
+  * **Data Encodings & Decodings:** Base64, Hexadecimal, URL encode/decode, HTML entities, Binary bitstreams, Octal, Base32, Base58, Base85 / Ascii85, and Decimal byte arrays.
+  * **Ciphers & Cryptography:** Dynamic XOR with variable key and hex output, ROT13, Caesar Cipher with configurable shift (-25 to +25), and Vigenère polyalphabetic cipher.
+  * **Threat Intelligence & Defanging:** Defang URLs & IPs (`hxxp://`, `example[.]com`), Refang indicators, Extract URLs, and Extract IPv4/IPv6 indicators.
+  * **String Manipulation & Formatting:** Reverse text (character/word/line), Trim whitespace, To Uppercase/Lowercase, Remove Line Breaks, Strip / Replace Regex patterns, Unique Lines deduplication, Sort Lines, Add Line Numbers, and Format JSON.
+  * **Cryptographic Hashes & Checksums:** Pure JavaScript air-gapped implementations of MD5, SHA-1, SHA-256, SHA-512, and CRC32 checksums.
+  * **Forensic Artifacts & Timestamps:** Windows FILETIME (64-bit integer 100ns epoch conversion to ISO 8601 UTC), Unix Epoch timestamps, and Extract Printable ASCII Strings.
+* **Drag-and-Drop Pipeline:** Operations can be dragged directly from the library into the Recipe Pipeline dropzone, and existing steps can be dynamically dragged to reorder.
+* **Saved Recipes (Enforcing $\ge 2$ Operations):** Operators can save multi-step pipelines as reusable custom recipes stored locally in browser storage with custom names and notes.
+* **1-Click Quick Apply Toolbar:** Pre-configured with expert pipelines categorized across:
+  * **Malware Research:** Malware XOR & Base64 Unpack, PowerShell `-EncodedCommand` unpacker, Reversed Base64 Recovery, C2 Dropper IOC Extractor.
+  * **Binary Analysis:** Hex Dump to ASCII Strings, Bitwise NOT / XOR 0xFF Invert.
+  * **Vulnerability Research:** Web Exploit & XSS Multi-Decode, SQLi Hex & URL Unmasker, JWT Attack Surface Dissector, Path Traversal Double-URL Normalize.
+  * **Threat Intel & Defanging:** Extract & Defang IOCs, Base64 to Pretty JSON, Deduplicate & Sort IOC List.
+* **Universal Text Selection "Send to Decoder":** Highlighting text or code anywhere across the application (hex dumps, disassembly, decoded form params, HTTP payloads) displays a quick pop-up menu allowing analysts to pipe the selection directly into the Security Decoder input.
+
+### Active Forensic CLI Execution
+FileSanitizer transforms static CLI recommendations into **active, sandboxed tool execution**:
+* Concurrently runs essential offline forensic utilities (`dig`, `rdap`, `openssl s_client`, `curl -I`, `python3 ipaddress`) in the sandboxed backend.
+* Displays real-time process exit codes (`EXIT 0`), execution duration in milliseconds, and parsed findings chips.
+* Interactive dark terminal console (`bash terminal Live Process`) with formatted command line and raw stdout/stderr output.
+* 1-Click "Copy Command" and "Copy Output" for incident documentation.
+
+### Multi-Aspect Risk Scoring & Hovering Breakdown
+The risk engine has been comprehensively recalibrated to ensure benign domains and web assets (e.g. `google.com`, `apple.com`) receive `Clean / Benign` verdicts with calibrated risk scores ($5-25/100$) rather than false-positive malicious alerts:
+* **Interactive Hovering Aspect Breakdown:** Hovering over the Risk Score badge reveals a transparent modal card with progress bars across 4 dimensions:
+  * **Threat Intelligence ($40\%$ Weight):** Multi-feed CTI consensus (VirusTotal, URLhaus, AbuseIPDB, AlienVault OTX). Malicious verdicts require verified CTI consensus ($\ge 65$).
+  * **Infrastructure Reputation ($25\%$ Weight):** Autonomous system trust, domain registration age, and DNS stability (distinguishing dynamic CDN/load balancer TTLs from fast-flux botnets).
+  * **Cryptographic Trust ($20\%$ Weight):** TLS certificate validity, CA trust, and SAN coverage.
+  * **Exposure & Hardening ($15\%$ Weight):** Email spoofing posture (SPF, DKIM, DMARC) and web security headers.
+* **Factor-Level Explanations:** Transparently enumerates exact point additions or deductions, factor types (Credit, Neutral, Penalty), and plain-English rationale.
 
 ---
 

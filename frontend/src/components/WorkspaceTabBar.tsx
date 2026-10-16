@@ -48,7 +48,7 @@ function getFileIcon(category?: string, filename?: string) {
   if (cat === 'evtx' || name.endsWith('.evtx')) {
     return Terminal;
   }
-  if (cat === 'office' || name.match(/\.(docx?|xlsx?|pptx?|docm|xlsm|pptm|rtf)$/)) {
+  if (cat === 'office' || name.match(/\.(docx?|xlsx?|pptx?|docm|xlsm|pptm|rtf|one|onetoc2)$/)) {
     return FileSpreadsheet;
   }
   if (cat === 'email' || name.match(/\.(eml|msg)$/)) {

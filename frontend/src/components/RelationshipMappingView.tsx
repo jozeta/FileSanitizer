@@ -46,6 +46,7 @@ import { EvtxTriageCard } from './EvtxTriageCard';
 import { MultiEvtxSwimlaneView } from './MultiEvtxSwimlaneView';
 import { ReferencedText } from './ReferencedFileLink';
 import { HIGHLIGHT_COLOR_OPTIONS, DEFAULT_HIGHLIGHT_COLOR } from './EntityGraphCard';
+import { groupSimilarNodesInGraph } from '../utils/entityNormalizer';
 
 interface RelationshipMappingViewProps {
   jobs: WorkspaceJob[];
@@ -105,6 +106,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const [hideIsolatedNodes, setHideIsolatedNodes] = useState<boolean>(false);
   const [hideBenignNodes, setHideBenignNodes] = useState<boolean>(false);
   const [showEmptyNodes, setShowEmptyNodes] = useState<boolean>(false);
+  const [mergeSimilarNodes, setMergeSimilarNodes] = useState<boolean>(true);
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
 
   // Operator node visibility and highlighting state
@@ -1357,71 +1359,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     });
   }, [data, selectedFilters, sharedOnlyFilter, hideIsolatedNodes, hideBenignNodes, nodeDegreeMap, showEmptyNodes, includedFileIds, nodeToFileIdsMap, hiddenNodeIds]);
 
-  const selectAllOfType = (typeKey: string) => {
-    if (typeKey === 'all') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'none') {
-      setSelectedNodeIds(new Set());
-      setSelectedNode(null);
-      return;
-    }
-    if (typeKey === 'shared') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.is_shared).map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'file') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'file').map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'hash') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'hash').map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'network') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => ['ip', 'domain', 'url', 'hostname'].includes(n.type)).map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'technique') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'technique').map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'user' || typeKey === 'identity') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => ['user', 'metadata', 'email', 'name', 'person'].includes(n.type)).map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'vulnerability' || typeKey === 'vulns') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => ['vulnerability', 'threat_intel', 'threat_signature', 'keyword', 'watchlist_keyword'].includes(n.type)).map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'email') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'email').map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'keyword') {
-      setSelectedNodeIds(new Set(filteredGraphNodes.filter((n) => n.type === 'keyword' || n.type === 'watchlist_keyword').map((n) => n.id)));
-      return;
-    }
-    if (typeKey === 'invert') {
-      setSelectedNodeIds((prev) => {
-        const next = new Set<string>();
-        filteredGraphNodes.forEach((n) => {
-          if (!prev.has(n.id)) next.add(n.id);
-        });
-        return next;
-      });
-    }
-  };
-
   const visibleNodeIds = useMemo(() => new Set(filteredGraphNodes.map((n) => n.id)), [filteredGraphNodes]);
-
-  // If selected node was filtered out or hidden, close the inspector (unless explicitly hidden by operator so operator can unhide it)
-  useEffect(() => {
-    if (selectedNode && !visibleNodeIds.has(selectedNode.id) && !hiddenNodeIds.has(selectedNode.id)) {
-      setSelectedNode(null);
-    }
-  }, [visibleNodeIds, selectedNode, hiddenNodeIds]);
 
   // Edges filtered: ANY edge connected to a hidden/filtered node is hidden!
   const visibleEdges = useMemo(() => {
@@ -1431,21 +1369,90 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
     );
   }, [data, visibleNodeIds]);
 
+  // Group similar nodes together (e.g. http://www.google.com, www.google.com, google.com)
+  const { nodes: processedGraphNodes, edges: processedGraphEdges, mergedCount: mergedGraphCount } = useMemo(() => {
+    return groupSimilarNodesInGraph(filteredGraphNodes, visibleEdges, mergeSimilarNodes);
+  }, [filteredGraphNodes, visibleEdges, mergeSimilarNodes]);
+
+  const activeVisibleNodeIds = useMemo(() => new Set(processedGraphNodes.map((n) => n.id)), [processedGraphNodes]);
+
+  const selectAllOfType = (typeKey: string) => {
+    if (typeKey === 'all') {
+      setSelectedNodeIds(new Set(processedGraphNodes.map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'none') {
+      setSelectedNodeIds(new Set());
+      setSelectedNode(null);
+      return;
+    }
+    if (typeKey === 'shared') {
+      setSelectedNodeIds(new Set(processedGraphNodes.filter((n) => n.is_shared).map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'file') {
+      setSelectedNodeIds(new Set(processedGraphNodes.filter((n) => n.type === 'file').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'hash') {
+      setSelectedNodeIds(new Set(processedGraphNodes.filter((n) => n.type === 'hash').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'network') {
+      setSelectedNodeIds(new Set(processedGraphNodes.filter((n) => ['ip', 'domain', 'url', 'hostname'].includes(n.type)).map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'technique') {
+      setSelectedNodeIds(new Set(processedGraphNodes.filter((n) => n.type === 'technique').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'user' || typeKey === 'identity') {
+      setSelectedNodeIds(new Set(processedGraphNodes.filter((n) => ['user', 'metadata', 'email', 'name', 'person'].includes(n.type)).map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'vulnerability' || typeKey === 'vulns') {
+      setSelectedNodeIds(new Set(processedGraphNodes.filter((n) => ['vulnerability', 'threat_intel', 'threat_signature', 'keyword', 'watchlist_keyword'].includes(n.type)).map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'email') {
+      setSelectedNodeIds(new Set(processedGraphNodes.filter((n) => n.type === 'email').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'keyword') {
+      setSelectedNodeIds(new Set(processedGraphNodes.filter((n) => n.type === 'keyword' || n.type === 'watchlist_keyword').map((n) => n.id)));
+      return;
+    }
+    if (typeKey === 'invert') {
+      setSelectedNodeIds((prev) => {
+        const next = new Set<string>();
+        processedGraphNodes.forEach((n) => {
+          if (!prev.has(n.id)) next.add(n.id);
+        });
+        return next;
+      });
+    }
+  };
+
+  // If selected node was filtered out or hidden, close the inspector (unless explicitly hidden by operator so operator can unhide it)
+  useEffect(() => {
+    if (selectedNode && !activeVisibleNodeIds.has(selectedNode.id) && !hiddenNodeIds.has(selectedNode.id)) {
+      setSelectedNode(null);
+    }
+  }, [activeVisibleNodeIds, selectedNode, hiddenNodeIds]);
+
   // Select all visible nodes connected to a node (excluding files), and close the inspector
   const handleSelectConnectedNodes = (nodeId: string) => {
     const connectedIds = new Set<string>();
-    const allEdges = data?.campaign_graph?.edges || [];
-    const allNodes = data?.campaign_graph?.nodes || [];
-    const nodeMap = new Map<string, any>(allNodes.map((n) => [n.id, n]));
+    const nodeMap = new Map<string, any>(processedGraphNodes.map((n) => [n.id, n]));
 
-    allEdges.forEach((edge: any) => {
+    processedGraphEdges.forEach((edge: any) => {
       let otherId: string | null = null;
       if (edge.source === nodeId) otherId = edge.target;
       else if (edge.target === nodeId) otherId = edge.source;
 
       if (otherId) {
         // Only select currently visible nodes; if a node is hidden, do NOT select it
-        if (!visibleNodeIds.has(otherId)) return;
+        if (!activeVisibleNodeIds.has(otherId)) return;
 
         const otherNode = nodeMap.get(otherId);
         // Exclude file nodes as requested: "when clicking select connected nodes i dont want a file to be selected"
@@ -1462,17 +1469,16 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
   // Connected visible node count for selectedNode (excluding files)
   const selectedNodeConnectedCount = useMemo(() => {
-    if (!selectedNode || !data?.campaign_graph?.edges) return 0;
-    const allNodes = data?.campaign_graph?.nodes || [];
-    const nodeMap = new Map<string, any>(allNodes.map((n) => [n.id, n]));
+    if (!selectedNode || !processedGraphEdges) return 0;
+    const nodeMap = new Map<string, any>(processedGraphNodes.map((n) => [n.id, n]));
     const connected = new Set<string>();
 
-    data.campaign_graph.edges.forEach((edge: any) => {
+    processedGraphEdges.forEach((edge: any) => {
       let otherId: string | null = null;
       if (edge.source === selectedNode.id) otherId = edge.target;
       else if (edge.target === selectedNode.id) otherId = edge.source;
 
-      if (otherId && visibleNodeIds.has(otherId)) {
+      if (otherId && activeVisibleNodeIds.has(otherId)) {
         const otherNode = nodeMap.get(otherId);
         if (otherNode?.type !== 'file' && otherNode?.type !== 'root' && !otherId.startsWith('job_')) {
           connected.add(otherId);
@@ -1480,14 +1486,14 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       }
     });
     return connected.size;
-  }, [selectedNode, data?.campaign_graph?.edges, data?.campaign_graph?.nodes, visibleNodeIds]);
+  }, [selectedNode, processedGraphEdges, processedGraphNodes, activeVisibleNodeIds]);
 
   // Re-layout & redraw graph automatically when visible nodes, edges, layout mode, sort mode, canvas size, or proximity changes
   useEffect(() => {
-    if (filteredGraphNodes.length > 0) {
+    if (processedGraphNodes.length > 0) {
       const { positions, clusterLabels } = calculateLayout(
-        filteredGraphNodes,
-        visibleEdges,
+        processedGraphNodes,
+        processedGraphEdges,
         layoutMode,
         sortMode,
         canvasSize.width,
@@ -1500,7 +1506,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       setNodePositions({});
       setCategoryClusterLabels([]);
     }
-  }, [filteredGraphNodes, visibleEdges, layoutMode, sortMode, canvasSize, nodeProximity]);
+  }, [processedGraphNodes, processedGraphEdges, layoutMode, sortMode, canvasSize, nodeProximity]);
 
   // Filtered Timeline Events
   const uniqueTimelineFiles = useMemo(() => {
@@ -2205,11 +2211,37 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   )}
                 </label>
 
+                {/* Group Similar Nodes Checkbox */}
+                <label
+                  id="threat-graph-merge-similar-label"
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer select-none shadow-2xs ${
+                    mergeSimilarNodes
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                  }`}
+                  title="When checked, normalizes and groups equivalent indicators (e.g. http://www.google.com, www.google.com, google.com). Unchecked keeps all nodes separate."
+                >
+                  <input
+                    type="checkbox"
+                    id="threat-graph-merge-similar"
+                    checked={mergeSimilarNodes}
+                    onChange={(e) => setMergeSimilarNodes(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                  />
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Group Similar Nodes</span>
+                  {mergeSimilarNodes && mergedGraphCount > 0 && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold bg-indigo-200/80 text-indigo-900">
+                      -{mergedGraphCount}
+                    </span>
+                  )}
+                </label>
+
                 {/* Live Stats */}
                 <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 text-[11px] font-medium text-slate-600 border border-slate-200 font-mono">
-                  <span><strong className="text-slate-900">{filteredGraphNodes.length}</strong> / {data.campaign_graph.nodes.length} nodes</span>
+                  <span><strong className="text-slate-900">{processedGraphNodes.length}</strong> / {data.campaign_graph.nodes.length} nodes</span>
                   <span className="text-slate-300">•</span>
-                  <span><strong className="text-slate-900">{visibleEdges.length}</strong> lines</span>
+                  <span><strong className="text-slate-900">{processedGraphEdges.length}</strong> lines</span>
                 </div>
               </div>
 
@@ -2241,10 +2273,10 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       setGraphPan({ x: 0, y: 0 });
                       setSelectedNode(null);
                       setSelectedNodeIds(new Set());
-                      if (filteredGraphNodes.length > 0) {
+                      if (processedGraphNodes.length > 0) {
                         const { positions, clusterLabels } = calculateLayout(
-                          filteredGraphNodes,
-                          visibleEdges,
+                          processedGraphNodes,
+                          processedGraphEdges,
                           layoutMode,
                           sortMode,
                           canvasSize.width,
@@ -2474,7 +2506,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                 )}
 
                 {/* Edges: only between visible nodes */}
-                {visibleEdges.map((edge, idx) => {
+                {processedGraphEdges.map((edge, idx) => {
                   const srcPos = nodePositions[edge.source];
                   const dstPos = nodePositions[edge.target];
                   if (!srcPos || !dstPos) return null;
@@ -2548,7 +2580,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                 })}
 
                 {/* Nodes with Dragging & EntityGraphCard Styling */}
-                {filteredGraphNodes.map((node) => {
+                {processedGraphNodes.map((node) => {
                   const pos = nodePositions[node.id];
                   if (!pos) return null;
 
@@ -2646,7 +2678,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         r={nodeRadius}
                         fill={styling.fill}
                         stroke={styling.stroke}
-                        strokeWidth="2"
+                        strokeWidth={node.groupedCount && node.groupedCount > 1 ? 4 : 2}
                         className="transition-transform group-hover:scale-110 shadow-xs"
                       />
 
@@ -2698,6 +2730,30 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           ? 'TOOL'
                           : node.type.substring(0, 3).toUpperCase()}
                       </text>
+
+                      {/* Grouped Nodes Badge */}
+                      {node.groupedCount && node.groupedCount > 1 && (
+                        <g transform={`translate(${nodeRadius * 0.72}, ${-nodeRadius * 0.72})`}>
+                          <circle
+                            r={8}
+                            fill="#4f46e5"
+                            stroke="#ffffff"
+                            strokeWidth={1.8}
+                            className="filter drop-shadow-xs"
+                          />
+                          <text
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fill="#ffffff"
+                            fontWeight="bold"
+                            fontSize="8.5px"
+                            fontFamily="ui-monospace, monospace"
+                            className="pointer-events-none select-none"
+                          >
+                            {node.groupedCount}
+                          </text>
+                        </g>
+                      )}
 
                       {/* Node Label Text */}
                       <g transform={`translate(0, ${nodeRadius + 14})`}>
@@ -2784,6 +2840,38 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       </button>
                     </div>
                   </div>
+
+                  {/* Grouped Variants Display */}
+                  {selectedNode.groupedCount && selectedNode.groupedCount > 1 && (
+                    <div className="p-3 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-2">
+                      <div className="flex items-center justify-between text-indigo-900 font-bold text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Consolidated Group</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800 text-[10px] font-mono">
+                          {selectedNode.groupedCount} variants
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-indigo-700 leading-snug">
+                        Similar indicator variants normalized and grouped together:
+                      </p>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {(selectedNode.groupedVariants || []).map((v: string, i: number) => (
+                          <div key={i} className="text-[11px] font-mono bg-white/90 px-2.5 py-1 rounded-lg border border-indigo-100 text-slate-800 break-all select-all flex items-center justify-between gap-1.5">
+                            <span>{v}</span>
+                            <button
+                              onClick={() => handleCopy(v, `variant_${i}`)}
+                              className="p-1 rounded text-slate-400 hover:text-indigo-600 shrink-0 cursor-pointer"
+                              title="Copy variant"
+                            >
+                              {copiedKey === `variant_${i}` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Operator Visibility & Highlighting Panel */}
                   <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">

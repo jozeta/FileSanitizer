@@ -1,7 +1,10 @@
+import re
+import time
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, status, Response, Query
 from pydantic import BaseModel, Field
 
+from app.config import settings as app_settings
 from app.core.settings_store import (
     settings_store,
     verify_admin_login,
@@ -128,6 +131,150 @@ def update_ui_preferences_settings(config: Dict[str, Any], admin=Depends(require
         "success": True,
         "ui_preferences": settings_store.get_ui_preferences()
     }
+
+_UPDATE_CHECK_CACHE: Dict[str, Any] = {
+    "timestamp": 0.0,
+    "data": None,
+}
+_UPDATE_CACHE_TTL = 3600  # 1 hour
+
+def _parse_semver(v: str) -> tuple:
+    clean = re.sub(r'^[vV]', '', (v or '').strip())
+    parts = []
+    for p in clean.split('.'):
+        m = re.match(r'^\d+', p)
+        parts.append(int(m.group(0)) if m else 0)
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts[:3])
+
+@router.get("/check-update")
+def check_for_updates(force: bool = False, simulate_version: Optional[str] = Query(None)):
+    """
+    Checks GitHub for new releases or updates to FileSanitizer.
+    Supports GitHub Releases API (/releases/latest) with fallback to main branch version.ts.
+    Cached for 1 hour unless force=True.
+    """
+    global _UPDATE_CHECK_CACHE
+
+    current_ver = app_settings.APP_VERSION
+    now = time.time()
+
+    # Testing hook: allow simulating a release version
+    if simulate_version:
+        sim_v = simulate_version.lstrip("v").strip()
+        sim_has_update = _parse_semver(sim_v) > _parse_semver(current_ver)
+        return {
+            "success": True,
+            "has_update": sim_has_update,
+            "current_version": current_ver,
+            "latest_version": sim_v,
+            "release_name": f"FileSanitizer v{sim_v} - Security & Analysis Enhancements",
+            "release_notes": f"• Enhanced Java Bytecode Analysis\n• Automated APK Manifest & DEX Inspection\n• Upgraded YARA Engine v{sim_v}",
+            "published_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "html_url": f"https://github.com/jozeta/FileSanitizer/releases/tag/v{sim_v}",
+            "source": "simulated",
+            "checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+
+    # Check external connection policy
+    ext_conn = settings_store.get_external_policy()
+    if not ext_conn.get("allow_all_external", True):
+        return {
+            "success": True,
+            "has_update": False,
+            "current_version": current_ver,
+            "external_blocked": True,
+            "message": "External network requests are disabled in settings.",
+        }
+
+    # Return cached data if valid and force is False
+    if not force and _UPDATE_CHECK_CACHE.get("data") and (now - _UPDATE_CHECK_CACHE.get("timestamp", 0) < _UPDATE_CACHE_TTL):
+        return _UPDATE_CHECK_CACHE["data"]
+
+    headers = {
+        "User-Agent": f"FileSanitizer-Update-Check/{current_ver}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+
+    latest_version = None
+    release_name = None
+    release_notes = None
+    published_at = None
+    html_url = "https://github.com/jozeta/FileSanitizer"
+    source = "unknown"
+
+    try:
+        import httpx
+        with httpx.Client(timeout=6.0, follow_redirects=True, headers=headers) as client:
+            # 1. Attempt GitHub Releases API
+            try:
+                rel_resp = client.get("https://api.github.com/repos/jozeta/FileSanitizer/releases/latest")
+                if rel_resp.status_code == 200:
+                    data = rel_resp.json()
+                    tag = data.get("tag_name", "").strip()
+                    if tag:
+                        latest_version = tag.lstrip("v")
+                        release_name = data.get("name") or f"FileSanitizer v{latest_version}"
+                        release_notes = data.get("body") or ""
+                        published_at = data.get("published_at")
+                        html_url = data.get("html_url") or f"https://github.com/jozeta/FileSanitizer/releases/tag/{tag}"
+                        source = "github_release"
+            except Exception as e_rel:
+                logger.debug(f"GitHub Releases check failed: {e_rel}")
+
+            # 2. Fallback to raw version.ts on main branch
+            if not latest_version:
+                raw_resp = client.get("https://raw.githubusercontent.com/jozeta/FileSanitizer/main/frontend/src/version.ts")
+                if raw_resp.status_code == 200:
+                    content = raw_resp.text
+                    v_match = re.search(r"APP_VERSION\s*=\s*['\"]([^'\"]+)['\"]", content)
+                    name_match = re.search(r"APP_RELEASE_NAME\s*=\s*['\"]([^'\"]+)['\"]", content)
+                    date_match = re.search(r"APP_BUILD_DATE\s*=\s*['\"]([^'\"]+)['\"]", content)
+                    if v_match:
+                        latest_version = v_match.group(1).lstrip("v")
+                        release_name = name_match.group(1) if name_match else f"FileSanitizer v{latest_version}"
+                        published_at = date_match.group(1) if date_match else None
+                        release_notes = f"Release build: {release_name}"
+                        html_url = "https://github.com/jozeta/FileSanitizer"
+                        source = "github_main_branch"
+
+        if not latest_version:
+            return {
+                "success": False,
+                "has_update": False,
+                "current_version": current_ver,
+                "error": "Could not determine latest version from GitHub.",
+            }
+
+        has_update = _parse_semver(latest_version) > _parse_semver(current_ver)
+
+        result = {
+            "success": True,
+            "has_update": has_update,
+            "current_version": current_ver,
+            "latest_version": latest_version,
+            "release_name": release_name,
+            "release_notes": release_notes,
+            "published_at": published_at,
+            "html_url": html_url,
+            "source": source,
+            "checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+
+        _UPDATE_CHECK_CACHE["timestamp"] = now
+        _UPDATE_CHECK_CACHE["data"] = result
+        return result
+
+    except Exception as e:
+        logger.warning(f"Error checking GitHub for updates: {e}")
+        return {
+            "success": False,
+            "has_update": False,
+            "current_version": current_ver,
+            "error": str(e),
+            "checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
 
 # 2. General Settings
 @router.get("")

@@ -91,5 +91,7 @@ test-files/ultimate_files/
 test-files/ultimate_detection_80mb.pdf
 test-files/Gemini_image.jpeg
 test-files/*.apk
+test-files/*.jar
 backend/ultimate_files/
+scratch/
 

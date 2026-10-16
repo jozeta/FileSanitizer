@@ -26,6 +26,12 @@ import {
   UploadCloud,
   ExternalLink,
   CheckCircle2,
+  ShieldCheck,
+  Layers,
+  Wifi,
+  Radio,
+  FileText,
+  AlertOctagon,
 } from 'lucide-react';
 import {
   PcapInfo,
@@ -48,6 +54,7 @@ interface PcapTriageCardProps {
   onSelectJob?: (jobId: string) => void;
   workspaceJobs?: any[];
   onNavigateToEvtx?: (evtxJobId?: string, targetIp?: string) => void;
+  disabledChecks?: string[];
 }
 
 export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
@@ -55,8 +62,11 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
   jobId,
   onSelectJob,
   workspaceJobs,
-  onNavigateToEvtx
+  onNavigateToEvtx,
+  disabledChecks = [],
 }) => {
+  const isCheckDisabled = (chk: string) => (disabledChecks || []).includes(chk);
+  const canShowFlows = !isCheckDisabled('check_conversations_flows');
   const [activeTab, setActiveTab] = useState<
     | 'flows'
     | 'web_sessions'
@@ -72,7 +82,30 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
     | 'credentials'
     | 'beaconing'
     | 'ssh'
-  >('flows');
+    | 'integrity'
+    | 'zeek_logs'
+    | 'ids_alerts'
+    | 'lateral_movement'
+    | 'protocol_anomalies'
+  >(canShowFlows ? 'flows' : 'gantt');
+
+  React.useEffect(() => {
+    if (activeTab === 'flows' && isCheckDisabled('check_conversations_flows')) {
+      setActiveTab('gantt');
+    } else if (activeTab === 'dns' && isCheckDisabled('check_dns_queries')) {
+      setActiveTab(canShowFlows ? 'flows' : 'gantt');
+    } else if (activeTab === 'tls' && isCheckDisabled('check_tls_certificates')) {
+      setActiveTab(canShowFlows ? 'flows' : 'gantt');
+    } else if (activeTab === 'web_sessions' && isCheckDisabled('check_http_ftp_traffic')) {
+      setActiveTab(canShowFlows ? 'flows' : 'gantt');
+    } else if (activeTab === 'credentials' && isCheckDisabled('check_plaintext_credentials')) {
+      setActiveTab(canShowFlows ? 'flows' : 'gantt');
+    } else if (activeTab === 'carved' && isCheckDisabled('check_extracted_payloads')) {
+      setActiveTab(canShowFlows ? 'flows' : 'gantt');
+    }
+  }, [activeTab, disabledChecks]);
+  const [activeZeekLog, setActiveZeekLog] = useState<'conn' | 'dns' | 'ssl' | 'x509' | 'files'>('conn');
+  const [idsSeverityFilter, setIdsSeverityFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -318,6 +351,138 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
         </div>
       )}
 
+      {/* Executive PCAP Security Verdict Banner */}
+      {pcapInfo.pcap_verdict && (
+        <div
+          className={`p-6 border-b transition-all ${
+            pcapInfo.pcap_verdict.verdict === 'Malicious'
+              ? 'bg-rose-50/90 border-rose-200 text-rose-950'
+              : pcapInfo.pcap_verdict.verdict === 'Suspicious'
+              ? 'bg-amber-50/90 border-amber-200 text-amber-950'
+              : pcapInfo.pcap_verdict.verdict === 'Potentially Vulnerable'
+              ? 'bg-yellow-50/90 border-yellow-200 text-yellow-950'
+              : pcapInfo.pcap_verdict.verdict === 'No Known Threat Detected'
+              ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
+              : 'bg-slate-50/90 border-slate-200 text-slate-800'
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-black/10">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-xs shrink-0 ${
+                  pcapInfo.pcap_verdict.verdict === 'Malicious'
+                    ? 'bg-rose-600 text-white'
+                    : pcapInfo.pcap_verdict.verdict === 'Suspicious'
+                    ? 'bg-amber-600 text-white'
+                    : pcapInfo.pcap_verdict.verdict === 'Potentially Vulnerable'
+                    ? 'bg-yellow-600 text-white'
+                    : pcapInfo.pcap_verdict.verdict === 'No Known Threat Detected'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-600 text-white'
+                }`}
+              >
+                {pcapInfo.pcap_verdict.verdict === 'Malicious' ? (
+                  <ShieldAlert className="w-6 h-6 animate-pulse" />
+                ) : pcapInfo.pcap_verdict.verdict === 'Suspicious' ? (
+                  <AlertTriangle className="w-6 h-6" />
+                ) : pcapInfo.pcap_verdict.verdict === 'No Known Threat Detected' ? (
+                  <ShieldCheck className="w-6 h-6" />
+                ) : (
+                  <Info className="w-6 h-6" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-black/10 text-current font-mono">
+                    Executive PCAP Security Verdict
+                  </span>
+                  <span className="text-lg font-black tracking-tight">{pcapInfo.pcap_verdict.verdict}</span>
+                  <span
+                    className={`text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono ${
+                      pcapInfo.pcap_verdict.severity === 'critical'
+                        ? 'bg-rose-600 text-white'
+                        : pcapInfo.pcap_verdict.severity === 'high'
+                        ? 'bg-amber-600 text-white'
+                        : pcapInfo.pcap_verdict.severity === 'medium'
+                        ? 'bg-yellow-600 text-white'
+                        : 'bg-emerald-600 text-white'
+                    }`}
+                  >
+                    {pcapInfo.pcap_verdict.severity}
+                  </span>
+                </div>
+                <p className="text-xs opacity-80 mt-0.5">
+                  Automated network packet capture risk determination, confidence calibration &amp; incident containment guidance.
+                </p>
+              </div>
+            </div>
+
+            {/* Confidence Score Gauge */}
+            <div className="flex items-center gap-3 bg-white/70 px-4 py-2 rounded-2xl border border-black/10 shadow-2xs">
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block font-mono">Analysis Confidence</span>
+                <span className="text-base font-black text-slate-900 font-mono">{pcapInfo.pcap_verdict.confidence_score}%</span>
+              </div>
+              <div className="w-16 bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-2 rounded-full ${
+                    pcapInfo.pcap_verdict.confidence_score >= 80 ? 'bg-indigo-600' : 'bg-amber-500'
+                  }`}
+                  style={{ width: `${pcapInfo.pcap_verdict.confidence_score}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Rationale and Containment Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 text-xs">
+            <div>
+              <span className="font-bold text-[11px] uppercase tracking-wider opacity-80 block mb-1.5 font-mono">
+                Key Assessment Rationale:
+              </span>
+              <ul className="space-y-1.5 list-disc list-inside opacity-90 leading-relaxed">
+                {pcapInfo.pcap_verdict.rationale.map((r, idx) => (
+                  <li key={idx} className="text-current">
+                    {r}
+                  </li>
+                ))}
+              </ul>
+
+              {pcapInfo.pcap_verdict.mitre_techniques?.length > 0 && (
+                <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-75 font-mono mr-1">
+                    MITRE ATT&amp;CK:
+                  </span>
+                  {pcapInfo.pcap_verdict.mitre_techniques.map((t, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 bg-black/10 rounded-md font-mono text-[10px] font-semibold text-current"
+                    >
+                      {t.id}: {t.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {pcapInfo.pcap_verdict.containment_recommendations?.length > 0 && (
+              <div>
+                <span className="font-bold text-[11px] uppercase tracking-wider opacity-80 block mb-1.5 font-mono">
+                  Actionable Containment Guidance:
+                </span>
+                <ul className="space-y-1.5 list-disc list-inside opacity-90 leading-relaxed font-medium">
+                  {pcapInfo.pcap_verdict.containment_recommendations.map((c, idx) => (
+                    <li key={idx} className="text-current">
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="p-6 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -375,7 +540,7 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {credentials?.length > 0 && (
+            {!isCheckDisabled('check_plaintext_credentials') && credentials?.length > 0 && (
               <button
                 onClick={() => setActiveTab('credentials')}
                 className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-2xs cursor-pointer transition-colors"
@@ -383,7 +548,7 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                 Inspect Credentials ({credentials.length})
               </button>
             )}
-            {carved_files.length > 0 && (
+            {!isCheckDisabled('check_extracted_payloads') && carved_files.length > 0 && (
               <button
                 onClick={() => setActiveTab('carved')}
                 className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-2xs cursor-pointer transition-colors"
@@ -429,17 +594,19 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
 
       {/* Tabs Navigation */}
       <div className="px-6 border-b border-slate-200 flex items-center gap-2 overflow-x-auto scrollbar-thin text-xs font-medium">
-        <button
-          onClick={() => setActiveTab('flows')}
-          className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'flows'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Activity className="w-4 h-4" />
-          <span>Network Flows ({conversations?.length || 0})</span>
-        </button>
+        {!isCheckDisabled('check_conversations_flows') && (
+          <button
+            onClick={() => setActiveTab('flows')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'flows'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Network Flows ({conversations?.length || 0})</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('gantt')}
@@ -453,20 +620,22 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
           <span>Timeline / Gantt Chart</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('web_sessions')}
-          className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'web_sessions'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Search className="w-4 h-4" />
-          <span>Web &amp; Searches ({search_queries.length + web_sessions.length})</span>
-          {(search_queries.length + web_sessions.length) > 0 && (
-            <span className="w-2 h-2 rounded-full bg-indigo-500" />
-          )}
-        </button>
+        {!isCheckDisabled('check_http_ftp_traffic') && (
+          <button
+            onClick={() => setActiveTab('web_sessions')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'web_sessions'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Search className="w-4 h-4" />
+            <span>Web &amp; Searches ({search_queries.length + web_sessions.length})</span>
+            {(search_queries.length + web_sessions.length) > 0 && (
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+            )}
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('exfiltration')}
@@ -515,20 +684,22 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
           )}
         </button>
 
-        <button
-          onClick={() => setActiveTab('carved')}
-          className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'carved'
-              ? 'border-amber-600 text-amber-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <HardDrive className="w-4 h-4" />
-          <span>Carved Files ({carved_files?.length || 0})</span>
-          {(carved_files?.length || 0) > 0 && (
-            <span className="w-2 h-2 rounded-full bg-amber-500" />
-          )}
-        </button>
+        {!isCheckDisabled('check_extracted_payloads') && (
+          <button
+            onClick={() => setActiveTab('carved')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'carved'
+                ? 'border-amber-600 text-amber-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <HardDrive className="w-4 h-4" />
+            <span>Carved Files ({carved_files?.length || 0})</span>
+            {(carved_files?.length || 0) > 0 && (
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+            )}
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('software')}
@@ -554,44 +725,50 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
           <span>Top Endpoints ({top_endpoints?.length || 0})</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('dns')}
-          className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'dns'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Globe className="w-4 h-4" />
-          <span>DNS Queries ({dns_queries?.length || 0})</span>
-        </button>
+        {!isCheckDisabled('check_dns_queries') && (
+          <button
+            onClick={() => setActiveTab('dns')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'dns'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            <span>DNS Queries ({dns_queries?.length || 0})</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveTab('tls')}
-          className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'tls'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Lock className="w-4 h-4" />
-          <span>TLS Sessions ({tls_sessions?.length || 0})</span>
-        </button>
+        {!isCheckDisabled('check_tls_certificates') && (
+          <button
+            onClick={() => setActiveTab('tls')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'tls'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Lock className="w-4 h-4" />
+            <span>TLS Sessions ({tls_sessions?.length || 0})</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setActiveTab('credentials')}
-          className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
-            activeTab === 'credentials'
-              ? 'border-rose-600 text-rose-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Key className="w-4 h-4" />
-          <span>Credentials ({credentials?.length || 0})</span>
-          {(credentials?.length || 0) > 0 && (
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-          )}
-        </button>
+        {!isCheckDisabled('check_plaintext_credentials') && (
+          <button
+            onClick={() => setActiveTab('credentials')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'credentials'
+                ? 'border-rose-600 text-rose-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Key className="w-4 h-4" />
+            <span>Credentials ({credentials?.length || 0})</span>
+            {(credentials?.length || 0) > 0 && (
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            )}
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('beaconing')}
@@ -619,6 +796,96 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
           >
             <Terminal className="w-4 h-4 text-purple-600" />
             <span>SSH &amp; HASSH ({ssh_sessions.length})</span>
+          </button>
+        )}
+
+        {pcapInfo.ids_alerts && pcapInfo.ids_alerts.length > 0 && (
+          <button
+            onClick={() => setActiveTab('ids_alerts')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'ids_alerts'
+                ? 'border-rose-600 text-rose-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4 text-rose-600" />
+            <span>Suricata IDS ({pcapInfo.ids_alerts.length})</span>
+            {pcapInfo.ids_alerts.some(a => a.severity === 1) && (
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            )}
+          </button>
+        )}
+
+        {pcapInfo.zeek_logs && (
+          <button
+            onClick={() => setActiveTab('zeek_logs')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'zeek_logs'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Layers className="w-4 h-4 text-indigo-600" />
+            <span>Zeek Logs</span>
+          </button>
+        )}
+
+        {pcapInfo.lateral_movement && (
+          <button
+            onClick={() => setActiveTab('lateral_movement')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'lateral_movement'
+                ? 'border-amber-600 text-amber-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Radio className="w-4 h-4 text-amber-600" />
+            <span>
+              Recon &amp; Lateral (
+              {(pcapInfo.lateral_movement.scans_detected?.length || 0) +
+                (pcapInfo.lateral_movement.lateral_movement_events?.length || 0)}
+              )
+            </span>
+            {(pcapInfo.lateral_movement.has_active_reconnaissance ||
+              pcapInfo.lateral_movement.has_lateral_movement) && (
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+            )}
+          </button>
+        )}
+
+        {pcapInfo.protocol_anomalies && (
+          <button
+            onClick={() => setActiveTab('protocol_anomalies')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'protocol_anomalies'
+                ? 'border-purple-600 text-purple-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Wifi className="w-4 h-4 text-purple-600" />
+            <span>Protocol Anomalies &amp; OT</span>
+            {(pcapInfo.protocol_anomalies.arp_spoofing_alerts?.length > 0 ||
+              pcapInfo.protocol_anomalies.rogue_dhcp_detected ||
+              pcapInfo.protocol_anomalies.modbus_industrial_events?.some(m => m.severity === 'CRITICAL')) && (
+              <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+            )}
+          </button>
+        )}
+
+        {pcapInfo.capture_integrity && (
+          <button
+            onClick={() => setActiveTab('integrity')}
+            className={`py-3 px-3 border-b-2 font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'integrity'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Capture Integrity &amp; Provenance</span>
+            {pcapInfo.capture_integrity.integrity_status !== 'INTACT' && (
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+            )}
           </button>
         )}
       </div>
@@ -1936,15 +2203,15 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 font-mono">
                             {ws.method}
                           </span>
-                          <span className="text-xs font-bold text-slate-900 font-mono">{ws.host}{ws.uri}</span>
+                          <span className="text-xs font-bold text-slate-900 font-mono break-all">{ws.host}{ws.uri}</span>
                           {ws.is_credential_submission && (
-                            <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold flex items-center gap-1">
+                            <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold flex items-center gap-1 shrink-0">
                               <Key className="w-3 h-3 text-rose-600" />
                               <span>Credentials Submitted</span>
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
+                        <div className="text-[11px] text-slate-500 font-mono shrink-0">
                           {ws.client_ip} ➔ {ws.server_ip}
                         </div>
                       </div>
@@ -1955,9 +2222,9 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                           <div className="text-[11px] font-bold text-slate-600 uppercase mb-2">Decoded Form Parameters:</div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                             {Object.entries(ws.submitted_fields || (ws as any).form_fields).map(([k, v]) => (
-                              <div key={k} className="p-2 bg-white rounded-lg border border-slate-200 text-xs font-mono">
-                                <span className="text-indigo-600 font-bold">{k}: </span>
-                                <span className="text-slate-800">{String(v)}</span>
+                              <div key={k} className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs font-mono min-w-0 overflow-hidden break-all shadow-2xs">
+                                <span className="text-indigo-600 font-bold block truncate text-[11px] mb-0.5" title={k}>{k}: </span>
+                                <span className="text-slate-800 break-all select-all block text-[11px] leading-relaxed max-h-32 overflow-y-auto">{String(v)}</span>
                               </div>
                             ))}
                           </div>
@@ -2448,6 +2715,689 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
             )}
           </div>
         )}
+
+        {/* =========================================================================
+            TAB 15: Suricata IDS Intrusion Alerts
+           ========================================================================= */}
+        {activeTab === 'ids_alerts' && (
+          <div className="space-y-6">
+            <div className="p-4 bg-rose-50/70 border border-rose-200 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-rose-600 text-white rounded-xl shadow-xs">
+                  <ShieldAlert className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-rose-950">Suricata-Compatible IDS Signature Rule Matches</h4>
+                  <p className="text-xs text-rose-800">
+                    Payload pattern matching for Web Exploits (SQLi, Traversal, Command Injection, Webshells), C2 stagers, and sensitive data leaks.
+                  </p>
+                </div>
+              </div>
+
+              {/* Severity Filter Pills */}
+              <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-rose-200/80 text-xs font-mono">
+                {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map(sev => (
+                  <button
+                    key={sev}
+                    onClick={() => setIdsSeverityFilter(sev)}
+                    className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-colors ${
+                      idsSeverityFilter === sev
+                        ? 'bg-rose-600 text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    {sev}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {(() => {
+              const alerts = (pcapInfo.ids_alerts || []).filter(a => {
+                if (idsSeverityFilter !== 'ALL' && a.severity_label !== idsSeverityFilter) return false;
+                if (!searchQuery) return true;
+                const q = searchQuery.toLowerCase();
+                return (
+                  a.msg.toLowerCase().includes(q) ||
+                  a.classtype.toLowerCase().includes(q) ||
+                  a.src_ip.toLowerCase().includes(q) ||
+                  a.dst_ip.toLowerCase().includes(q) ||
+                  a.matched_snippet.toLowerCase().includes(q)
+                );
+              });
+
+              if (alerts.length === 0) {
+                return (
+                  <div className="p-12 text-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-500 text-xs">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-60" />
+                    <p className="font-semibold text-slate-700">No Intrusion Alerts Matched</p>
+                    <p className="text-slate-400 mt-1">No network payloads triggered Suricata attack rules under the current filter.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  {alerts.map((al, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl border transition-all bg-white border-slate-200 hover:border-slate-300 shadow-2xs space-y-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase font-mono tracking-wider ${
+                              al.severity === 1
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                : al.severity === 2
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                            }`}
+                          >
+                            {al.severity_label} (Priority {al.severity})
+                          </span>
+                          <span className="text-xs font-mono font-bold text-slate-500">SID: {al.sid}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-[10px]">
+                            {al.classtype}
+                          </span>
+                        </div>
+
+                        <div className="text-xs font-mono text-slate-600 flex items-center gap-2">
+                          <span className="font-bold text-slate-800">{al.src_ip}:{al.src_port}</span>
+                          <span className="text-slate-400">→</span>
+                          <span className="font-bold text-slate-800">{al.dst_ip}:{al.dst_port}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 text-[10px] font-bold">
+                            {al.protocol}
+                          </span>
+                        </div>
+                      </div>
+
+                      <h5 className="text-sm font-bold text-slate-900 tracking-tight">{al.msg}</h5>
+
+                      {al.matched_snippet && (
+                        <div className="p-3 bg-slate-950 text-indigo-300 rounded-xl font-mono text-[11px] leading-relaxed overflow-x-auto shadow-inner">
+                          <span className="text-slate-500 select-none block mb-1 text-[10px] font-bold uppercase">
+                            Matched Stream Payload Proof:
+                          </span>
+                          <code>{al.matched_snippet}</code>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB 16: Zeek-Style Structured Session Logs
+           ========================================================================= */}
+        {activeTab === 'zeek_logs' && (
+          <div className="space-y-6">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-xs">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Zeek Structured Forensic Session Logs</h4>
+                  <p className="text-xs text-slate-500">
+                    Normalized connection and protocol transaction logs generated per Zeek/Bro network sensor specifications.
+                  </p>
+                </div>
+              </div>
+
+              {/* Subtab Selector */}
+              <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 text-xs font-mono">
+                {(['conn', 'dns', 'ssl', 'x509', 'files'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveZeekLog(tab)}
+                    className={`px-3 py-1 rounded-lg font-bold cursor-pointer transition-colors ${
+                      activeZeekLog === tab
+                        ? 'bg-indigo-600 text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    {tab}.log ({pcapInfo.zeek_logs?.[`${tab}_log` as keyof typeof pcapInfo.zeek_logs]?.length || 0})
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* conn.log */}
+            {activeZeekLog === 'conn' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                      <th className="py-2.5 px-3">UID</th>
+                      <th className="py-2.5 px-3">Orig Host (Client)</th>
+                      <th className="py-2.5 px-3">Resp Host (Server)</th>
+                      <th className="py-2.5 px-3">Proto / Service</th>
+                      <th className="py-2.5 px-3">Duration</th>
+                      <th className="py-2.5 px-3">Bytes (Orig / Resp)</th>
+                      <th className="py-2.5 px-3">State</th>
+                      <th className="py-2.5 px-3">History</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(pcapInfo.zeek_logs?.conn_log || []).map((c, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-2.5 px-3 font-bold text-indigo-700">{c.uid}</td>
+                        <td className="py-2.5 px-3 text-slate-800">{c.id_orig_h}:{c.id_orig_p}</td>
+                        <td className="py-2.5 px-3 text-slate-800">{c.id_resp_h}:{c.id_resp_p}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold uppercase mr-1">
+                            {c.proto}
+                          </span>
+                          <span className="text-slate-500 font-sans">{c.service}</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600">{c.duration}s</td>
+                        <td className="py-2.5 px-3 text-slate-600">
+                          {formatBytes(c.orig_bytes)} / {formatBytes(c.resp_bytes)}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            c.conn_state === 'SF' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {c.conn_state}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">{c.history}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* dns.log */}
+            {activeZeekLog === 'dns' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                      <th className="py-2.5 px-3">UID</th>
+                      <th className="py-2.5 px-3">Client Endpoint</th>
+                      <th className="py-2.5 px-3">Queried Hostname</th>
+                      <th className="py-2.5 px-3">Type</th>
+                      <th className="py-2.5 px-3">RCode</th>
+                      <th className="py-2.5 px-3">Resolved Answers</th>
+                      <th className="py-2.5 px-3">Entropy</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(pcapInfo.zeek_logs?.dns_log || []).map((d, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-2.5 px-3 font-bold text-sky-700">{d.uid}</td>
+                        <td className="py-2.5 px-3 text-slate-800">{d.id_orig_h}</td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-900">{d.query}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{d.qtype_name}</td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            d.rcode_name === 'NOERROR' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {d.rcode_name}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-700">
+                          {d.answers?.length > 0 ? d.answers.join(', ') : <span className="text-slate-400 italic">None</span>}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600 font-bold">{d.entropy} bits</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* ssl.log */}
+            {activeZeekLog === 'ssl' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                      <th className="py-2.5 px-3">UID</th>
+                      <th className="py-2.5 px-3">Server Name (SNI)</th>
+                      <th className="py-2.5 px-3">TLS Version</th>
+                      <th className="py-2.5 px-3">Cipher Suite</th>
+                      <th className="py-2.5 px-3">JA3 Fingerprint</th>
+                      <th className="py-2.5 px-3">Subject</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(pcapInfo.zeek_logs?.ssl_log || []).map((s, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-2.5 px-3 font-bold text-indigo-700">{s.uid}</td>
+                        <td className="py-2.5 px-3 font-bold text-slate-900">{s.server_name}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{s.version}</td>
+                        <td className="py-2.5 px-3 text-slate-600 truncate max-w-xs">{s.cipher}</td>
+                        <td className="py-2.5 px-3 text-indigo-600 font-mono text-[11px]">{s.ja3 || 'N/A'}</td>
+                        <td className="py-2.5 px-3 text-slate-500 truncate max-w-xs">{s.subject}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* x509.log */}
+            {activeZeekLog === 'x509' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                      <th className="py-2.5 px-3">Serial</th>
+                      <th className="py-2.5 px-3">Certificate Subject</th>
+                      <th className="py-2.5 px-3">Issuer Authority</th>
+                      <th className="py-2.5 px-3">SAN DNS Names</th>
+                      <th className="py-2.5 px-3">Key Specification</th>
+                      <th className="py-2.5 px-3">Trust</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(pcapInfo.zeek_logs?.x509_log || []).map((x, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-2.5 px-3 text-slate-600">{x.certificate_serial}</td>
+                        <td className="py-2.5 px-3 font-bold text-slate-900">{x.subject}</td>
+                        <td className="py-2.5 px-3 text-slate-700">{x.issuer}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{x.san_dns?.join(', ')}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{x.key_type?.toUpperCase()} {x.key_length}b</td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            x.self_signed ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {x.self_signed ? 'Self-Signed' : 'CA-Signed'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* files.log */}
+            {activeZeekLog === 'files' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                      <th className="py-2.5 px-3">FUID</th>
+                      <th className="py-2.5 px-3">Protocol</th>
+                      <th className="py-2.5 px-3">Filename</th>
+                      <th className="py-2.5 px-3">MIME Type</th>
+                      <th className="py-2.5 px-3">Size</th>
+                      <th className="py-2.5 px-3">SHA-256 Checksum</th>
+                      <th className="py-2.5 px-3">Classification</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(pcapInfo.zeek_logs?.files_log || []).map((f, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-2.5 px-3 font-bold text-amber-700">{f.fuid}</td>
+                        <td className="py-2.5 px-3 text-slate-700 font-bold">{f.source_proto}</td>
+                        <td className="py-2.5 px-3 font-bold text-slate-900">{f.filename}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{f.mime_type}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{formatBytes(f.total_bytes)}</td>
+                        <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px] truncate max-w-xs">{truncateHash(f.sha256)}</td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            f.is_dangerous ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {f.threat_category}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB 17: Network Reconnaissance & Lateral Movement
+           ========================================================================= */}
+        {activeTab === 'lateral_movement' && (
+          <div className="space-y-6">
+            <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-start gap-3.5">
+              <div className="p-2.5 bg-amber-600 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
+                <Radio className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-amber-950">
+                  Network Reconnaissance, Port Scans &amp; East-West Lateral Movement
+                </h4>
+                <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                  Identifies internal port scanning, ARP/ICMP host discovery sweeps, and administrative remote execution (SMB admin shares C$/ADMIN$/IPC$, WinRM, RDP, SSH, Kerberos).
+                </p>
+              </div>
+            </div>
+
+            {/* Active Reconnaissance Section */}
+            <div className="space-y-3">
+              <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
+                Port Scans &amp; Host Discovery Sweeps ({pcapInfo.lateral_movement?.scans_detected?.length || 0})
+              </h5>
+              {(pcapInfo.lateral_movement?.scans_detected || []).length === 0 ? (
+                <div className="p-6 text-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-400 text-xs">
+                  No active port scans, network sweeps, or ARP sweeps observed.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {pcapInfo.lateral_movement!.scans_detected.map((sc, sidx) => (
+                    <div key={sidx} className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold font-mono text-slate-900">{sc.scanner_ip}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
+                          {sc.threat_level}
+                        </span>
+                      </div>
+                      <div className="text-xs font-semibold text-slate-800">{sc.scan_type}</div>
+                      {sc.ports_sample && sc.ports_sample.length > 0 && (
+                        <div className="text-[11px] text-slate-600 font-mono">
+                          Probed Ports: {sc.ports_sample.join(', ')}... ({sc.ports_probed_count} total)
+                        </div>
+                      )}
+                      {sc.sample_targets && sc.sample_targets.length > 0 && (
+                        <div className="text-[11px] text-slate-600 font-mono">
+                          Targets: {sc.sample_targets.join(', ')}... ({sc.target_count} total)
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* East-West Lateral Movement Section */}
+            <div className="space-y-3">
+              <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
+                Internal Lateral Movement Events ({pcapInfo.lateral_movement?.lateral_movement_events?.length || 0})
+              </h5>
+              {(pcapInfo.lateral_movement?.lateral_movement_events || []).length === 0 ? (
+                <div className="p-6 text-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-400 text-xs">
+                  No internal lateral movement sessions detected across administrative ports.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                        <th className="py-2.5 px-3">Source Host</th>
+                        <th className="py-2.5 px-3">Target Host</th>
+                        <th className="py-2.5 px-3">Port</th>
+                        <th className="py-2.5 px-3">Protocol / Service</th>
+                        <th className="py-2.5 px-3">Admin Share</th>
+                        <th className="py-2.5 px-3">Transferred</th>
+                        <th className="py-2.5 px-3">Severity</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {pcapInfo.lateral_movement!.lateral_movement_events.map((lat, lidx) => (
+                        <tr key={lidx} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-2.5 px-3 font-bold text-slate-900">{lat.source_ip}</td>
+                          <td className="py-2.5 px-3 font-bold text-slate-900">{lat.destination_ip}</td>
+                          <td className="py-2.5 px-3 text-slate-600">{lat.target_port}</td>
+                          <td className="py-2.5 px-3 text-slate-800 font-sans font-semibold">{lat.protocol_name}</td>
+                          <td className="py-2.5 px-3 text-rose-700 font-bold font-mono">{lat.admin_share || '—'}</td>
+                          <td className="py-2.5 px-3 text-slate-600">{formatBytes(lat.bytes_transferred)}</td>
+                          <td className="py-2.5 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              lat.severity === 'CRITICAL'
+                                ? 'bg-rose-100 text-rose-800'
+                                : lat.severity === 'HIGH'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {lat.severity}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB 18: Protocol Anomalies & Industrial OT (SCADA)
+           ========================================================================= */}
+        {activeTab === 'protocol_anomalies' && (
+          <div className="space-y-6">
+            <div className="p-4 bg-purple-50/70 border border-purple-200 rounded-2xl flex items-start gap-3.5">
+              <div className="p-2.5 bg-purple-600 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
+                <Wifi className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-purple-950">Protocol-Specific Deep Inspection &amp; OT SCADA Analysis</h4>
+                <p className="text-xs text-purple-800 mt-0.5 leading-relaxed">
+                  Monitors network infrastructure protocols (ARP cache integrity, rogue DHCP servers, NTP amplification) and industrial automation controls (Modbus/TCP register writes).
+                </p>
+              </div>
+            </div>
+
+            {/* ARP Poisoning Callouts */}
+            {(pcapInfo.protocol_anomalies?.arp_spoofing_alerts || []).length > 0 && (
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-2">
+                <h5 className="text-xs font-bold text-rose-900 uppercase font-mono flex items-center gap-2">
+                  <AlertOctagon className="w-4 h-4 text-rose-600" />
+                  <span>ARP Cache Poisoning / Spoofing Detected (Man-in-the-Middle)</span>
+                </h5>
+                {pcapInfo.protocol_anomalies!.arp_spoofing_alerts.map((arp, aidx) => (
+                  <div key={aidx} className="text-xs text-rose-800">
+                    Host <strong>{arp.target_ip}</strong> is concurrently claimed by multiple MAC addresses:{' '}
+                    <code>{arp.conflicting_mac_addresses.join(', ')}</code>.
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Rogue DHCP Callout */}
+            {pcapInfo.protocol_anomalies?.rogue_dhcp_detected && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-1">
+                <h5 className="text-xs font-bold text-amber-900 uppercase font-mono">
+                  Rogue DHCP Server Conflict
+                </h5>
+                <p className="text-xs text-amber-800">
+                  Multiple DHCP Offer/ACK responders detected across network segment: {pcapInfo.protocol_anomalies.dhcp_servers_detected.join(', ')}.
+                </p>
+              </div>
+            )}
+
+            {/* Industrial Modbus/TCP Events */}
+            <div className="space-y-3">
+              <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
+                Industrial Control Protocols: Modbus/TCP ({pcapInfo.protocol_anomalies?.modbus_industrial_events?.length || 0})
+              </h5>
+              {(pcapInfo.protocol_anomalies?.modbus_industrial_events || []).length === 0 ? (
+                <div className="p-6 text-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-400 text-xs">
+                  No industrial control system (Modbus/TCP) frames detected on port 502.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                        <th className="py-2.5 px-3">Source Endpoint</th>
+                        <th className="py-2.5 px-3">PLC / RTU Target</th>
+                        <th className="py-2.5 px-3">Unit ID</th>
+                        <th className="py-2.5 px-3">Function Code</th>
+                        <th className="py-2.5 px-3">Command Operation</th>
+                        <th className="py-2.5 px-3">Classification</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {pcapInfo.protocol_anomalies!.modbus_industrial_events.map((mb, midx) => (
+                        <tr key={midx} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-2.5 px-3 text-slate-800">{mb.source_ip}</td>
+                          <td className="py-2.5 px-3 font-bold text-slate-900">{mb.target_ip}</td>
+                          <td className="py-2.5 px-3 text-slate-600">{mb.unit_id}</td>
+                          <td className="py-2.5 px-3 font-bold text-indigo-700">0x{mb.function_code.toString(16).padStart(2, '0')}</td>
+                          <td className="py-2.5 px-3 text-slate-800 font-sans font-medium">{mb.operation}</td>
+                          <td className="py-2.5 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              mb.severity === 'CRITICAL' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {mb.severity}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            TAB 19: Capture Integrity & Evidence Provenance
+           ========================================================================= */}
+        {activeTab === 'integrity' && (
+          <div className="space-y-6">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-3.5">
+              <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">
+                  Packet Capture Integrity, Frame Sizing &amp; Evidence Provenance
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                  Audits low-level capture format, endianness, timestamp precision, link types, snaplen truncation anomalies, duplicate frames, and timeline gaps.
+                </p>
+              </div>
+            </div>
+
+            {pcapInfo.capture_integrity && (
+              <div className="space-y-6">
+                {/* Metric Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
+                  <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
+                    <span className="text-[10px] text-slate-400 block uppercase">Format &amp; Precision</span>
+                    <span className="text-sm font-bold text-slate-900 block mt-1">{pcapInfo.capture_integrity.format}</span>
+                    <span className="text-[11px] text-indigo-600 font-semibold block">{pcapInfo.capture_integrity.timestamp_precision}</span>
+                  </div>
+
+                  <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
+                    <span className="text-[10px] text-slate-400 block uppercase">Byte Order &amp; Link</span>
+                    <span className="text-sm font-bold text-slate-900 block mt-1">{pcapInfo.capture_integrity.endianness}</span>
+                    <span className="text-[11px] text-slate-500 block">{pcapInfo.capture_integrity.link_layer_types.join(', ')}</span>
+                  </div>
+
+                  <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
+                    <span className="text-[10px] text-slate-400 block uppercase">Integrity Status</span>
+                    <span className={`text-sm font-bold block mt-1 ${
+                      pcapInfo.capture_integrity.integrity_status === 'INTACT' ? 'text-emerald-700' : 'text-amber-700'
+                    }`}>
+                      {pcapInfo.capture_integrity.integrity_status}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block">
+                      {pcapInfo.capture_integrity.truncated_packets_count} truncated frames
+                    </span>
+                  </div>
+
+                  <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
+                    <span className="text-[10px] text-slate-400 block uppercase">Retransmissions &amp; Dups</span>
+                    <span className="text-sm font-bold text-slate-900 block mt-1">
+                      {pcapInfo.capture_integrity.tcp_retransmissions_count} TCP Retrans
+                    </span>
+                    <span className="text-[11px] text-slate-500 block">
+                      {pcapInfo.capture_integrity.duplicate_packets_count} duplicate frames
+                    </span>
+                  </div>
+                </div>
+
+                {/* Timeline and Time Gaps */}
+                <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-3 font-mono">
+                  <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Capture Timeline &amp; Time Gap Detection
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Start Time (UTC):</span>
+                      <span className="font-bold text-slate-800">{pcapInfo.capture_integrity.start_time || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">End Time (UTC):</span>
+                      <span className="font-bold text-slate-800">{pcapInfo.capture_integrity.end_time || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Total Captured Duration:</span>
+                      <span className="font-bold text-slate-800">{pcapInfo.capture_integrity.duration_seconds} seconds</span>
+                    </div>
+                  </div>
+
+                  {pcapInfo.capture_integrity.time_gaps.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <span className="text-[11px] font-bold text-amber-800 block mb-2">
+                        Detected Gaps (≥ 10.0s interruption):
+                      </span>
+                      <div className="space-y-1.5">
+                        {pcapInfo.capture_integrity.time_gaps.map((tg, tgidx) => (
+                          <div key={tgidx} className="p-2 rounded-xl bg-amber-50 border border-amber-200/70 text-[11px] flex items-center justify-between text-amber-900">
+                            <span>Gap from offset +{tg.start_sec}s to +{tg.end_sec}s</span>
+                            <span className="font-bold">{tg.duration_sec}s silence</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Evidence Hashes and Provenance */}
+                <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-3 font-mono">
+                  <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Evidence Provenance &amp; Cryptographic Audit Trail
+                  </h5>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="truncate mr-3">
+                        <span className="text-slate-400 block text-[10px]">SHA-256 (Primary Forensic Evidence Hash):</span>
+                        <code className="font-bold text-slate-900 text-xs">{pcapInfo.capture_integrity.provenance.sha256}</code>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(pcapInfo.capture_integrity!.provenance.sha256, 'sha256')}
+                        className="px-2 py-1 rounded bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs flex items-center gap-1 cursor-pointer shrink-0"
+                      >
+                        {copiedKey === 'sha256' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>Copy</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-slate-400 block text-[10px]">SHA-1:</span>
+                        <code className="text-slate-800 text-xs truncate block">{pcapInfo.capture_integrity.provenance.sha1}</code>
+                      </div>
+                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <span className="text-slate-400 block text-[10px]">MD5:</span>
+                        <code className="text-slate-800 text-xs truncate block">{pcapInfo.capture_integrity.provenance.md5}</code>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-center justify-between font-sans">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{pcapInfo.capture_integrity.provenance.preservation}</span>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-700">{pcapInfo.capture_integrity.provenance.analysis_engine}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* =========================================================================
@@ -2711,9 +3661,9 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
                 <span className="font-bold text-slate-700 uppercase tracking-wider text-[11px]">Decoded Submitted Fields:</span>
                 <div className="mt-2 space-y-1.5 font-mono">
                   {Object.entries(selectedWebSession.submitted_fields || (selectedWebSession as any).form_fields || {}).map(([k, v]) => (
-                    <div key={k} className="p-2 bg-slate-100 rounded-lg flex items-center justify-between">
-                      <span className="font-bold text-indigo-700">{k}</span>
-                      <span className="text-slate-800">{String(v)}</span>
+                    <div key={k} className="p-2.5 bg-slate-100 rounded-lg flex flex-col sm:flex-row sm:items-start justify-between gap-1.5 min-w-0 overflow-hidden">
+                      <span className="font-bold text-indigo-700 shrink-0 font-mono text-xs">{k}:</span>
+                      <span className="text-slate-800 font-mono break-all select-all text-xs leading-relaxed max-h-36 overflow-y-auto">{String(v)}</span>
                     </div>
                   ))}
                 </div>

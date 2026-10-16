@@ -14,7 +14,10 @@ import {
   Activity,
   Compass,
   FileCheck,
-  Edit3
+  Edit3,
+  Zap,
+  GitFork,
+  Bug
 } from 'lucide-react';
 import { formatBytes } from '../utils/formatters';
 import { BinaryInfo, AntiAnalysisInfo } from '../types';
@@ -33,6 +36,7 @@ interface BinaryTriageCardProps {
   antiAnalysis?: AntiAnalysisInfo;
   workspaceJobs?: any[];
   onSelectJob?: (newJobId: string) => void;
+  disabledChecks?: string[];
 }
 
 export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
@@ -43,14 +47,34 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
   antiAnalysis,
   workspaceJobs,
   onSelectJob,
+  disabledChecks = [],
 }) => {
+  const isCheckDisabled = (chk: string) => (disabledChecks || []).includes(chk);
+
   const isShellcodeFile = Boolean(
     (binaryInfo as any)?.shellcode?.is_shellcode ||
     binaryInfo?.format?.toLowerCase().includes('shellcode')
   );
-  const [activeTab, setActiveTab] = useState<'headers' | 'sections' | 'imports' | 'exports' | 'resources' | 'strings' | 'compilers' | 'disassembly' | 'decompiler' | 'anti_analysis' | 'authenticode' | 'mitigations' | 'shellcode'>(
-    isShellcodeFile ? 'shellcode' : 'headers'
+  const canShowCapabilities = !isCheckDisabled('check_capabilities') && Boolean((binaryInfo as any)?.pe_capabilities?.length > 0);
+  const [activeTab, setActiveTab] = useState<'headers' | 'sections' | 'imports' | 'exports' | 'resources' | 'strings' | 'compilers' | 'disassembly' | 'decompiler' | 'anti_analysis' | 'authenticode' | 'mitigations' | 'shellcode' | 'capabilities' | 'dll_forensics' | 'dotnet' | 'vulnerabilities'>(
+    isShellcodeFile ? 'shellcode' : (canShowCapabilities ? 'capabilities' : 'headers')
   );
+
+  React.useEffect(() => {
+    if (activeTab === 'capabilities' && isCheckDisabled('check_capabilities')) {
+      setActiveTab('headers');
+    } else if (activeTab === 'sections' && isCheckDisabled('check_sections_entropy')) {
+      setActiveTab('headers');
+    } else if (activeTab === 'imports' && isCheckDisabled('check_suspicious_imports')) {
+      setActiveTab('headers');
+    } else if (activeTab === 'authenticode' && (isCheckDisabled('check_authenticode_signature') || isCheckDisabled('check_code_signature'))) {
+      setActiveTab('headers');
+    } else if ((activeTab === 'disassembly' || activeTab === 'decompiler') && isCheckDisabled('check_disassembly')) {
+      setActiveTab('headers');
+    } else if (activeTab === 'anti_analysis' && (isCheckDisabled('check_anti_analysis') || isCheckDisabled('anti_analysis_enabled'))) {
+      setActiveTab('headers');
+    }
+  }, [activeTab, disabledChecks]);
   const [selectedDll, setSelectedDll] = useState<string>('all');
   const [importSearch, setImportSearch] = useState('');
   const [stringSearch, setStringSearch] = useState('');
@@ -431,6 +455,101 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Executive PE Security Verdict Banner */}
+      {binaryInfo?.pe_verdict?.verdict && (
+        <div className={`rounded-3xl border p-5 shadow-sm ${
+          binaryInfo.pe_verdict.verdict === 'Malicious'
+            ? 'bg-rose-50/80 border-rose-200 text-rose-950'
+            : binaryInfo.pe_verdict.verdict === 'Suspicious'
+            ? 'bg-amber-50/80 border-amber-200 text-amber-950'
+            : binaryInfo.pe_verdict.verdict === 'Potentially Vulnerable'
+            ? 'bg-orange-50/80 border-orange-200 text-orange-950'
+            : binaryInfo.pe_verdict.verdict === 'No Known Threat Detected'
+            ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+            : 'bg-slate-50 border-slate-200 text-slate-900'
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-black/5">
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-2xl ${
+                binaryInfo.pe_verdict.verdict === 'Malicious'
+                  ? 'bg-rose-500 text-white'
+                  : binaryInfo.pe_verdict.verdict === 'Suspicious'
+                  ? 'bg-amber-500 text-white'
+                  : binaryInfo.pe_verdict.verdict === 'Potentially Vulnerable'
+                  ? 'bg-orange-500 text-white'
+                  : binaryInfo.pe_verdict.verdict === 'No Known Threat Detected'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-slate-500 text-white'
+              }`}>
+                {binaryInfo.pe_verdict.verdict === 'Malicious' ? (
+                  <ShieldAlert className="w-5 h-5" />
+                ) : binaryInfo.pe_verdict.verdict === 'No Known Threat Detected' ? (
+                  <ShieldCheck className="w-5 h-5" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase tracking-wider font-extrabold opacity-75">
+                    Executive PE Triage Verdict
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/10">
+                    {binaryInfo.pe_verdict.confidence_score}% Confidence
+                  </span>
+                </div>
+                <h4 className="text-lg font-black tracking-tight">
+                  {binaryInfo.pe_verdict.verdict.toUpperCase()}
+                </h4>
+              </div>
+            </div>
+
+            {/* MITRE ATT&CK quick badges */}
+            {binaryInfo.pe_verdict.mitre_techniques?.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {binaryInfo.pe_verdict.mitre_techniques.slice(0, 4).map((tech) => (
+                  <span
+                    key={tech.id}
+                    className="px-2 py-1 rounded-lg bg-black/5 text-[11px] font-mono font-bold"
+                    title={`${tech.id}: ${tech.name} (${tech.tactic})`}
+                  >
+                    {tech.id}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3.5 text-xs">
+            {/* Rationale */}
+            <div>
+              <span className="font-bold text-[11px] uppercase tracking-wider opacity-80 block mb-1.5">
+                Key Assessment Rationale:
+              </span>
+              <ul className="space-y-1 list-disc list-inside opacity-90 leading-relaxed">
+                {binaryInfo.pe_verdict.rationale.map((r, idx) => (
+                  <li key={idx}>{r}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Containment Recommendations */}
+            {binaryInfo.pe_verdict.containment_recommendations?.length > 0 && (
+              <div>
+                <span className="font-bold text-[11px] uppercase tracking-wider opacity-80 block mb-1.5">
+                  Actionable Containment Guidance:
+                </span>
+                <ul className="space-y-1 list-disc list-inside opacity-90 leading-relaxed font-medium">
+                  {binaryInfo.pe_verdict.containment_recommendations.map((c, idx) => (
+                    <li key={idx}>{c}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
@@ -465,7 +584,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
               </span>
             )}
 
-            {hasAuthenticode ? (
+            {!(isCheckDisabled('check_authenticode_signature') || isCheckDisabled('check_code_signature')) && (hasAuthenticode ? (
               <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-semibold flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 Signed Binary
@@ -476,7 +595,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                   ? 'Unsigned Binary'
                   : binaryInfo.digital_signature || 'Unsigned Binary'}
               </span>
-            )}
+            ))}
           </div>
         </div>
 
@@ -501,21 +620,25 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
             </span>
           </div>
 
-          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold mb-1">
-              Sections
-            </span>
-            <span className="text-slate-900 font-bold">{sectionsCount} sections</span>
-          </div>
+          {!isCheckDisabled('check_sections_entropy') && (
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold mb-1">
+                Sections
+              </span>
+              <span className="text-slate-900 font-bold">{sectionsCount} sections</span>
+            </div>
+          )}
 
-          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold mb-1">
-              Imports
-            </span>
-            <span className="text-slate-900 font-bold">
-              {binaryInfo.total_imports_count || 0} APIs ({binaryInfo.import_libraries_count || dllNames.length} DLLs)
-            </span>
-          </div>
+          {!isCheckDisabled('check_suspicious_imports') && (
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold mb-1">
+                Imports
+              </span>
+              <span className="text-slate-900 font-bold">
+                {binaryInfo.total_imports_count || 0} APIs ({binaryInfo.import_libraries_count || dllNames.length} DLLs)
+              </span>
+            </div>
+          )}
 
           <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80">
             <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold mb-1">
@@ -582,6 +705,81 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
 
         {/* Tab Controls */}
         <div className="flex border-b border-slate-200 gap-1 overflow-x-auto pt-2">
+          {!isCheckDisabled('check_capabilities') && Boolean((binaryInfo as any)?.pe_capabilities?.length > 0) && (
+            <button
+              onClick={() => setActiveTab('capabilities')}
+              className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === 'capabilities'
+                  ? 'bg-rose-50/80 text-rose-700 border-b-2 border-rose-600 font-bold'
+                  : 'text-rose-600 hover:text-rose-900 hover:bg-rose-50'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Malware Capabilities ({((binaryInfo as any).pe_capabilities || []).length})</span>
+              <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-bold">
+                ATT&CK
+              </span>
+            </button>
+          )}
+
+          {Boolean((binaryInfo as any)?.dll_forensics?.is_dll || isPE) && (
+            <button
+              onClick={() => setActiveTab('dll_forensics')}
+              className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === 'dll_forensics'
+                  ? 'bg-blue-50/80 text-blue-700 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <GitFork className="w-3.5 h-3.5" />
+              <span>DLL & Sideloading</span>
+              {Boolean((binaryInfo as any)?.dll_forensics?.sideloading_risk?.is_common_target_dll) && (
+                <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-bold">
+                  Sideload
+                </span>
+              )}
+              {Boolean((binaryInfo as any)?.dll_forensics?.has_tls_callbacks) && (
+                <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px] font-bold">
+                  TLS
+                </span>
+              )}
+            </button>
+          )}
+
+          {Boolean((binaryInfo as any)?.dotnet_assembly?.is_dotnet) && (
+            <button
+              onClick={() => setActiveTab('dotnet')}
+              className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === 'dotnet'
+                  ? 'bg-purple-50/80 text-purple-700 border-b-2 border-purple-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Boxes className="w-3.5 h-3.5" />
+              <span>.NET CLR Assembly</span>
+              <span className="px-1.5 py-0.2 bg-purple-500 text-white rounded-full text-[10px] font-bold">
+                C#
+              </span>
+            </button>
+          )}
+
+          {Boolean(((binaryInfo as any)?.pe_vulnerabilities?.vulnerability_count || 0) > 0 || (binaryInfo as any)?.pe_vulnerabilities?.has_wx_sections) && (
+            <button
+              onClick={() => setActiveTab('vulnerabilities')}
+              className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === 'vulnerabilities'
+                  ? 'bg-amber-50/80 text-amber-700 border-b-2 border-amber-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Bug className="w-3.5 h-3.5" />
+              <span>Vulnerabilities & CRT</span>
+              <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[10px] font-bold">
+                {((binaryInfo as any)?.pe_vulnerabilities?.legacy_crt_apis || []).length} CRT
+              </span>
+            </button>
+          )}
+
           <button
             onClick={() => setActiveTab('headers')}
             className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
@@ -594,34 +792,38 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
             <span>{isPE ? 'MZ & PE Headers' : isELF ? 'ELF Structure' : isMachO ? 'Mach-O Header' : 'Headers'}</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('sections')}
-            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
-              activeTab === 'sections'
-                ? 'bg-blue-50/80 text-blue-700 border-b-2 border-blue-600'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <Boxes className="w-3.5 h-3.5" />
-            <span>Sections & Dumps ({sectionsCount})</span>
-          </button>
+          {!isCheckDisabled('check_sections_entropy') && (
+            <button
+              onClick={() => setActiveTab('sections')}
+              className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === 'sections'
+                  ? 'bg-blue-50/80 text-blue-700 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Boxes className="w-3.5 h-3.5" />
+              <span>Sections & Dumps ({sectionsCount})</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab('imports')}
-            className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
-              activeTab === 'imports'
-                ? 'bg-blue-50/80 text-blue-700 border-b-2 border-blue-600'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <FolderTree className="w-3.5 h-3.5" />
-            <span>Imports & Libraries ({binaryInfo.total_imports_count || 0})</span>
-            {suspiciousApisCount > 0 && (
-              <span className="px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-bold">
-                {suspiciousApisCount}
-              </span>
-            )}
-          </button>
+          {!isCheckDisabled('check_suspicious_imports') && (
+            <button
+              onClick={() => setActiveTab('imports')}
+              className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === 'imports'
+                  ? 'bg-blue-50/80 text-blue-700 border-b-2 border-blue-600'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <FolderTree className="w-3.5 h-3.5" />
+              <span>Imports & Libraries ({binaryInfo.total_imports_count || 0})</span>
+              {suspiciousApisCount > 0 && (
+                <span className="px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[10px] font-bold">
+                  {suspiciousApisCount}
+                </span>
+              )}
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('exports')}
@@ -676,7 +878,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
             <span>Compilers & Protectors</span>
           </button>
 
-          {(binaryInfo as any).disassembly?.instructions?.length > 0 && (
+          {!isCheckDisabled('check_disassembly') && (binaryInfo as any).disassembly?.instructions?.length > 0 && (
             <button
               onClick={() => setActiveTab('disassembly')}
               className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
@@ -695,7 +897,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
             </button>
           )}
 
-          {Boolean((binaryInfo as any).decompilation || (binaryInfo as any).disassembly?.instructions?.length > 0) && (
+          {!isCheckDisabled('check_disassembly') && Boolean((binaryInfo as any).decompilation || (binaryInfo as any).disassembly?.instructions?.length > 0) && (
             <button
               onClick={() => setActiveTab('decompiler')}
               className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
@@ -712,7 +914,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
             </button>
           )}
 
-          {((binaryInfo as any)?.anti_analysis || antiAnalysis) && (
+          {!isCheckDisabled('check_anti_analysis') && !isCheckDisabled('anti_analysis_enabled') && ((binaryInfo as any)?.anti_analysis || antiAnalysis) && (
             <button
               onClick={() => setActiveTab('anti_analysis')}
               className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
@@ -731,7 +933,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
             </button>
           )}
 
-          {(binaryInfo as any).authenticode && (
+          {!(isCheckDisabled('check_authenticode_signature') || isCheckDisabled('check_code_signature')) && (binaryInfo as any).authenticode && (
             <button
               onClick={() => setActiveTab('authenticode')}
               className={`px-4 py-2.5 text-xs font-semibold rounded-t-xl transition-colors flex items-center gap-2 cursor-pointer ${
@@ -778,6 +980,442 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
             </button>
           )}
         </div>
+
+        {/* Tab: Malware Capabilities (ATT&CK aligned) */}
+        {activeTab === 'capabilities' && (
+          <div className="pt-4 space-y-4">
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-rose-600" />
+                    Inferred Malware Capabilities & MITRE ATT&CK Matrix
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Capabilities correlated across imported Win32 APIs, internal strings, memory protections, and execution triggers.
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-xs font-bold font-mono">
+                  {((binaryInfo as any).pe_capabilities || []).length} Capabilities
+                </span>
+              </div>
+
+              {((binaryInfo as any).pe_capabilities || []).length === 0 ? (
+                <div className="text-center py-10 text-slate-400 text-xs">
+                  No overt weaponized capabilities inferred from static imports or strings.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {((binaryInfo as any).pe_capabilities || []).map((cap: any) => (
+                    <div
+                      key={cap.id}
+                      className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition-all space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-md text-[10px] font-mono font-bold">
+                              {cap.mitre_attack}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              {cap.tactic}
+                            </span>
+                          </div>
+                          <h5 className="text-sm font-bold text-slate-900">{cap.name}</h5>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            cap.severity === 'CRITICAL' ? 'bg-rose-600 text-white' :
+                            cap.severity === 'HIGH' ? 'bg-amber-500 text-white' :
+                            'bg-blue-600 text-white'
+                          }`}>
+                            {cap.severity}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-mono">
+                            {cap.confidence} Confidence
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {cap.description}
+                      </p>
+
+                      <div className="pt-2 border-t border-slate-200/60">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1.5">
+                          Supporting Evidence ({cap.evidence?.length || 0}):
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(cap.evidence || []).map((ev: string, idx: number) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded-md text-[11px] font-mono"
+                            >
+                              {ev}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab: DLL Forensics, Forwarders & TLS */}
+        {activeTab === 'dll_forensics' && (() => {
+          const dll = (binaryInfo as any).dll_forensics || {};
+          const sideload = dll.sideloading_risk || {};
+          const tlsCallbacks = dll.tls_callbacks || [];
+          const forwarded = dll.forwarded_exports || [];
+
+          return (
+            <div className="pt-4 space-y-5">
+              {/* Sideloading target alert */}
+              {sideload.is_common_target_dll && (
+                <div className="p-5 rounded-3xl bg-rose-50 border border-rose-200 text-rose-950">
+                  <div className="flex items-center gap-3 mb-2">
+                    <ShieldAlert className="w-5 h-5 text-rose-600" />
+                    <h4 className="text-sm font-bold text-rose-900">
+                      High-Risk DLL Sideloading Target Detected: {sideload.target_match_name}
+                    </h4>
+                    <span className="px-2 py-0.5 bg-rose-600 text-white text-[10px] font-bold rounded-full">
+                      {sideload.risk_level} RISK
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-800 leading-relaxed mb-3">
+                    {sideload.description} Attackers place a weaponized library bearing this name adjacent to a trusted executable to hijack the Windows search order.
+                  </p>
+                  {sideload.common_host_processes?.length > 0 && (
+                    <div className="text-xs">
+                      <span className="font-semibold text-rose-900">Known Victim Host Applications: </span>
+                      <span className="text-rose-800">{sideload.common_host_processes.join(', ')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Proxy DLL / Forwarded Exports */}
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-4 gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <GitFork className="w-4 h-4 text-blue-600" />
+                      Forwarded Exports & Proxy DLL Analysis
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Detection of forwarded symbol stubs used to seamlessly proxy API calls while executing concealed implants.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-slate-100 rounded-full text-xs font-mono font-bold text-slate-700">
+                      {dll.forwarded_export_count || 0} / {dll.export_count || 0} Forwarded
+                    </span>
+                    {dll.has_proxy_exports && (
+                      <span className="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-bold">
+                        Proxy DLL Detected
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {forwarded.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-6 text-center">
+                    No forwarded exports detected. Library exports native symbols directly.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
+                          <th className="py-2.5 px-3">Ordinal</th>
+                          <th className="py-2.5 px-3">Export Function Name</th>
+                          <th className="py-2.5 px-3">Forwarding Target (Proxy Destination)</th>
+                          <th className="py-2.5 px-3">Classification</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-mono">
+                        {forwarded.map((f: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50/80">
+                            <td className="py-2 px-3 text-slate-500">#{f.ordinal}</td>
+                            <td className="py-2 px-3 font-bold text-slate-900">{f.name}</td>
+                            <td className="py-2 px-3 text-blue-600 font-bold">{f.forwarder}</td>
+                            <td className="py-2 px-3">
+                              <span className="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[10px] font-sans font-bold">
+                                Forwarded Proxy Stub
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* TLS Callbacks */}
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-4 gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-600" />
+                      Thread Local Storage (TLS) Callbacks
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Routines executed automatically prior to DllMain or the executable entry point.
+                    </p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    tlsCallbacks.length > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {tlsCallbacks.length} Callbacks
+                  </span>
+                </div>
+
+                {tlsCallbacks.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-6 text-center">
+                    No TLS callback routines defined in IMAGE_DIRECTORY_ENTRY_TLS.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
+                          <th className="py-2.5 px-3">#</th>
+                          <th className="py-2.5 px-3">Virtual Address (VA)</th>
+                          <th className="py-2.5 px-3">Relative RVA</th>
+                          <th className="py-2.5 px-3">Hosting Section</th>
+                          <th className="py-2.5 px-3">Risk Assessment</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-mono">
+                        {tlsCallbacks.map((cb: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50/80">
+                            <td className="py-2 px-3 text-slate-500">{cb.index}</td>
+                            <td className="py-2 px-3 font-bold text-indigo-600">{cb.va}</td>
+                            <td className="py-2 px-3 text-slate-700">{cb.rva}</td>
+                            <td className="py-2 px-3 font-bold text-slate-900">{cb.section}</td>
+                            <td className="py-2 px-3">
+                              <span className="px-2 py-0.5 bg-rose-50 text-rose-800 border border-rose-200 rounded text-[10px] font-sans font-bold">
+                                Pre-Execution Hook (Anti-Debug Risk)
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Tab: .NET CLR Assembly */}
+        {activeTab === 'dotnet' && (() => {
+          const dn = (binaryInfo as any).dotnet_assembly || {};
+          const suspicious = dn.suspicious_features || [];
+          const obfuscators = dn.detected_obfuscators || [];
+
+          return (
+            <div className="pt-4 space-y-5">
+              {/* CLR Overview Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block mb-1">
+                    CLR Runtime Version
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 font-mono">{dn.runtime_version || 'Unknown'}</span>
+                </div>
+                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block mb-1">
+                    Target Framework
+                  </span>
+                  <span className="text-sm font-bold text-slate-900">{dn.target_framework || 'Desktop CLR'}</span>
+                </div>
+                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block mb-1">
+                    Entry Token
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 font-mono">{dn.entry_point_token || '0x0'}</span>
+                </div>
+                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block mb-1">
+                    IL Only / Pure Managed
+                  </span>
+                  <span className={`text-sm font-bold ${dn.is_il_only ? 'text-emerald-600' : 'text-slate-700'}`}>
+                    {dn.is_il_only ? 'Yes (Pure IL)' : 'Mixed-Mode / Native'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Obfuscator Banner */}
+              {obfuscators.length > 0 && (
+                <div className="p-4 rounded-3xl bg-purple-50 border border-purple-200 text-purple-950 flex items-center justify-between">
+                  <div>
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-purple-900">
+                      .NET Code Obfuscator & Protector Detected
+                    </h5>
+                    <p className="text-xs text-purple-800 mt-0.5">
+                      Identified commercial or malware protector signatures: {obfuscators.join(', ')}.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 bg-purple-600 text-white rounded-full text-xs font-bold">
+                    Protected
+                  </span>
+                </div>
+              )}
+
+              {/* Suspicious Managed Features */}
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-4 gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Boxes className="w-4 h-4 text-purple-600" />
+                      Suspicious Managed APIs & High-Risk Capabilities
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Managed APIs used for dynamic assembly execution, reflection evasion, native P/Invoke, and network communications.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-700">
+                    {suspicious.length} Indicators
+                  </span>
+                </div>
+
+                {suspicious.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-6 text-center">
+                    No suspicious managed API calls or reflection indicators detected.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
+                          <th className="py-2.5 px-3">Category</th>
+                          <th className="py-2.5 px-3">API / Pattern</th>
+                          <th className="py-2.5 px-3">Severity</th>
+                          <th className="py-2.5 px-3">Forensic Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {suspicious.map((s: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50/80">
+                            <td className="py-2.5 px-3 font-bold text-slate-700">{s.category}</td>
+                            <td className="py-2.5 px-3 font-mono font-bold text-purple-700">{s.api}</td>
+                            <td className="py-2.5 px-3">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                s.severity === 'CRITICAL' ? 'bg-rose-100 text-rose-800' :
+                                s.severity === 'HIGH' ? 'bg-amber-100 text-amber-800' :
+                                'bg-blue-100 text-blue-800'
+                              }`}>
+                                {s.severity}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-600">{s.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Tab: Vulnerabilities & CRT */}
+        {activeTab === 'vulnerabilities' && (() => {
+          const vulns = (binaryInfo as any).pe_vulnerabilities || {};
+          const crtApis = vulns.legacy_crt_apis || [];
+          const missing = vulns.missing_mitigations || [];
+          const wx = vulns.wx_sections || [];
+
+          return (
+            <div className="pt-4 space-y-5">
+              {/* W+X Sections Warning */}
+              {wx.length > 0 && (
+                <div className="p-5 rounded-3xl bg-rose-50 border border-rose-200 text-rose-950">
+                  <div className="flex items-center gap-3 mb-2">
+                    <ShieldAlert className="w-5 h-5 text-rose-600" />
+                    <h4 className="text-sm font-bold text-rose-900">
+                      W^X Memory Protection Policy Violation (Writable & Executable Sections)
+                    </h4>
+                  </div>
+                  <p className="text-xs text-rose-800 leading-relaxed">
+                    Sections: <span className="font-mono font-bold">{wx.join(', ')}</span> have both Write and Execute permissions. This allows self-modifying code or arbitrary shellcode staging.
+                  </p>
+                </div>
+              )}
+
+              {/* Dangerous Legacy CRT APIs */}
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-4 gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Bug className="w-4 h-4 text-amber-600" />
+                      Dangerous Legacy C Runtime APIs (Buffer Overflow Risk)
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Functions that do not perform destination buffer boundary validation, susceptible to CWE-120 and CWE-134 exploits.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold font-mono">
+                    {crtApis.length} Dangerous APIs
+                  </span>
+                </div>
+
+                {crtApis.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-6 text-center">
+                    No dangerous legacy CRT string or format functions detected in imports table.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
+                          <th className="py-2.5 px-3">API Name</th>
+                          <th className="py-2.5 px-3">CWE ID</th>
+                          <th className="py-2.5 px-3">Vulnerability Type</th>
+                          <th className="py-2.5 px-3">Forensic Description</th>
+                          <th className="py-2.5 px-3">Recommended Safe Replacement</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {crtApis.map((api: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50/80">
+                            <td className="py-2.5 px-3 font-mono font-bold text-rose-700">{api.api}</td>
+                            <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{api.cwe}</td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-700">{api.vulnerability_type}</td>
+                            <td className="py-2.5 px-3 text-slate-600">{api.description}</td>
+                            <td className="py-2.5 px-3 font-mono text-emerald-700 font-bold">{api.replacement}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Missing Exploit Mitigations */}
+              {missing.length > 0 && (
+                <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                  <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-orange-600" />
+                    Missing PE Exploit Mitigations
+                  </h4>
+                  <ul className="space-y-1.5 list-disc list-inside text-xs text-slate-700">
+                    {missing.map((m: string, idx: number) => (
+                      <li key={idx} className="font-medium text-rose-800">{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Tab 1: Headers & Overview */}
         {activeTab === 'headers' && (
@@ -1017,6 +1655,62 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
               </div>
             </div>
           )}
+
+          {/* Trailing Overlay Forensics */}
+          {((binaryInfo as any).overlay_forensics?.has_overlay || binaryInfo.size_analysis?.has_overlay) && (() => {
+            const ov = (binaryInfo as any).overlay_forensics || {};
+            const size = ov.size || binaryInfo.size_analysis?.overlay_size || 0;
+            const entropy = ov.entropy ?? binaryInfo.size_analysis?.overlay_entropy ?? 0;
+            const type = ov.classified_type || (binaryInfo.size_analysis as any)?.classified_type || 'Generic Overlay';
+            const hexPreview = ov.hex_preview || (binaryInfo.size_analysis as any)?.hex_preview || '';
+
+            return (
+              <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <Compass className="w-3.5 h-3.5 text-amber-600" />
+                      Trailing PE Overlay Data Forensics
+                    </h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Data appended past declared PE sections at physical offset {binaryInfo.size_analysis?.overlay_offset || 'end'}.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 bg-slate-100 rounded-full text-xs font-mono font-bold text-slate-700">
+                      {formatBytes(size)} ({size} bytes)
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold ${
+                      entropy >= 7.2 ? 'bg-rose-100 text-rose-800' :
+                      entropy >= 6.0 ? 'bg-amber-100 text-amber-800' :
+                      'bg-slate-100 text-slate-700'
+                    }`}>
+                      Entropy: {entropy.toFixed(3)} / 8.0
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-semibold">Classification:</span>
+                  <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold ${
+                    type.includes('PE') || entropy >= 7.5 ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                    'bg-slate-100 text-slate-800'
+                  }`}>
+                    {type}
+                  </span>
+                </div>
+
+                {hexPreview && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Overlay Hex Dump Preview:</span>
+                    <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl font-mono text-[11px] overflow-x-auto leading-relaxed border border-slate-800 max-h-48">
+                      {hexPreview}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
         )}
 

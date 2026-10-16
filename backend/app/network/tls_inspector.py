@@ -8,11 +8,190 @@ Queries public Certificate Transparency logs (crt.sh) for historical certificate
 import ssl
 import socket
 import hashlib
+import concurrent.futures
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional, Set, Tuple
 import httpx
 
 from app.core.logging_config import logger
+
+
+# Cryptographic evaluations and security flaw rationales for TLS cipher suites
+CIPHER_SECURITY_CATALOG: Dict[str, Dict[str, Any]] = {
+    # Modern Recommended AEAD Ciphers
+    "TLS_AES_256_GCM_SHA384": {
+        "status": "RECOMMENDED",
+        "is_weak": False,
+        "protocol": "TLSv1.3",
+        "key_exchange": "ECDHE (PFS)",
+        "encryption": "AES-256-GCM",
+        "mac": "AEAD",
+        "bits": 256,
+        "explanation": "Modern authenticated encryption (AEAD) with Perfect Forward Secrecy. Top-tier cryptographic security (NIST SP 800-52r2)."
+    },
+    "TLS_CHACHA20_POLY1305_SHA256": {
+        "status": "RECOMMENDED",
+        "is_weak": False,
+        "protocol": "TLSv1.3",
+        "key_exchange": "ECDHE (PFS)",
+        "encryption": "ChaCha20-Poly1305",
+        "mac": "AEAD",
+        "bits": 256,
+        "explanation": "High-performance authenticated AEAD stream cipher with constant-time execution resistant to CPU cache timing side-channels."
+    },
+    "TLS_AES_128_GCM_SHA256": {
+        "status": "RECOMMENDED",
+        "is_weak": False,
+        "protocol": "TLSv1.3",
+        "key_exchange": "ECDHE (PFS)",
+        "encryption": "AES-128-GCM",
+        "mac": "AEAD",
+        "bits": 128,
+        "explanation": "Standard AEAD cipher with Perfect Forward Secrecy, recommended by NIST, IETF RFC 8446, and OWASP TLS guidelines."
+    },
+    "ECDHE-ECDSA-AES256-GCM-SHA384": {
+        "status": "RECOMMENDED",
+        "is_weak": False,
+        "protocol": "TLSv1.2",
+        "key_exchange": "ECDHE (PFS)",
+        "encryption": "AES-256-GCM",
+        "mac": "AEAD",
+        "bits": 256,
+        "explanation": "Elliptic curve Ephemeral Diffie-Hellman with ECDSA signature and AES-256-GCM authenticated encryption."
+    },
+    "ECDHE-RSA-AES256-GCM-SHA384": {
+        "status": "RECOMMENDED",
+        "is_weak": False,
+        "protocol": "TLSv1.2",
+        "key_exchange": "ECDHE (PFS)",
+        "encryption": "AES-256-GCM",
+        "mac": "AEAD",
+        "bits": 256,
+        "explanation": "Elliptic curve Ephemeral Diffie-Hellman with RSA signature and AES-256-GCM authenticated encryption."
+    },
+    "ECDHE-RSA-AES128-GCM-SHA256": {
+        "status": "RECOMMENDED",
+        "is_weak": False,
+        "protocol": "TLSv1.2",
+        "key_exchange": "ECDHE (PFS)",
+        "encryption": "AES-128-GCM",
+        "mac": "AEAD",
+        "bits": 128,
+        "explanation": "Standard TLS 1.2 AEAD cipher with Perfect Forward Secrecy. Excellent balance of security and hardware-accelerated throughput."
+    },
+    "ECDHE-RSA-CHACHA20-POLY1305": {
+        "status": "RECOMMENDED",
+        "is_weak": False,
+        "protocol": "TLSv1.2",
+        "key_exchange": "ECDHE (PFS)",
+        "encryption": "ChaCha20-Poly1305",
+        "mac": "AEAD",
+        "bits": 256,
+        "explanation": "ChaCha20-Poly1305 AEAD with Perfect Forward Secrecy for modern mobile and browser TLS 1.2 clients."
+    },
+    "DHE-RSA-AES256-GCM-SHA384": {
+        "status": "RECOMMENDED",
+        "is_weak": False,
+        "protocol": "TLSv1.2",
+        "key_exchange": "DHE (PFS)",
+        "encryption": "AES-256-GCM",
+        "mac": "AEAD",
+        "bits": 256,
+        "explanation": "Diffie-Hellman key exchange with AEAD encryption. (Requires DH parameter size ≥ 2048-bit to prevent Logjam)."
+    },
+    # Acceptable Ciphers (Legacy CBC mode, but with PFS)
+    "ECDHE-RSA-AES256-SHA384": {
+        "status": "ACCEPTABLE",
+        "is_weak": False,
+        "protocol": "TLSv1.2",
+        "key_exchange": "ECDHE (PFS)",
+        "encryption": "AES-256-CBC",
+        "mac": "SHA384",
+        "bits": 256,
+        "explanation": "Supports Perfect Forward Secrecy with strong SHA-384 HMAC, but uses legacy CBC block mode rather than modern AEAD."
+    },
+    "ECDHE-RSA-AES128-SHA256": {
+        "status": "ACCEPTABLE",
+        "is_weak": False,
+        "protocol": "TLSv1.2",
+        "key_exchange": "ECDHE (PFS)",
+        "encryption": "AES-128-CBC",
+        "mac": "SHA256",
+        "bits": 128,
+        "explanation": "Supports Perfect Forward Secrecy, but uses CBC mode. Modern deployments prefer AES-GCM or ChaCha20-Poly1305."
+    },
+    # Weak / Flawed Ciphers (Flagged with detailed flaw explanations)
+    "AES256-GCM-SHA384": {
+        "status": "WEAK",
+        "is_weak": True,
+        "protocol": "TLSv1.2",
+        "key_exchange": "RSA (Static)",
+        "encryption": "AES-256-GCM",
+        "mac": "AEAD",
+        "bits": 256,
+        "explanation": "Lacks Perfect Forward Secrecy (PFS). Uses static RSA key exchange where future private key disclosure allows retroactive decryption of past traffic captures."
+    },
+    "AES128-GCM-SHA256": {
+        "status": "WEAK",
+        "is_weak": True,
+        "protocol": "TLSv1.2",
+        "key_exchange": "RSA (Static)",
+        "encryption": "AES-128-GCM",
+        "mac": "AEAD",
+        "bits": 128,
+        "explanation": "Lacks Perfect Forward Secrecy (PFS). If the server private key is leaked or compromised in the future, all previously recorded sessions can be decrypted."
+    },
+    "AES256-SHA": {
+        "status": "WEAK",
+        "is_weak": True,
+        "protocol": "TLSv1.0/1.2",
+        "key_exchange": "RSA (Static)",
+        "encryption": "AES-256-CBC",
+        "mac": "SHA1",
+        "bits": 256,
+        "explanation": "Triple vulnerability: Lacks Forward Secrecy (static RSA), uses CBC padding vulnerable to Lucky Thirteen timing attacks, and relies on deprecated SHA-1."
+    },
+    "AES128-SHA": {
+        "status": "WEAK",
+        "is_weak": True,
+        "protocol": "TLSv1.0/1.2",
+        "key_exchange": "RSA (Static)",
+        "encryption": "AES-128-CBC",
+        "mac": "SHA1",
+        "bits": 128,
+        "explanation": "Lacks Forward Secrecy, uses legacy CBC mode vulnerable to timing attacks, and uses deprecated SHA-1 HMAC."
+    },
+    "DES-CBC3-SHA": {
+        "status": "INSECURE",
+        "is_weak": True,
+        "protocol": "TLSv1.0/1.2",
+        "key_exchange": "RSA (Static)",
+        "encryption": "3DES-EDE-CBC",
+        "mac": "SHA1",
+        "bits": 112,
+        "explanation": "Sweet32 Vulnerability (CVE-2016-2183): 64-bit block size allows collision attacks in long TLS sessions, allowing attackers to recover sensitive authentication cookies. Deprecated by NIST SP 800-131A."
+    },
+    "RC4-SHA": {
+        "status": "BROKEN",
+        "is_weak": True,
+        "protocol": "TLSv1.0",
+        "key_exchange": "RSA (Static)",
+        "encryption": "RC4-128",
+        "mac": "SHA1",
+        "bits": 128,
+        "explanation": "Bar Mitzvah / RC4 NOMORE Attacks: Severe statistical biases in the RC4 keystream allow practical plaintext recovery and session cookie extraction. Strictly prohibited by RFC 7465."
+    },
+    "RC4-MD5": {
+        "status": "BROKEN",
+        "is_weak": True,
+        "protocol": "TLSv1.0",
+        "key_exchange": "RSA (Static)",
+        "encryption": "RC4-128",
+        "mac": "MD5",
+        "bits": 128,
+        "explanation": "Completely broken: RC4 stream cipher biases plus broken MD5 collision resistance. Vulnerable to POODLE, Bar Mitzvah, and SLOTH collision attacks."
+    }
+}
 
 
 class TLSInspector:
@@ -84,6 +263,32 @@ class TLSInspector:
                     "title": f"Deprecated TLS Protocol ({tls_ver})",
                     "description": "Legacy TLS versions contain known cryptographic vulnerabilities (POODLE, BEAST) and lack modern cipher protection."
                 })
+
+            # 1b. Supported Cipher Suites Audit
+            ciphers_audit = cls._audit_supported_ciphers(
+                clean_host, effective_port, cert_info.get("cipher_suite"), cert_info.get("tls_version")
+            )
+            result["cipher_suites_audit"] = ciphers_audit
+
+            if ciphers_audit.get("has_weak_ciphers"):
+                weak_list = ciphers_audit.get("weak_ciphers", [])
+                weak_names = [c["name"] for c in weak_list[:3]]
+                result["security_findings"].append({
+                    "severity": "high" if any(c.get("status") in ("INSECURE", "BROKEN") for c in weak_list) else "medium",
+                    "title": f"Weak / Insecure Cipher Suites Supported ({len(weak_list)})",
+                    "description": f"Server supports weak or flawed cipher suites ({', '.join(weak_names)}). Susceptible to cryptographic downgrade, lack of forward secrecy, or plaintext recovery."
+                })
+        else:
+            result["cipher_suites_audit"] = {
+                "active_cipher": None,
+                "active_protocol": None,
+                "total_cataloged": 0,
+                "supported_count": 0,
+                "weak_ciphers_count": 0,
+                "has_weak_ciphers": False,
+                "weak_ciphers": [],
+                "ciphers": []
+            }
 
         # 2. Certificate Transparency Logs via crt.sh
         if query_ct_logs and not cls._is_ip(clean_host):
@@ -304,3 +509,115 @@ class TLSInspector:
             logger.debug(f"crt.sh query exception for {domain}: {e}")
 
         return ct_result
+
+    @classmethod
+    def _audit_supported_ciphers(
+        cls, host: str, port: int, active_cipher: Optional[str], active_proto: Optional[str]
+    ) -> Dict[str, Any]:
+        """
+        Audits and tests supported cipher suites for the host.
+        Identifies weak or broken ciphers and provides technical explanations.
+        """
+        ciphers_list: List[Dict[str, Any]] = []
+        supported_weak: List[Dict[str, Any]] = []
+        seen_ciphers: Set[str] = set()
+
+        candidates_to_test = [
+            "TLS_AES_256_GCM_SHA384",
+            "TLS_CHACHA20_POLY1305_SHA256",
+            "TLS_AES_128_GCM_SHA256",
+            "ECDHE-RSA-AES256-GCM-SHA384",
+            "ECDHE-RSA-AES128-GCM-SHA256",
+            "ECDHE-RSA-AES256-SHA384",
+            "AES256-GCM-SHA384",
+            "AES128-SHA",
+            "DES-CBC3-SHA",
+            "RC4-SHA",
+            "RC4-MD5"
+        ]
+
+        def _test_single_cipher(c_name: str) -> Tuple[str, bool]:
+            if active_cipher and c_name.lower() == active_cipher.lower():
+                return c_name, True
+            try:
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                try:
+                    ctx.set_ciphers(c_name)
+                except ssl.SSLError:
+                    return c_name, False
+
+                server_name = None if cls._is_ip(host) else host
+                with socket.create_connection((host, port), timeout=0.8) as sock:
+                    with ctx.wrap_socket(sock, server_hostname=server_name) as ssock:
+                        return c_name, True
+            except Exception:
+                return c_name, False
+
+        probe_results: Dict[str, bool] = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            fut_to_cipher = {executor.submit(_test_single_cipher, c): c for c in candidates_to_test}
+            for fut in concurrent.futures.as_completed(fut_to_cipher, timeout=2.5):
+                try:
+                    c_name, is_sup = fut.result()
+                    probe_results[c_name] = is_sup
+                except Exception:
+                    pass
+
+        for c_name, meta in CIPHER_SECURITY_CATALOG.items():
+            is_active = bool(active_cipher and c_name.lower() == active_cipher.lower())
+            is_supported = probe_results.get(c_name, False) or is_active
+
+            entry = {
+                "name": c_name,
+                "protocol": meta["protocol"],
+                "key_exchange": meta["key_exchange"],
+                "encryption": meta["encryption"],
+                "mac": meta["mac"],
+                "bits": meta["bits"],
+                "status": meta["status"],
+                "is_weak": meta["is_weak"],
+                "supported": is_supported,
+                "active_negotiated": is_active,
+                "explanation": meta["explanation"]
+            }
+            ciphers_list.append(entry)
+            seen_ciphers.add(c_name.lower())
+            if is_supported and meta["is_weak"]:
+                supported_weak.append(entry)
+
+        if active_cipher and active_cipher.lower() not in seen_ciphers:
+            ciphers_list.insert(0, {
+                "name": active_cipher,
+                "protocol": active_proto or "TLS",
+                "key_exchange": "ECDHE (PFS)" if "ECDHE" in active_cipher else ("DHE" if "DHE" in active_cipher else "RSA"),
+                "encryption": "AES" if "AES" in active_cipher else "Symmetric",
+                "mac": "AEAD" if "GCM" in active_cipher or "POLY1305" in active_cipher else "HMAC",
+                "bits": 256 if "256" in active_cipher else 128,
+                "status": "RECOMMENDED" if ("GCM" in active_cipher or "POLY1305" in active_cipher) else "ACCEPTABLE",
+                "is_weak": False,
+                "supported": True,
+                "active_negotiated": True,
+                "explanation": "Active negotiated cipher suite in live TLS handshake."
+            })
+
+        ciphers_list.sort(key=lambda x: (
+            not x["active_negotiated"],
+            not x["supported"],
+            not x["is_weak"],
+            x["name"]
+        ))
+
+        supported_count = sum(1 for c in ciphers_list if c["supported"])
+
+        return {
+            "active_cipher": active_cipher,
+            "active_protocol": active_proto,
+            "total_cataloged": len(ciphers_list),
+            "supported_count": supported_count,
+            "weak_ciphers_count": len(supported_weak),
+            "has_weak_ciphers": len(supported_weak) > 0,
+            "weak_ciphers": supported_weak,
+            "ciphers": ciphers_list
+        }

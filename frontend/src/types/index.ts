@@ -506,7 +506,235 @@ export interface EmailInfo {
     relationship: string;
     details?: string;
   }>;
+  file_integrity?: EmailFileIntegrity;
+  auth_posture?: EmailAuthPosture;
+  lookalike_analysis?: EmailLookalikeAnalysis;
+  url_threats?: EmailUrlThreats;
+  html_forensics?: EmailHtmlForensics;
+  attachment_forensics?: EmailAttachmentForensics;
+  bec_analysis?: EmailBecAnalysis;
+  email_verdict?: EmailVerdict;
+  offline_tools_guide?: EmailOfflineToolsGuide;
 }
+
+export interface EmailVerdict {
+  verdict: 'Malicious' | 'Suspicious' | 'Potentially Phishing / BEC' | 'No Known Threat Detected' | 'Inconclusive';
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'clean';
+  confidence_score: number;
+  threat_categories: string[];
+  key_assessment_rationale: string[];
+  mitre_attack_techniques: string[];
+  containment_guidance: string[];
+}
+
+export interface EmailFileIntegrity {
+  format: string;
+  is_valid_format: boolean;
+  file_size: number;
+  file_hashes: {
+    sha256: string;
+    sha1: string;
+    md5: string;
+  };
+  header_body_separated: boolean;
+  duplicate_headers: Array<{
+    name: string;
+    count: number;
+    values: string[];
+  }>;
+  mime_structure: {
+    is_multipart: boolean;
+    total_parts: number;
+    max_nesting_depth: number;
+    parser_defects: string[];
+    parts: Array<{
+      part_index: number;
+      content_type: string;
+      content_disposition: string;
+      filename?: string | null;
+      transfer_encoding: string;
+      decoded_size: number;
+      defects: string[];
+    }>;
+  };
+  clock_skew: {
+    drift_detected: boolean;
+    date_header?: string | null;
+    received_timestamp?: string | null;
+    skew_hours?: number;
+    details?: string;
+  };
+  unicode_anomalies: {
+    bidi_controls_detected: boolean;
+    zero_width_chars_detected: boolean;
+    unicode_chars_found: string[];
+    bidi_sample?: string;
+    zero_width_sample?: string;
+  };
+}
+
+export interface EmailAuthPosture {
+  spf: {
+    status: string;
+    envelope_domain: string;
+    client_ip: string;
+    mechanism: string;
+    aligned: boolean;
+  };
+  dkim: {
+    status: string;
+    signing_domain: string;
+    selector: string;
+    algorithm: string;
+    aligned: boolean;
+  };
+  dmarc: {
+    status: string;
+    policy: string;
+    spf_alignment: boolean;
+    dkim_alignment: boolean;
+    from_domain: string;
+  };
+  arc: {
+    seal_status: string;
+    chain_valid: boolean;
+    has_arc: boolean;
+  };
+  auth_summary: string;
+  flags: string[];
+}
+
+export interface EmailLookalikeAnalysis {
+  display_name: string;
+  from_address: string;
+  from_domain: string;
+  reply_to_address: string;
+  reply_to_domain: string;
+  return_path_domain: string;
+  is_free_webmail: boolean;
+  display_name_spoofing: {
+    is_spoofed: boolean;
+    impersonated_entity?: string | null;
+    details?: string | null;
+  };
+  lookalike_domain: {
+    is_lookalike: boolean;
+    impersonated_brand?: string;
+    canonical_domain?: string;
+    edit_distance?: number | null;
+    is_punycode: boolean;
+  };
+  vip_executive_impersonation: {
+    is_impersonating: boolean;
+    role?: string;
+    details?: string | null;
+  };
+  reply_to_mismatch: {
+    is_mismatched: boolean;
+    is_free_webmail_redirect: boolean;
+    details?: string | null;
+  };
+}
+
+export interface EmailUrlThreats {
+  total_urls_extracted: number;
+  deceptive_links_count: number;
+  ip_host_links_count: number;
+  userinfo_obfuscated_count: number;
+  shortened_links_count: number;
+  credential_harvesting_count: number;
+  url_items: Array<{
+    url: string;
+    host: string;
+    is_deceptive: boolean;
+    claimed_text?: string;
+    is_ip_host: boolean;
+    has_userinfo: boolean;
+    is_shortener: boolean;
+    is_credential_target: boolean;
+  }>;
+}
+
+export interface EmailHtmlForensics {
+  has_html: boolean;
+  hidden_text_detected: boolean;
+  hidden_text_items: Array<{
+    text: string;
+    reason: string;
+  }>;
+  credential_forms: Array<{
+    action: string;
+    method: string;
+    inputs: string[];
+    has_password_input: boolean;
+  }>;
+  meta_refreshes: Array<{
+    content: string;
+  }>;
+  data_urls: Array<{
+    mime_type: string;
+    data_snippet: string;
+  }>;
+  iframes: Array<{
+    src: string;
+    width: string;
+    height: string;
+  }>;
+  html_comments: string[];
+}
+
+export interface EmailAttachmentForensics {
+  total_attachments: number;
+  dangerous_count: number;
+  mismatch_count: number;
+  macro_enabled_count: number;
+  double_extension_count: number;
+  nested_messages_count: number;
+  inspected_attachments: Array<{
+    filename: string;
+    size: number;
+    declared_mime: string;
+    detected_type: string;
+    is_mismatch: boolean;
+    is_dangerous: boolean;
+    has_macros: boolean;
+    has_double_extension: boolean;
+    is_nested_email: boolean;
+    sha256: string;
+    threat_reason?: string;
+  }>;
+}
+
+export interface EmailBecAnalysis {
+  bec_detected: boolean;
+  bec_risk_score: number;
+  bank_payment_redirection: {
+    detected: boolean;
+    matches: string[];
+  };
+  urgency_secrecy: {
+    detected: boolean;
+    matches: string[];
+  };
+  gift_card_fraud: {
+    detected: boolean;
+    matches: string[];
+  };
+  executive_wire_fraud: {
+    detected: boolean;
+    matches: string[];
+  };
+  financial_fraud_types: string[];
+  indicators: string[];
+}
+
+export interface EmailOfflineToolItem {
+  tool: string;
+  command: string;
+  purpose: string;
+}
+
+export type EmailOfflineToolsGuide = Record<string, EmailOfflineToolItem>;
 
 export interface BinarySection {
   name: string;
@@ -874,6 +1102,104 @@ export interface BinaryInfo {
   xrefs?: XrefData;
   call_graph?: CallGraphData;
   api_hashing?: ApiHashMatch[];
+  pe_verdict?: PeSecurityVerdict;
+  pe_capabilities?: PeCapabilityItem[];
+  dll_forensics?: DllForensics;
+  dotnet_assembly?: DotNetAssemblyForensics;
+  pe_vulnerabilities?: PeVulnerabilityForensics;
+  overlay_forensics?: PeOverlayForensics;
+}
+
+export interface PeCapabilityItem {
+  id: string;
+  name: string;
+  tactic: string;
+  mitre_attack: string;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  description: string;
+  evidence: string[];
+}
+
+export interface PeSecurityVerdict {
+  verdict: 'Malicious' | 'Suspicious' | 'Potentially Vulnerable' | 'No Known Threat Detected' | 'Inconclusive';
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'clean';
+  confidence_score: number;
+  rationale: string[];
+  mitre_techniques: Array<{ id: string; name: string; tactic: string }>;
+  containment_recommendations: string[];
+}
+
+export interface DllForensics {
+  is_dll: boolean;
+  export_count: number;
+  forwarded_export_count: number;
+  has_proxy_exports: boolean;
+  forwarded_exports: Array<{
+    name: string;
+    ordinal: number;
+    address?: string;
+    forwarder?: string;
+    is_forwarded?: boolean;
+  }>;
+  tls_callbacks: Array<{
+    index: number;
+    va: string;
+    rva: string;
+    section: string;
+    description: string;
+  }>;
+  has_tls_callbacks: boolean;
+  sideloading_risk: {
+    is_common_target_dll: boolean;
+    target_match_name?: string | null;
+    risk_level: string;
+    description: string;
+    common_host_processes: string[];
+  };
+}
+
+export interface DotNetAssemblyForensics {
+  is_dotnet: boolean;
+  runtime_version?: string | null;
+  target_framework?: string | null;
+  assembly_name?: string | null;
+  flags?: string[];
+  entry_point_token?: string | null;
+  is_il_only?: boolean;
+  is_32bit_required?: boolean;
+  is_strong_name_signed?: boolean;
+  suspicious_features: Array<{
+    category: string;
+    api: string;
+    severity: string;
+    description: string;
+  }>;
+  detected_obfuscators: string[];
+}
+
+export interface PeVulnerabilityForensics {
+  vulnerability_count: number;
+  has_wx_sections: boolean;
+  wx_sections: string[];
+  missing_mitigations: string[];
+  legacy_crt_apis: Array<{
+    api: string;
+    cwe: string;
+    severity: string;
+    vulnerability_type: string;
+    description: string;
+    replacement: string;
+  }>;
+  risk_score: number;
+}
+
+export interface PeOverlayForensics {
+  has_overlay: boolean;
+  size: number;
+  entropy: number;
+  classified_type: string;
+  hex_preview: string;
 }
 
 export interface MitreAttackItem {
@@ -1187,6 +1513,215 @@ export interface EvtxDeobfuscatedCommand {
   steps: string[];
 }
 
+export interface EvtxVerdict {
+  verdict: 'Malicious' | 'Suspicious' | 'Potentially Vulnerable' | 'No Known Threat Detected' | 'Inconclusive' | string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  confidence_score: number;
+  key_assessment_rationale: string[];
+  mitre_attack_techniques: string[];
+  containment_guidance: string[];
+  coverage_score?: number;
+  coverage_warning?: string | null;
+}
+
+export interface EvtxCaptureIntegrity {
+  filename: string;
+  format: string;
+  is_valid_evtx: boolean;
+  is_binary_evtx: boolean;
+  is_xml_export: boolean;
+  file_size: number;
+  file_hashes: {
+    sha256: string;
+    sha1: string;
+    md5: string;
+  };
+  evtx_header: {
+    major_version: number;
+    minor_version: number;
+    header_chunk_count: number;
+    first_chunk_number: number;
+    last_chunk_number: number;
+    next_record_id: number;
+    header_size: number;
+    header_state: string;
+    flags: number;
+  };
+  integrity_status: string;
+  continuity?: {
+    total_records: number;
+    record_id_gaps: Array<{
+      from_record_id: number;
+      to_record_id: number;
+      missing_count: number;
+      severity: string;
+      note: string;
+    }>;
+    timestamp_gaps: Array<{
+      from_timestamp: string;
+      to_timestamp: string;
+      gap_duration_hours: number;
+      severity: string;
+      note: string;
+    }>;
+    has_continuity_anomalies: boolean;
+  };
+}
+
+export interface EvtxCoverageAudit {
+  coverage_score: number;
+  channels_present_count: number;
+  channels_present: string[];
+  catalog_audit: Array<{
+    channel: string;
+    role: string;
+    importance: 'critical' | 'high' | 'medium' | 'low';
+    present: boolean;
+  }>;
+  missing_critical_channels: string[];
+  coverage_limitations: string[];
+}
+
+export interface EvtxSigmaAlert {
+  rule_id: string;
+  title: string;
+  level: 'critical' | 'high' | 'medium' | 'low';
+  tags: string[];
+  mitre_technique: string;
+  description: string;
+  author: string;
+  match_count: number;
+  sample_events: Array<{
+    event_id: number;
+    timestamp: string;
+    user: string;
+    computer: string;
+    command_line?: string;
+    summary?: string;
+  }>;
+}
+
+export interface EvtxAuthForensics {
+  logon_types_breakdown: Record<string, number>;
+  total_successful_logons: number;
+  total_failed_logons: number;
+  failed_by_user: Record<string, number>;
+  failed_by_ip: Record<string, number>;
+  status_code_audit: Array<{
+    code: string;
+    count: number;
+    meaning: string;
+    threat: string;
+  }>;
+  password_spray_sources: Array<{
+    source_ip: string;
+    targeted_accounts_count: number;
+    targeted_accounts: string[];
+    failed_count: number;
+  }>;
+  brute_force_success: Array<{
+    target_account: string;
+    failure_count: number;
+    first_failure: string;
+    successful_logon: string;
+  }>;
+  explicit_credentials_logons: Array<any>;
+  special_privileges_logons: Array<any>;
+  kerberos_forensics: {
+    tgt_requests_count: number;
+    service_tickets_count: number;
+    kerberoasting_candidates: Array<{
+      timestamp: string;
+      service_name: string;
+      account: string;
+      ip: string;
+      encryption_type: string;
+    }>;
+    kerberos_preauth_failures: Array<{
+      timestamp: string;
+      account: string;
+      ip: string;
+      status: string;
+    }>;
+  };
+}
+
+export interface EvtxAccountManagement {
+  users_created: Array<{
+    timestamp: string;
+    actor: string;
+    created_user: string;
+    details?: Record<string, any>;
+  }>;
+  users_enabled: Array<{
+    timestamp: string;
+    actor: string;
+    enabled_user: string;
+  }>;
+  password_resets: Array<{
+    timestamp: string;
+    actor: string;
+    target_account: string;
+    is_admin_reset: boolean;
+  }>;
+  users_deleted: Array<{
+    timestamp: string;
+    actor: string;
+    deleted_user: string;
+  }>;
+  sensitive_group_additions: Array<{
+    timestamp: string;
+    actor: string;
+    member_added: string;
+    group_name: string;
+    group_sid: string;
+    is_sensitive_group: boolean;
+    event_id: number;
+  }>;
+  user_rights_assigned: Array<{
+    timestamp: string;
+    actor: string;
+    target_account: string;
+    rights: string;
+  }>;
+}
+
+export interface EvtxLateralChain {
+  target_host: string;
+  stages_detected: string[];
+  stages_count: number;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  sample_actor: string;
+  source_ip: string;
+  payload_dropped?: string | null;
+  summary: string;
+}
+
+export interface EvtxTamperingAnalysis {
+  tampering_detected: boolean;
+  total_tampering_events: number;
+  logs_cleared: Array<{
+    timestamp: string;
+    event_id: number;
+    log_type: string;
+    user: string;
+    computer: string;
+  }>;
+  audit_policy_changes: Array<any>;
+  service_interruptions: Array<any>;
+  system_time_manipulations: Array<any>;
+  defender_tampering: Array<any>;
+  sysmon_tampering: Array<any>;
+}
+
+export interface EvtxOfflineToolsGuide {
+  evtxecmd?: { title: string; purpose: string; command: string; notes: string };
+  chainsaw?: { title: string; purpose: string; command: string; notes: string };
+  hayabusa?: { title: string; purpose: string; command: string; notes: string };
+  powershell_getwinevent?: { title: string; purpose: string; command: string; notes: string };
+  wevtutil?: { title: string; purpose: string; command: string; notes: string };
+}
+
 export interface EvtxInfo {
   total_records: number;
   files_parsed?: string[];
@@ -1218,6 +1753,15 @@ export interface EvtxInfo {
   print_audit?: EvtxPrintRecord[];
   rdp_sessions?: EvtxRdpSession[];
   deobfuscated_commands?: EvtxDeobfuscatedCommand[];
+  evtx_verdict?: EvtxVerdict;
+  capture_integrity?: EvtxCaptureIntegrity;
+  coverage_audit?: EvtxCoverageAudit;
+  sigma_alerts?: EvtxSigmaAlert[];
+  auth_forensics?: EvtxAuthForensics;
+  account_management?: EvtxAccountManagement;
+  lateral_chains?: EvtxLateralChain[];
+  tampering_analysis?: EvtxTamperingAnalysis;
+  offline_tools_guide?: EvtxOfflineToolsGuide;
 }
 
 export interface AntiAnalysisTechnique {
@@ -1245,9 +1789,72 @@ export interface OfficeTriageInfo {
   vba_capabilities?: Record<string, Array<string | { label: string; count: number; samples?: string[] }>>;
   vba_stomping?: { is_stomped: boolean; details?: string[] };
   vba_purging?: { is_purged: boolean; details?: string[] };
+  mraptor?: {
+    suspicious: boolean;
+    flags: string;
+    autoexec: boolean;
+    autoexec_match?: string | null;
+    write: boolean;
+    write_match?: string | null;
+    execute: boolean;
+    execute_match?: string | null;
+    matches: string[];
+  };
+  oleid_indicators?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    value: string;
+    description?: string;
+    risk: string;
+  }>;
   xlm_macros?: { has_xlm_macros: boolean; details?: string[] };
-  rtf_exploits?: { is_rtf: boolean; has_exploits: boolean; details?: string[] };
-  ole_forensics?: Record<string, any>;
+  rtf_exploits?: { is_rtf: boolean; has_exploits: boolean; details?: string[]; carved_payloads?: string[] };
+  rtf_objects?: Array<{
+    id: number;
+    format_id: number;
+    class_name: string;
+    size: number;
+    is_package: boolean;
+    filename?: string;
+    src_path?: string;
+    temp_path?: string;
+    clsid?: string;
+    clsid_desc?: string;
+    carved_type?: string;
+    carved_size?: number;
+    carved_sha256?: string;
+    suspicious?: boolean;
+  }>;
+  ole_forensics?: {
+    is_ole_file?: boolean;
+    sector_size?: number;
+    minisector_size?: number;
+    streams_count?: number;
+    total_edit_time_minutes?: number;
+    streams?: Array<{
+      path: string;
+      type: string;
+      size: number;
+      ctime?: string | null;
+      mtime?: string | null;
+      clsid?: string | null;
+    }>;
+    clsids?: string[];
+    anomalies?: string[];
+  };
+  onenote_analysis?: {
+    is_onenote: boolean;
+    embedded_attachments: Array<{
+      filename: string;
+      file_type: string;
+      size: number;
+      sha256: string;
+      suspicious: boolean;
+      offset?: number;
+    }>;
+    suspicious_extensions: string[];
+  };
   has_activex?: boolean;
   activex_objects?: string[];
   has_ole_objects?: boolean;
@@ -1299,6 +1906,7 @@ export interface PdfObjectItem {
   is_stream: boolean;
   filter: string;
   size: number;
+  entropy?: number;
   is_suspicious: boolean;
   suspicious_reason?: string;
   raw_dict?: string;
@@ -1318,6 +1926,102 @@ export interface PdfStreamInspection {
   text_content: string;
   b64_content: string;
   hex_dump: string;
+}
+
+export interface PdfStructureForensics {
+  total_size: number;
+  header_offset: number;
+  is_polyglot: boolean;
+  polyglot_type?: string;
+  eof_count: number;
+  eof_offsets?: number[];
+  startxref_offsets?: number[];
+  has_overlay: boolean;
+  overlay_size?: number;
+  overlay_entropy?: number;
+  overlay_hex?: string;
+  overlay_threat?: string;
+  overlay_desc?: string;
+}
+
+export interface PdfDigitalSignatureItem {
+  xref: number;
+  subfilter: string;
+  signer: string;
+  reason: string;
+  date: string;
+  byte_range: number[];
+  has_shadow_attack: boolean;
+  shadow_bytes_count: number;
+}
+
+export interface PdfConcealedSpan {
+  page: number;
+  text: string;
+  color_hex?: string;
+  size: number;
+  font?: string;
+  bbox: number[];
+  page_rect?: number[];
+}
+
+export interface PdfDeceptiveLink {
+  page: number;
+  display_text: string;
+  display_domain: string;
+  destination_uri: string;
+  target_domain: string;
+  rect: number[];
+}
+
+export interface PdfConcealedContent {
+  white_text_count: number;
+  white_text_spans: PdfConcealedSpan[];
+  tiny_font_count: number;
+  tiny_font_spans: PdfConcealedSpan[];
+  off_page_count: number;
+  off_page_spans: PdfConcealedSpan[];
+  has_invisible_render_mode: boolean;
+  deceptive_link_count: number;
+  deceptive_links: PdfDeceptiveLink[];
+  has_ocg: boolean;
+  ocg_layers: string[];
+}
+
+export interface PdfActionChainItem {
+  trigger_hook: string;
+  scope: string;
+  action_type: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | string;
+  raw_snippet: string;
+}
+
+export interface PdfCarvedAttachment {
+  id: number;
+  filename: string;
+  size: number;
+  size_formatted: string;
+  sha256: string;
+  classification: string;
+  is_threat: boolean;
+  threat_level: 'critical' | 'high' | 'suspicious' | 'neutral' | string;
+  description?: string;
+  hex_preview?: string;
+}
+
+export interface PdfDangerousJsApi {
+  api: string;
+  risk: string;
+  description: string;
+  mitre?: string;
+}
+
+export interface PdfJsAnalysis {
+  has_javascript: boolean;
+  deobfuscated_code: string;
+  deobfuscated_applied: boolean;
+  dangerous_apis: PdfDangerousJsApi[];
+  shellcode_indicators: string[];
 }
 
 export interface PdfTriageInfo {
@@ -1347,6 +2051,12 @@ export interface PdfTriageInfo {
   filter_counts?: Record<string, number>;
   pdf_version?: string;
   is_linearized?: boolean;
+  structure_forensics?: PdfStructureForensics;
+  digital_signatures?: PdfDigitalSignatureItem[];
+  concealed_content?: PdfConcealedContent;
+  action_chains?: PdfActionChainItem[];
+  carved_attachments?: PdfCarvedAttachment[];
+  js_analysis?: PdfJsAnalysis;
 }
 
 export interface ImageTriageInfo {
@@ -1397,16 +2107,217 @@ export interface ImageTriageInfo {
   overlay_entropy?: number;
 }
 
+export interface JarClassEntry {
+  class_name: string;
+  class_file: string;
+  is_entry: boolean;
+  methods_count: number;
+  fields_count: number;
+  methods: Array<{
+    name: string;
+    descriptor?: string;
+    access_flags?: number;
+    signature?: string;
+  }>;
+  fields: Array<{
+    name: string;
+    descriptor?: string;
+    access_flags?: number;
+    formatted?: string;
+  }>;
+  decompiled_source: string;
+}
+
+export interface JarSigningInfo {
+  is_signed: boolean;
+  status: string;
+  certificate?: {
+    subject: string;
+    issuer: string;
+    valid_from: string;
+    valid_to: string;
+    is_self_signed: boolean;
+    is_expired: boolean;
+    is_debug_key: boolean;
+    fingerprint_sha256: string;
+    serial_number?: string;
+  };
+  signature_files?: string[];
+  is_partially_signed?: boolean;
+  unsigned_classes_count?: number;
+  unsigned_classes?: string[];
+}
+
+export interface JarArchiveSecurity {
+  zip_slip: {
+    detected: boolean;
+    paths: string[];
+    count: number;
+  };
+  zip_bomb: {
+    detected: boolean;
+    compression_ratio: number;
+    uncompressed_size: number;
+    compressed_size: number;
+    disk_size?: number;
+    is_dangerous: boolean;
+  };
+  duplicate_entries: {
+    detected: boolean;
+    entries: string[];
+    count: number;
+  };
+  extension_mismatches: Array<{
+    filename: string;
+    declared_extension: string;
+    actual_type: string;
+    file_size: number;
+    threat_level: string;
+  }>;
+  polyglot_and_trailing: {
+    has_trailing_data: boolean;
+    trailing_bytes_count: number;
+    has_leading_polyglot: boolean;
+    leading_magic: string;
+  };
+  nested_archives: Array<{
+    filename: string;
+    size: number;
+    type: string;
+  }>;
+  issues_count: number;
+  verdict: 'SECURE' | 'SUSPICIOUS' | 'VULNERABLE';
+}
+
+export interface JarDependency {
+  group_id: string;
+  artifact_id: string;
+  version: string;
+  source: string;
+  type: string;
+}
+
+export interface JarShadedLibrary {
+  name: string;
+  package_prefix: string;
+  category: string;
+  packages_count: number;
+}
+
+export interface JarCveAdvisory {
+  artifact: string;
+  version: string;
+  cve: string;
+  name: string;
+  severity: string;
+  cvss: number;
+  cwe: string;
+  description: string;
+}
+
+export interface JarCycloneDxSbom {
+  bomFormat: string;
+  specVersion: string;
+  serialNumber: string;
+  version: number;
+  metadata: {
+    timestamp: string;
+    tools?: Array<{ vendor: string; name: string; version: string }>;
+    component: {
+      name: string;
+      version: string;
+      type: string;
+    };
+  };
+  components: Array<{
+    type: string;
+    group?: string;
+    name: string;
+    version?: string;
+    purl?: string;
+    cpe?: string;
+    description?: string;
+    scope?: string;
+  }>;
+  multi_release?: {
+    is_multi_release: boolean;
+    versions: number[];
+  };
+}
+
+export interface JarSecretsAndCtf {
+  detected: boolean;
+  ctf_flags: Array<{
+    flag: string;
+    format: string;
+    length: number;
+    source?: string;
+  }>;
+  flags_count: number;
+  secrets: Array<{
+    type: string;
+    masked: string;
+    severity: string;
+    description: string;
+    length: number;
+  }>;
+  secrets_count: number;
+}
+
+export interface JarEmbeddedResource {
+  name: string;
+  size: number;
+  type: string;
+  is_executable: boolean;
+  is_script: boolean;
+  is_archive: boolean;
+  is_config: boolean;
+  threat_level: 'SUSPICIOUS' | 'DANGEROUS' | 'INFO';
+}
+
+export interface JarLolbinMatch {
+  name: string;
+  category: string;
+  description: string;
+  matched_in: string;
+  matched_text: string;
+}
+
+export interface JarBase64Block {
+  encoded: string;
+  encoded_full: string;
+  decoded_preview: string;
+  encoding: string;
+  length: number;
+  threat: string;
+  iocs?: string[];
+}
+
 export interface JarTriageInfo {
   is_jar: boolean;
   main_class?: string | null;
   permissions?: string | null;
   manifest_content?: string;
   class_count: number;
+  classes_count?: number;
   embedded_binaries?: string[];
   packages?: string[];
   total_entries?: number;
   suspicious_apis?: Array<{
+    class_file: string;
+    api: string;
+    title?: string;
+    severity?: string;
+    category?: string;
+    description: string;
+    risk_explanation?: string;
+    remediation?: string;
+    cwe?: string;
+    owasp?: string;
+    mitre?: string;
+    mitre_name?: string;
+  }>;
+  dangerous_apis?: Array<{
     class_file: string;
     api: string;
     title?: string;
@@ -1427,6 +2338,50 @@ export interface JarTriageInfo {
     urls?: string[];
     ips?: string[];
   };
+  classes_decompiled?: JarClassEntry[];
+  code_modules?: Array<{
+    name: string;
+    code: string;
+    language?: string;
+  }>;
+  strings?: {
+    all_sample: string[];
+    categorized: {
+      network: string[];
+      file_paths: string[];
+      registry: string[];
+      commands: string[];
+      all_sample: string[];
+    };
+    total_count: number;
+  };
+  b64_blocks?: JarBase64Block[];
+  lolbin_matches?: JarLolbinMatch[];
+  has_lolbins?: boolean;
+  detected_commands?: string[];
+  digital_signature?: {
+    is_signed: boolean;
+    status: string;
+    signer?: string;
+    algorithm?: string;
+  };
+  signing_info?: JarSigningInfo;
+  embedded_resources?: JarEmbeddedResource[];
+  class_info?: {
+    major_version?: number;
+    minor_version?: number;
+    java_version?: string;
+    constant_pool_count?: number;
+    methods_count?: number;
+    interfaces_count?: number;
+  };
+  code_preview?: string;
+  archive_security?: JarArchiveSecurity;
+  dependencies?: JarDependency[];
+  shaded_libraries?: JarShadedLibrary[];
+  cve_advisories?: JarCveAdvisory[];
+  cyclonedx_sbom?: JarCycloneDxSbom;
+  secrets_and_ctf?: JarSecretsAndCtf;
 }
 
 
@@ -1670,6 +2625,7 @@ export interface DomainIntelligence {
       recent_entries?: Array<{ id?: number; common_name?: string; logged_at?: string; not_before?: string; not_after?: string }>;
     };
     security_findings?: Array<{ severity: string; title: string; description: string }>;
+    cipher_suites_audit?: CipherSuitesAudit;
   };
 
   web_fingerprint?: {
@@ -2094,6 +3050,343 @@ export interface DomainIntelligence {
       new_subdomains?: string[];
     };
   };
+
+  indicator_normalisation?: IndicatorNormalisation;
+  dns_configuration_audit?: DnsConfigurationAudit;
+  subdomain_takeover_analysis?: SubdomainTakeoverAnalysis;
+  email_domain_posture?: EmailDomainPosture;
+  tls_cert_forensics?: TlsCertForensics;
+  web_headers_and_exposure?: WebHeadersAndExposure;
+  checklist_verdict?: IpDomainChecklistVerdict;
+  offline_tools_guide?: OfflineToolsGuide;
+  active_recon_summary?: {
+    dns_findings?: string[];
+    rdap_findings?: string[];
+    tls_findings?: string[];
+    http_findings?: string[];
+    ip_findings?: string[];
+  };
+}
+
+export interface IndicatorNormalisation {
+  original_input: string;
+  normalized_value: string;
+  indicator_type: string;
+  is_valid: boolean;
+  ip_classification?: string;
+  is_private_rfc1918?: boolean;
+  is_loopback?: boolean;
+  is_link_local?: boolean;
+  is_multicast?: boolean;
+  is_reserved?: boolean;
+  is_cgnat?: boolean;
+  is_documentation?: boolean;
+  is_mapped_v6?: boolean;
+  mapped_ipv4?: string | null;
+  rdns_eligible: boolean;
+  rdns_eligibility_reason: string;
+  has_punycode?: boolean;
+  is_punycode?: boolean;
+  is_homograph?: boolean;
+  unicode_rendered?: string;
+  spoofed_chars?: Array<{
+    char: string;
+    latin_lookalike: string;
+    codepoint: string;
+    name: string;
+  }>;
+  subdomain?: string | null;
+  registrable_domain?: string | null;
+  public_suffix?: string | null;
+  is_special_use_domain?: boolean;
+  special_use_category?: string | null;
+  is_dns_eligible?: boolean;
+  dns_eligibility_reason?: string;
+  ssrf_risk?: boolean;
+  ssrf_mitigation_note?: string;
+  active_ipaddress_findings?: string[];
+}
+
+export interface DnsConfigurationAudit {
+  counts: Record<string, number>;
+  dnssec: {
+    enabled: boolean;
+    validated: boolean;
+    ds_records: any[];
+    dnskey_count: number;
+    notes: string;
+  };
+  has_wildcard_dns: boolean;
+  wildcard_ip: string | null;
+  low_ttl_detected: boolean;
+  min_ttl: number | null;
+  fast_flux_suspect: boolean;
+  cname_chain: string[];
+  anomalies: Array<{
+    type: string;
+    severity: string;
+    title: string;
+    description: string;
+  }>;
+  active_dig_findings?: string[];
+}
+
+export interface SubdomainTakeoverCandidate {
+  domain: string;
+  cname_target: string;
+  provider: string;
+  status: string;
+  severity: string;
+  vulnerability: string;
+  fingerprint_match?: string;
+  description: string;
+  remediation: string;
+}
+
+export interface SubdomainTakeoverAnalysis {
+  evaluated_count?: number;
+  vulnerable_count?: number;
+  has_high_risk_takeover?: boolean;
+  candidates?: SubdomainTakeoverCandidate[];
+  summary?: string;
+  has_takeover_risk?: boolean;
+  claimable_count?: number;
+  dangling_cnames?: Array<{
+    subdomain: string;
+    cname_target: string;
+    service_provider: string;
+    signature: string;
+    takeover_status: string;
+    severity: string;
+    remediation: string;
+  }>;
+  remediation_guidance?: string[];
+}
+
+export interface EmailDomainPosture {
+  domain?: string;
+  is_spoofable?: boolean;
+  spoofing_risk_summary?: string;
+  spf: {
+    present?: boolean;
+    published?: boolean;
+    raw?: string | null;
+    raw_record?: string | null;
+    qualifier: string;
+    all_qualifier?: string;
+    qualifier_safety: string;
+    lookup_count: number;
+    lookup_limit_exceeded: boolean;
+    is_permissive?: boolean;
+    issues?: string[];
+  };
+  dmarc: {
+    present?: boolean;
+    published?: boolean;
+    raw?: string | null;
+    policy: string;
+    is_enforced: boolean;
+    subdomain_policy: string | null;
+    percentage?: number;
+    aggregate_reports?: string[];
+    vulnerable_to_spoofing?: boolean;
+    issues?: string[];
+  };
+  dkim: {
+    selectors_checked: number;
+    selectors_found: any[];
+  };
+  mta_sts: {
+    enabled: boolean;
+    published?: boolean;
+    mode?: string | null;
+  };
+  tls_rpt: {
+    enabled: boolean;
+    published?: boolean;
+  };
+  has_mx?: boolean;
+  has_null_mx?: boolean;
+  null_mx?: boolean;
+  overall_posture: string;
+  findings?: Array<{
+    severity: string;
+    title: string;
+    description: string;
+  }>;
+}
+
+export interface HostnameValidationDetails {
+  matches: boolean;
+  status: 'MATCH' | 'MISMATCH';
+  target: string;
+  subject_cn?: string | null;
+  matched_pattern?: string | null;
+  match_type: 'EXACT_SAN' | 'WILDCARD_SAN' | 'EXACT_IP_SAN' | 'CN_FALLBACK' | 'NONE';
+  mismatch_type?: 'IP_WITHOUT_IP_SAN' | 'WILDCARD_DEPTH_EXCEEDED' | 'CN_ONLY_IGNORED' | 'UNRELATED_DOMAIN' | 'CDN_SNI_MISCONFIGURATION' | 'NO_CERTIFICATE' | null;
+  how: string;
+  why: string;
+  risk_level: 'none' | 'low' | 'medium' | 'high';
+  remediation: string;
+}
+
+export interface SupportedCipherEntry {
+  name: string;
+  protocol: string;
+  key_exchange: string;
+  encryption: string;
+  mac: string;
+  bits: number;
+  status: 'RECOMMENDED' | 'ACCEPTABLE' | 'WEAK' | 'INSECURE' | 'BROKEN';
+  is_weak: boolean;
+  supported: boolean;
+  active_negotiated: boolean;
+  explanation: string;
+}
+
+export interface CipherSuitesAudit {
+  active_cipher?: string | null;
+  active_protocol?: string | null;
+  total_cataloged: number;
+  supported_count: number;
+  weak_ciphers_count: number;
+  has_weak_ciphers: boolean;
+  weak_ciphers: SupportedCipherEntry[];
+  ciphers: SupportedCipherEntry[];
+}
+
+export interface TlsCertForensics {
+  has_tls: boolean;
+  subject_cn?: string;
+  issuer_cn?: string;
+  issuer?: string;
+  issuer_org?: string;
+  sans: string[];
+  sans_count?: number;
+  is_wildcard: boolean;
+  matches_target: boolean;
+  hostname_matches_cert?: boolean;
+  days_remaining?: number;
+  days_to_expiry?: number;
+  is_expired: boolean;
+  is_self_signed: boolean;
+  signature_algorithm?: string;
+  key_type?: string;
+  key_size?: number;
+  ct_log_count: number;
+  ct_logs_count?: number;
+  sha256_fingerprint?: string;
+  hostname_validation?: HostnameValidationDetails;
+  cipher_suites_audit?: CipherSuitesAudit;
+  active_openssl_findings?: string[];
+  warnings?: Array<{
+    severity: string;
+    title: string;
+    description: string;
+  }>;
+  findings: Array<{
+    severity: string;
+    title: string;
+    description: string;
+  }>;
+}
+
+export interface WebHeadersAndExposure {
+  status_code: number | null;
+  server_banner: string | null;
+  powered_by: string | null;
+  headers_audit: {
+    hsts: boolean;
+    csp: boolean;
+    x_frame_options: boolean;
+    x_content_type_options: boolean;
+    referrer_policy: boolean;
+    permissions_policy: boolean;
+  };
+  missing_security_headers: string[];
+  exposed_sensitive_files: Array<{
+    path: string;
+    title: string;
+    category: string;
+    risk: string;
+    status_code: number;
+    content_preview?: string;
+  }>;
+  findings: Array<{
+    severity: string;
+    title: string;
+    description: string;
+  }>;
+  active_curl_findings?: string[];
+}
+
+export interface IpDomainChecklistVerdict {
+  verdict: 'Malicious' | 'Suspicious' | 'Vulnerable / Misconfigured' | 'Benign / Low Risk' | 'Clean / Benign' | 'Clean / Informational' | 'Private / Internal Indicator' | string;
+  risk_score: number;
+  confidence_score: number;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'clean' | 'info' | string;
+  threat_tags: string[];
+  rationale: string[];
+  mitre_techniques?: Array<{ id: string; name: string }>;
+  mitre_attack?: string[];
+  containment_checklist: string[];
+  risk_breakdown?: {
+    threat_intelligence: {
+      score: number;
+      max_score?: number;
+      weight_pct: number;
+      level: string;
+      summary: string;
+      factors: Array<{ name: string; points: number; type: 'penalty' | 'credit' | 'neutral'; detail: string }>;
+    };
+    infrastructure_reputation: {
+      score: number;
+      max_score?: number;
+      weight_pct: number;
+      level: string;
+      summary: string;
+      factors: Array<{ name: string; points: number; type: 'penalty' | 'credit' | 'neutral'; detail: string }>;
+    };
+    cryptographic_trust: {
+      score: number;
+      max_score?: number;
+      weight_pct: number;
+      level: string;
+      summary: string;
+      factors: Array<{ name: string; points: number; type: 'penalty' | 'credit' | 'neutral'; detail: string }>;
+    };
+    exposure_and_hardening: {
+      score: number;
+      max_score?: number;
+      weight_pct: number;
+      level: string;
+      summary: string;
+      factors: Array<{ name: string; points: number; type: 'penalty' | 'credit' | 'neutral'; detail: string }>;
+    };
+    summary_explanation: string;
+  };
+}
+
+export interface OfflineToolItem {
+  name: string;
+  tool?: string;
+  command: string;
+  purpose: string;
+  category: string;
+  description?: string;
+  executed?: boolean;
+  status?: 'success' | 'warning' | 'error' | string;
+  exit_code?: number;
+  duration_ms?: number;
+  stdout?: string;
+  stderr?: string | null;
+  parsed_findings?: string[];
+}
+
+export interface OfflineToolsGuide {
+  disclaimer: string;
+  executed_live?: boolean;
+  tools: OfflineToolItem[];
 }
 
 export interface EnrichedIocItem {
@@ -2480,6 +3773,9 @@ export interface EntityGraphNode {
   x?: number;
   y?: number;
   details?: Record<string, any>;
+  groupedCount?: number;
+  groupedVariants?: string[];
+  groupedNodes?: any[];
 }
 
 export interface EntityGraphEdge {
@@ -2884,7 +4180,309 @@ export interface PcapEmail {
   is_suspicious: boolean;
 }
 
+export interface PcapVerdict {
+  verdict: 'Malicious' | 'Suspicious' | 'Potentially Vulnerable' | 'No Known Threat Detected' | 'Inconclusive';
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'clean';
+  confidence_score: number;
+  rationale: string[];
+  mitre_techniques: Array<{ id: string; name: string }>;
+  containment_recommendations: string[];
+}
+
+export interface PcapTimeGap {
+  start_sec: number;
+  end_sec: number;
+  duration_sec: number;
+  severity: 'CRITICAL' | 'WARNING';
+}
+
+export interface PcapProvenance {
+  sha256: string;
+  sha1: string;
+  md5: string;
+  preservation: string;
+  analysis_engine: string;
+}
+
+export interface PcapCaptureIntegrity {
+  format: string;
+  is_pcapng: boolean;
+  magic_hex: string;
+  endianness: string;
+  timestamp_precision: string;
+  link_layer_types: string[];
+  packet_count: number;
+  total_file_bytes: number;
+  duration_seconds: number;
+  start_time: string | null;
+  end_time: string | null;
+  integrity_status: string;
+  integrity_issues: string[];
+  truncated_packets_count: number;
+  undersized_frames_count: number;
+  jumbo_frames_count: number;
+  duplicate_packets_count: number;
+  tcp_retransmissions_count: number;
+  time_gaps: PcapTimeGap[];
+  provenance: PcapProvenance;
+}
+
+export interface ZeekConnLog {
+  uid: string;
+  id_orig_h: string;
+  id_orig_p: number;
+  id_resp_h: string;
+  id_resp_p: number;
+  proto: string;
+  service: string;
+  duration: number;
+  orig_bytes: number;
+  resp_bytes: number;
+  conn_state: string;
+  local_orig: boolean;
+  local_resp: boolean;
+  history: string;
+}
+
+export interface ZeekDnsLog {
+  uid: string;
+  id_orig_h: string;
+  id_resp_h: string;
+  proto: string;
+  query: string;
+  qtype_name: string;
+  rcode_name: string;
+  answers: string[];
+  TTLs: number[];
+  rejected: boolean;
+  entropy: number;
+  is_suspicious: boolean;
+}
+
+export interface ZeekSslLog {
+  uid: string;
+  id_orig_h: string;
+  id_orig_p: number;
+  id_resp_h: string;
+  id_resp_p: number;
+  version: string;
+  cipher: string;
+  server_name: string;
+  ja3?: string;
+  ja3s?: string;
+  established: boolean;
+  subject: string;
+  issuer: string;
+}
+
+export interface ZeekX509Log {
+  certificate_serial: string;
+  subject: string;
+  issuer: string;
+  san_dns: string[];
+  validity_start: string;
+  validity_end: string;
+  key_type: string;
+  key_length: number;
+  self_signed: boolean;
+  is_expired: boolean;
+}
+
+export interface ZeekFilesLog {
+  fuid: string;
+  source_proto: string;
+  mime_type: string;
+  filename: string;
+  total_bytes: number;
+  sha256: string;
+  is_dangerous: boolean;
+  threat_category: string;
+}
+
+export interface ZeekStructuredLogs {
+  conn_log: ZeekConnLog[];
+  dns_log: ZeekDnsLog[];
+  ssl_log: ZeekSslLog[];
+  x509_log: ZeekX509Log[];
+  files_log: ZeekFilesLog[];
+}
+
+export interface SuricataAlert {
+  sid: number;
+  classtype: string;
+  severity: number;
+  severity_label: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  msg: string;
+  src_ip: string;
+  src_port: number;
+  dst_ip: string;
+  dst_port: number;
+  protocol: string;
+  matched_snippet: string;
+}
+
+export interface DgaCandidate {
+  domain: string;
+  subdomain: string;
+  entropy: number;
+  length: number;
+  client_ip: string;
+  resolved_ips: string[];
+  threat_note: string;
+}
+
+export interface DnsTunnelingQuery {
+  domain: string;
+  query_type: string;
+  entropy: number;
+  client_ip: string;
+  reason: string;
+}
+
+export interface FastFluxDomain {
+  domain: string;
+  resolved_ips: string[];
+  unique_subnets: number;
+  risk_assessment: string;
+}
+
+export interface PcapDnsForensics {
+  total_queries_analyzed: number;
+  nxdomain_count: number;
+  nxdomain_ratio_percent: number;
+  nxdomain_burst_detected: boolean;
+  dga_candidates: DgaCandidate[];
+  tunneling_queries: DnsTunnelingQuery[];
+  fast_flux_domains: FastFluxDomain[];
+  top_queried_slds: Array<{ sld: string; count: number }>;
+}
+
+export interface PcapBeaconSession {
+  source_ip: string;
+  target_ip: string;
+  target_scope: string;
+  pulse_count: number;
+  mean_interval_sec: number;
+  std_dev_sec: number;
+  jitter_percent: number;
+  classification: string;
+  threat_level: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  min_interval: number;
+  max_interval: number;
+}
+
+export interface PcapBeaconingAnalysis {
+  detected_beacon_count: number;
+  beaconing_sessions: PcapBeaconSession[];
+}
+
+export interface PcapRatioAnomaly {
+  flow_id: string;
+  source_ip: string;
+  target_ip: string;
+  target_port: number;
+  client_upload_bytes: number;
+  server_download_bytes: number;
+  upload_ratio: number;
+  protocol: string;
+  threat_note: string;
+}
+
+export interface PcapIcmpTunnelPacket {
+  source_ip: string;
+  target_ip: string;
+  icmp_type: string;
+  payload_size: number;
+  payload_entropy: number;
+  reason: string;
+  hex_preview: string;
+}
+
+export interface PcapCloudExfilEvent {
+  service: string;
+  target_url: string;
+  method: string;
+  source_ip: string;
+  destination_ip: string;
+  threat_note: string;
+}
+
+export interface PcapExfiltrationAnalysis {
+  ratio_anomalies: PcapRatioAnomaly[];
+  icmp_tunneling_packets: PcapIcmpTunnelPacket[];
+  cloud_exfiltration_events: PcapCloudExfilEvent[];
+  has_high_confidence_exfiltration: boolean;
+}
+
+export interface PcapReconScan {
+  scanner_ip: string;
+  target_ip?: string;
+  target_count?: number;
+  scan_type: string;
+  ports_probed_count?: number;
+  ports_sample?: number[];
+  sample_targets?: string[];
+  threat_level: 'HIGH' | 'MEDIUM';
+}
+
+export interface PcapLateralEvent {
+  source_ip: string;
+  destination_ip: string;
+  target_port: number;
+  protocol_name: string;
+  admin_share?: string | null;
+  bytes_transferred: number;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+}
+
+export interface PcapLateralMovement {
+  scans_detected: PcapReconScan[];
+  lateral_movement_events: PcapLateralEvent[];
+  has_active_reconnaissance: boolean;
+  has_lateral_movement: boolean;
+}
+
+export interface PcapArpAlert {
+  target_ip: string;
+  conflicting_mac_addresses: string[];
+  threat_note: string;
+}
+
+export interface PcapNtpAmplification {
+  source_ip: string;
+  type: string;
+  size: number;
+}
+
+export interface PcapModbusEvent {
+  source_ip: string;
+  target_ip: string;
+  unit_id: number;
+  function_code: number;
+  operation: string;
+  severity: 'CRITICAL' | 'INFO';
+}
+
+export interface PcapProtocolAnomalies {
+  arp_spoofing_alerts: PcapArpAlert[];
+  dhcp_servers_detected: string[];
+  rogue_dhcp_detected: boolean;
+  ntp_amplifications: PcapNtpAmplification[];
+  modbus_industrial_events: PcapModbusEvent[];
+  quic_sessions_count: number;
+  cleartext_credentials_count: number;
+}
+
 export interface PcapInfo {
+  pcap_verdict?: PcapVerdict;
+  capture_integrity?: PcapCaptureIntegrity;
+  zeek_logs?: ZeekStructuredLogs;
+  ids_alerts?: SuricataAlert[];
+  dns_forensics?: PcapDnsForensics;
+  beaconing_analysis?: PcapBeaconingAnalysis;
+  exfiltration_analysis?: PcapExfiltrationAnalysis;
+  lateral_movement?: PcapLateralMovement;
+  protocol_anomalies?: PcapProtocolAnomalies;
   summary: PcapSummary;
   protocols: Record<string, number>;
   top_endpoints: PcapEndpoint[];
@@ -3318,6 +4916,9 @@ export interface IncidentCorrelationData {
       is_shared?: boolean;
       file_ids?: string[];
       details?: Record<string, any>;
+      groupedCount?: number;
+      groupedVariants?: string[];
+      groupedNodes?: any[];
     }>;
     edges: Array<{
       source: string;
@@ -3727,6 +5328,104 @@ export interface ApkCertificate {
   is_self_signed?: boolean;
 }
 
+export interface ApkArchiveSecurity {
+  zip_slip: {
+    detected: boolean;
+    paths: string[];
+  };
+  decompression_ratio: number;
+  zip_bomb_risk: boolean;
+  total_uncompressed_bytes: number;
+  total_compressed_bytes: number;
+  duplicate_entries: {
+    detected: boolean;
+    entries: string[];
+  };
+  extension_mismatches: Array<{
+    filename: string;
+    declared_ext: string;
+    actual_type: string;
+    magic_hex: string;
+    reason: string;
+  }>;
+  polyglot_and_trailing: {
+    has_trailing_data: boolean;
+    trailing_bytes_count: number;
+    has_prepended_header: boolean;
+    prepended_type: string;
+    details: string;
+  };
+  nested_archives: Array<{
+    filename: string;
+    size: number;
+    type: string;
+  }>;
+  multi_dex_inventory: Array<{
+    name: string;
+    size: number;
+    dex_version: string;
+    checksum: string;
+    signature: string;
+    classes_count: number;
+    strings_count: number;
+    methods_count: number;
+    is_stub: boolean;
+  }>;
+  verdict: 'CLEAN' | 'SUSPICIOUS' | 'VULNERABLE' | string;
+}
+
+export interface ApkDependency {
+  id: string;
+  name: string;
+  group: string;
+  artifact: string;
+  category: string;
+  version: string;
+  description: string;
+  purl: string;
+  known_vulnerabilities?: string[];
+}
+
+export interface ApkCtfFlag {
+  flag: string;
+  type: string;
+  source: string;
+}
+
+export interface ApkHardcodedSecret {
+  type: string;
+  value: string;
+  severity: string;
+  source: string;
+}
+
+export interface ApkSecretsAndCtf {
+  detected: boolean;
+  ctf_flags: ApkCtfFlag[];
+  secrets: ApkHardcodedSecret[];
+  total_count: number;
+}
+
+export interface ApkDeepLink {
+  activity: string;
+  scheme: string;
+  host: string;
+  path_prefix?: string;
+  path_pattern?: string;
+  is_custom_scheme: boolean;
+  exported: boolean;
+}
+
+export interface ApkSensitivePermissionCombo {
+  id: string;
+  title: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  permissions: string[];
+  description: string;
+  mitre?: string;
+  mitre_name?: string;
+}
+
 export interface ApkAnalysisData {
   is_apk: boolean;
   is_standalone_dex?: boolean;
@@ -3794,6 +5493,12 @@ export interface ApkAnalysisData {
     has_pinning: boolean;
     details: string[];
   };
+  archive_security?: ApkArchiveSecurity;
+  dependencies?: ApkDependency[];
+  cyclonedx_sbom?: Record<string, any>;
+  secrets_and_ctf?: ApkSecretsAndCtf;
+  deep_links?: ApkDeepLink[];
+  sensitive_permission_combos?: ApkSensitivePermissionCombo[];
   embedded_assets?: string[];
   iocs?: {
     urls?: string[];
@@ -3861,6 +5566,41 @@ export interface JavaAnalysisData {
   risk_level?: string;
   behavioral_analysis?: JavaBehavioralAnalysis;
   strrat_profile?: JavaStrratHeuristics;
+  classes_decompiled?: JarClassEntry[];
+  code_modules?: Array<{
+    name: string;
+    code: string;
+    language?: string;
+  }>;
+  strings?: {
+    all_sample: string[];
+    categorized: {
+      network: string[];
+      file_paths: string[];
+      registry: string[];
+      commands: string[];
+      all_sample: string[];
+    };
+    total_count: number;
+  };
+  b64_blocks?: JarBase64Block[];
+  lolbin_matches?: JarLolbinMatch[];
+  has_lolbins?: boolean;
+  detected_commands?: string[];
+  digital_signature?: {
+    is_signed: boolean;
+    status: string;
+    signer?: string;
+    algorithm?: string;
+  };
+  signing_info?: JarSigningInfo;
+  embedded_resources?: JarEmbeddedResource[];
+  archive_security?: JarArchiveSecurity;
+  dependencies?: JarDependency[];
+  shaded_libraries?: JarShadedLibrary[];
+  cve_advisories?: JarCveAdvisory[];
+  cyclonedx_sbom?: JarCycloneDxSbom;
+  secrets_and_ctf?: JarSecretsAndCtf;
 }
 
 export interface JavaBehavioralCapability {

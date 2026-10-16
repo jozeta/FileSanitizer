@@ -342,7 +342,7 @@ class ScriptAnalyzer(BaseAnalyzer):
         if not findings:
             findings.append(Finding(
                 category="script",
-                severity="informational",
+                severity="info",
                 title=f"{display_names.get(script_type, 'Script')} Code Clean",
                 description=f"Static heuristic triage completed on {len(lines)} lines of code. No malicious APIs, reverse shells, or evasion patterns detected."
             ))

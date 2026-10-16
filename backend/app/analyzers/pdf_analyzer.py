@@ -6,6 +6,16 @@ from app.analyzers.didier_pdf import DidierPDFAnalyzer, PDFID_TAGS
 from app.core.settings_store import settings_store
 from app.core.logging_config import logger
 import fitz
+from app.analyzers.pdf_forensics import (
+    calculate_shannon_entropy,
+    inspect_pdf_structure_and_overlay,
+    inspect_digital_signatures,
+    inspect_concealed_content,
+    inspect_action_chains,
+    carve_and_inspect_attachments,
+    deobfuscate_and_analyze_javascript,
+)
+
 
 COMMON_MALWARE_PASSWORDS = [
     "infected", "virus", "password", "123456", "malware", "clean",
@@ -281,11 +291,13 @@ class PDFAnalyzer(BaseAnalyzer):
                             if tag in raw_dict:
                                 found_tokens.append(tag)
 
+                        entropy = 0.0
                         if is_stream:
                             try:
                                 stream_bytes = doc.xref_stream(xref)
                                 size = len(stream_bytes) if stream_bytes else 0
                                 if stream_bytes:
+                                    entropy = calculate_shannon_entropy(stream_bytes)
                                     stream_hex = _format_hex_preview(stream_bytes, max_len=256)
                                     # Attempt text decoding
                                     try:
@@ -324,6 +336,9 @@ class PDFAnalyzer(BaseAnalyzer):
                                     elif b"c.transform" in s_low or b"fontmatrix" in s_low:
                                         is_suspicious = True
                                         suspicious_reason = "FontMatrix breakout vector (CVE-2024-4367)"
+                                    elif entropy > 7.5:
+                                        is_suspicious = True
+                                        suspicious_reason = f"High Shannon Entropy stream ({entropy:.2f}/8.0 - packed/encrypted)"
                             except Exception:
                                 pass
 
@@ -333,6 +348,7 @@ class PDFAnalyzer(BaseAnalyzer):
                             "is_stream": is_stream,
                             "filter": filter_name or "Plaintext",
                             "size": size,
+                            "entropy": entropy,
                             "is_suspicious": is_suspicious,
                             "suspicious_reason": suspicious_reason,
                             "raw_dict": raw_dict,
@@ -468,6 +484,149 @@ class PDFAnalyzer(BaseAnalyzer):
             exploit_findings = self._detect_pdf_exploits_and_cves(doc, raw_bytes, raw_text, didier_res)
             findings.extend(exploit_findings)
 
+            # 7. Deep PDF Forensics (Checklist Suite)
+            structure_forensics = inspect_pdf_structure_and_overlay(raw_bytes)
+            digital_signatures = inspect_digital_signatures(doc, raw_bytes)
+            concealed_content = inspect_concealed_content(doc, raw_text)
+            action_chains = inspect_action_chains(doc, raw_text)
+            carved_attachments = carve_and_inspect_attachments(doc, raw_bytes)
+
+            combined_js = didier_res.get("combined_js_code", "")
+            js_analysis = deobfuscate_and_analyze_javascript(combined_js)
+
+            # Overlay Findings
+            if structure_forensics.get("has_overlay"):
+                findings.append(Finding(
+                    category="structure",
+                    severity=structure_forensics.get("overlay_threat", "medium"),
+                    title=f"Trailing Overlay Data Appended Past %%EOF ({structure_forensics.get('overlay_size')} bytes)",
+                    description=(
+                        f"Document contains {structure_forensics.get('overlay_size')} bytes of trailing data past the final %%EOF token "
+                        f"(Shannon Entropy: {structure_forensics.get('overlay_entropy'):.2f}/8.0). {structure_forensics.get('overlay_desc')}."
+                    ),
+                    details={
+                        "overlay_size": structure_forensics.get("overlay_size"),
+                        "overlay_entropy": structure_forensics.get("overlay_entropy"),
+                        "overlay_threat": structure_forensics.get("overlay_threat"),
+                        "overlay_desc": structure_forensics.get("overlay_desc"),
+                        "mitre_technique": "T1027"
+                    }
+                ))
+
+            # Digital Signatures & Shadow Attacks
+            for sig in digital_signatures:
+                if sig.get("has_shadow_attack"):
+                    findings.append(Finding(
+                        category="exploit",
+                        severity="critical",
+                        title=f"PDF Shadow Attack Detected on Digital Signature (xref {sig.get('xref')})",
+                        description=(
+                            f"Digital signature by '{sig.get('signer')}' covers byte range up to {sig.get('byte_range')[2] + sig.get('byte_range')[3]} "
+                            f"bytes, but file size is {len(raw_bytes)} bytes ({sig.get('shadow_bytes_count')} modified trailing bytes). "
+                            "Document was incrementally altered after signing, invalidating document integrity."
+                        ),
+                        details=sig
+                    ))
+                else:
+                    findings.append(Finding(
+                        category="structure",
+                        severity="info",
+                        title=f"Digital Signature Present: {sig.get('signer')}",
+                        description=f"PDF is cryptographically signed ({sig.get('subfilter')}). Reason: {sig.get('reason')}",
+                        details=sig
+                    ))
+
+            # Concealed Visual Content
+            if concealed_content.get("white_text_count", 0) > 0:
+                findings.append(Finding(
+                    category="evasion",
+                    severity="high",
+                    title=f"Concealed White-on-White Text Detected ({concealed_content['white_text_count']} span(s))",
+                    description=(
+                        f"Discovered {concealed_content['white_text_count']} text span(s) rendered with white font color (#FFFFFF) "
+                        "against a document page. Concealed text is often utilized for prompt injection attacks, search engine poisoning, or hidden exfiltration instructions."
+                    ),
+                    details={"samples": concealed_content.get("white_text_spans", [])[:5]}
+                ))
+
+            if concealed_content.get("tiny_font_count", 0) > 0:
+                findings.append(Finding(
+                    category="evasion",
+                    severity="medium",
+                    title=f"Sub-Pixel Micro Text Detected ({concealed_content['tiny_font_count']} span(s) < 1.0 pt)",
+                    description=(
+                        f"Discovered {concealed_content['tiny_font_count']} micro-sized text span(s) with font size below 1.0pt. "
+                        "Sub-pixel text is invisible to human viewers but parsed by automated scrapers and LLMs."
+                    ),
+                    details={"samples": concealed_content.get("tiny_font_spans", [])[:5]}
+                ))
+
+            if concealed_content.get("off_page_count", 0) > 0:
+                findings.append(Finding(
+                    category="evasion",
+                    severity="medium",
+                    title=f"Off-Page Hidden Text Rendering Detected ({concealed_content['off_page_count']} span(s))",
+                    description=(
+                        f"Document renders {concealed_content['off_page_count']} text element(s) with coordinates outside "
+                        "the visible page MediaBox bounding box."
+                    ),
+                    details={"samples": concealed_content.get("off_page_spans", [])[:5]}
+                ))
+
+            if concealed_content.get("has_invisible_render_mode"):
+                findings.append(Finding(
+                    category="evasion",
+                    severity="high",
+                    title="Invisible Text Rendering Mode (3 Tr) Detected",
+                    description=(
+                        "Page content stream declares PDF text rendering operator '3 Tr' (Neither fill nor stroke text). "
+                        "Text rendered under mode 3 is rendered invisibly on the canvas while remaining indexable by parsers."
+                    )
+                ))
+
+            if concealed_content.get("deceptive_link_count", 0) > 0:
+                findings.append(Finding(
+                    category="phishing",
+                    severity="high",
+                    title=f"Deceptive Hyperlink Mismatch Detected ({concealed_content['deceptive_link_count']} link(s))",
+                    description=(
+                        f"Discovered {concealed_content['deceptive_link_count']} hyperlink(s) where the displayed URL text "
+                        "points to a completely different domain than the underlying clickable destination URI."
+                    ),
+                    details={"links": concealed_content.get("deceptive_links", [])[:5], "mitre_technique": "T1566.002"}
+                ))
+
+            # Dangerous JavaScript APIs & Shellcode
+            if js_analysis.get("dangerous_apis"):
+                for api_item in js_analysis["dangerous_apis"]:
+                    findings.append(Finding(
+                        category="exploit",
+                        severity=api_item.get("risk", "high"),
+                        title=f"High-Risk Acrobat JavaScript API: {api_item.get('api')}",
+                        description=api_item.get("description"),
+                        details={"api": api_item.get("api"), "mitre_technique": api_item.get("mitre")}
+                    ))
+
+            if js_analysis.get("shellcode_indicators"):
+                findings.append(Finding(
+                    category="exploit",
+                    severity="critical",
+                    title="Shellcode / Memory Spray Pattern in PDF JavaScript",
+                    description="; ".join(js_analysis["shellcode_indicators"]),
+                    details={"indicators": js_analysis["shellcode_indicators"], "mitre_technique": "T1055"}
+                ))
+
+            # Carved Attachments Threats
+            for att in carved_attachments:
+                if att.get("is_threat") or att.get("threat_level") in ["critical", "high"]:
+                    findings.append(Finding(
+                        category="malware",
+                        severity=att.get("threat_level", "critical"),
+                        title=f"Weaponized Embedded Attachment: {att.get('filename')} ({att.get('classification')})",
+                        description=f"Carved embedded attachment '{att.get('filename')}' ({att.get('size_formatted')}) matches weaponized file classification: {att.get('classification')}.",
+                        details=att
+                    ))
+
             didier_counts = didier_res.get("pdfid_counts", {})
 
             data = {
@@ -501,7 +660,13 @@ class PDFAnalyzer(BaseAnalyzer):
                 "filter_counts": filter_counts,
                 "pdf_version": metadata.get("format", "PDF"),
                 "is_linearized": bool(re.search(r'/Linearized\b', raw_text)),
-                "text": "\n".join(page_texts)
+                "text": "\n".join(page_texts),
+                "structure_forensics": structure_forensics,
+                "digital_signatures": digital_signatures,
+                "concealed_content": concealed_content,
+                "action_chains": action_chains,
+                "carved_attachments": carved_attachments,
+                "js_analysis": js_analysis
             }
 
             if has_js and didier_res.get("combined_js_code"):

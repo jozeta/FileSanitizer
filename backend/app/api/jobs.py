@@ -71,7 +71,8 @@ def get_job_status(job_id: str):
         "is_unlocked": getattr(job, "is_unlocked", False),
         "error_message": job.error_message,
         "thumbnail_available": job.thumbnail_available,
-        "thumbnail_url": job.thumbnail_url
+        "thumbnail_url": job.thumbnail_url,
+        "disabled_checks": getattr(job, "disabled_checks", [])
     }
 
 @router.get("/{job_id}/analysis")
@@ -543,7 +544,7 @@ def download_forensic_report(
         raise HTTPException(status_code=404, detail="Job not found.")
 
     report_data = ForensicReportGenerator.build_report_data(job)
-    safe_name = job.filename.replace(" ", "_")
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', job.filename) or "artifact"
 
     if format and format.lower() == "html":
         html_content = ForensicReportGenerator.generate_html_report(report_data)
@@ -657,7 +658,7 @@ def run_deobfuscator(job_id: str, req: Optional[DeobfuscateRequest] = None):
 
     op = (req.operation or "analyze").lower() if req else "analyze"
 
-    # Specific CyberChef operations
+    # Specific Decoder operations
     if op == "rot13":
         return {"operation": op, "result": Deobfuscator.rot13(input_text)}
     elif op == "rot47":

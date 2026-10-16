@@ -209,7 +209,7 @@ class ActiveContentAnalyzer(BaseAnalyzer):
                     else:
                         findings.append(Finding(
                             category="javascript",
-                            severity="informational",
+                            severity="info",
                             title=f"Client-Side JavaScript Present in HTML ({len(scripts)} tags)",
                             description="Document contains client-side script tags (normal for web pages and applications).",
                             details={"script_tags": len(scripts)}

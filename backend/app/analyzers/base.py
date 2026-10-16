@@ -2,7 +2,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Set
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 URL_REGEX = re.compile(
     r'(?:https?|ftp)://[a-zA-Z0-9\-\._~:/\?#\[\]@!\$&\'\(\)\*\+,;=%]+',
@@ -35,6 +35,16 @@ class Finding(BaseModel):
     title: str
     description: str
     details: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("severity", mode="before")
+    @classmethod
+    def normalize_severity(cls, v: str) -> str:
+        if isinstance(v, str):
+            v_lower = v.lower().strip()
+            if v_lower in ("informational", "information"):
+                return "info"
+            return v_lower
+        return v
 
 class AnalyzerResult(BaseModel):
     analyzer_name: str

@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { WarningRule, YaraRule, ClamAVInfo, ExternalConnectionPolicy, StatisticsData } from '../types';
 import { apiClient } from '../api/client';
 import { formatBytes, formatTimestamp, setTimeDisplayConfig } from '../utils/formatters';
+import { Sparkles, Github, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { NewVersionModal } from './NewVersionModal';
+import { APP_VERSION } from '../version';
 import {
   FileFormatDefinition,
   DEFAULT_FILE_FORMATS,
@@ -46,6 +49,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       return false;
     }
   });
+
+  // UI Preferences State (Check for GitHub updates - enabled by default)
+  const [checkForUpdates, setCheckForUpdates] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('fs_check_for_updates');
+      return v !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState<boolean>(false);
+  const [updateCheckStatus, setUpdateCheckStatus] = useState<{
+    type: 'success' | 'has_update' | 'warning' | 'error';
+    message: string;
+    details?: any;
+  } | null>(null);
+  const [showUpdateModalFromSettings, setShowUpdateModalFromSettings] = useState<boolean>(false);
+  const [updateModalInfo, setUpdateModalInfo] = useState<any>(null);
 
   // Time & Localization State
   const [timeSettings, setTimeSettings] = useState<any>({
@@ -667,6 +688,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
         setShowTelemetryDiagnostics(Boolean(res.settings.ui_preferences.show_telemetry_diagnostics));
         localStorage.setItem('fs_show_telemetry_diagnostics', String(res.settings.ui_preferences.show_telemetry_diagnostics));
       }
+      if (res.settings?.ui_preferences?.check_for_updates !== undefined) {
+        setCheckForUpdates(Boolean(res.settings.ui_preferences.check_for_updates));
+        localStorage.setItem('fs_check_for_updates', String(res.settings.ui_preferences.check_for_updates));
+      }
     } catch (e: any) {
       if (e.message?.includes('401') || e.message?.includes('auth') || e.message?.includes('Unauthorized')) {
         handleLogout('Session expired. Please log in again.');
@@ -1263,6 +1288,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
         setShowTelemetryDiagnostics(Boolean(res.ui_preferences.show_telemetry_diagnostics));
         localStorage.setItem('fs_show_telemetry_diagnostics', String(res.ui_preferences.show_telemetry_diagnostics));
       }
+      if (res?.ui_preferences?.check_for_updates !== undefined) {
+        setCheckForUpdates(Boolean(res.ui_preferences.check_for_updates));
+        localStorage.setItem('fs_check_for_updates', String(res.ui_preferences.check_for_updates));
+      }
     } catch {
       // fallback
     }
@@ -1297,6 +1326,77 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       }
     } else {
       showNotification(`Telemetry & Diagnostics tab ${enable ? 'is now visible' : 'is now hidden'} in file analysis dashboards.`);
+    }
+  };
+
+  const handleToggleCheckForUpdates = async (enable: boolean) => {
+    setCheckForUpdates(enable);
+    try {
+      localStorage.setItem('fs_check_for_updates', String(enable));
+    } catch (e) {
+      console.warn('Failed to save to localStorage', e);
+    }
+    window.dispatchEvent(new CustomEvent('fs-settings-changed', {
+      detail: { check_for_updates: enable }
+    }));
+
+    if (token) {
+      try {
+        await apiClient.updateUiPreferences(token, { check_for_updates: enable });
+        if (settingsData) {
+          setSettingsData({
+            ...settingsData,
+            ui_preferences: {
+              ...(settingsData.ui_preferences || {}),
+              check_for_updates: enable,
+            }
+          });
+        }
+        showNotification(`Automatic update check on startup ${enable ? 'is now enabled' : 'is now disabled'}.`);
+      } catch (err: any) {
+        console.warn('Backend UI preferences update error:', err);
+      }
+    } else {
+      showNotification(`Automatic update check on startup ${enable ? 'is now enabled' : 'is now disabled'}.`);
+    }
+  };
+
+  const handleManualCheckUpdates = async () => {
+    setIsCheckingUpdates(true);
+    setUpdateCheckStatus(null);
+    try {
+      const res = await apiClient.checkForUpdates(true);
+      if (res.has_update) {
+        setUpdateCheckStatus({
+          type: 'has_update',
+          message: `New version v${res.latest_version} is available!`,
+          details: res,
+        });
+        setUpdateModalInfo(res);
+        setShowUpdateModalFromSettings(true);
+      } else if (res.external_blocked) {
+        setUpdateCheckStatus({
+          type: 'warning',
+          message: 'External network connections are disabled in settings policy.',
+        });
+      } else if (res.success) {
+        setUpdateCheckStatus({
+          type: 'success',
+          message: `You are running the latest version of FileSanitizer (v${res.current_version}).`,
+        });
+      } else {
+        setUpdateCheckStatus({
+          type: 'error',
+          message: res.error || 'Failed to check GitHub for updates.',
+        });
+      }
+    } catch (err: any) {
+      setUpdateCheckStatus({
+        type: 'error',
+        message: err.message || 'Error communicating with update service.',
+      });
+    } finally {
+      setIsCheckingUpdates(false);
     }
   };
 
@@ -1872,6 +1972,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
               }`}
             >
               {showTelemetryDiagnostics ? 'Hide Tab' : 'Show Tab'}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 mt-2.5">
+            <div className="text-left">
+              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Github className="w-3.5 h-3.5 text-slate-700" />
+                Automatic Update Checks
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {checkForUpdates ? 'Notify on new GitHub releases' : 'Checks disabled (no popups)'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleToggleCheckForUpdates(!checkForUpdates)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
+                checkForUpdates
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700'
+                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+              }`}
+            >
+              {checkForUpdates ? 'Turn Off' : 'Turn On'}
             </button>
           </div>
         </div>
@@ -2473,6 +2596,103 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   <span className={`w-2.5 h-2.5 rounded-full ${showTelemetryDiagnostics ? 'bg-emerald-400' : 'bg-slate-400'}`} />
                   <span>{showTelemetryDiagnostics ? '✓ Diagnostics Tab Visible (Click to Hide)' : '○ Diagnostics Tab Hidden (Click to Show)'}</span>
                 </button>
+              </div>
+            </div>
+
+            {/* GitHub Version & Automatic Update Checks Toggle Card */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1.5 max-w-2xl">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                      <Github className="w-3.5 h-3.5 text-slate-700" />
+                      Automatic GitHub Version &amp; Update Checks
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono ${
+                        checkForUpdates
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {checkForUpdates ? 'ENABLED (CHECK ON STARTUP)' : 'DISABLED (NO POPUPS)'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Automatically checks GitHub for newer FileSanitizer releases and security updates when loading the application.
+                    When a newer version exists, a notification popup modal will appear with release details, changelog, and direct GitHub links.
+                    Disable this option if you want to turn off automatic update checks and avoid update popups.
+                  </p>
+                </div>
+
+                <div className="shrink-0 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleCheckForUpdates(!checkForUpdates)}
+                    className={`px-5 py-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
+                      checkForUpdates
+                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700 shadow-indigo-600/20'
+                        : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+                    }`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full ${checkForUpdates ? 'bg-emerald-400' : 'bg-slate-400'}`} />
+                    <span>{checkForUpdates ? '✓ Auto-Check Enabled (Click to Turn Off)' : '○ Auto-Check Disabled (Click to Turn On)'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Manual Update Check Toolbar */}
+              <div className="pt-3 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleManualCheckUpdates}
+                    disabled={isCheckingUpdates}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-300 rounded-xl transition-all shadow-2xs disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isCheckingUpdates ? 'animate-spin' : ''}`} />
+                    <span>{isCheckingUpdates ? 'Checking GitHub...' : 'Check for Updates Now'}</span>
+                  </button>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Current: v{APP_VERSION}
+                  </span>
+                </div>
+
+                {updateCheckStatus && (
+                  <div className="flex items-center gap-2 text-xs">
+                    {updateCheckStatus.type === 'has_update' ? (
+                      <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-xl font-medium">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                        <span>{updateCheckStatus.message}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUpdateModalInfo(updateCheckStatus.details);
+                            setShowUpdateModalFromSettings(true);
+                          }}
+                          className="underline font-bold hover:text-emerald-900 cursor-pointer ml-1"
+                        >
+                          View Details &rarr;
+                        </button>
+                      </div>
+                    ) : updateCheckStatus.type === 'success' ? (
+                      <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{updateCheckStatus.message}</span>
+                      </div>
+                    ) : updateCheckStatus.type === 'warning' ? (
+                      <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>{updateCheckStatus.message}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1 rounded-xl">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>{updateCheckStatus.message}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -8204,6 +8424,18 @@ jobs:
           </div>
         </div>,
         document.body
+      )}
+
+      {showUpdateModalFromSettings && updateModalInfo && (
+        <NewVersionModal
+          isOpen={showUpdateModalFromSettings}
+          onClose={() => setShowUpdateModalFromSettings(false)}
+          updateInfo={updateModalInfo}
+          onDisableFutureChecks={() => {
+            handleToggleCheckForUpdates(false);
+            setShowUpdateModalFromSettings(false);
+          }}
+        />
       )}
     </div>
   );

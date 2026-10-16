@@ -36,7 +36,6 @@ import { LnkCard } from './LnkCard';
 import { AntiAnalysisInspectorCard } from './AntiAnalysisInspectorCard';
 import { ApkAnalysisCard } from './ApkAnalysisCard';
 import { JavaAnalysisCard } from './JavaAnalysisCard';
-import { DetectionRulesModal } from './DetectionRulesModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { CrossArtifactNavigator } from './CrossArtifactNavigator';
 import { detectCrossArtifactReferences } from '../utils/crossFileReferences';
@@ -85,49 +84,56 @@ interface AnalysisDashboardProps {
 function getFormatSections(job: JobDetail | null) {
   if (!job) return [];
   const sections: { id: string; label: string; icon: any; count?: number }[] = [];
-  const isDomain = job.category === 'domain' || Boolean(job.domain_info);
-  const isAppleScript = job.category === 'applescript' || Boolean(job.applescript_info) || Boolean(job.filename?.match(/\.(applescript|applescrip|scpt|scptd)$/i));
+  const cat = job.category || 'unknown';
+  const isUnknown = cat === 'unknown' || !cat;
+  const isDomain = cat === 'domain' || Boolean(job.domain_info);
+  const isAppleScript = cat === 'applescript' || Boolean(job.applescript_info) || (isUnknown && Boolean(job.filename?.match(/\.(applescript|applescrip|scpt|scptd)$/i)));
+  const disabledChecks: string[] = (job as any)?.disabled_checks || [];
+  const isCheckDisabled = (check: string) => disabledChecks.includes(check);
 
-  if (isDomain) {
+  const domainChecks = ['check_whois_rdap', 'check_dns_records', 'check_subdomains', 'check_ssl_tls_cert', 'check_mx_reputation'];
+  const allDomainDisabled = domainChecks.every(c => isCheckDisabled(c));
+  if (isDomain && !allDomainDisabled) {
     sections.push({ id: 'domain', label: 'Domain & IP Infrastructure', icon: Globe });
   }
-  if (job.category === 'extension' || Boolean(job.extension_info)) {
+  if (cat === 'extension' || Boolean(job.extension_info)) {
     sections.push({ id: 'extension', label: 'Extension Manifest & Scripts', icon: Layers });
   }
   if (isAppleScript) {
     sections.push({ id: 'applescript', label: 'AppleScript Decompilation', icon: Terminal, count: job.applescript_info?.findings?.length });
   }
-  if (job.category === 'email' || Boolean(job.email_info)) {
+  if (cat === 'email' || Boolean(job.email_info) || (isUnknown && Boolean(job.filename?.match(/\.(eml|msg)$/i)))) {
     sections.push({ id: 'email', label: 'Email Headers & Tracking', icon: Mail, count: job.email_info?.tracking_pixel_count });
   }
-  if (job.category === 'office' || Boolean(job.office_info) || job.filename?.match(/\.(docx?|xlsx?|pptx?|docm|xlsm|pptm|rtf)$/i)) {
+  if (cat === 'office' || Boolean(job.office_info) || (isUnknown && Boolean(job.filename?.match(/\.(docx?|xlsx?|pptx?|docm|xlsm|pptm|rtf)$/i)))) {
     sections.push({ id: 'office', label: 'Office & Macro Triage', icon: FileSpreadsheet, count: job.office_info?.macro_modules?.length });
   }
-  if (job.category === 'pdf' || Boolean(job.pdf_info) || job.filename?.toLowerCase().endsWith('.pdf')) {
+  if (cat === 'pdf' || Boolean(job.pdf_info) || (isUnknown && Boolean(job.filename?.toLowerCase().endsWith('.pdf')))) {
     sections.push({ id: 'pdf', label: 'PDF Structure & JavaScript', icon: FileText, count: job.pdf_info?.javascript_streams?.length });
   }
-  if (job.category === 'apk' || Boolean(job.apk_info) || job.filename?.match(/\.(apk|aab|xapk|dex)$/i)) {
+  if (cat === 'apk' || Boolean(job.apk_info) || (isUnknown && Boolean(job.filename?.match(/\.(apk|aab|xapk|dex)$/i)))) {
     sections.push({ id: 'apk', label: 'Android APK & Mobile Security', icon: Smartphone, count: job.apk_info?.dangerous_permissions?.length });
   }
-  if (job.category === 'java' || Boolean(job.java_info) || job.filename?.match(/\.(java|class|jar|war|ear)$/i)) {
+  const isJarArchive = Boolean(job.jar_info) || job.java_info?.java_subtype === 'jar' || (isUnknown && Boolean(job.filename?.match(/\.(jar|war|ear)$/i)));
+  if (!isJarArchive && (cat === 'java' || Boolean(job.java_info) || (isUnknown && Boolean(job.filename?.match(/\.(java|class)$/i))))) {
     sections.push({ id: 'java', label: 'Java Forensics & Bytecode', icon: Coffee, count: job.java_info?.dangerous_apis?.length });
   }
-  if (Boolean(job.jar_info) || job.filename?.match(/\.(jar|war|ear)$/i)) {
-    sections.push({ id: 'jar', label: 'JAR Java Bytecode Triage', icon: Coffee, count: job.jar_info?.suspicious_apis?.length });
+  if (isJarArchive) {
+    sections.push({ id: 'jar', label: 'JAR Java Bytecode Triage', icon: Coffee, count: job.jar_info?.suspicious_apis?.length || job.java_info?.dangerous_apis?.length });
   }
-  if (job.category === 'image' || Boolean(job.image_info) || Boolean(job.ai_image_provenance) || job.filename?.match(/\.(png|jpe?g|gif|webp|bmp|tiff?)$/i)) {
+  if (cat === 'image' || Boolean(job.image_info) || Boolean(job.ai_image_provenance) || (isUnknown && Boolean(job.filename?.match(/\.(png|jpe?g|gif|webp|bmp|tiff?)$/i)))) {
     sections.push({ id: 'image', label: 'Image Forensics & Provenance', icon: ImageIcon });
   }
-  if (!isAppleScript && (job.category === 'executable' || job.category === 'binary' || Boolean(job.binary_info))) {
+  if (!isAppleScript && (cat === 'executable' || cat === 'binary' || Boolean(job.binary_info) || (isUnknown && Boolean(job.filename?.match(/\.(exe|dll|sys|scr|elf|bin)$/i))))) {
     sections.push({ id: 'binary', label: 'PE / ELF Binary Headers', icon: Cpu });
   }
-  if (job.category === 'script' || Boolean(job.script_triage)) {
+  if (cat === 'script' || Boolean(job.script_triage) || (isUnknown && Boolean(job.filename?.match(/\.(ps1|bat|cmd|vbs|sh|bash|php|py|rb|js)$/i)))) {
     sections.push({ id: 'script', label: 'Script Syntax & AST Triage', icon: Terminal, count: job.script_triage?.risk_score });
   }
   if (job.mitre_attack && job.mitre_attack.length > 0) {
     sections.push({ id: 'mitre', label: 'ATT&CK Navigator Matrix', icon: ShieldAlert, count: job.mitre_attack.length });
   }
-  if ((job.embedded_files && job.embedded_files.length > 0) || (job.pdf_info?.embedded_files && job.pdf_info.embedded_files.length > 0)) {
+  if (!isCheckDisabled('check_embedded_files') && ((job.embedded_files && job.embedded_files.length > 0) || (job.pdf_info?.embedded_files && job.pdf_info.embedded_files.length > 0))) {
     sections.push({
       id: 'embedded',
       label: 'Embedded Artifacts',
@@ -135,16 +141,16 @@ function getFormatSections(job: JobDetail | null) {
       count: job.embedded_files?.length || job.pdf_info?.embedded_files?.length || 0
     });
   }
-  if (job.category === 'pcap' || Boolean(job.pcap_info) || job.filename?.match(/\.(pcap|pcapng|cap)$/i)) {
+  if (cat === 'pcap' || Boolean(job.pcap_info) || (isUnknown && Boolean(job.filename?.match(/\.(pcap|pcapng|cap)$/i)))) {
     sections.push({ id: 'pcap', label: 'PCAP Network Packet Forensics', icon: Activity, count: job.pcap_info?.summary?.packet_count });
   }
-  if (job.category === 'evtx' || Boolean(job.evtx_info) || job.filename?.match(/\.(evtx)$/i)) {
+  if (cat === 'evtx' || Boolean(job.evtx_info) || (isUnknown && Boolean(job.filename?.match(/\.(evtx)$/i)))) {
     sections.push({ id: 'evtx', label: 'Windows Event Log Forensics', icon: Terminal, count: job.evtx_info?.total_records });
   }
-  if (job.category === 'lnk' || Boolean(job.lnk_info) || job.filename?.toLowerCase().endsWith('.lnk')) {
+  if (cat === 'lnk' || Boolean(job.lnk_info) || (isUnknown && Boolean(job.filename?.toLowerCase().endsWith('.lnk')))) {
     sections.push({ id: 'lnk', label: 'LNK Shortcut Dissection', icon: Terminal });
   }
-  if (job.anti_analysis && (job.anti_analysis.evasion_detected || (job.anti_analysis.techniques && job.anti_analysis.techniques.length > 0))) {
+  if (!isCheckDisabled('check_anti_analysis') && !isCheckDisabled('anti_analysis_enabled') && job.anti_analysis && (job.anti_analysis.evasion_detected || (job.anti_analysis.techniques && job.anti_analysis.techniques.length > 0))) {
     sections.push({
       id: 'anti_analysis',
       label: 'Anti-Analysis & Evasion',
@@ -161,50 +167,53 @@ function getFormatSections(job: JobDetail | null) {
 
 function getFormatTabConfig(sections: any[], job: JobDetail | null) {
   if (sections.length === 0 || !job) return null;
-  const isAppleScript = job.category === 'applescript' || Boolean(job.applescript_info) || Boolean(job.filename?.match(/\.(applescript|applescrip|scpt|scptd)$/i));
-  if (job.category === 'domain' || job.domain_info) {
+  const cat = job.category || 'unknown';
+  const isUnknown = cat === 'unknown' || !cat;
+  const isAppleScript = cat === 'applescript' || Boolean(job.applescript_info) || (isUnknown && Boolean(job.filename?.match(/\.(applescript|applescrip|scpt|scptd)$/i)));
+  if (cat === 'domain' || job.domain_info) {
     return { label: 'Domain / IP Intelligence', icon: Globe };
   }
-  if (job.category === 'extension' || job.extension_info) {
+  if (cat === 'extension' || job.extension_info) {
     return { label: 'Browser Extension', icon: Layers };
   }
   if (isAppleScript) {
     return { label: 'AppleScript Triage', icon: Terminal };
   }
-  if (job.category === 'email' || job.email_info) {
+  if (cat === 'email' || job.email_info || (isUnknown && job.filename?.match(/\.(eml|msg)$/i))) {
     return { label: 'Email Triage', icon: Mail };
   }
-  if (job.category === 'office' || job.office_info || job.filename?.match(/\.(docx?|xlsx?|pptx?|docm|xlsm|pptm|rtf)$/i)) {
+  if (cat === 'office' || job.office_info || (isUnknown && job.filename?.match(/\.(docx?|xlsx?|pptx?|docm|xlsm|pptm|rtf|one|onetoc2)$/i))) {
     return { label: 'Office & Macro Triage', icon: FileSpreadsheet };
   }
-  if (job.category === 'pdf' || job.pdf_info || job.filename?.toLowerCase().endsWith('.pdf')) {
+  if (cat === 'pdf' || job.pdf_info || (isUnknown && job.filename?.toLowerCase().endsWith('.pdf'))) {
     return { label: 'PDF Structure & Triage', icon: FileText };
   }
-  if (job.category === 'apk' || job.apk_info || job.filename?.match(/\.(apk|aab|xapk|dex)$/i)) {
+  if (cat === 'apk' || job.apk_info || (isUnknown && job.filename?.match(/\.(apk|aab|xapk|dex)$/i))) {
     return { label: 'Android APK & Mobile Security', icon: Smartphone };
   }
-  if (job.category === 'java' || job.java_info || job.filename?.match(/\.(java|class)$/i)) {
+  const isJarArchive = Boolean(job.jar_info) || job.java_info?.java_subtype === 'jar' || (isUnknown && Boolean(job.filename?.match(/\.(jar|war|ear)$/i)));
+  if (!isJarArchive && (cat === 'java' || job.java_info || (isUnknown && job.filename?.match(/\.(java|class)$/i)))) {
     return { label: 'Java Forensics & Bytecode', icon: Coffee };
   }
-  if (job.jar_info || job.filename?.toLowerCase().endsWith('.jar')) {
+  if (isJarArchive) {
     return { label: 'JAR Java Triage', icon: Coffee };
   }
-  if (job.category === 'image' || job.image_info || job.ai_image_provenance || job.filename?.match(/\.(png|jpe?g|gif|webp|bmp|tiff?)$/i)) {
+  if (cat === 'image' || job.image_info || job.ai_image_provenance || (isUnknown && job.filename?.match(/\.(png|jpe?g|gif|webp|bmp|tiff?)$/i))) {
     return { label: 'Image Forensics & Provenance', icon: ImageIcon };
   }
-  if (!isAppleScript && (job.category === 'executable' || job.category === 'binary' || job.binary_info)) {
+  if (!isAppleScript && (cat === 'executable' || cat === 'binary' || job.binary_info || (isUnknown && job.filename?.match(/\.(exe|dll|sys|scr|elf|bin)$/i)))) {
     return { label: 'PE / Binary Analysis', icon: Cpu };
   }
-  if (job.category === 'lnk' || job.lnk_info || job.filename?.toLowerCase().endsWith('.lnk')) {
+  if (cat === 'lnk' || job.lnk_info || (isUnknown && job.filename?.toLowerCase().endsWith('.lnk'))) {
     return { label: 'LNK Shortcut Dissection', icon: Terminal };
   }
-  if (job.category === 'pcap' || job.pcap_info || job.filename?.match(/\.(pcap|pcapng|cap)$/i)) {
+  if (cat === 'pcap' || job.pcap_info || (isUnknown && job.filename?.match(/\.(pcap|pcapng|cap)$/i))) {
     return { label: 'PCAP Network Forensics', icon: Activity };
   }
-  if (job.category === 'evtx' || job.evtx_info || job.filename?.match(/\.(evtx)$/i)) {
+  if (cat === 'evtx' || job.evtx_info || (isUnknown && job.filename?.match(/\.(evtx)$/i))) {
     return { label: 'Windows Event Log Forensics', icon: Terminal };
   }
-  if (job.category === 'script' || job.script_triage) {
+  if (cat === 'script' || job.script_triage || (isUnknown && job.filename?.match(/\.(ps1|bat|cmd|vbs|sh|bash|php|py|rb|js)$/i))) {
     return { label: 'Script Triage', icon: Terminal };
   }
   if (job.embedded_files && job.embedded_files.length > 0) {
@@ -244,13 +253,6 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState('');
   const [showReportMenu, setShowReportMenu] = useState(false);
-  const [showDetectionRulesModal, setShowDetectionRulesModal] = useState<boolean>(() => {
-    try {
-      return new URLSearchParams(window.location.search).get('rules') === 'true';
-    } catch {
-      return false;
-    }
-  });
   const [copiedRichHash, setCopiedRichHash] = useState(false);
   const [cdrPolicies, setCdrPolicies] = useState<Record<string, any> | null>(null);
   const initialTabSelectedRef = useRef(false);
@@ -691,16 +693,6 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
               </div>
 
               <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
-                {/* Automated Detection Rules (KQL & YARA) Button */}
-                <button
-                  onClick={() => setShowDetectionRulesModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
-                  title="Automated Detection Rule Generation (Sentinel KQL & YARA)"
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>Detection Rules</span>
-                </button>
-
                 {/* Forensic Dossier Export Button */}
                 <div className="relative">
                   <button
@@ -1214,7 +1206,13 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
               switch (currentSubTab) {
                 case 'domain':
                   return job.domain_info ? (
-                    <DomainAnalyticsCard domainInfo={job.domain_info} thumbnailUrl={job.thumbnail_url} jobId={job.job_id} onNavigateToJob={onSelectJob} />
+                    <DomainAnalyticsCard
+                      domainInfo={job.domain_info}
+                      thumbnailUrl={job.thumbnail_url}
+                      jobId={job.job_id}
+                      onNavigateToJob={onSelectJob}
+                      disabledChecks={(job as any).disabled_checks}
+                    />
                   ) : (
                     <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center text-slate-500">
                       <Globe className="w-8 h-8 text-slate-400 mx-auto mb-2" />
@@ -1247,6 +1245,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         findings={job.findings}
                         onSelectJob={onSelectJob}
                         workspaceJobs={workspaceJobs}
+                        disabledChecks={(job as any).disabled_checks}
                       />
                     </ErrorBoundary>
                   );
@@ -1261,6 +1260,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         antiAnalysis={job.anti_analysis}
                         workspaceJobs={workspaceJobs}
                         onSelectJob={onSelectJob}
+                        disabledChecks={(job as any).disabled_checks}
                       />
                     </ErrorBoundary>
                   );
@@ -1287,6 +1287,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         antiAnalysis={job.anti_analysis}
                         workspaceJobs={workspaceJobs}
                         onSelectJob={onSelectJob}
+                        disabledChecks={(job as any).disabled_checks}
                       />
                     </ErrorBoundary>
                   );
@@ -1302,6 +1303,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         workspaceJobs={workspaceJobs}
                         onSelectJob={onSelectJob}
                         embeddedFiles={job.embedded_files}
+                        disabledChecks={(job as any).disabled_checks}
                       />
                     </ErrorBoundary>
                   );
@@ -1320,7 +1322,14 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                 case 'jar':
                   return (
                     <ErrorBoundary fallbackTitle="JAR Java Triage Error" onReset={() => setActiveTab('security')}>
-                      <JarTriageCard jarInfo={job.jar_info} filename={job.filename} findings={job.findings} />
+                      <JarTriageCard
+                        jarInfo={job.jar_info || (job.java_info?.java_subtype === 'jar' ? (job.java_info as any) : undefined)}
+                        filename={job.filename}
+                        findings={job.findings}
+                        antiAnalysis={job.anti_analysis}
+                        workspaceJobs={workspaceJobs}
+                        onSelectJob={onSelectJob}
+                      />
                     </ErrorBoundary>
                   );
                 case 'image':
@@ -1354,6 +1363,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         jobId={job.job_id}
                         onSelectJob={onSelectJob}
                         workspaceJobs={workspaceJobs}
+                        disabledChecks={(job as any).disabled_checks}
                         onNavigateToEvtx={(evtxJobId?: string, _targetIp?: string) => {
                           if (onSelectJob && evtxJobId) {
                             onSelectJob(evtxJobId);
@@ -1372,6 +1382,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         antiAnalysis={job.anti_analysis}
                         workspaceJobs={workspaceJobs}
                         onSelectJob={onSelectJob}
+                        disabledChecks={(job as any).disabled_checks}
                         onNavigateToPcap={(pcapJobId?: string, _targetIp?: string) => {
                           if (onSelectJob && pcapJobId) {
                             onSelectJob(pcapJobId);
@@ -1616,17 +1627,6 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
             </div>
           </div>
         </div>
-      )}
-
-      {/* Automated Detection Rules (Sentinel KQL & YARA) Modal */}
-      {showDetectionRulesModal && (
-        <DetectionRulesModal
-          isOpen={showDetectionRulesModal}
-          onClose={() => setShowDetectionRulesModal(false)}
-          jobId={job.job_id}
-          filename={job.filename}
-          initialRules={job.detection_rules}
-        />
       )}
     </div>
   );

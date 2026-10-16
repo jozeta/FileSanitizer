@@ -14,6 +14,9 @@ import re
 import struct
 import zipfile
 import hashlib
+import uuid
+from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple, Set
 
@@ -254,6 +257,132 @@ HIGH_RISK_JAVA_APIS = [
         "owasp": "A01:2021-Broken Access Control",
         "mitre": "T1414",
         "mitre_name": "Credentials from Web Browsers / Clipboard"
+    },
+    {
+        "pattern": re.compile(r'java/lang/invoke/MethodHandles|MethodHandles\.lookup', re.I),
+        "api": "MethodHandles.lookup()",
+        "title": "Dynamic MethodHandles Invocation & Introspection",
+        "severity": "medium",
+        "category": "reflection",
+        "description": "Utilizes polymorphic MethodHandles to invoke methods dynamically, potentially obscuring execution targets from static inspection.",
+        "risk_explanation": "Enables low-level reflective invocation that bypasses direct caller-sensitive method dispatch checks, frequently abused to obscure dangerous API calls.",
+        "remediation": "Restrict dynamic method handle invocation to well-defined dependency injection frameworks.",
+        "cwe": "CWE-470: Use of Externally-Controlled Input to Select Classes or Code",
+        "owasp": "A04:2021-Insecure Design",
+        "mitre": "T1626",
+        "mitre_name": "Obfuscated Files or Information"
+    },
+    {
+        "pattern": re.compile(r'javax/tools/JavaCompiler|ToolProvider\.getSystemJavaCompiler', re.I),
+        "api": "JavaCompiler",
+        "title": "Runtime Java Source Code Compilation",
+        "severity": "critical",
+        "category": "code_loading",
+        "description": "Dynamically compiles on-the-fly Java source code in memory during execution.",
+        "risk_explanation": "Compiles arbitrary Java source strings directly into executable bytecode at runtime, providing an evasion mechanism to compile malicious payloads on the victim host.",
+        "remediation": "Package pre-compiled class files into the build rather than compiling code dynamically at runtime.",
+        "cwe": "CWE-94: Improper Control of Generation of Code",
+        "owasp": "A08:2021-Software and Data Integrity Failures",
+        "mitre": "T1027.004",
+        "mitre_name": "Compile After Delivery"
+    },
+    {
+        "pattern": re.compile(r'Runtime\.getRuntime\(\)\.addShutdownHook|addShutdownHook', re.I),
+        "api": "Runtime.addShutdownHook()",
+        "title": "Process Shutdown Hook Registration",
+        "severity": "medium",
+        "category": "persistence",
+        "description": "Registers a thread executed automatically when JVM terminates or receives a termination signal.",
+        "risk_explanation": "Shutdown hooks execute when the JVM is closing. Malware abuses shutdown hooks for anti-analysis cleanup, persistence installation, or dropping secondary payloads before process termination.",
+        "remediation": "Ensure shutdown hooks only perform clean resource disposal (closing connections, saving state).",
+        "cwe": "CWE-672: Operation on Resource After Expiration or Release",
+        "owasp": "A04:2021-Insecure Design",
+        "mitre": "T1543",
+        "mitre_name": "Create or Modify System Process"
+    },
+    {
+        "pattern": re.compile(r'javax/script/ScriptEngine|ScriptEngineManager|ScriptEngine;?\.?eval', re.I),
+        "api": "ScriptEngine.eval()",
+        "title": "Dynamic Script Engine Execution (Nashorn / JS / Groovy)",
+        "severity": "critical",
+        "category": "execution",
+        "description": "Executes dynamically interpreted script code (JavaScript, Groovy, Python) within the JVM.",
+        "risk_explanation": "Allows arbitrary script execution inside the JVM runtime without bytecode compilation, frequently used as an in-memory execution cradle.",
+        "remediation": "Validate and sanitize script inputs, or disable JSR-223 ScriptEngineManager unless strictly required.",
+        "cwe": "CWE-94: Improper Control of Generation of Code",
+        "owasp": "A03:2021-Injection",
+        "mitre": "T1059",
+        "mitre_name": "Command and Scripting Interpreter"
+    },
+    {
+        "pattern": re.compile(r'javax/el/ExpressionFactory|ValueExpression|MethodExpression', re.I),
+        "api": "Expression Language (EL)",
+        "title": "Java Expression Language (EL) Dynamic Evaluation",
+        "severity": "high",
+        "category": "injection",
+        "description": "Evaluates dynamic Expression Language strings (JSP / Spring EL / OGNL).",
+        "risk_explanation": "Untrusted input in Expression Language strings allows attackers to evaluate Java expressions that invoke Runtime.getRuntime().exec() or access internal objects (Spring4Shell / Struts RCE style).",
+        "remediation": "Never concatenate untrusted input into EL expression templates.",
+        "cwe": "CWE-917: Expression Language Injection",
+        "owasp": "A03:2021-Injection",
+        "mitre": "T1190",
+        "mitre_name": "Exploit Public-Facing Application"
+    },
+    {
+        "pattern": re.compile(r'java/sql/Statement;?\.?execute|java/sql/Statement;?\.?executeQuery', re.I),
+        "api": "java.sql.Statement.execute()",
+        "title": "Raw SQL Statement Execution (SQLi Risk)",
+        "severity": "medium",
+        "category": "injection",
+        "description": "Executes raw SQL query strings directly against relational databases.",
+        "risk_explanation": "Using Statement.execute() instead of PreparedStatement invites SQL injection if query parameters are concatenated from user input.",
+        "remediation": "Always use java.sql.PreparedStatement with parameterized query placeholders (?).",
+        "cwe": "CWE-89: SQL Injection",
+        "owasp": "A03:2021-Injection",
+        "mitre": "T1190",
+        "mitre_name": "Exploit Public-Facing Application"
+    },
+    {
+        "pattern": re.compile(r'org/apache/commons/exec/CommandLine|DefaultExecutor', re.I),
+        "api": "org.apache.commons.exec",
+        "title": "Apache Commons Exec Third-Party Command Spawning",
+        "severity": "critical",
+        "category": "execution",
+        "description": "Spawns host operating system processes via the Apache Commons Exec library.",
+        "risk_explanation": "Third-party process execution wrapper often used to disguise command execution from simple Runtime.exec checks.",
+        "remediation": "Audit commands passed to CommandLine and sanitize all command arguments.",
+        "cwe": "CWE-78: OS Command Injection",
+        "owasp": "A03:2021-Injection",
+        "mitre": "T1059",
+        "mitre_name": "Command and Scripting Interpreter"
+    },
+    {
+        "pattern": re.compile(r'java/lang/management/ManagementFactory|com/sun/management', re.I),
+        "api": "ManagementFactory (JMX)",
+        "title": "JVM Runtime & Environment Introspection (Anti-Analysis / Telemetry)",
+        "severity": "low",
+        "category": "evasion",
+        "description": "Inspects JVM process arguments, memory pools, thread dumps, and operating system properties.",
+        "risk_explanation": "Can be utilized by malware to inspect launch flags for debuggers (-agentlib:jdwp) or detect hypervisor environments.",
+        "remediation": "Verify whether management bean queries are required for operational monitoring.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp": "A01:2021-Broken Access Control",
+        "mitre": "T1497",
+        "mitre_name": "Virtualization/Sandbox Evasion"
+    },
+    {
+        "pattern": re.compile(r'InvokerTransformer|InstantiateTransformer|TemplatesImpl|MethodClosure|BadAttributeValueExpException|PoolBackedDataSourceBase', re.I),
+        "api": "Java Deserialization Gadget Marker",
+        "title": "Java Deserialization Gadget Chain Component (ysoserial Marker)",
+        "severity": "critical",
+        "category": "deserialization",
+        "description": "Known Java deserialization gadget class identified in bytecode (CommonsCollections, Xalan, Groovy, C3P0).",
+        "risk_explanation": "These classes are well-known building blocks of remote code execution gadget chains (ysoserial). If untrusted ObjectInputStream deserialization occurs, these gadgets allow attackers to execute arbitrary commands.",
+        "remediation": "Update or remove vulnerable dependency versions (e.g. Commons Collections 3.2.2+ disables InvokerTransformer by default) and apply ObjectInputFilter.",
+        "cwe": "CWE-502: Deserialization of Untrusted Data",
+        "owasp": "A08:2021-Software and Data Integrity Failures",
+        "mitre": "T1203",
+        "mitre_name": "Exploitation for Client Execution"
     }
 ]
 
@@ -325,6 +454,7 @@ class JavaClassParser:
         self.class_name = ""
         self.super_class_name = ""
         self.interfaces: List[str] = []
+        self.fields: List[Dict[str, Any]] = []
         self.methods: List[Dict[str, Any]] = []
         self.strings: List[str] = []
         self.method_calls: List[Dict[str, str]] = []
@@ -401,6 +531,8 @@ class JavaClassParser:
                 self.class_name = self._resolve_class_name(this_cls_idx)
                 self.super_class_name = self._resolve_class_name(super_cls_idx)
                 offset += 6
+
+                # Interfaces
                 if offset + 2 <= len(self.data):
                     interfaces_count = struct.unpack_from(">H", self.data, offset)[0]
                     offset += 2
@@ -411,6 +543,59 @@ class JavaClassParser:
                             iface_name = self._resolve_class_name(iface_idx)
                             if iface_name:
                                 self.interfaces.append(iface_name)
+
+                # Fields
+                if offset + 2 <= len(self.data):
+                    fields_count = struct.unpack_from(">H", self.data, offset)[0]
+                    offset += 2
+                    for _ in range(fields_count):
+                        if offset + 8 > len(self.data):
+                            break
+                        f_flags, f_name_idx, f_desc_idx, f_attr_count = struct.unpack_from(">HHHH", self.data, offset)
+                        offset += 8
+                        f_name = self._get_utf8(f_name_idx)
+                        f_desc = self._get_utf8(f_desc_idx)
+                        if f_name:
+                            self.fields.append({
+                                "name": f_name,
+                                "descriptor": f_desc,
+                                "flags": f_flags,
+                                "type": self._parse_descriptor_type(f_desc),
+                                "formatted": f"{self._format_flags(f_flags)} {self._parse_descriptor_type(f_desc)} {f_name}".strip()
+                            })
+                        for _ in range(f_attr_count):
+                            if offset + 6 > len(self.data):
+                                break
+                            _, attr_len = struct.unpack_from(">HI", self.data, offset)
+                            offset += 6 + attr_len
+
+                # Methods
+                if offset + 2 <= len(self.data):
+                    methods_count = struct.unpack_from(">H", self.data, offset)[0]
+                    offset += 2
+                    for _ in range(methods_count):
+                        if offset + 8 > len(self.data):
+                            break
+                        m_flags, m_name_idx, m_desc_idx, m_attr_count = struct.unpack_from(">HHHH", self.data, offset)
+                        offset += 8
+                        m_name = self._get_utf8(m_name_idx)
+                        m_desc = self._get_utf8(m_desc_idx)
+                        if m_name:
+                            sig = self._format_method_signature(m_name, m_desc, m_flags)
+                            self.methods.append({
+                                "name": m_name,
+                                "descriptor": m_desc,
+                                "flags": m_flags,
+                                "signature": sig,
+                                "is_static": bool(m_flags & 0x0008),
+                                "is_native": bool(m_flags & 0x0100),
+                                "is_main": (m_name == "main" and "([Ljava/lang/String;)V" in m_desc and bool(m_flags & 0x0008))
+                            })
+                        for _ in range(m_attr_count):
+                            if offset + 6 > len(self.data):
+                                break
+                            _, attr_len = struct.unpack_from(">HI", self.data, offset)
+                            offset += 6 + attr_len
 
             return True
         except Exception as e:
@@ -437,6 +622,148 @@ class JavaClassParser:
             if item and item.get("tag") == self.TAG_NAME_AND_TYPE:
                 return self._get_utf8(item.get("idx1", 0)), self._get_utf8(item.get("idx2", 0))
         return "", ""
+
+    @staticmethod
+    def _format_flags(flags: int) -> str:
+        parts = []
+        if flags & 0x0001: parts.append("public")
+        elif flags & 0x0002: parts.append("private")
+        elif flags & 0x0004: parts.append("protected")
+        if flags & 0x0008: parts.append("static")
+        if flags & 0x0010: parts.append("final")
+        if flags & 0x0020: parts.append("synchronized")
+        if flags & 0x0040: parts.append("volatile")
+        if flags & 0x0080: parts.append("transient")
+        if flags & 0x0100: parts.append("native")
+        if flags & 0x0400: parts.append("abstract")
+        return " ".join(parts)
+
+    @classmethod
+    def _parse_descriptor_type(cls, desc: str) -> str:
+        if not desc:
+            return "void"
+        dim = 0
+        while desc.startswith("["):
+            dim += 1
+            desc = desc[1:]
+        base = "Object"
+        if desc == "V": base = "void"
+        elif desc == "Z": base = "boolean"
+        elif desc == "B": base = "byte"
+        elif desc == "C": base = "char"
+        elif desc == "S": base = "short"
+        elif desc == "I": base = "int"
+        elif desc == "J": base = "long"
+        elif desc == "F": base = "float"
+        elif desc == "D": base = "double"
+        elif desc.startswith("L") and desc.endswith(";"):
+            cname = desc[1:-1].replace("/", ".")
+            base = cname.split(".")[-1]
+        return base + ("[]" * dim)
+
+    @classmethod
+    def _format_method_signature(cls, name: str, desc: str, flags: int) -> str:
+        prefix = cls._format_flags(flags)
+        if not desc or "(" not in desc or ")" not in desc:
+            return f"{prefix} {name}()".strip()
+        params_str = desc[desc.find("(")+1:desc.find(")")]
+        ret_str = desc[desc.find(")")+1:]
+        ret_type = cls._parse_descriptor_type(ret_str)
+
+        params = []
+        p_idx = 0
+        while p_idx < len(params_str):
+            dim = 0
+            while p_idx < len(params_str) and params_str[p_idx] == "[":
+                dim += 1
+                p_idx += 1
+            if p_idx >= len(params_str):
+                break
+            ch = params_str[p_idx]
+            if ch in "ZBCSIJFD":
+                p_type = cls._parse_descriptor_type(ch) + ("[]" * dim)
+                params.append(p_type)
+                p_idx += 1
+            elif ch == "L":
+                semi = params_str.find(";", p_idx)
+                if semi != -1:
+                    raw_c = params_str[p_idx+1:semi].replace("/", ".")
+                    params.append(raw_c.split(".")[-1] + ("[]" * dim))
+                    p_idx = semi + 1
+                else:
+                    break
+            else:
+                p_idx += 1
+
+        arg_list = ", ".join(params)
+        if name == "<init>":
+            return f"{prefix} <init>({arg_list})".strip()
+        if name == "<clinit>":
+            return "static <clinit>()"
+        return f"{prefix} {ret_type} {name}({arg_list})".strip()
+
+    def get_decompiled_source(self, dangerous_apis: Optional[List[Dict[str, Any]]] = None) -> str:
+        full_cls = (self.class_name or "AnonymousClass").replace("/", ".")
+        pkg = ".".join(full_cls.split(".")[:-1]) if "." in full_cls else ""
+        simple = full_cls.split(".")[-1] if full_cls else "AnonymousClass"
+        super_simple = self.super_class_name.replace("/", ".").split(".")[-1] if self.super_class_name else "Object"
+        ifaces = [i.replace("/", ".").split(".")[-1] for i in self.interfaces]
+
+        slash_cls = (self.class_name or "AnonymousClass").replace(".", "/")
+        lines = [
+            f"// ==========================================================================",
+            f"// Disassembled Entry / Target Class: {slash_cls}.class",
+            f"// Decompiled Java Bytecode: {full_cls}",
+            f"// Target Platform: {self.java_version_name} (Major: {self.major_version})",
+            f"// Superclass: {self.super_class_name.replace('/', '.')}",
+            f"// Interfaces: {', '.join([i.replace('/', '.') for i in self.interfaces]) if self.interfaces else 'None'}",
+            f"// Constant Pool Symbols: {len(self.constant_pool)} entries | Methods: {len(self.methods)}",
+            f"// ==========================================================================",
+            ""
+        ]
+        if pkg:
+            lines.append(f"package {pkg};\n")
+
+        header = f"public class {simple}"
+        if super_simple:
+            header += f" extends {super_simple}"
+        if ifaces:
+            header += f" implements {', '.join(ifaces)}"
+        header += " {"
+        lines.append(header)
+
+        if self.fields:
+            lines.append("    // --- Fields ---")
+            for f in self.fields:
+                lines.append(f"    {f.get('formatted', f.get('name'))};")
+            lines.append("")
+
+        if self.methods:
+            lines.append("    // --- Methods ---")
+            for m in self.methods:
+                lines.append(f"    {m.get('signature', m.get('name') + '()')};")
+            lines.append("")
+
+        if self.method_calls:
+            lines.append("    // --- Invocations & Resolved Constant Pool References ---")
+            seen_mc = set()
+            for mc in self.method_calls[:40]:
+                sig = f"{mc.get('class', '').replace('/', '.')}.{mc.get('method', '')}{mc.get('descriptor', '')}"
+                if sig not in seen_mc:
+                    seen_mc.add(sig)
+                    lines.append(f"    // invokes: {sig}")
+            if len(self.method_calls) > 40:
+                lines.append(f"    // ... and {len(self.method_calls) - 40} additional method references")
+            lines.append("")
+
+        if dangerous_apis:
+            lines.append("    // --- ⚠️ Security Findings & High-Risk APIs ---")
+            for d in dangerous_apis:
+                lines.append(f"    // [{d.get('severity', 'HIGH').upper()}] {d.get('title', d.get('api'))} ({d.get('api')})")
+            lines.append("")
+
+        lines.append("}")
+        return "\n".join(lines)
 
 
 class JavaAnalyzer(BaseAnalyzer):
@@ -503,7 +830,13 @@ class JavaAnalyzer(BaseAnalyzer):
             "risk_score": 0,
             "risk_level": "CLEAN",
             "behavioral_analysis": None,
-            "strrat_profile": None
+            "strrat_profile": None,
+            "archive_security": None,
+            "dependencies": [],
+            "shaded_libraries": [],
+            "cve_advisories": [],
+            "cyclonedx_sbom": None,
+            "secrets_and_ctf": None
         }
 
         # 1. Java Source Code Analysis (.java)
@@ -1422,6 +1755,1062 @@ class JavaAnalyzer(BaseAnalyzer):
         except Exception as e:
             logger.debug(f"Java class analysis error: {e}")
 
+    def _inspect_jar_signature(self, zf: zipfile.ZipFile, namelist: List[str], findings: List[Finding]) -> Tuple[str, Dict[str, Any]]:
+        """
+        Inspects JAR digital signatures (META-INF/*.SF, META-INF/*.RSA, *.DSA, *.EC).
+        Parses signer certificates, validity dates, self-signed status, and generates findings.
+        """
+        sig_info: Dict[str, Any] = {
+            "is_signed": False,
+            "signer_name": None,
+            "subject": None,
+            "issuer": None,
+            "serial_number": None,
+            "valid_from": None,
+            "valid_until": None,
+            "sha256_fingerprint": None,
+            "sha1_fingerprint": None,
+            "signature_algorithm": None,
+            "is_self_signed": False,
+            "is_expired": False,
+            "is_debug_key": False,
+            "is_partially_signed": False,
+            "unsigned_classes_count": 0,
+            "unsigned_classes": [],
+            "manifest_digests_count": 0,
+            "signature_files": []
+        }
+
+        sig_files = [n for n in namelist if n.upper().startswith("META-INF/") and n.upper().endswith((".RSA", ".DSA", ".EC", ".SF"))]
+        sig_info["signature_files"] = sig_files
+
+        if not sig_files:
+            return "UNSIGNED", sig_info
+
+        # Count digest entries and track signed file names in .SF
+        signed_files = set()
+        for sf_name in sig_files:
+            if sf_name.upper().endswith(".SF"):
+                try:
+                    sf_text = zf.read(sf_name).decode("utf-8", errors="ignore")
+                    digests = re.findall(r"(?:SHA-256|SHA1)-Digest:", sf_text, re.I)
+                    sig_info["manifest_digests_count"] = max(sig_info["manifest_digests_count"], len(digests))
+                    for name_match in re.finditer(r'^Name:\s*([^\r\n]+)', sf_text, re.M):
+                        signed_files.add(name_match.group(1).strip())
+                except Exception:
+                    pass
+
+        # Signed entry coverage: check for unsigned executable .class files
+        class_files = [n for n in namelist if n.endswith(".class") and not n.startswith("META-INF/")]
+        if signed_files and class_files:
+            unsigned_classes = [c for c in class_files if c not in signed_files]
+            if unsigned_classes:
+                sig_info["is_partially_signed"] = True
+                sig_info["unsigned_classes_count"] = len(unsigned_classes)
+                sig_info["unsigned_classes"] = unsigned_classes[:15]
+                findings.append(Finding(
+                    category="signature",
+                    severity="high",
+                    title=f"Partially Signed JAR: {len(unsigned_classes)} Unsigned Classes Detected",
+                    description=(
+                        f"Archive is digitally signed but contains {len(unsigned_classes)} unsigned executable class file(s) "
+                        f"(e.g. '{unsigned_classes[0]}'). This indicates partial signing, incomplete build verification, "
+                        "or potential class injection / signature bypass tampering."
+                    ),
+                    details={"unsigned_classes": unsigned_classes[:25], "total_unsigned": len(unsigned_classes)}
+                ))
+
+        # Find signature block file
+        sig_block = next((n for n in sig_files if n.upper().endswith((".RSA", ".DSA", ".EC"))), None)
+        if not sig_block:
+            sig_info["is_signed"] = True
+            sig_info["signer_name"] = "Signed (Signature File Present)"
+            return "SIGNED", sig_info
+
+        try:
+            from cryptography import x509
+            from cryptography.hazmat.backends import default_backend
+            from datetime import datetime, timezone
+
+            cert_bytes = zf.read(sig_block)
+            cert = None
+            try:
+                cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
+            except Exception:
+                start = cert_bytes.find(b"\x30\x82")
+                while start != -1:
+                    try:
+                        seq_len = struct.unpack_from(">H", cert_bytes, start + 2)[0]
+                        candidate = cert_bytes[start:start + seq_len + 4]
+                        cert = x509.load_der_x509_certificate(candidate, default_backend())
+                        if cert:
+                            break
+                    except Exception:
+                        pass
+                    start = cert_bytes.find(b"\x30\x82", start + 1)
+
+            if cert:
+                sig_info["is_signed"] = True
+                subject_str = cert.subject.rfc4514_string()
+                issuer_str = cert.issuer.rfc4514_string()
+
+                cn_match = re.search(r'CN=([^,]+)', subject_str)
+                signer_cn = cn_match.group(1) if cn_match else subject_str
+
+                der_bytes = cert.public_bytes(x509.Encoding.DER)
+                sha256_fp = hashlib.sha256(der_bytes).hexdigest()
+                sha1_fp = hashlib.sha1(der_bytes).hexdigest()
+
+                valid_from = cert.not_valid_before_utc.isoformat() if hasattr(cert, 'not_valid_before_utc') else str(cert.not_valid_before)
+                valid_until = cert.not_valid_after_utc.isoformat() if hasattr(cert, 'not_valid_after_utc') else str(cert.not_valid_after)
+
+                sig_info["signer_name"] = signer_cn
+                sig_info["subject"] = subject_str
+                sig_info["issuer"] = issuer_str
+                sig_info["serial_number"] = hex(cert.serial_number)
+                sig_info["valid_from"] = valid_from
+                sig_info["valid_until"] = valid_until
+                sig_info["sha256_fingerprint"] = sha256_fp
+                sig_info["sha1_fingerprint"] = sha1_fp
+                sig_info["signature_algorithm"] = cert.signature_algorithm_oid._name if hasattr(cert.signature_algorithm_oid, '_name') else str(cert.signature_algorithm_oid)
+
+                if subject_str == issuer_str:
+                    sig_info["is_self_signed"] = True
+
+                now = datetime.now(timezone.utc)
+                cert_end = cert.not_valid_after_utc if hasattr(cert, 'not_valid_after_utc') else cert.not_valid_after.replace(tzinfo=timezone.utc)
+                if now > cert_end:
+                    sig_info["is_expired"] = True
+
+                if any(term in subject_str.lower() for term in ["android debug", "test key", "example", "self-signed"]):
+                    sig_info["is_debug_key"] = True
+
+                status_str = "SIGNED"
+                if sig_info["is_expired"]:
+                    status_str = "SIGNED (EXPIRED)"
+                    findings.append(Finding(
+                        category="signature",
+                        severity="high",
+                        title=f"Expired JAR Code Signing Certificate ('{signer_cn}')",
+                        description=f"JAR digital certificate expired on {valid_until[:10]}. Software signed with expired certificates cannot guarantee publisher verification.",
+                        details=sig_info
+                    ))
+                elif sig_info["is_debug_key"]:
+                    status_str = "SIGNED (DEBUG KEY)"
+                    findings.append(Finding(
+                        category="signature",
+                        severity="high",
+                        title=f"Test/Debug Code Signing Key Detected ('{signer_cn}')",
+                        description=f"Archive was signed using a public or debug keystore ('{signer_cn}'). Production software must never be distributed with debug keys.",
+                        details=sig_info
+                    ))
+                elif sig_info["is_self_signed"]:
+                    status_str = "SIGNED (SELF-SIGNED)"
+                    findings.append(Finding(
+                        category="signature",
+                        severity="medium",
+                        title=f"Self-Signed JAR Digital Certificate ('{signer_cn}')",
+                        description=f"JAR is signed by a self-issued certificate rather than a trusted public Certificate Authority (CA).",
+                        details=sig_info
+                    ))
+                else:
+                    findings.append(Finding(
+                        category="signature",
+                        severity="info",
+                        title=f"Cryptographically Signed Java Archive ('{signer_cn}')",
+                        description=f"Archive contains valid X.509 code signature issued to '{signer_cn}' (Valid until {valid_until[:10]}).",
+                        details=sig_info
+                    ))
+
+                return status_str, sig_info
+
+        except Exception as e:
+            logger.debug(f"JAR signature parsing note: {e}")
+
+        sig_info["is_signed"] = True
+        sig_info["signer_name"] = "Signed (Embedded PKCS#7 Block)"
+        return "SIGNED", sig_info
+
+    def _categorize_strings(self, all_strings: List[str]) -> Tuple[List[str], Dict[str, List[str]], int]:
+        """
+        Categorizes extracted strings into Network, File Paths, Registry, Commands, and All.
+        Matches PE/ELF binary string categorization format.
+        """
+        seen = set()
+        cleaned = []
+        for s in all_strings:
+            if isinstance(s, str):
+                st = s.strip()
+                if 3 <= len(st) <= 500 and st not in seen:
+                    printable_ratio = sum(1 for c in st if c.isprintable()) / len(st)
+                    if printable_ratio >= 0.75:
+                        seen.add(st)
+                        cleaned.append(st)
+
+        network = []
+        file_paths = []
+        registry = []
+        commands = []
+
+        net_pat = re.compile(r'https?://|(?:(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?)|(?:[a-zA-Z0-9_\-\.]+\.(?:com|org|net|io|ru|xyz|top|cc|biz|info|cn)(?::\d+)?)|socks[45]?://|irc://', re.I)
+        fp_pat = re.compile(r'(?:[a-zA-Z]:\\|(?:/(?:etc|tmp|var|usr|bin|root|home|dev|proc)/)|%[A-Za-z_]+%|user\.home|appdata|\.crimson|lock\.file|\.jar|\.exe|\.dll|\.sh|\.bat)', re.I)
+        reg_pat = re.compile(r'(?:CurrentVersion\\Run|HKEY_|HKLM|HKCU|Software\\Microsoft\\Windows)', re.I)
+        cmd_pat = re.compile(r'(?:cmd\.exe|powershell(?:\.exe)?|schtasks(?:\.exe)?|reg(?:\.exe)?|certutil(?:\.exe)?|wscript|cscript|taskkill|vssadmin|attrib|/bin/sh|/bin/bash|curl|wget)', re.I)
+
+        for s in cleaned:
+            if net_pat.search(s):
+                network.append(s)
+            if fp_pat.search(s):
+                file_paths.append(s)
+            if reg_pat.search(s):
+                registry.append(s)
+            if cmd_pat.search(s):
+                commands.append(s)
+
+        all_sample = sorted(cleaned, key=lambda x: (
+            0 if any(c in x.lower() for c in ["http", "powershell", "cmd", "run", "crimson", "socket"]) else 1,
+            -len(x)
+        ))[:150]
+
+        categorized = {
+            "network": sorted(list(set(network)))[:100],
+            "file_paths": sorted(list(set(file_paths)))[:100],
+            "registry": sorted(list(set(registry)))[:100],
+            "commands": sorted(list(set(commands)))[:100]
+        }
+
+        return all_sample, categorized, len(cleaned)
+
+    def _extract_base64_blocks(self, corpus: str, findings: List[Finding]) -> List[Dict[str, Any]]:
+        """
+        Extracts, decodes, and analyzes Base64 blocks from JAR strings/resources.
+        Matches Script & Python triage functionality.
+        """
+        b64_blocks = []
+        try:
+            from app.analyzers.deobfuscator import Deobfuscator
+            raw_b64_list = Deobfuscator.scan_for_base64_blocks(corpus)
+            for b64_item in raw_b64_list[:15]:
+                enc_preview = b64_item.get("encoded", "")
+                enc_full = b64_item.get("encoded_full", enc_preview)
+                dec = b64_item.get("decoded", "")
+                encoding = b64_item.get("encoding", "UTF-8")
+                is_binary = b64_item.get("is_binary", False)
+
+                is_critical = is_binary or any(kw in dec.lower() for kw in [
+                    "invoke-expression", "iex", "downloadstring", "downloadfile", "webclient",
+                    "virtualalloc", "writeprocessmemory", "createremotethread", "amsiutils",
+                    "cmd.exe", "powershell", "wscript.shell", "/bin/sh", "curl", "wget", "nc ",
+                    "socket", "runtime.exec", "processbuilder"
+                ])
+
+                block_entry = {
+                    "encoded": enc_preview,
+                    "encoded_full": enc_full,
+                    "decoded_preview": dec[:140].strip(),
+                    "encoding": encoding,
+                    "length": len(enc_full),
+                    "threat": "HIGH_CONFIDENCE_PAYLOAD" if is_critical else "SUSPICIOUS_ENCODED",
+                    "extracted_urls": b64_item.get("extracted_urls", []),
+                    "extracted_ips": b64_item.get("extracted_ips", []),
+                    "iocs": b64_item.get("extracted_urls", []) + b64_item.get("extracted_ips", []),
+                    "is_critical": is_critical
+                }
+                b64_blocks.append(block_entry)
+
+                if is_critical or len(b64_item.get("extracted_urls", [])) > 0:
+                    findings.append(Finding(
+                        category="deobfuscation",
+                        severity="critical" if is_critical else "high",
+                        title=f"Decoded Base64 Payload in JAR ({encoding})",
+                        description=(
+                            f"Extracted Base64 string '{enc_preview}'. "
+                            f"Decoded content reveals: {dec[:180]}"
+                        ),
+                        details=block_entry
+                    ))
+        except Exception as e:
+            logger.debug(f"JAR Base64 scan note: {e}")
+        return b64_blocks
+
+    def _extract_lolbins_and_commands(self, corpus: str, strings: List[str]) -> Tuple[List[Dict[str, Any]], bool, List[str]]:
+        """
+        Extracts Living-off-the-Land (LOLBins) and OS host commands.
+        Matches Script triage functionality.
+        """
+        lolbin_catalog = [
+            ("certutil", "Defense Evasion / Download Cradle", "Command-line utility used to download and decode malicious payloads."),
+            ("powershell", "Execution / Download Cradle", "Windows automation engine abused to execute memory-only scripts."),
+            ("bitsadmin", "Defense Evasion / Persistence", "Background Intelligent Transfer Service abused to download malicious payloads."),
+            ("wscript", "Execution", "Windows Script Host abused to execute VBScript or JScript payloads."),
+            ("cscript", "Execution", "Console-based script host abused for script execution."),
+            ("mshta", "Execution / Defense Evasion", "Microsoft HTML Application host abused to execute remote scripts."),
+            ("rundll32", "Defense Evasion / Execution", "Executes 32-bit DLLs directly from command line."),
+            ("regsvr32", "Defense Evasion", "Registers and executes in-memory scriptlet DLLs (Squiblydoo)."),
+            ("schtasks", "Persistence / Execution", "Schedules tasks for persistence and elevated execution."),
+            ("reg", "Persistence / Defense Evasion", "Modifies Windows Registry Run keys or security settings."),
+            ("taskkill", "Defense Evasion", "Terminates security and monitoring software processes."),
+            ("vssadmin", "Impact / Ransomware", "Deletes Volume Shadow Copies to prevent system recovery."),
+            ("attrib", "Defense Evasion", "Hides malicious files with system and hidden attributes."),
+            ("sc", "Persistence", "Creates and manages malicious Windows services.")
+        ]
+        matched_lolbins = []
+        detected_commands = []
+
+        for bin_name, category, description in lolbin_catalog:
+            if re.search(r'(?i)\b' + re.escape(bin_name) + r'(?:\.exe)?\b', corpus):
+                matched_sample = next((s for s in strings if isinstance(s, str) and bin_name in s.lower()), bin_name)
+                matched_lolbins.append({
+                    "name": bin_name,
+                    "category": category,
+                    "description": description,
+                    "matched_in": "Bytecode String Constants",
+                    "matched_text": matched_sample[:140]
+                })
+
+        cmd_patterns = [
+            r'(?i)cmd(?:\.exe)?\s+/c\s+["\']?([^"\'\n\r]+)',
+            r'(?i)powershell(?:\.exe)?\s+-[a-zA-Z]+\s+([^"\'\n\r]+)',
+            r'(?i)schtasks(?:\.exe)?\s+(?:/create|/run|/delete)[^"\'\n\r]*',
+            r'(?i)reg(?:\.exe)?\s+(?:add|delete)[^"\'\n\r]*',
+            r'(?i)(?:/bin/sh|/bin/bash)\s+-c\s+["\']?([^"\'\n\r]+)'
+        ]
+        for pat in cmd_patterns:
+            for m in re.finditer(pat, corpus):
+                detected_commands.append(m.group(0)[:120])
+
+        for s in strings:
+            if isinstance(s, str) and len(s) > 4:
+                s_low = s.lower()
+                if any(k in s_low for k in ["cmd.exe /c", "powershell -enc", "schtasks /create", "reg add", "taskkill /f", "vssadmin delete"]):
+                    detected_commands.append(s[:120])
+
+        has_lolbins = len(matched_lolbins) > 0
+        return matched_lolbins, has_lolbins, list(set(detected_commands))[:30]
+
+    def _inspect_embedded_resources(self, infos: List[zipfile.ZipInfo]) -> List[Dict[str, Any]]:
+        """
+        Categorizes embedded resources inside the JAR archive (configs, scripts, native libraries).
+        Matches Binary resources and APK asset functionality.
+        """
+        resources = []
+        for info in infos:
+            if info.filename.endswith(".class") or info.filename == "META-INF/MANIFEST.MF":
+                continue
+            ext = Path(info.filename).suffix.lower()
+            size = info.file_size
+            size_fmt = f"{size / 1024:.1f} KB" if size >= 1024 else f"{size} B"
+            is_binary = ext in [".dll", ".so", ".dylib", ".exe", ".bin", ".dat", ".png", ".jpg", ".ico", ".rsa", ".dsa"]
+            is_dangerous = ext in [".dll", ".so", ".dylib", ".exe", ".sh", ".bat", ".cmd", ".ps1", ".vbs"]
+            threat_reason = None
+            if ext in [".dll", ".so", ".dylib", ".exe"]:
+                threat_reason = "Native binary executable or shared library bundled inside Java Archive"
+            elif ext in [".sh", ".bat", ".cmd", ".ps1", ".vbs"]:
+                threat_reason = "Dropper shell/batch script packaged inside Java Archive"
+
+            is_executable = ext in [".dll", ".so", ".dylib", ".exe"]
+            is_script = ext in [".sh", ".bat", ".cmd", ".ps1", ".vbs", ".py", ".js"]
+            is_archive = ext in [".zip", ".tar", ".gz", ".jar", ".7z", ".rar"]
+            is_config = ext in [".json", ".xml", ".yml", ".yaml", ".properties", ".ini", ".conf"]
+            threat_level = "DANGEROUS" if is_executable else ("SUSPICIOUS" if is_script else "INFO")
+            res_type = "Native Executable" if is_executable else ("Script" if is_script else ("Archive" if is_archive else ("Configuration" if is_config else "Resource")))
+
+            resources.append({
+                "name": info.filename,
+                "size": size,
+                "size_formatted": size_fmt,
+                "type": res_type,
+                "extension": ext or "none",
+                "is_executable": is_executable,
+                "is_script": is_script,
+                "is_archive": is_archive,
+                "is_config": is_config,
+                "threat_level": threat_level,
+                "is_binary": is_binary,
+                "is_dangerous": is_dangerous,
+                "threat_reason": threat_reason
+            })
+        return resources
+
+    def _audit_archive_security(
+        self,
+        file_path: Path,
+        zf: zipfile.ZipFile,
+        infos: List[zipfile.ZipInfo],
+        findings: List[Finding]
+    ) -> Dict[str, Any]:
+        """
+        Audits archive structural integrity and anti-parser security:
+        - Path traversal / Zip Slip vulnerability (../ or absolute paths)
+        - Decompression ratio / Zip Bomb resource exhaustion
+        - Duplicate central-directory / local-header entries
+        - Extension & magic byte mismatches (e.g. .png hiding .class or PE)
+        - Polyglot & trailing data inspection (appended payloads past EOCD)
+        - Nested archives (embedded JAR, WAR, EAR, ZIP)
+        """
+        zip_slip_paths = []
+        for info in infos:
+            fn = info.filename
+            if "../" in fn or "..\\" in fn or fn.startswith(("/", "\\")) or re.match(r'^[a-zA-Z]:[/\\]', fn):
+                zip_slip_paths.append(fn)
+
+        if zip_slip_paths:
+            findings.append(Finding(
+                category="archive_security",
+                severity="critical",
+                title=f"Zip Slip Vulnerability Detected ({len(zip_slip_paths)} Traversal Paths)",
+                description=(
+                    f"Archive contains {len(zip_slip_paths)} file path(s) using directory traversal characters ('../') "
+                    f"or absolute roots (e.g. '{zip_slip_paths[0]}'). Unpacking this archive without sanitization will "
+                    "cause files to be written outside the target directory, enabling arbitrary file overwrite / code execution."
+                ),
+                details={"paths": zip_slip_paths[:20]}
+            ))
+
+        total_uncompressed = sum(i.file_size for i in infos)
+        total_compressed = sum(i.compress_size for i in infos)
+        disk_size = file_path.stat().st_size if file_path.exists() else total_compressed
+
+        ratio_compressed = total_uncompressed / max(1, total_compressed)
+        ratio_disk = total_uncompressed / max(1, disk_size)
+        comp_ratio = round(max(ratio_compressed, ratio_disk), 1)
+
+        is_bomb = comp_ratio >= 100 or (total_uncompressed >= 200_000_000 and comp_ratio >= 50)
+        if is_bomb:
+            sev = "critical" if comp_ratio >= 100 or total_uncompressed >= 500_000_000 else "high"
+            findings.append(Finding(
+                category="archive_security",
+                severity=sev,
+                title=f"Potential Zip Bomb / Resource Exhaustion ({comp_ratio}:1 Expansion)",
+                description=(
+                    f"Archive exhibits an abnormal compression ratio of {comp_ratio}:1 "
+                    f"(Compressed: {total_compressed / (1024*1024):.2f} MB, Uncompressed: {total_uncompressed / (1024*1024):.2f} MB). "
+                    "Attempting decompression may cause denial-of-service via memory or disk exhaustion."
+                ),
+                details={
+                    "compression_ratio": comp_ratio,
+                    "uncompressed_bytes": total_uncompressed,
+                    "compressed_bytes": total_compressed,
+                    "disk_bytes": disk_size
+                }
+            ))
+
+        # Duplicate entries
+        all_names = [i.filename for i in infos]
+        counts = Counter(all_names)
+        duplicates = [name for name, count in counts.items() if count > 1]
+        if duplicates:
+            findings.append(Finding(
+                category="archive_security",
+                severity="medium",
+                title=f"Archive Integrity: Duplicate Entries Detected ({len(duplicates)} Paths)",
+                description=(
+                    f"Archive contains {len(duplicates)} duplicate path entries (e.g. '{duplicates[0]}'). "
+                    "Conflicting entries can cause security tools, Java classloaders, and archive extractors "
+                    "to process different versions of classes or resources, bypassing security filters."
+                ),
+                details={"duplicates": duplicates[:20]}
+            ))
+
+        # Extension and Content Mismatch
+        mismatches = []
+        disguised_types = {
+            ".png", ".jpg", ".jpeg", ".gif", ".ico", ".bmp", ".txt", ".csv",
+            ".pdf", ".css", ".json", ".xml", ".properties", ".svg", ".log"
+        }
+        for info in infos[:250]:
+            ext = Path(info.filename).suffix.lower()
+            if ext in disguised_types and info.file_size > 16:
+                try:
+                    head = zf.read(info.filename)[:32]
+                    actual = None
+                    if head.startswith(b"\xca\xfe\xba\xbe"):
+                        actual = "Java Compiled Class (Bytecode)"
+                    elif head.startswith(b"MZ"):
+                        actual = "Windows PE Executable / DLL"
+                    elif head.startswith(b"\x7fELF"):
+                        actual = "Linux ELF Executable / Shared Object"
+                    elif head.startswith(b"PK\x03\x04"):
+                        actual = "Embedded ZIP / JAR Archive"
+                    elif head.startswith(b"#!") or any(kw in head.lower() for kw in [b"powershell", b"wscript", b"cmd.exe"]):
+                        actual = "Shell / Script Executable"
+
+                    if actual:
+                        mismatches.append({
+                            "filename": info.filename,
+                            "declared_extension": ext,
+                            "actual_type": actual,
+                            "file_size": info.file_size,
+                            "threat_level": "critical" if "Executable" in actual or "Bytecode" in actual else "high"
+                        })
+                except Exception:
+                    pass
+
+        if mismatches:
+            for m in mismatches[:5]:
+                findings.append(Finding(
+                    category="archive_security",
+                    severity=m["threat_level"],
+                    title=f"Concealed Executable / Disguised Content ({m['filename']})",
+                    description=(
+                        f"Entry '{m['filename']}' possesses innocuous extension '{m['declared_extension']}' "
+                        f"but actually contains {m['actual_type']}. Threat actors use this technique to bypass firewalls and inspection."
+                    ),
+                    details=m
+                ))
+
+        # Polyglot and Trailing Data Inspection
+        has_trailing = False
+        trailing_bytes = 0
+        has_polyglot = False
+        leading_magic = "ZIP"
+
+        try:
+            with open(file_path, "rb") as f:
+                head16 = f.read(16)
+                if not head16.startswith(b"PK\x03\x04") and not head16.startswith(b"PK\x05\x06"):
+                    has_polyglot = True
+                    if head16.startswith(b"GIF89a") or head16.startswith(b"GIF87a"):
+                        leading_magic = "GIF (GIFAR Polyglot)"
+                    elif head16.startswith(b"\xff\xd8\xff"):
+                        leading_magic = "JPEG Image Polyglot"
+                    elif head16.startswith(b"%PDF"):
+                        leading_magic = "PDF Document Polyglot"
+                    elif head16.startswith(b"MZ"):
+                        leading_magic = "Windows PE Polyglot"
+                    elif head16.startswith(b"\x7fELF"):
+                        leading_magic = "Linux ELF Polyglot"
+                    else:
+                        leading_magic = f"Custom Header ({head16[:8].hex()})"
+
+                # Check for trailing data after EOCD
+                f.seek(0, 2)
+                fsize = f.tell()
+                search_len = min(fsize, 65557)
+                f.seek(fsize - search_len)
+                tail = f.read(search_len)
+                eocd_idx = tail.rfind(b"PK\x05\x06")
+                if eocd_idx != -1:
+                    eocd_pos = (fsize - search_len) + eocd_idx
+                    if len(tail) >= eocd_idx + 22:
+                        comment_len = struct.unpack_from("<H", tail, eocd_idx + 20)[0]
+                        expected_end = eocd_pos + 22 + comment_len
+                        if fsize > expected_end + 32:
+                            has_trailing = True
+                            trailing_bytes = fsize - expected_end
+        except Exception as e:
+            logger.debug(f"Polyglot inspection note: {e}")
+
+        if has_polyglot or has_trailing:
+            details_obj = {
+                "has_polyglot": has_polyglot,
+                "leading_magic": leading_magic,
+                "has_trailing_data": has_trailing,
+                "trailing_bytes": trailing_bytes
+            }
+            title = "Polyglot Archive Structure" if has_polyglot else f"Appended Trailing Data ({trailing_bytes} bytes)"
+            findings.append(Finding(
+                category="archive_security",
+                severity="high" if has_polyglot else "medium",
+                title=title,
+                description=(
+                    f"Archive exhibits anomalous structure: "
+                    + (f"starts with {leading_magic} instead of standard ZIP header. " if has_polyglot else "")
+                    + (f"Contains {trailing_bytes} trailing bytes after the End of Central Directory record." if has_trailing else "")
+                ),
+                details=details_obj
+            ))
+
+        # Nested archives
+        nested_archives = []
+        archive_exts = {".jar", ".war", ".ear", ".zip", ".tar", ".gz", ".tgz", ".bz2", ".7z"}
+        for info in infos:
+            ext = Path(info.filename).suffix.lower()
+            if ext in archive_exts:
+                nested_archives.append({
+                    "filename": info.filename,
+                    "size": info.file_size,
+                    "type": ext.lstrip(".").upper()
+                })
+
+        issues_count = (
+            len(zip_slip_paths) +
+            (1 if is_bomb else 0) +
+            len(duplicates) +
+            len(mismatches) +
+            (1 if has_polyglot else 0) +
+            (1 if has_trailing else 0)
+        )
+
+        verdict = "SECURE"
+        if zip_slip_paths or is_bomb or mismatches:
+            verdict = "VULNERABLE"
+        elif duplicates or has_polyglot or has_trailing or len(nested_archives) > 5:
+            verdict = "SUSPICIOUS"
+
+        return {
+            "zip_slip": {
+                "detected": len(zip_slip_paths) > 0,
+                "paths": zip_slip_paths[:20],
+                "count": len(zip_slip_paths)
+            },
+            "zip_bomb": {
+                "detected": is_bomb,
+                "compression_ratio": comp_ratio,
+                "uncompressed_size": total_uncompressed,
+                "compressed_size": total_compressed,
+                "disk_size": disk_size,
+                "is_dangerous": is_bomb
+            },
+            "duplicate_entries": {
+                "detected": len(duplicates) > 0,
+                "entries": duplicates[:20],
+                "count": len(duplicates)
+            },
+            "extension_mismatches": mismatches,
+            "polyglot_and_trailing": {
+                "has_trailing_data": has_trailing,
+                "trailing_bytes_count": trailing_bytes,
+                "has_leading_polyglot": has_polyglot,
+                "leading_magic": leading_magic
+            },
+            "nested_archives": nested_archives,
+            "issues_count": issues_count,
+            "verdict": verdict
+        }
+
+    def _parse_version(self, v: str) -> Tuple[int, ...]:
+        clean = re.sub(r'[^0-9.]', '', v)
+        parts = clean.split(".")
+        res = []
+        for p in parts:
+            try:
+                res.append(int(p))
+            except ValueError:
+                res.append(0)
+        return tuple(res) if res else (0,)
+
+    def _is_version_less_than(self, v: str, target: str) -> bool:
+        try:
+            return self._parse_version(v) < self._parse_version(target)
+        except Exception:
+            return False
+
+    def _audit_dependencies_and_sbom(
+        self,
+        zf: zipfile.ZipFile,
+        infos: List[zipfile.ZipInfo],
+        namelist: List[str],
+        manifest_dict: Dict[str, str],
+        packages: Set[str],
+        findings: List[Finding]
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        Extracts dependencies from Maven pom.properties / pom.xml, Manifest headers,
+        detects shaded libraries and Multi-Release JARs, correlates known CVEs
+        (Log4Shell, Spring4Shell, Commons-Collections, Fastjson, SnakeYAML, XStream),
+        and generates a CycloneDX v1.4 JSON SBOM.
+        """
+        dependencies: List[Dict[str, Any]] = []
+        seen_deps = set()
+
+        # 1. Maven pom.properties inspection
+        pom_prop_files = [n for n in namelist if "pom.properties" in n.lower() and n.startswith("META-INF/maven/")]
+        for pfile in pom_prop_files:
+            try:
+                ptext = zf.read(pfile).decode("utf-8", errors="ignore")
+                dep_info: Dict[str, str] = {}
+                for line in ptext.splitlines():
+                    if "=" in line and not line.strip().startswith("#"):
+                        k, v = line.split("=", 1)
+                        dep_info[k.strip()] = v.strip()
+                gid = dep_info.get("groupId", "")
+                aid = dep_info.get("artifactId", "")
+                ver = dep_info.get("version", "")
+                if aid and (gid, aid, ver) not in seen_deps:
+                    seen_deps.add((gid, aid, ver))
+                    dependencies.append({
+                        "group_id": gid or "unknown",
+                        "artifact_id": aid,
+                        "version": ver or "unknown",
+                        "source": pfile,
+                        "type": "maven"
+                    })
+            except Exception:
+                pass
+
+        # 2. Maven pom.xml inspection if pom.properties missing
+        if not dependencies:
+            pom_xml_files = [n for n in namelist if n.endswith("pom.xml") and n.startswith("META-INF/maven/")]
+            for px in pom_xml_files:
+                try:
+                    xml_text = zf.read(px).decode("utf-8", errors="ignore")
+                    gid_m = re.search(r'<groupId>([^<]+)</groupId>', xml_text)
+                    aid_m = re.search(r'<artifactId>([^<]+)</artifactId>', xml_text)
+                    ver_m = re.search(r'<version>([^<]+)</version>', xml_text)
+                    if aid_m:
+                        gid = gid_m.group(1).strip() if gid_m else "unknown"
+                        aid = aid_m.group(1).strip()
+                        ver = ver_m.group(1).strip() if ver_m else "unknown"
+                        if (gid, aid, ver) not in seen_deps:
+                            seen_deps.add((gid, aid, ver))
+                            dependencies.append({
+                                "group_id": gid,
+                                "artifact_id": aid,
+                                "version": ver,
+                                "source": px,
+                                "type": "maven_xml"
+                            })
+                except Exception:
+                    pass
+
+        # 3. Fallback: Manifest-based primary dependency
+        title = manifest_dict.get("implementation-title") or manifest_dict.get("bundle-symbolicname") or manifest_dict.get("specification-title")
+        version = manifest_dict.get("implementation-version") or manifest_dict.get("bundle-version") or manifest_dict.get("specification-version")
+        if title and not dependencies:
+            dependencies.append({
+                "group_id": "manifest",
+                "artifact_id": title,
+                "version": version or "unknown",
+                "source": "META-INF/MANIFEST.MF",
+                "type": "manifest"
+            })
+
+        # 4. Multi-Release JAR Check
+        multi_release_versions = []
+        mr_pattern = re.compile(r'^META-INF/versions/(\d+)/')
+        for n in namelist:
+            m = mr_pattern.match(n)
+            if m:
+                multi_release_versions.append(int(m.group(1)))
+        multi_release_versions = sorted(list(set(multi_release_versions)))
+
+        # 5. Shaded Library Detection
+        shaded_signatures = [
+            ("org.apache.commons", "Apache Commons", "utility"),
+            ("org.apache.logging.log4j", "Apache Log4j", "logging"),
+            ("org.apache.log4j", "Apache Log4j 1.x", "logging"),
+            ("com.google.gson", "Google Gson", "json"),
+            ("com.google.common", "Google Guava", "utility"),
+            ("com.fasterxml.jackson", "Jackson Databind", "json"),
+            ("org.slf4j", "SLF4J Logger", "logging"),
+            ("ch.qos.logback", "Logback", "logging"),
+            ("io.netty", "Netty Network Framework", "network"),
+            ("org.springframework", "Spring Framework", "framework"),
+            ("org.yaml.snakeyaml", "SnakeYAML", "yaml"),
+            ("com.thoughtworks.xstream", "XStream", "xml"),
+            ("com.alibaba.fastjson", "Fastjson", "json"),
+            ("org.bouncycastle", "Bouncy Castle Crypto", "crypto"),
+            ("org.sqlite", "SQLite JDBC Driver", "database"),
+            ("com.mysql", "MySQL Connector", "database"),
+            ("org.postgresql", "PostgreSQL JDBC Driver", "database"),
+            ("org.apache.http", "Apache HttpComponents", "network")
+        ]
+        shaded_libraries = []
+        for prefix, lib_name, cat in shaded_signatures:
+            if any(p.startswith(prefix) for p in packages):
+                matching_count = sum(1 for p in packages if p.startswith(prefix))
+                shaded_libraries.append({
+                    "name": lib_name,
+                    "package_prefix": prefix,
+                    "category": cat,
+                    "packages_count": matching_count
+                })
+
+        # 6. CVE Vulnerability Correlation
+        cve_advisories = []
+        cve_rules = [
+            {
+                "artifact": "log4j-core",
+                "cve": "CVE-2021-44228",
+                "name": "Log4Shell JNDI Remote Code Execution",
+                "severity": "critical",
+                "cwe": "CWE-502 / CWE-917",
+                "cvss": 10.0,
+                "is_vulnerable": lambda v: self._is_version_less_than(v, "2.17.1"),
+                "description": "Log4j JNDI lookup vulnerability allows unauthenticated remote attackers to execute arbitrary code via malicious LDAP/RMI queries."
+            },
+            {
+                "artifact": "spring-beans",
+                "cve": "CVE-2022-22965",
+                "name": "Spring4Shell Remote Code Execution",
+                "severity": "critical",
+                "cwe": "CWE-94",
+                "cvss": 9.8,
+                "is_vulnerable": lambda v: self._is_version_less_than(v, "5.3.18") or (v.startswith("5.2.") and self._is_version_less_than(v, "5.2.20")),
+                "description": "Spring Framework DataBinder classloader access allows unauthenticated remote attackers to execute arbitrary code on Tomcat."
+            },
+            {
+                "artifact": "commons-collections",
+                "cve": "CVE-2015-7501",
+                "name": "Commons Collections InvokerTransformer Deserialization RCE",
+                "severity": "critical",
+                "cwe": "CWE-502",
+                "cvss": 9.8,
+                "is_vulnerable": lambda v: self._is_version_less_than(v, "3.2.2") or v.startswith("4.0"),
+                "description": "InvokerTransformer executes arbitrary code upon deserialization of untrusted ObjectInputStream data."
+            },
+            {
+                "artifact": "fastjson",
+                "cve": "CVE-2022-25845",
+                "name": "Fastjson AutoType Bypass Deserialization RCE",
+                "severity": "critical",
+                "cwe": "CWE-502",
+                "cvss": 9.8,
+                "is_vulnerable": lambda v: self._is_version_less_than(v, "1.2.83"),
+                "description": "AutoType restriction bypass in Alibaba Fastjson allows remote code execution when parsing malicious JSON."
+            },
+            {
+                "artifact": "snakeyaml",
+                "cve": "CVE-2022-1471",
+                "name": "SnakeYAML Constructor Deserialization RCE",
+                "severity": "high",
+                "cwe": "CWE-502",
+                "cvss": 8.5,
+                "is_vulnerable": lambda v: self._is_version_less_than(v, "1.32"),
+                "description": "SnakeYAML Constructor class allows remote code execution via unsafe class instantiation during YAML unmarshaling."
+            },
+            {
+                "artifact": "xstream",
+                "cve": "CVE-2021-39144",
+                "name": "XStream Deserialization Remote Code Execution",
+                "severity": "critical",
+                "cwe": "CWE-502",
+                "cvss": 9.8,
+                "is_vulnerable": lambda v: self._is_version_less_than(v, "1.4.19"),
+                "description": "XStream deserialization gadget execution allows arbitrary command execution via dynamic proxy handlers."
+            }
+        ]
+
+        for dep in dependencies:
+            aid = dep.get("artifact_id", "").lower()
+            ver = dep.get("version", "")
+            if not ver or ver == "unknown":
+                continue
+            for rule in cve_rules:
+                if rule["artifact"] in aid:
+                    try:
+                        if rule["is_vulnerable"](ver):
+                            advisory = {
+                                "artifact": dep["artifact_id"],
+                                "version": ver,
+                                "cve": rule["cve"],
+                                "name": rule["name"],
+                                "severity": rule["severity"],
+                                "cvss": rule["cvss"],
+                                "cwe": rule["cwe"],
+                                "description": rule["description"]
+                            }
+                            cve_advisories.append(advisory)
+                            findings.append(Finding(
+                                category="vulnerability",
+                                severity=rule["severity"],
+                                title=f"Vulnerable Dependency: {rule['cve']} ({dep['artifact_id']} {ver})",
+                                description=f"{rule['name']}: {rule['description']}",
+                                details=advisory
+                            ))
+                    except Exception as e:
+                        logger.debug(f"CVE check note: {e}")
+
+        # 7. CycloneDX v1.4 SBOM Generation
+        main_name = dependencies[0]["artifact_id"] if dependencies else (title or "java-application")
+        main_ver = dependencies[0]["version"] if dependencies else (version or "1.0.0")
+
+        sbom_components = []
+        for d in dependencies:
+            gid = d.get("group_id", "")
+            aid = d.get("artifact_id", "")
+            v = d.get("version", "1.0.0")
+            purl = f"pkg:maven/{gid}/{aid}@{v}" if gid and gid != "unknown" and gid != "manifest" else f"pkg:generic/{aid}@{v}"
+            sbom_components.append({
+                "type": "library",
+                "group": gid if gid not in ["unknown", "manifest"] else "",
+                "name": aid,
+                "version": v,
+                "purl": purl,
+                "cpe": f"cpe:2.3:a:{gid or 'library'}:{aid}:{v}:*:*:*:*:*:*:*"
+            })
+
+        for s in shaded_libraries:
+            sbom_components.append({
+                "type": "library",
+                "name": s["name"],
+                "description": f"Shaded package {s['package_prefix']} ({s['packages_count']} packages)",
+                "scope": "embedded"
+            })
+
+        cyclonedx_sbom = {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.4",
+            "serialNumber": f"urn:uuid:{uuid.uuid4()}",
+            "version": 1,
+            "metadata": {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "tools": [
+                    {
+                        "vendor": "FileSanitizer",
+                        "name": "JavaAnalyzer",
+                        "version": "2.0.0"
+                    }
+                ],
+                "component": {
+                    "name": main_name,
+                    "version": main_ver,
+                    "type": "application"
+                }
+            },
+            "components": sbom_components,
+            "multi_release": {
+                "is_multi_release": len(multi_release_versions) > 0,
+                "versions": multi_release_versions
+            }
+        }
+
+        return dependencies, shaded_libraries, cve_advisories, cyclonedx_sbom
+
+    def _scan_secrets_and_ctf(
+        self,
+        corpus: str,
+        strings: List[str],
+        zf: zipfile.ZipFile,
+        infos: List[zipfile.ZipInfo],
+        findings: List[Finding]
+    ) -> Dict[str, Any]:
+        """
+        Scans strings, decompiled bytecode, and resources for:
+        - CTF flags (flag{...}, ctf{...}, picoCTF{...}, HTB{...}, etc.)
+        - Hardcoded API credentials (AWS, GitHub, Slack, Private Keys, JDBC passwords, JWT)
+        """
+        ctf_flags = []
+        secrets = []
+        seen_flags = set()
+        seen_secrets = set()
+
+        flag_patterns = [
+            re.compile(r'\b(flag\{[A-Za-z0-9_\-\.\$@!#%^&*+=]{3,100}\})', re.I),
+            re.compile(r'\b(ctf\{[A-Za-z0-9_\-\.\$@!#%^&*+=]{3,100}\})', re.I),
+            re.compile(r'\b(picoCTF\{[A-Za-z0-9_\-\.\$@!#%^&*+=]{3,100}\})', re.I),
+            re.compile(r'\b(HTB\{[A-Za-z0-9_\-\.\$@!#%^&*+=]{3,100}\})', re.I),
+            re.compile(r'\b(THM\{[A-Za-z0-9_\-\.\$@!#%^&*+=]{3,100}\})', re.I),
+            re.compile(r'\b(secflag\{[A-Za-z0-9_\-\.\$@!#%^&*+=]{3,100}\})', re.I)
+        ]
+
+        secret_patterns = [
+            (
+                "AWS Access Key ID",
+                re.compile(r'\b(AKIA[0-9A-Z]{16})\b'),
+                "critical",
+                "Amazon Web Services IAM User Access Key ID."
+            ),
+            (
+                "GitHub Personal Access Token",
+                re.compile(r'\b(ghp_[0-9a-zA-Z]{36}|github_pat_[0-9a-zA-Z_]{82})\b'),
+                "critical",
+                "GitHub Personal Access Token with repository or organization privileges."
+            ),
+            (
+                "Slack OAuth / Bot Token",
+                re.compile(r'\b(xox[baprs]-[0-9a-zA-Z]{10,48})\b'),
+                "high",
+                "Slack API token granting access to channels and bot endpoints."
+            ),
+            (
+                "Private Encryption Key Block",
+                re.compile(r'(-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)'),
+                "critical",
+                "Embedded private cryptographic key header."
+            ),
+            (
+                "Database JDBC Password",
+                re.compile(r'(?:jdbc:[a-z]+://[^\r\n;]+.*?(?:password|pwd)=([^\s&;\'"]+))', re.I),
+                "high",
+                "Hardcoded database connection string containing plaintext credentials."
+            ),
+            (
+                "JSON Web Token (JWT)",
+                re.compile(r'\b(eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})\b'),
+                "medium",
+                "Hardcoded JSON Web Token."
+            )
+        ]
+
+        # Scan text corpus
+        for pat in flag_patterns:
+            for match in pat.finditer(corpus):
+                flag = match.group(1)
+                if flag not in seen_flags:
+                    seen_flags.add(flag)
+                    ctf_flags.append({
+                        "flag": flag,
+                        "format": flag.split("{")[0] + "{...}",
+                        "length": len(flag)
+                    })
+
+        for name, pat, sev, desc in secret_patterns:
+            for match in pat.finditer(corpus):
+                val = match.group(1)
+                if val not in seen_secrets:
+                    seen_secrets.add(val)
+                    if len(val) > 8:
+                        masked = val[:4] + "*" * (len(val) - 8) + val[-4:]
+                    else:
+                        masked = val[:2] + "****"
+                    secrets.append({
+                        "type": name,
+                        "masked": masked,
+                        "severity": sev,
+                        "description": desc,
+                        "length": len(val)
+                    })
+
+        # Scan resources for hidden flag or credential files
+        for info in infos[:150]:
+            name_lower = info.filename.lower()
+            if any(k in name_lower for k in ["flag", "secret", "creds", "password", "key.txt"]):
+                try:
+                    rdata = zf.read(info.filename).decode("utf-8", errors="ignore")
+                    for pat in flag_patterns:
+                        for match in pat.finditer(rdata):
+                            flag = match.group(1)
+                            if flag not in seen_flags:
+                                seen_flags.add(flag)
+                                ctf_flags.append({
+                                    "flag": flag,
+                                    "format": flag.split("{")[0] + "{...}",
+                                    "length": len(flag),
+                                    "source": info.filename
+                                })
+                except Exception:
+                    pass
+
+        # Generate findings for CTF Flags
+        for f_entry in ctf_flags[:5]:
+            findings.append(Finding(
+                category="ctf",
+                severity="high",
+                title=f"CTF Flag Captured: {f_entry['flag'][:25]}...",
+                description=f"Identified capture-the-flag marker '{f_entry['flag']}'.",
+                details=f_entry
+            ))
+
+        # Generate findings for Secrets
+        for s_entry in secrets[:5]:
+            findings.append(Finding(
+                category="credential",
+                severity=s_entry["severity"],
+                title=f"Hardcoded Credential: {s_entry['type']}",
+                description=f"{s_entry['description']} Masked value: {s_entry['masked']}.",
+                details=s_entry
+            ))
+
+        return {
+            "detected": len(ctf_flags) > 0 or len(secrets) > 0,
+            "ctf_flags": ctf_flags,
+            "flags_count": len(ctf_flags),
+            "secrets": secrets,
+            "secrets_count": len(secrets)
+        }
+
     def _analyze_java_archive(self, file_path: Path, data: Dict[str, Any], findings: List[Finding]):
         data["java_type"] = "jar"
         data["java_subtype"] = "jar"
@@ -1431,7 +2820,7 @@ class JavaAnalyzer(BaseAnalyzer):
                 namelist = [i.filename for i in infos]
 
                 data["classes_count"] = sum(1 for n in namelist if n.endswith(".class"))
-                data["classes_list"] = [n for n in namelist if n.endswith(".class")][:50]
+                data["classes_list"] = [n for n in namelist if n.endswith(".class")][:100]
                 data["embedded_binaries"] = [
                     n for n in namelist
                     if Path(n).suffix.lower() in [".dll", ".so", ".dylib", ".exe", ".sh", ".bat", ".bin", ".vbs", ".ps1"]
@@ -1444,12 +2833,17 @@ class JavaAnalyzer(BaseAnalyzer):
                 data["packages_count"] = len(packages)
 
                 manifest_content = ""
+                manifest_dict = {}
                 # Parse META-INF/MANIFEST.MF
                 if "META-INF/MANIFEST.MF" in namelist:
                     manifest_content = zf.read("META-INF/MANIFEST.MF").decode("utf-8", errors="ignore")
                     data["code_preview"] = manifest_content[:15000]
 
                     for line in manifest_content.splitlines():
+                        if ":" in line and not line.startswith(" "):
+                            parts = line.split(":", 1)
+                            manifest_dict[parts[0].strip().lower()] = parts[1].strip()
+
                         if line.lower().startswith("main-class:"):
                             data["main_class"] = line.split(":", 1)[1].strip()
                         elif line.lower().startswith("premain-class:"):
@@ -1500,8 +2894,9 @@ class JavaAnalyzer(BaseAnalyzer):
                         details={"embedded_binaries": data["embedded_binaries"]}
                     ))
 
-                # Scan contained .class files using JavaClassParser
+                # Scan and decompile contained .class files using JavaClassParser
                 class_parsers = []
+                classes_catalog = []
                 all_class_names = []
                 all_method_calls = []
                 all_strings = []
@@ -1513,20 +2908,22 @@ class JavaAnalyzer(BaseAnalyzer):
                     main_file = data["main_class"].replace(".", "/") + ".class"
                     class_entries.sort(key=lambda x: 0 if x.filename == main_file else 1)
 
-                for info in class_entries[:300]:
+                for info in class_entries[:500]:
                     try:
                         c_bytes = zf.read(info.filename)
                         parser = JavaClassParser(c_bytes)
                         if parser.parse():
                             class_parsers.append(parser)
-                            all_class_names.append(parser.class_name or info.filename)
+                            cls_full = parser.class_name or info.filename.replace(".class", "")
+                            all_class_names.append(cls_full)
                             all_method_calls.extend(parser.method_calls)
                             all_strings.extend(parser.strings)
 
                             joined_methods = " ".join([m["full"] for m in parser.method_calls] + parser.strings)
+                            class_apis = []
                             for api_def in HIGH_RISK_JAVA_APIS:
                                 if api_def["pattern"].search(joined_methods):
-                                    suspicious_apis.append({
+                                    entry = {
                                         "class_file": info.filename,
                                         "api": api_def["api"],
                                         "title": api_def["title"],
@@ -1539,10 +2936,36 @@ class JavaAnalyzer(BaseAnalyzer):
                                         "owasp": api_def.get("owasp", ""),
                                         "mitre": api_def["mitre"],
                                         "mitre_name": api_def["mitre_name"]
-                                    })
+                                    }
+                                    suspicious_apis.append(entry)
+                                    class_apis.append(entry)
+
                             for s in parser.strings:
                                 for u in re.findall(r'https?://[a-zA-Z0-9_\-\.:]+(?:/[^\s\'"<>\\]*)?', s):
                                     all_urls.add(u)
+
+                            is_main_entry = any(m.get("is_main") for m in parser.methods) or (data.get("main_class") and data["main_class"].replace(".", "/") == cls_full.replace(".", "/"))
+                            simple_n = cls_full.split("/")[-1].split(".")[-1]
+                            is_obf = len(simple_n) <= 2 or (simple_n.islower() and len(simple_n) <= 3)
+
+                            classes_catalog.append({
+                                "class_name": cls_full.replace("/", "."),
+                                "class_file": info.filename,
+                                "simple_name": simple_n,
+                                "package_name": ".".join(cls_full.replace("/", ".").split(".")[:-1]),
+                                "super_class": parser.super_class_name.replace("/", "."),
+                                "interfaces": [i.replace("/", ".") for i in parser.interfaces],
+                                "methods_count": len(parser.methods),
+                                "fields_count": len(parser.fields),
+                                "methods": [m.get("signature", m.get("name") + "()") for m in parser.methods],
+                                "fields": [f.get("formatted", f.get("name")) for f in parser.fields],
+                                "is_main": is_main_entry,
+                                "is_entry": is_main_entry,
+                                "is_obfuscated": is_obf,
+                                "danger_apis_count": len(class_apis),
+                                "danger_apis": class_apis,
+                                "decompiled_source": parser.get_decompiled_source(class_apis)
+                            })
                         else:
                             c_text = c_bytes.decode("latin1", errors="ignore")
                             all_strings.append(c_text[:1000])
@@ -1577,21 +3000,126 @@ class JavaAnalyzer(BaseAnalyzer):
 
                             r_text = r_bytes.decode("utf-8", errors="ignore")
                             if r_text:
-                                all_strings.append(r_text[:2000])
+                                all_strings.append(r_text[:3000])
                                 for u in re.findall(r'https?://[a-zA-Z0-9_\-\.:]+(?:/[^\s\'"<>\\]*)?', r_text):
                                     all_urls.add(u)
                         except Exception:
                             pass
 
+                # Sort classes catalog: entry points and classes with dangerous APIs first
+                classes_catalog.sort(key=lambda c: (
+                    0 if c["is_main"] else 1,
+                    0 if c["danger_apis_count"] > 0 else 1,
+                    -c["danger_apis_count"],
+                    c["class_name"]
+                ))
+
+                # Build Multi-Module Code Explorer list (like Script & Python code modules)
+                code_modules = [
+                    {
+                        "name": "META-INF/MANIFEST.MF",
+                        "code": manifest_content or "// Manifest absent or empty",
+                        "language": "properties"
+                    }
+                ]
+                for c in classes_catalog[:40]:
+                    tag = " (Entry Point)" if c["is_main"] else (f" ({c['danger_apis_count']} High-Risk APIs)" if c["danger_apis_count"] > 0 else "")
+                    code_modules.append({
+                        "name": f"{c['class_name']}{tag}",
+                        "code": c["decompiled_source"],
+                        "language": "java"
+                    })
+
+                # Bundled Scripts & Configs
+                for info in infos:
+                    ext = Path(info.filename).suffix.lower()
+                    if ext in [".bat", ".cmd", ".sh", ".ps1", ".vbs", ".py", ".js", ".properties", ".json", ".xml", ".yml", ".yaml"]:
+                        try:
+                            f_text = zf.read(info.filename).decode("utf-8", errors="ignore")
+                            if f_text.strip():
+                                lang = "bash" if ext == ".sh" else ("batch" if ext in [".bat", ".cmd"] else ("python" if ext == ".py" else ("javascript" if ext == ".js" else ("json" if ext == ".json" else "text"))))
+                                code_modules.append({
+                                    "name": f"{info.filename} (Resource)",
+                                    "code": f_text[:100000],
+                                    "language": lang
+                                })
+                        except Exception:
+                            pass
+
+                # Categorized Strings (like PE/ELF Binaries)
+                all_sample, categorized_strings, total_str_count = self._categorize_strings(all_strings)
+
+                # Base64 Blocks Extraction & Automatic Decoding (like Scripts / Python)
+                raw_text_corpus = (
+                    " ".join(namelist) + " " +
+                    manifest_content + " " +
+                    " ".join(all_strings) + " " +
+                    " ".join([m["full"] for m in all_method_calls])
+                )
+                b64_blocks = self._extract_base64_blocks(raw_text_corpus, findings)
+
+                # Add decoded Base64 blocks to code_modules
+                for idx, b64 in enumerate(b64_blocks[:5]):
+                    if b64.get("decoded_preview"):
+                        code_modules.append({
+                            "name": f"Decoded Base64 Payload #{idx+1} ({b64.get('encoding')})",
+                            "code": b64.get("decoded_preview", "") + "\n\n// Full Encoded Payload:\n" + b64.get("encoded_full", ""),
+                            "language": "text"
+                        })
+
+                # LOLBins & Commands
+                lolbin_matches, has_lolbins, detected_commands = self._extract_lolbins_and_commands(raw_text_corpus, all_strings)
+
+                # Digital Signature & Signer Certificate Verification (like Binaries Authenticode)
+                digital_sig_status, signing_info = self._inspect_jar_signature(zf, namelist, findings)
+
+                # Embedded Resources (like Binaries / Office)
+                embedded_resources = self._inspect_embedded_resources(infos)
+
                 # Set JAR triage compatibility fields
                 data["is_jar"] = True
                 data["class_count"] = data["classes_count"]
-                data["manifest_content"] = data.get("code_preview", "")
+                data["manifest_content"] = manifest_content
                 data["packages"] = sorted(list(packages))
                 data["total_entries"] = len(namelist)
                 data["suspicious_apis"] = suspicious_apis
                 data["dangerous_apis"] = suspicious_apis
-                data["iocs"]["urls"] = list(all_urls)[:50]
+                data["iocs"]["urls"] = sorted(list(all_urls))[:100]
+
+                # Parity with Scripts, Python, and Binaries:
+                data["classes_decompiled"] = classes_catalog
+                data["code_modules"] = code_modules
+                data["strings"] = {
+                    "all_sample": all_sample,
+                    "categorized": categorized_strings,
+                    "total_count": total_str_count
+                }
+                data["b64_blocks"] = b64_blocks
+                data["lolbin_matches"] = lolbin_matches
+                data["has_lolbins"] = has_lolbins
+                data["detected_commands"] = detected_commands
+                data["digital_signature"] = digital_sig_status
+                data["signing_info"] = signing_info
+                data["embedded_resources"] = embedded_resources
+
+                # Comprehensive Checklist Analysis:
+                # 1. Archive Structural & Integrity Security
+                archive_security = self._audit_archive_security(file_path, zf, infos, findings)
+
+                # 2. Dependencies, Shaded Libraries & CycloneDX SBOM
+                dependencies, shaded_libraries, cve_advisories, cyclonedx_sbom = self._audit_dependencies_and_sbom(
+                    zf, infos, namelist, manifest_dict, packages, findings
+                )
+
+                # 3. Hardcoded Secrets & CTF Flags
+                secrets_and_ctf = self._scan_secrets_and_ctf(raw_text_corpus, all_strings, zf, infos, findings)
+
+                data["archive_security"] = archive_security
+                data["dependencies"] = dependencies
+                data["shaded_libraries"] = shaded_libraries
+                data["cve_advisories"] = cve_advisories
+                data["cyclonedx_sbom"] = cyclonedx_sbom
+                data["secrets_and_ctf"] = secrets_and_ctf
 
                 # Class metadata from first valid class or main class
                 if class_parsers:
@@ -1601,44 +3129,13 @@ class JavaAnalyzer(BaseAnalyzer):
                         "minor_version": first_cp.minor_version,
                         "java_version": first_cp.java_version_name,
                         "constant_pool_count": len(first_cp.constant_pool),
-                        "methods_count": len(first_cp.method_calls),
+                        "methods_count": len(first_cp.methods),
                         "interfaces_count": len(first_cp.interfaces)
                     }
 
-                # Disassemble main entry class or first .class for rich preview
-                target_class_entry = None
-                if data.get("main_class"):
-                    candidate = data["main_class"].replace(".", "/") + ".class"
-                    if candidate in namelist:
-                        target_class_entry = candidate
-                if not target_class_entry:
-                    if suspicious_apis:
-                        target_class_entry = suspicious_apis[0]["class_file"]
-                    elif data["classes_list"]:
-                        target_class_entry = data["classes_list"][0]
-
-                if target_class_entry and target_class_entry in namelist:
-                    try:
-                        cls_bytes = zf.read(target_class_entry)
-                        c_parser = JavaClassParser(cls_bytes)
-                        if c_parser.parse():
-                            lines = [
-                                "",
-                                "// ==========================================================================",
-                                f"// Disassembled Entry / Target Class: {target_class_entry}",
-                                f"// Target JVM: {c_parser.java_version_name} (Major: {c_parser.major_version})",
-                                f"// Superclass: {c_parser.super_class_name}",
-                                f"// Interfaces: {', '.join(c_parser.interfaces) if c_parser.interfaces else 'None'}",
-                                "// ==========================================================================",
-                                f"public class {c_parser.class_name.split('/')[-1]} extends {c_parser.super_class_name.split('/')[-1]} {{",
-                                "    // Method Invocations Resolved from Constant Pool:"
-                            ]
-                            for mc in c_parser.method_calls[:40]:
-                                lines.append(f"    // Invokes: {mc['full']}")
-                            lines.append("}")
-                            data["code_preview"] = (data.get("code_preview", "") + "\n" + "\n".join(lines)).strip()
-                    except Exception as e:
-                        logger.debug(f"Class disassembly in JAR failed: {e}")
+                # Disassemble main entry class or first .class for code_preview
+                if classes_catalog:
+                    data["code_preview"] = (manifest_content + "\n\n" + classes_catalog[0]["decompiled_source"]).strip()
 
                 # Group API findings
                 unique_api_titles = list(set(a["title"] for a in suspicious_apis))
@@ -1666,12 +3163,6 @@ class JavaAnalyzer(BaseAnalyzer):
                         ))
 
                 # 4-Pillar Behavioral Analysis (SecurityScorecard Methodology)
-                raw_text_corpus = (
-                    " ".join(namelist) + " " +
-                    manifest_content + " " +
-                    " ".join(all_strings) + " " +
-                    " ".join([m["full"] for m in all_method_calls])
-                )
                 data["behavioral_analysis"] = self._audit_behavioral_capabilities(
                     strings=all_strings,
                     method_calls=all_method_calls,

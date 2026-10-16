@@ -62,7 +62,8 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
   const mbLink = malwarebazaar?.search_url || (sha256 ? `https://bazaar.abuse.ch/sample/${sha256}/` : '');
   const circlLink = circl?.search_url || (sha256 ? `https://hashlookup.circl.lu/search/${sha256}` : '');
   const otxLink = alienvault_otx?.search_url || (sha256 ? `https://otx.alienvault.com/indicator/file/${sha256}` : '');
-  const dlpFindings = findings.filter(f => f.category === 'dlp');
+  const displayFindings = (findings || []).filter(f => f.category !== 'yara' || (!disabledChecks?.includes('check_yara') && !disabledChecks?.includes('yara_enabled')));
+  const dlpFindings = displayFindings.filter(f => f.category === 'dlp');
 
   // Floating hover state for YARA rule matches
   const [hoveredYaraInfo, setHoveredYaraInfo] = useState<{
@@ -165,7 +166,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                 )}
               </div>
 
-              {yara && yara.matches_count > 0 && (
+              {yara && yara.matches_count > 0 && !disabledChecks?.includes('check_yara') && !disabledChecks?.includes('yara_enabled') && (
                 <span
                   onMouseEnter={(e) => {
                     if (closeTimeoutRef.current) {
@@ -217,7 +218,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
             )}
 
             {/* Antivirus Pill */}
-            {clamav && !disabledChecks?.includes('check_clamav') && (
+            {clamav && !disabledChecks?.includes('check_clamav') && !disabledChecks?.includes('clamav_enabled') && (
               <div className="bg-white/90 border border-slate-200 rounded-2xl p-3 sm:px-4 flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
                   <Bug className="w-5 h-5" />
@@ -285,7 +286,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
       </div>
 
       {/* Threat Intelligence & VirusTotal Integration Card */}
-      {virustotal && !disabledChecks?.includes('check_virustotal') && (
+      {virustotal && !disabledChecks?.includes('check_virustotal') && !disabledChecks?.includes('virustotal_enabled') && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
@@ -436,7 +437,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
       )}
 
       {/* CrowdStrike Falcon Sandbox / Hybrid Analysis Integration Card */}
-      {hybrid_analysis && !disabledChecks?.includes('check_crowdstrike') && (
+      {hybrid_analysis && !disabledChecks?.includes('check_crowdstrike') && !disabledChecks?.includes('crowdstrike_enabled') && !disabledChecks?.includes('hybrid_analysis_enabled') && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
@@ -603,279 +604,299 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
       )}
 
       {/* Multi-Source Threat Intelligence: Abuse.ch ThreatFox & CIRCL Hashlookup Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Abuse.ch ThreatFox Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 bg-rose-50 text-rose-600 rounded-lg text-base">🦊</span>
-                <div>
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-slate-700 font-bold">
-                    Abuse.ch ThreatFox IOCs
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Community malware IOC database & threat indicator sharing
-                  </p>
-                </div>
-              </div>
-              {tfLink && (
-                <a
-                  href={tfLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-rose-700 hover:text-rose-800 text-[11px] font-semibold rounded-lg border border-slate-200 transition-colors"
-                >
-                  <span>ThreatFox</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-            </div>
+      {(() => {
+        const showThreatFox = Boolean(threatfox && !disabledChecks?.includes('check_threatfox') && !disabledChecks?.includes('threatfox_enabled'));
+        const showMalwareBazaar = Boolean(malwarebazaar && !disabledChecks?.includes('check_malwarebazaar') && !disabledChecks?.includes('malwarebazaar_enabled'));
+        const showCircl = Boolean(circl && !disabledChecks?.includes('check_circl') && !disabledChecks?.includes('circl_hashlookup_enabled'));
+        const showAlienVault = Boolean(alienvault_otx && !disabledChecks?.includes('check_alienvault_otx') && !disabledChecks?.includes('alienvault_otx_enabled'));
 
-            {threatfox && threatfox.status === 'MALICIOUS' ? (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
-                    ⚠️ Malware IOC Hit
-                  </span>
-                  <span className="font-bold text-rose-900 text-xs">
-                    {threatfox.malware || 'Malicious Indicator'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-700">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Threat Type</span>
-                    <span className="font-semibold text-rose-900">{threatfox.threat_type || 'Malware Indicator'}</span>
+        const visibleIntelCount = [showThreatFox, showMalwareBazaar, showCircl, showAlienVault].filter(Boolean).length;
+        if (visibleIntelCount === 0) return null;
+
+        return (
+          <div className={`grid grid-cols-1 ${visibleIntelCount > 1 ? 'md:grid-cols-2' : ''} gap-4`}>
+            {/* Abuse.ch ThreatFox Card */}
+            {showThreatFox && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 bg-rose-50 text-rose-600 rounded-lg text-base">🦊</span>
+                      <div>
+                        <h4 className="text-xs font-mono uppercase tracking-wider text-slate-700 font-bold">
+                          Abuse.ch ThreatFox IOCs
+                        </h4>
+                        <p className="text-[11px] text-slate-400">
+                          Community malware IOC database &amp; threat indicator sharing
+                        </p>
+                      </div>
+                    </div>
+                    {tfLink && (
+                      <a
+                        href={tfLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-rose-700 hover:text-rose-800 text-[11px] font-semibold rounded-lg border border-slate-200 transition-colors"
+                      >
+                        <span>ThreatFox</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
                   </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Confidence</span>
-                    <span className="font-semibold text-rose-900">{threatfox.confidence || 100}%</span>
-                  </div>
+
+                  {threatfox && threatfox.status === 'MALICIOUS' ? (
+                    <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
+                          ⚠️ Malware IOC Hit
+                        </span>
+                        <span className="font-bold text-rose-900 text-xs">
+                          {threatfox.malware || 'Malicious Indicator'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-700">
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">Threat Type</span>
+                          <span className="font-semibold text-rose-900">{threatfox.threat_type || 'Malware Indicator'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">Confidence</span>
+                          <span className="font-semibold text-rose-900">{threatfox.confidence || 100}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : threatfox && threatfox.status === 'CLEAN' ? (
+                    <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="font-semibold text-emerald-900">
+                          No active malware IOC records found
+                        </span>
+                      </div>
+                      <span className="text-emerald-700 text-[11px] font-mono font-medium">✓ Clean</span>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+                      <span className="font-semibold block mb-0.5">No IOC Records Found</span>
+                      <span className="text-[11px] text-slate-500">Hash is not listed in Abuse.ch ThreatFox IOC tracking database.</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ) : threatfox && threatfox.status === 'CLEAN' ? (
-              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="font-semibold text-emerald-900">
-                    No active malware IOC records found
-                  </span>
-                </div>
-                <span className="text-emerald-700 text-[11px] font-mono font-medium">✓ Clean</span>
-              </div>
-            ) : (
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
-                <span className="font-semibold block mb-0.5">No IOC Records Found</span>
-                <span className="text-[11px] text-slate-500">Hash is not listed in Abuse.ch ThreatFox IOC tracking database.</span>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* MalwareBazaar (Abuse.ch) Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 bg-rose-50 text-rose-600 rounded-lg text-base">🦠</span>
+            {/* MalwareBazaar (Abuse.ch) Card */}
+            {showMalwareBazaar && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
                 <div>
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-slate-700 font-bold">
-                    MalwareBazaar (Abuse.ch)
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Community malware sample intelligence & family signatures
-                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 bg-rose-50 text-rose-600 rounded-lg text-base">🦠</span>
+                      <div>
+                        <h4 className="text-xs font-mono uppercase tracking-wider text-slate-700 font-bold">
+                          MalwareBazaar (Abuse.ch)
+                        </h4>
+                        <p className="text-[11px] text-slate-400">
+                          Community malware sample intelligence &amp; family signatures
+                        </p>
+                      </div>
+                    </div>
+                    {mbLink && (
+                      <a
+                        href={mbLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-rose-700 hover:text-rose-800 text-[11px] font-semibold rounded-lg border border-slate-200 transition-colors"
+                      >
+                        <span>MalwareBazaar</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+
+                  {malwarebazaar && malwarebazaar.status === 'MALICIOUS' ? (
+                    <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
+                          ⚠️ Malware Threat Hit
+                        </span>
+                        <span className="font-bold text-rose-900 text-xs">
+                          {malwarebazaar.signature || 'Malware Sample'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-700">
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">File Type</span>
+                          <span className="font-semibold text-rose-900">{malwarebazaar.file_type || 'Binary'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">First Seen</span>
+                          <span className="font-semibold text-slate-800 truncate block">{malwarebazaar.first_seen || 'Recorded'}</span>
+                        </div>
+                      </div>
+                      {malwarebazaar.tags && malwarebazaar.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {malwarebazaar.tags.map((t, idx) => (
+                            <span key={idx} className="px-1.5 py-0.5 bg-rose-200/60 text-rose-900 rounded text-[10px] font-mono">
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : malwarebazaar && malwarebazaar.status === 'CLEAN' ? (
+                    <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="font-semibold text-emerald-900">
+                          No active malware records in MalwareBazaar
+                        </span>
+                      </div>
+                      <span className="text-emerald-700 text-[11px] font-mono font-medium">✓ Clean</span>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+                      <span className="font-semibold block mb-0.5">No Records Found</span>
+                      <span className="text-[11px] text-slate-500">Hash is not listed in Abuse.ch MalwareBazaar database.</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              {mbLink && (
-                <a
-                  href={mbLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-rose-700 hover:text-rose-800 text-[11px] font-semibold rounded-lg border border-slate-200 transition-colors"
-                >
-                  <span>MalwareBazaar</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-            </div>
+            )}
 
-            {malwarebazaar && malwarebazaar.status === 'MALICIOUS' ? (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
-                    ⚠️ Malware Threat Hit
-                  </span>
-                  <span className="font-bold text-rose-900 text-xs">
-                    {malwarebazaar.signature || 'Malware Sample'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-700">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">File Type</span>
-                    <span className="font-semibold text-rose-900">{malwarebazaar.file_type || 'Binary'}</span>
+            {/* CIRCL Hashlookup (NIST NSRL) Card */}
+            {showCircl && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg text-base">🏛️</span>
+                      <div>
+                        <h4 className="text-xs font-mono uppercase tracking-wider text-slate-700 font-bold">
+                          CIRCL Hashlookup (NSRL)
+                        </h4>
+                        <p className="text-[11px] text-slate-400">
+                          NIST National Software Reference Library verification
+                        </p>
+                      </div>
+                    </div>
+                    {circlLink && (
+                      <a
+                        href={circlLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-blue-700 hover:text-blue-800 text-[11px] font-semibold rounded-lg border border-slate-200 transition-colors"
+                      >
+                        <span>CIRCL Search</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
                   </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">First Seen</span>
-                    <span className="font-semibold text-slate-800 truncate block">{malwarebazaar.first_seen || 'Recorded'}</span>
-                  </div>
-                </div>
-                {malwarebazaar.tags && malwarebazaar.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {malwarebazaar.tags.map((t, idx) => (
-                      <span key={idx} className="px-1.5 py-0.5 bg-rose-200/60 text-rose-900 rounded text-[10px] font-mono">
-                        #{t}
+
+                  {circl && (circl.status === 'BENIGN_KNOWN' || circl.is_nsrl) ? (
+                    <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
+                          ✓ Verified Known Benign
+                        </span>
+                        <span className="font-bold text-emerald-900 text-xs truncate">
+                          {circl.file_name || 'NSRL Reference File'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-700">
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">Vendor / Publisher</span>
+                          <span className="font-semibold text-emerald-900 truncate block">{circl.vendor || 'Standard Software'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px]">Database Registry</span>
+                          <span className="font-semibold text-emerald-900">NIST NSRL RDS</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-semibold text-slate-800">Unmatched in NIST NSRL Database</span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 leading-relaxed block">
+                        Typical for custom documents, user files, generated data, and proprietary software.
                       </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : malwarebazaar && malwarebazaar.status === 'CLEAN' ? (
-              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="font-semibold text-emerald-900">
-                    No active malware records in MalwareBazaar
-                  </span>
+                    </div>
+                  )}
                 </div>
-                <span className="text-emerald-700 text-[11px] font-mono font-medium">✓ Clean</span>
-              </div>
-            ) : (
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
-                <span className="font-semibold block mb-0.5">No Records Found</span>
-                <span className="text-[11px] text-slate-500">Hash is not listed in Abuse.ch MalwareBazaar database.</span>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* CIRCL Hashlookup (NIST NSRL) Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg text-base">🏛️</span>
+            {/* AlienVault OTX (Open Threat Exchange) Pulse Card */}
+            {showAlienVault && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
                 <div>
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-slate-700 font-bold">
-                    CIRCL Hashlookup (NSRL)
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    NIST National Software Reference Library verification
-                  </p>
-                </div>
-              </div>
-              {circlLink && (
-                <a
-                  href={circlLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-blue-700 hover:text-blue-800 text-[11px] font-semibold rounded-lg border border-slate-200 transition-colors"
-                >
-                  <span>CIRCL Search</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-            </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-base">🛰️</span>
+                      <div>
+                        <h4 className="text-xs font-mono uppercase tracking-wider text-slate-700 font-bold">
+                          AlienVault OTX
+                        </h4>
+                        <p className="text-[11px] text-slate-400">
+                          Open Threat Exchange community pulses &amp; APT attribution
+                        </p>
+                      </div>
+                    </div>
+                    {otxLink && (
+                      <a
+                        href={otxLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-indigo-700 hover:text-indigo-800 text-[11px] font-semibold rounded-lg border border-slate-200 transition-colors"
+                      >
+                        <span>OTX Pulses</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
 
-            {circl && (circl.status === 'BENIGN_KNOWN' || circl.is_nsrl) ? (
-              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
-                    ✓ Verified Known Benign
-                  </span>
-                  <span className="font-bold text-emerald-900 text-xs truncate">
-                    {circl.file_name || 'NSRL Reference File'}
-                  </span>
+                  {alienvault_otx && alienvault_otx.pulse_count && alienvault_otx.pulse_count > 0 ? (
+                    <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
+                          ⚠️ {alienvault_otx.pulse_count} Threat Pulses
+                        </span>
+                        <span className="font-bold text-rose-900 text-xs truncate">
+                          {alienvault_otx.pulse_names?.[0] || 'Active Threat Campaign'}
+                        </span>
+                      </div>
+                      {alienvault_otx.tags && alienvault_otx.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {alienvault_otx.tags.slice(0, 4).map((tag, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-mono">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="font-semibold text-emerald-900">
+                          No threat pulses reported in OTX
+                        </span>
+                      </div>
+                      <span className="text-emerald-700 text-[11px] font-mono font-medium">✓ Clean</span>
+                    </div>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-700">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Vendor / Publisher</span>
-                    <span className="font-semibold text-emerald-900 truncate block">{circl.vendor || 'Standard Software'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Database Registry</span>
-                    <span className="font-semibold text-emerald-900">NIST NSRL RDS</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-semibold text-slate-800">Unmatched in NIST NSRL Database</span>
-                </div>
-                <span className="text-[11px] text-slate-500 leading-relaxed block">
-                  Typical for custom documents, user files, generated data, and proprietary software.
-                </span>
               </div>
             )}
           </div>
-        </div>
-
-        {/* AlienVault OTX (Open Threat Exchange) Pulse Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-base">🛰️</span>
-                <div>
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-slate-700 font-bold">
-                    AlienVault OTX
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Open Threat Exchange community pulses & APT attribution
-                  </p>
-                </div>
-              </div>
-              {otxLink && (
-                <a
-                  href={otxLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-indigo-700 hover:text-indigo-800 text-[11px] font-semibold rounded-lg border border-slate-200 transition-colors"
-                >
-                  <span>OTX Pulses</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-            </div>
-
-            {alienvault_otx && alienvault_otx.pulse_count && alienvault_otx.pulse_count > 0 ? (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
-                    ⚠️ {alienvault_otx.pulse_count} Threat Pulses
-                  </span>
-                  <span className="font-bold text-rose-900 text-xs truncate">
-                    {alienvault_otx.pulse_names?.[0] || 'Active Threat Campaign'}
-                  </span>
-                </div>
-                {alienvault_otx.tags && alienvault_otx.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {alienvault_otx.tags.slice(0, 4).map((tag, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-mono">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="font-semibold text-emerald-900">
-                    No threat pulses reported in OTX
-                  </span>
-                </div>
-                <span className="text-emerald-700 text-[11px] font-mono font-medium">✓ Clean</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* ClamAV Engine Details */}
-      {clamav && !disabledChecks?.includes('check_clamav') && (
+      {clamav && !disabledChecks?.includes('check_clamav') && !disabledChecks?.includes('clamav_enabled') && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
           <h4 className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -958,13 +979,13 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
       )}
 
       {/* Detailed Findings Breakdown */}
-      {findings.length > 0 && (
+      {displayFindings.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
           <h4 className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-4">
-            Security Findings Catalog ({findings.length})
+            Security Findings Catalog ({displayFindings.length})
           </h4>
           <div className="space-y-3">
-            {findings.map((f, idx) => {
+            {displayFindings.map((f, idx) => {
               const isCodeFinding =
                 (f.category === 'macro' || f.category === 'javascript' || f.category === 'yara') &&
                 Boolean(extractedCode);

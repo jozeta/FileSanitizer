@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Clock, Info, BookOpen, FileCheck2, Shield, Settings, Lock } from 'lucide-react';
+import { ShieldCheck, Clock, Info, BookOpen, FileCheck2, Shield, Settings, Lock, Binary } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { APP_VERSION } from '../version';
 
-export type ViewTab = 'sanitizer' | 'how-it-works' | 'supported-formats' | 'settings';
+export type ViewTab = 'sanitizer' | 'decoder' | 'how-it-works' | 'supported-formats' | 'settings';
 
 interface HeaderProps {
   currentView: ViewTab;
   onNavigate: (view: ViewTab) => void;
   onOpenDisclaimer: () => void;
   onReset?: () => void;
+  hasUpdate?: boolean;
+  onOpenUpdateModal?: () => void;
 }
 
 const SECURITY_SLOGANS = [
@@ -49,6 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
   currentView, 
   onNavigate, 
   onOpenDisclaimer,
+  hasUpdate,
+  onOpenUpdateModal,
 }) => {
   const [health, setHealth] = useState<any>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!localStorage.getItem('fs_admin_token'));
@@ -76,21 +80,36 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-40">
       <div className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Logo and Brand */}
-        <button 
-          onClick={() => onNavigate('sanitizer')} 
-          className="flex items-center gap-3 text-left focus:outline-none group cursor-pointer shrink-0"
-        >
-          <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm group-hover:bg-blue-600 transition-colors">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-lg text-slate-900 tracking-tight">FileSanitizer</span>
-              <span className="text-[11px] font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">v{APP_VERSION} CDR</span>
+        <div className="flex items-center gap-3 text-left shrink-0">
+          <button 
+            type="button"
+            onClick={() => onNavigate('sanitizer')} 
+            className="flex items-center gap-3 text-left focus:outline-none group cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm group-hover:bg-blue-600 transition-colors">
+              <ShieldCheck className="w-6 h-6" />
             </div>
-            <p className="text-xs text-slate-500 font-normal hidden sm:block">{slogan}</p>
-          </div>
-        </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-lg text-slate-900 tracking-tight">FileSanitizer</span>
+                <span className="text-[11px] font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">v{APP_VERSION} CDR</span>
+              </div>
+              <p className="text-xs text-slate-500 font-normal hidden sm:block">{slogan}</p>
+            </div>
+          </button>
+
+          {hasUpdate && onOpenUpdateModal && (
+            <button
+              type="button"
+              onClick={onOpenUpdateModal}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-colors shadow-2xs cursor-pointer ml-1"
+              title="New FileSanitizer version available! Click to view details."
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+              <span>Update Available</span>
+            </button>
+          )}
+        </div>
 
         {/* Center Navigation Tabs */}
         <nav className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/80">
@@ -104,6 +123,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Shield className="w-3.5 h-3.5" />
             <span>Sanitizer</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('decoder')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              currentView === 'decoder'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Binary className="w-3.5 h-3.5" />
+            <span>Decoder</span>
           </button>
 
           <button

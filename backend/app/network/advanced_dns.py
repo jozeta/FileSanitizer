@@ -373,20 +373,28 @@ class AdvancedDNSInspector:
             if min_ttl < 180:
                 result["heuristics"]["low_ttl_detected"] = True
 
-                # Fast-flux check: low TTL + multiple A records
-                if len(a_records) >= 3 and min_ttl <= 300:
+                # Fast-flux check: only suspect true fast-flux if ultra low TTL (< 60s) with many IPs (>= 5)
+                # Standard CDN / cloud anycast providers (Cloudflare, Akamai, Fastly, Google, AWS) use 60-300s TTLs for benign load balancing
+                if min_ttl <= 60 and len(a_records) >= 4:
                     result["heuristics"]["fast_flux_suspect"] = True
                     result["anomalies"].append({
                         "type": "FAST_FLUX_INDICATOR",
-                        "severity": "high",
-                        "title": f"Possible Fast-Flux DNS Detected (TTL: {min_ttl}s, {len(a_records)} IPs)",
-                        "description": "Short TTL combined with multiple A records is commonly used by botnets and bulletproof hosting to evade IP blocklists."
+                        "severity": "medium",
+                        "title": f"Possible Fast-Flux DNS Profile (TTL: {min_ttl}s, {len(a_records)} IPs)",
+                        "description": "Short TTL combined with numerous distinct A records requires correlation with ASN reputation to distinguish CDN load balancing from botnet fluxing."
+                    })
+                elif len(a_records) >= 2 and min_ttl <= 300:
+                    result["anomalies"].append({
+                        "type": "DYNAMIC_LOAD_BALANCING_TTL",
+                        "severity": "low",
+                        "title": f"Dynamic Load Balancing TTL ({min_ttl}s, {len(a_records)} IPs)",
+                        "description": "DNS records use short cache expiration for high availability, geo-steering, or CDN traffic distribution."
                     })
                 elif min_ttl <= 60:
                     result["anomalies"].append({
-                        "type": "ULTRA_LOW_TTL",
-                        "severity": "medium",
-                        "title": f"Unusually Short TTL ({min_ttl} seconds)",
+                        "type": "SHORT_CACHE_TTL",
+                        "severity": "low",
+                        "title": f"Short Cache TTL ({min_ttl} seconds)",
                         "description": "DNS records expire rapidly, allowing dynamic infrastructure rotation."
                     })
 

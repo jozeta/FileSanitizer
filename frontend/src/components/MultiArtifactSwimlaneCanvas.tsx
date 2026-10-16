@@ -608,8 +608,8 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
               })}
           </svg>
 
-          {/* Interactive Event Nodes */}
-          <div className="relative" style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px`, zIndex: 2 }}>
+          {/* Interactive Event Nodes (Absolute overlay matching SVG coordinate system) */}
+          <div className="absolute top-0 left-0 pointer-events-none" style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px`, zIndex: 2 }}>
             {filteredEvents.map((ev, idx) => {
               const eid = ev.id || `evt_${idx}`;
               const pos = eventPositions[eid];
@@ -630,7 +630,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
                     top: `${pos.y}px`,
                     transform: 'translate(-50%, -50%)'
                   }}
-                  className="absolute cursor-pointer group"
+                  className="absolute cursor-pointer group pointer-events-auto"
                   onClick={() => setSelectedEventId(isSelected ? null : eid)}
                   onMouseEnter={() => setHoveredEventId(eid)}
                   onMouseLeave={() => setHoveredEventId(null)}
