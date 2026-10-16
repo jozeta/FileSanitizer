@@ -3548,7 +3548,16 @@ export interface ApkComponent {
   name: string;
   exported: boolean;
   permission?: string;
-  intent_filters?: string[];
+  authorities?: string;
+  label?: string;
+  is_main?: boolean;
+  is_launcher?: boolean;
+  is_boot?: boolean;
+  is_sms?: boolean;
+  intent_filters?: Array<{
+    actions?: string[];
+    categories?: string[];
+  }> | string[];
   actions?: string[];
 }
 

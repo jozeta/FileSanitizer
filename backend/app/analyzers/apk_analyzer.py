@@ -35,7 +35,7 @@ from app.network.threat_intelligence import ThreatIntelligenceAggregator
 # Silence verbose Androguard debug logging from loguru
 try:
     from loguru import logger as loguru_logger
-    loguru_logger.disable("androguard")
+    loguru_logger.remove()
 except Exception:
     pass
 
@@ -1439,6 +1439,159 @@ class ApkAnalyzer(BaseAnalyzer):
             pass
         return False
 
+    @staticmethod
+    def _format_asn1_name(name_obj) -> str:
+        """Format an asn1crypto.x509.Name or string DN into standard readable X.500 format."""
+        if not name_obj:
+            return ""
+        if hasattr(name_obj, "human_friendly") and callable(getattr(name_obj, "human_friendly")):
+            return name_obj.human_friendly()
+        if hasattr(name_obj, "human_friendly") and isinstance(name_obj.human_friendly, str):
+            return name_obj.human_friendly
+        if hasattr(name_obj, "native") and isinstance(name_obj.native, dict):
+            key_map = {
+                "common_name": "CN",
+                "organization_name": "O",
+                "organizational_unit_name": "OU",
+                "locality_name": "L",
+                "state_or_province_name": "ST",
+                "country_name": "C",
+                "email_address": "emailAddress",
+            }
+            parts = [f"{key_map.get(k, k)}={v}" for k, v in name_obj.native.items() if v]
+            if parts:
+                return ", ".join(parts)
+        return str(name_obj)
+
+    def _parse_manifest_tree(self, m_xml, data: Dict[str, Any]):
+        """Extract application attributes, components, intent-filters, and security flags from parsed manifest XML."""
+        if m_xml is None:
+            return
+        ns = "{http://schemas.android.com/apk/res/android}"
+
+        # Application Attributes & Security Flags
+        app_elem = m_xml.find("application")
+        if app_elem is not None:
+            debuggable_val = app_elem.get(f"{ns}debuggable")
+            if debuggable_val is not None:
+                is_dbg = debuggable_val.lower() == "true"
+                data["security_flags"]["debuggable"] = is_dbg
+
+            backup_val = app_elem.get(f"{ns}allowBackup")
+            if backup_val is not None:
+                is_bak = backup_val.lower() == "true"
+                data["security_flags"]["allowBackup"] = is_bak
+                data["security_flags"]["allow_backup"] = is_bak
+
+            cleartext_val = app_elem.get(f"{ns}usesCleartextTraffic")
+            if cleartext_val is not None:
+                is_clear = cleartext_val.lower() == "true"
+                data["security_flags"]["usesCleartextTraffic"] = is_clear
+                data["security_flags"]["uses_cleartext_traffic"] = is_clear
+
+            nsc = app_elem.get(f"{ns}networkSecurityConfig")
+            if nsc:
+                data["security_flags"]["networkSecurityConfig"] = nsc
+
+        # Activities & Activity Aliases
+        parsed_activities = []
+        for tag in ["activity", "activity-alias"]:
+            for act in m_xml.iter(tag):
+                act_name = act.get(f"{ns}name") or act.get(f"{ns}targetActivity") or ""
+                if not act_name:
+                    continue
+                act_exp = act.get(f"{ns}exported")
+                label = act.get(f"{ns}label", "")
+                perm = act.get(f"{ns}permission", "")
+                filters = []
+                for ifilter in act.findall("intent-filter"):
+                    actions = [a.get(f"{ns}name") for a in ifilter.findall("action") if a.get(f"{ns}name")]
+                    cats = [c.get(f"{ns}name") for c in ifilter.findall("category") if c.get(f"{ns}name")]
+                    filters.append({"actions": actions, "categories": cats})
+                is_exp = (act_exp.lower() == "true") if act_exp is not None else (len(filters) > 0)
+                is_main = any("android.intent.action.MAIN" in f.get("actions", []) for f in filters)
+                is_launcher = any("android.intent.category.LAUNCHER" in f.get("categories", []) for f in filters)
+                parsed_activities.append({
+                    "name": act_name,
+                    "exported": is_exp,
+                    "permission": perm,
+                    "label": label,
+                    "is_main": is_main,
+                    "is_launcher": is_launcher,
+                    "intent_filters": filters
+                })
+        if parsed_activities:
+            data["components"]["activities"] = parsed_activities
+
+        # Services
+        parsed_services = []
+        for srv in m_xml.iter("service"):
+            srv_name = srv.get(f"{ns}name") or ""
+            if not srv_name:
+                continue
+            srv_exp = srv.get(f"{ns}exported")
+            perm = srv.get(f"{ns}permission", "")
+            filters = []
+            for ifilter in srv.findall("intent-filter"):
+                actions = [a.get(f"{ns}name") for a in ifilter.findall("action") if a.get(f"{ns}name")]
+                cats = [c.get(f"{ns}name") for c in ifilter.findall("category") if c.get(f"{ns}name")]
+                filters.append({"actions": actions, "categories": cats})
+            is_exp = (srv_exp.lower() == "true") if srv_exp is not None else (len(filters) > 0)
+            parsed_services.append({
+                "name": srv_name,
+                "exported": is_exp,
+                "permission": perm,
+                "intent_filters": filters
+            })
+        if parsed_services:
+            data["components"]["services"] = parsed_services
+
+        # Receivers
+        parsed_receivers = []
+        for rcv in m_xml.iter("receiver"):
+            rcv_name = rcv.get(f"{ns}name") or ""
+            if not rcv_name:
+                continue
+            rcv_exp = rcv.get(f"{ns}exported")
+            perm = rcv.get(f"{ns}permission", "")
+            filters = []
+            for ifilter in rcv.findall("intent-filter"):
+                actions = [a.get(f"{ns}name") for a in ifilter.findall("action") if a.get(f"{ns}name")]
+                cats = [c.get(f"{ns}name") for c in ifilter.findall("category") if c.get(f"{ns}name")]
+                filters.append({"actions": actions, "categories": cats})
+            is_exp = (rcv_exp.lower() == "true") if rcv_exp is not None else (len(filters) > 0)
+            is_boot = any(any("BOOT_COMPLETED" in a for a in f.get("actions", [])) for f in filters)
+            is_sms = any(any("SMS_RECEIVED" in a for a in f.get("actions", [])) for f in filters)
+            parsed_receivers.append({
+                "name": rcv_name,
+                "exported": is_exp,
+                "permission": perm,
+                "is_boot": is_boot,
+                "is_sms": is_sms,
+                "intent_filters": filters
+            })
+        if parsed_receivers:
+            data["components"]["receivers"] = parsed_receivers
+
+        # Providers
+        parsed_providers = []
+        for prv in m_xml.iter("provider"):
+            prv_name = prv.get(f"{ns}name") or ""
+            if not prv_name:
+                continue
+            prv_exp = prv.get(f"{ns}exported")
+            auth = prv.get(f"{ns}authorities", "")
+            is_exp = (prv_exp.lower() == "true") if prv_exp is not None else False
+            parsed_providers.append({
+                "name": prv_name,
+                "exported": is_exp,
+                "authorities": auth,
+                "read_permission": prv.get(f"{ns}readPermission", ""),
+                "write_permission": prv.get(f"{ns}writePermission", "")
+            })
+        if parsed_providers:
+            data["components"]["providers"] = parsed_providers
+
     def analyze(self, file_path: Path, filename: str, mime_type: str) -> AnalyzerResult:
         findings: List[Finding] = []
         name_lower = filename.lower()
@@ -1630,24 +1783,24 @@ class ApkAnalyzer(BaseAnalyzer):
                         data["target_sdk"] = andro_apk.get_target_sdk_version()
                         data["permissions"] = andro_apk.get_permissions() or []
 
-                        # Format manifest XML string
+                        # Format manifest XML string and parse rich component & security attributes
                         try:
                             m_xml = andro_apk.get_android_manifest_xml()
                             if m_xml is not None:
                                 data["manifest_xml"] = etree.tostring(m_xml, pretty_print=True, encoding="unicode")
-                        except Exception:
-                            pass
+                                self._parse_manifest_tree(m_xml, data)
+                        except Exception as m_err:
+                            logger.debug(f"Manifest tree parse error: {m_err}")
 
-                        # Activities, Services, Receivers, Providers
-                        acts = andro_apk.get_activities() or []
-                        srvs = andro_apk.get_services() or []
-                        rcvs = andro_apk.get_receivers() or []
-                        prvs = andro_apk.get_providers() or []
-
-                        data["components"]["activities"] = [{"name": a, "exported": False} for a in acts]
-                        data["components"]["services"] = [{"name": s, "exported": False} for s in srvs]
-                        data["components"]["receivers"] = [{"name": r, "exported": False} for r in rcvs]
-                        data["components"]["providers"] = [{"name": p, "exported": False} for p in prvs]
+                        # Fallback simple component names if tree parse produced empty
+                        if not data["components"]["activities"] and andro_apk.get_activities():
+                            data["components"]["activities"] = [{"name": a, "exported": False} for a in andro_apk.get_activities()]
+                        if not data["components"]["services"] and andro_apk.get_services():
+                            data["components"]["services"] = [{"name": s, "exported": False} for s in andro_apk.get_services()]
+                        if not data["components"]["receivers"] and andro_apk.get_receivers():
+                            data["components"]["receivers"] = [{"name": r, "exported": False} for r in andro_apk.get_receivers()]
+                        if not data["components"]["providers"] and andro_apk.get_providers():
+                            data["components"]["providers"] = [{"name": p, "exported": False} for p in andro_apk.get_providers()]
 
                         # Signatures & Certs
                         data["signing_info"]["has_v1_signature"] = andro_apk.is_signed_v1()
@@ -1692,24 +1845,50 @@ class ApkAnalyzer(BaseAnalyzer):
                 else:
                     namelist = zf.namelist()
 
-                # Parse AndroidManifest.xml if not yet parsed
-                if not data["package_name"] and "AndroidManifest.xml" in namelist:
+                # Parse AndroidManifest.xml via AxmlDecoder to enrich or fallback
+                if "AndroidManifest.xml" in namelist:
                     manifest_bytes = get_apk_bytes("AndroidManifest.xml")
                     if manifest_bytes:
-                        axml = AxmlDecoder(manifest_bytes)
-                        if axml.decode():
-                            data["package_name"] = axml.package_name
-                            data["version_code"] = str(axml.version_code or "1")
-                            data["version_name"] = str(axml.version_name or "1.0")
-                            data["min_sdk"] = axml.min_sdk_version
-                            data["target_sdk"] = axml.target_sdk_version
-                            data["compile_sdk"] = axml.compile_sdk_version
-                            data["permissions"] = axml.permissions
-                            data["components"]["activities"] = axml.activities
-                            data["components"]["services"] = axml.services
-                            data["components"]["receivers"] = axml.receivers
-                            data["components"]["providers"] = axml.providers
-                            data["security_flags"].update(axml.application_attributes)
+                        try:
+                            axml = AxmlDecoder(manifest_bytes)
+                            if axml.decode():
+                                if not data["package_name"]:
+                                    data["package_name"] = axml.package_name
+                                if not data["version_code"] or data["version_code"] == "1":
+                                    data["version_code"] = str(axml.version_code or "1")
+                                if not data["version_name"] or data["version_name"] == "1.0":
+                                    data["version_name"] = str(axml.version_name or "1.0")
+                                if not data["min_sdk"]:
+                                    data["min_sdk"] = axml.min_sdk_version
+                                if not data["target_sdk"]:
+                                    data["target_sdk"] = axml.target_sdk_version
+                                if not data["compile_sdk"]:
+                                    data["compile_sdk"] = axml.compile_sdk_version
+                                if not data["permissions"]:
+                                    data["permissions"] = axml.permissions
+                                if not data["components"]["activities"]:
+                                    data["components"]["activities"] = axml.activities
+                                if not data["components"]["services"]:
+                                    data["components"]["services"] = axml.services
+                                if not data["components"]["receivers"]:
+                                    data["components"]["receivers"] = axml.receivers
+                                if not data["components"]["providers"]:
+                                    data["components"]["providers"] = axml.providers
+                                for k, v in axml.application_attributes.items():
+                                    data["security_flags"][k] = v
+                                    if k == "allowBackup":
+                                        data["security_flags"]["allow_backup"] = v
+                                    elif k == "usesCleartextTraffic":
+                                        data["security_flags"]["uses_cleartext_traffic"] = v
+                                if not data["manifest_xml"] and manifest_bytes:
+                                    try:
+                                        txt_cand = manifest_bytes.decode("utf-8", errors="ignore")
+                                        if "<manifest" in txt_cand:
+                                            data["manifest_xml"] = txt_cand
+                                    except Exception:
+                                        pass
+                        except Exception as ax_err:
+                            logger.debug(f"AxmlDecoder fallback parse note: {ax_err}")
 
                 # Set SDK labels
                 if data["min_sdk"]:
@@ -1853,64 +2032,88 @@ class ApkAnalyzer(BaseAnalyzer):
                     except Exception as dex_err:
                         logger.debug(f"DexParser error on {df}: {dex_err}")
 
-                # Use Androguard DEX for method instruction disassembly on primary DEX files
+                # Use Androguard DEX for method instruction disassembly and DAD decompilation on primary DEX files
                 if ANDROGUARD_AVAILABLE and valid_dex_entries:
                     try:
                         primary_dex_entries = valid_dex_entries[:4]
                         dex_objs = []
+                        dx = AndroguardAnalysis()
                         for df, dex_bytes in primary_dex_entries:
                             d_obj = AndroguardDEX(dex_bytes)
+                            dx.add(d_obj)
+                            try:
+                                d_obj.set_decompiler(DecompilerDAD(d_obj, dx))
+                            except Exception:
+                                pass
                             dex_objs.append(d_obj)
 
-                        # Extract classes and methods with instruction disassembly
+                        # Separate app classes from third-party/framework classes
+                        app_classes_raw = []
+                        other_classes_raw = []
+                        pkg_prefix = data["package_name"] or ""
+
                         for d_obj in dex_objs:
                             for cls_item in d_obj.get_classes():
                                 c_name = cls_item.get_name()
                                 if c_name.startswith("L") and c_name.endswith(";"):
                                     c_name = c_name[1:-1].replace("/", ".")
 
-                                pkg_prefix = data["package_name"] or ""
-                                is_app_class = (pkg_prefix and c_name.startswith(pkg_prefix)) or len(classes_extracted) < 15
+                                if pkg_prefix and c_name.startswith(pkg_prefix):
+                                    app_classes_raw.append((d_obj, cls_item, c_name))
+                                else:
+                                    other_classes_raw.append((d_obj, cls_item, c_name))
 
-                                if is_app_class and len(classes_extracted) < 40:
-                                    methods_list = []
-                                    for m in cls_item.get_methods():
-                                        instructions = []
-                                        try:
-                                            for ins in m.get_instructions():
-                                                instructions.append(f"{ins.get_name()} {ins.get_output()}")
-                                        except Exception:
-                                            pass
+                        # Select up to 120 classes, prioritizing package-owned classes
+                        selected_classes_raw = (app_classes_raw + other_classes_raw)[:120]
 
-                                        methods_list.append({
-                                            "name": m.get_name(),
-                                            "descriptor": m.get_descriptor(),
-                                            "access_flags": m.get_access_flags_string(),
-                                            "instructions_count": len(instructions),
-                                            "instructions": instructions[:60],
-                                            "source": ""
-                                        })
+                        for d_obj, cls_item, c_name in selected_classes_raw:
+                            methods_list = []
+                            for m in cls_item.get_methods():
+                                instructions = []
+                                try:
+                                    for ins in m.get_instructions():
+                                        instructions.append(f"{ins.get_name()} {ins.get_output()}")
+                                except Exception:
+                                    pass
 
-                                    # Build clean reconstructed class preview from instructions
-                                    m_blocks = []
-                                    for m_item in methods_list:
-                                        m_lines = [f"    // Method: {m_item['name']}{m_item['descriptor']} [{m_item['access_flags']}]"]
-                                        for ins in m_item.get("instructions", []):
-                                            m_lines.append(f"    {ins}")
-                                        m_blocks.append("\n".join(m_lines))
-                                    cls_pkg = c_name.rsplit(".", 1)[0] if "." in c_name else ""
-                                    cls_simple = c_name.split(".")[-1]
-                                    cls_src = f"// Reconstructed Dalvik class structure\npackage {cls_pkg};\n\npublic class {cls_simple} {{\n" + "\n\n".join(m_blocks) + "\n}"
+                                methods_list.append({
+                                    "name": m.get_name(),
+                                    "descriptor": m.get_descriptor(),
+                                    "access_flags": m.get_access_flags_string(),
+                                    "instructions_count": len(instructions),
+                                    "instructions": instructions[:80],
+                                    "source": ""
+                                })
 
-                                    classes_extracted.append({
-                                        "name": c_name,
-                                        "package": cls_pkg,
-                                        "superclass": cls_item.get_superclassname(),
-                                        "access_flags": cls_item.get_access_flags_string(),
-                                        "methods_count": len(methods_list),
-                                        "methods": methods_list,
-                                        "source_code": cls_src
-                                    })
+                            # Attempt authentic Java source decompilation via DecompilerDAD
+                            cls_src = None
+                            try:
+                                cls_src = cls_item.get_source()
+                            except Exception:
+                                cls_src = None
+
+                            cls_pkg = c_name.rsplit(".", 1)[0] if "." in c_name else ""
+                            cls_simple = c_name.split(".")[-1]
+
+                            if not cls_src or len(cls_src.strip()) < 10:
+                                # Clean pseudo-Java fallback with annotated bytecode
+                                m_blocks = []
+                                for m_item in methods_list:
+                                    m_lines = [f"    // Method: {m_item['name']}{m_item['descriptor']} [{m_item['access_flags']}]"]
+                                    for ins in m_item.get("instructions", []):
+                                        m_lines.append(f"    {ins}")
+                                    m_blocks.append("\n".join(m_lines))
+                                cls_src = f"// Reconstructed Dalvik Class\npackage {cls_pkg};\n\npublic class {cls_simple} {{\n" + "\n\n".join(m_blocks) + "\n}"
+
+                            classes_extracted.append({
+                                "name": c_name,
+                                "package": cls_pkg,
+                                "superclass": cls_item.get_superclassname(),
+                                "access_flags": cls_item.get_access_flags_string(),
+                                "methods_count": len(methods_list),
+                                "methods": methods_list,
+                                "source_code": cls_src
+                            })
 
                         data["dex_info"]["classes_count"] = len(all_dex_classes) if all_dex_classes else sum(len(d.get_classes()) for d in dex_objs)
                         data["dex_info"]["total_strings_count"] = len(all_strings_collected)
@@ -2035,19 +2238,26 @@ class ApkAnalyzer(BaseAnalyzer):
                         andro_certs = andro_apk.get_certificates()
                         if andro_certs:
                             for idx, c in enumerate(andro_certs):
-                                issuer_str = c.issuer.human_friendly if hasattr(c.issuer, "human_friendly") else str(c.issuer)
-                                subject_str = c.subject.human_friendly if hasattr(c.subject, "human_friendly") else str(c.subject)
-                                sha256_fp = c.sha256_fingerprint if hasattr(c, "sha256_fingerprint") else (c.sha256.hex() if hasattr(c, "sha256") else "")
-                                is_debug = "android@android.com" in issuer_str.lower() or "debug" in issuer_str.lower()
+                                issuer_str = self._format_asn1_name(getattr(c, "issuer", None))
+                                subject_str = self._format_asn1_name(getattr(c, "subject", None))
+                                raw_fp = getattr(c, "sha256_fingerprint", "")
+                                if not raw_fp and hasattr(c, "sha256"):
+                                    raw_fp = c.sha256.hex() if isinstance(c.sha256, bytes) else str(c.sha256)
+                                sha256_fp = raw_fp.upper() if raw_fp else ""
+                                is_debug = "android@android.com" in issuer_str.lower() or "debug" in issuer_str.lower() or "android debug" in subject_str.lower()
                                 is_self = bool(getattr(c, "self_signed", False) or issuer_str == subject_str)
+
+                                sn = hex(c.serial_number) if hasattr(c, "serial_number") and isinstance(c.serial_number, int) else str(getattr(c, "serial_number", ""))
+                                v_from = str(getattr(c, "not_valid_before", ""))
+                                v_until = str(getattr(c, "not_valid_after", ""))
 
                                 cert_entry = {
                                     "index": idx,
                                     "issuer": issuer_str,
                                     "subject": subject_str,
-                                    "serial_number": hex(c.serial_number) if hasattr(c, "serial_number") else "",
-                                    "valid_from": str(getattr(c, "not_valid_before", "")),
-                                    "valid_until": str(getattr(c, "not_valid_after", "")),
+                                    "serial_number": sn,
+                                    "valid_from": v_from,
+                                    "valid_until": v_until,
                                     "sha256_fingerprint": sha256_fp,
                                     "is_debug_key": is_debug,
                                     "is_self_signed": is_self
@@ -2058,9 +2268,9 @@ class ApkAnalyzer(BaseAnalyzer):
                                     data["signing_info"].update({
                                         "issuer": issuer_str,
                                         "subject": subject_str,
-                                        "serial_number": hex(c.serial_number) if hasattr(c, "serial_number") else "",
-                                        "valid_from": str(getattr(c, "not_valid_before", "")),
-                                        "valid_until": str(getattr(c, "not_valid_after", "")),
+                                        "serial_number": sn,
+                                        "valid_from": v_from,
+                                        "valid_until": v_until,
                                         "sha256_fingerprint": sha256_fp,
                                         "is_debug_key": is_debug,
                                         "is_self_signed": is_self

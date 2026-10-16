@@ -19,10 +19,44 @@ import {
   Code2,
   Binary,
   FileText,
-  Hash
+  Hash,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
-import { ApkAnalysisData, Finding, ApkClassDetail, ApkEmbeddedSourceFile } from '../types';
+import { ApkAnalysisData, Finding, ApkClassDetail, ApkEmbeddedSourceFile, ApkComponent, ApkCertificate } from '../types';
 import { formatBytes } from '../utils/formatters';
+
+const getStandardPermDescription = (perm: string): string => {
+  const descriptions: Record<string, string> = {
+    'android.permission.INTERNET': 'Allows the application to create network sockets and use custom network protocols (Full Internet access).',
+    'android.permission.ACCESS_NETWORK_STATE': 'Allows the application to view the status of network connections (e.g. Wi-Fi vs Mobile data).',
+    'android.permission.ACCESS_WIFI_STATE': 'Allows the application to view information about Wi-Fi networking status.',
+    'android.permission.CHANGE_WIFI_STATE': 'Allows the application to connect/disconnect from Wi-Fi and alter network configurations.',
+    'android.permission.WAKE_LOCK': 'Allows the application to prevent the processor from sleeping or screen from dimming.',
+    'android.permission.VIBRATE': 'Allows the application to control the device vibrator for haptics and alerts.',
+    'android.permission.FOREGROUND_SERVICE': 'Allows the application to run background tasks with a persistent user notification.',
+    'android.permission.FOREGROUND_SERVICE_SPECIAL_USE': 'Allows the application to run foreground services for special purposes.',
+    'android.permission.FOREGROUND_SERVICE_DATA_SYNC': 'Allows the application to run foreground services to sync data in the background.',
+    'android.permission.POST_NOTIFICATIONS': 'Allows the application to post status bar notifications (Android 13+).',
+    'android.permission.RECEIVE_BOOT_COMPLETED': 'Allows the application to launch or trigger a receiver immediately after device boot finishes.',
+    'android.permission.REQUEST_INSTALL_PACKAGES': 'Allows the application to request installation of secondary package files (potential dropper capability).',
+    'android.permission.QUERY_ALL_PACKAGES': 'Allows the application to query the list of all installed packages on the device.',
+    'android.permission.BLUETOOTH': 'Allows the application to connect to paired Bluetooth devices.',
+    'android.permission.BLUETOOTH_ADMIN': 'Allows the application to discover and pair with Bluetooth devices.',
+    'android.permission.BLUETOOTH_CONNECT': 'Allows the application to communicate with paired Bluetooth devices (Android 12+).',
+    'android.permission.BLUETOOTH_SCAN': 'Allows the application to scan for nearby Bluetooth peripherals (Android 12+).',
+    'android.permission.NFC': 'Allows the application to perform Near-Field Communication (NFC) transactions.',
+    'android.permission.MODIFY_AUDIO_SETTINGS': 'Allows the application to modify global audio settings like volume and output routing.',
+    'android.permission.KILL_BACKGROUND_PROCESSES': 'Allows the application to call ActivityManager.killBackgroundProcesses to terminate other apps.',
+    'android.permission.REORDER_TASKS': 'Allows the application to move tasks to the foreground and background.',
+    'android.permission.SYSTEM_ALERT_WINDOW': 'Allows an app to create windows shown on top of all other apps (Draw over apps / Overlay capability).',
+    'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS': 'Allows an application to request permission to bypass battery optimization restrictions.'
+  };
+
+  if (descriptions[perm]) return descriptions[perm];
+  const short = perm.split('.').pop() || perm;
+  return `Standard Android platform permission (${short}). Allows application component execution without runtime prompt.`;
+};
 
 interface ApkAnalysisCardProps {
   apkInfo?: ApkAnalysisData;
@@ -38,9 +72,17 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
     'overview' | 'decompiler' | 'embedded_sources' | 'native_so' | 'permissions' | 'components' | 'dex' | 'strings' | 'certificate' | 'manifest' | 'mitre'
   >('overview');
 
+  // Permissions Tab State
   const [permSearch, setPermSearch] = useState('');
-  const [permFilter, setPermFilter] = useState<'all' | 'critical' | 'high' | 'medium'>('all');
+  const [permTypeFilter, setPermTypeFilter] = useState<'all' | 'dangerous' | 'standard'>('all');
+  const [permFilter, setPermFilter] = useState<'all' | 'critical' | 'high' | 'medium' | 'low'>('all');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Components Tab State
+  const [componentTypeFilter, setComponentTypeFilter] = useState<'all' | 'activities' | 'services' | 'receivers' | 'providers'>('all');
+  const [componentSearch, setComponentSearch] = useState('');
+  const [componentExportedOnly, setComponentExportedOnly] = useState(false);
+  const [expandedComponentIndex, setExpandedComponentIndex] = useState<number | null>(null);
 
   // Decompiler Tab State
   const [classSearch, setClassSearch] = useState('');
@@ -58,8 +100,12 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
     'all' | 'secrets' | 'urls' | 'ips' | 'commands' | 'crypto' | 'paths' | 'apis'
   >('all');
 
+  // Certificate Tab State
+  const [selectedCertIndex, setSelectedCertIndex] = useState<number>(0);
+
   // Manifest Tab State
   const [manifestSearch, setManifestSearch] = useState('');
+  const [manifestFilterOnly, setManifestFilterOnly] = useState(false);
 
   // Sensitive APIs Tab State
   const [apiSearch, setApiSearch] = useState('');
@@ -128,14 +174,195 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const filteredPerms = dangerous_permissions.filter(p => {
-    const matchesSearch =
-      p.permission.toLowerCase().includes(permSearch.toLowerCase()) ||
-      p.title.toLowerCase().includes(permSearch.toLowerCase()) ||
-      p.description.toLowerCase().includes(permSearch.toLowerCase());
-    const matchesFilter = permFilter === 'all' || p.severity === permFilter;
-    return matchesSearch && matchesFilter;
-  });
+  // Unified Permission List (Dangerous + Standard Android permissions)
+  const unifiedPermissions = useMemo(() => {
+    const dangMap = new Map<string, (typeof dangerous_permissions)[0]>();
+    dangerous_permissions.forEach(dp => {
+      dangMap.set(dp.permission, dp);
+    });
+
+    const list: Array<{
+      permission: string;
+      is_dangerous: boolean;
+      severity: 'critical' | 'high' | 'medium' | 'low' | 'normal';
+      title: string;
+      description: string;
+      mitre?: string;
+      mitre_name?: string;
+    }> = [];
+
+    const seen = new Set<string>();
+
+    (permissions || []).forEach(perm => {
+      seen.add(perm);
+      const dp = dangMap.get(perm);
+      if (dp) {
+        list.push({
+          permission: dp.permission,
+          is_dangerous: true,
+          severity: dp.severity,
+          title: dp.title,
+          description: dp.description,
+          mitre: dp.mitre,
+          mitre_name: dp.mitre_name
+        });
+      } else {
+        const shortName = perm.split('.').pop() || perm;
+        list.push({
+          permission: perm,
+          is_dangerous: false,
+          severity: 'normal',
+          title: shortName.replace(/_/g, ' '),
+          description: getStandardPermDescription(perm)
+        });
+      }
+    });
+
+    dangerous_permissions.forEach(dp => {
+      if (!seen.has(dp.permission)) {
+        seen.add(dp.permission);
+        list.push({
+          permission: dp.permission,
+          is_dangerous: true,
+          severity: dp.severity,
+          title: dp.title,
+          description: dp.description,
+          mitre: dp.mitre,
+          mitre_name: dp.mitre_name
+        });
+      }
+    });
+
+    return list;
+  }, [permissions, dangerous_permissions]);
+
+  const filteredUnifiedPerms = useMemo(() => {
+    return unifiedPermissions.filter(p => {
+      const q = permSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        p.permission.toLowerCase().includes(q) ||
+        p.title.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q);
+
+      if (permTypeFilter === 'dangerous' && !p.is_dangerous) return false;
+      if (permTypeFilter === 'standard' && p.is_dangerous) return false;
+
+      if (permFilter !== 'all') {
+        if (!p.is_dangerous || p.severity !== permFilter) return false;
+      }
+
+      return matchesSearch;
+    });
+  }, [unifiedPermissions, permSearch, permTypeFilter, permFilter]);
+
+  // Unified Components List (Activities, Services, Receivers, Content Providers)
+  const allComponentsList = useMemo(() => {
+    const list: Array<ApkComponent & { componentType: 'activity' | 'service' | 'receiver' | 'provider' }> = [];
+    activities.forEach(a => list.push({ ...a, componentType: 'activity' }));
+    services.forEach(s => list.push({ ...s, componentType: 'service' }));
+    receivers.forEach(r => list.push({ ...r, componentType: 'receiver' }));
+    providers.forEach(p => list.push({ ...p, componentType: 'provider' }));
+    return list;
+  }, [activities, services, receivers, providers]);
+
+  const filteredComponentsList = useMemo(() => {
+    return allComponentsList.filter(comp => {
+      if (componentTypeFilter === 'activities' && comp.componentType !== 'activity') return false;
+      if (componentTypeFilter === 'services' && comp.componentType !== 'service') return false;
+      if (componentTypeFilter === 'receivers' && comp.componentType !== 'receiver') return false;
+      if (componentTypeFilter === 'providers' && comp.componentType !== 'provider') return false;
+
+      if (componentExportedOnly && !comp.exported) return false;
+
+      if (componentSearch.trim()) {
+        const q = componentSearch.toLowerCase().trim();
+        const matchesName = comp.name.toLowerCase().includes(q);
+        const matchesLabel = !!comp.label && comp.label.toLowerCase().includes(q);
+        const matchesAuth = !!comp.authorities && comp.authorities.toLowerCase().includes(q);
+        const matchesPerm = !!comp.permission && comp.permission.toLowerCase().includes(q);
+
+        let matchesIntent = false;
+        if (comp.intent_filters && Array.isArray(comp.intent_filters)) {
+          matchesIntent = comp.intent_filters.some(f => {
+            if (typeof f === 'string') return f.toLowerCase().includes(q);
+            const acts = f.actions || [];
+            const cats = f.categories || [];
+            return acts.some(a => a.toLowerCase().includes(q)) || cats.some(c => c.toLowerCase().includes(q));
+          });
+        }
+        if (comp.actions && Array.isArray(comp.actions)) {
+          matchesIntent = matchesIntent || comp.actions.some(a => a.toLowerCase().includes(q));
+        }
+
+        return matchesName || matchesLabel || matchesAuth || matchesPerm || matchesIntent;
+      }
+
+      return true;
+    });
+  }, [allComponentsList, componentTypeFilter, componentExportedOnly, componentSearch]);
+
+  // Filtered Secrets (Strings Tab)
+  const filteredSecrets = useMemo(() => {
+    const list = categorized_strings?.secrets_and_keys || [];
+    if (!stringSearch.trim()) return list;
+    const q = stringSearch.toLowerCase();
+    return list.filter(
+      s => s.type.toLowerCase().includes(q) || s.value.toLowerCase().includes(q) || (s.location && s.location.toLowerCase().includes(q))
+    );
+  }, [categorized_strings?.secrets_and_keys, stringSearch]);
+
+  // Decoded AndroidManifest Lines & Highlighting
+  const manifestLines = useMemo(() => {
+    if (!manifest_xml) return [];
+    return manifest_xml.split('\n');
+  }, [manifest_xml]);
+
+  const manifestMatchLines = useMemo(() => {
+    if (!manifestSearch.trim()) {
+      return manifestLines.map((line, idx) => ({ lineNum: idx + 1, text: line, isMatch: false }));
+    }
+    const q = manifestSearch.toLowerCase();
+    return manifestLines.map((line, idx) => ({
+      lineNum: idx + 1,
+      text: line,
+      isMatch: line.toLowerCase().includes(q)
+    }));
+  }, [manifestLines, manifestSearch]);
+
+  const manifestMatchesCount = useMemo(() => {
+    if (!manifestSearch.trim()) return 0;
+    return manifestMatchLines.filter(l => l.isMatch).length;
+  }, [manifestMatchLines, manifestSearch]);
+
+  const displayedManifestLines = useMemo(() => {
+    if (manifestFilterOnly && manifestSearch.trim()) {
+      return manifestMatchLines.filter(l => l.isMatch);
+    }
+    return manifestMatchLines;
+  }, [manifestMatchLines, manifestFilterOnly, manifestSearch]);
+
+  // Certificate Chain (multi-cert support)
+  const certChain: ApkCertificate[] = useMemo(() => {
+    if (signing_info?.certificates && signing_info.certificates.length > 0) {
+      return signing_info.certificates;
+    }
+    if (signing_info?.subject || signing_info?.sha256_fingerprint) {
+      return [{
+        subject: signing_info.subject,
+        issuer: signing_info.issuer,
+        serial_number: signing_info.serial_number,
+        valid_from: signing_info.valid_from,
+        valid_until: signing_info.valid_until,
+        sha256_fingerprint: signing_info.sha256_fingerprint,
+        is_debug_key: signing_info.is_debug_key,
+        is_self_signed: signing_info.is_self_signed
+      }];
+    }
+    return [];
+  }, [signing_info]);
+
+  const activeCert = certChain[selectedCertIndex] || certChain[0] || signing_info;
 
   const filteredClasses = useMemo(() => {
     if (!classes || classes.length === 0) return [];
@@ -202,6 +429,8 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
         return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'medium':
         return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'low':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
       default:
         return 'bg-slate-50 text-slate-700 border-slate-200';
     }
@@ -370,7 +599,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
-            Permissions ({dangerous_permissions.length})
+            Permissions ({unifiedPermissions.length})
           </button>
         )}
 
@@ -384,7 +613,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            Components ({totalExported} Exported)
+            Components ({totalExported > 0 ? `${totalExported} Exp / ${totalComponents}` : totalComponents})
           </button>
         )}
 
@@ -1482,45 +1711,106 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
       {/* Tab: Permissions Matrix */}
       {activeTab === 'permissions' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="relative w-full sm:w-72">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={permSearch}
-                onChange={e => setPermSearch(e.target.value)}
-                placeholder="Search dangerous permissions..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
-              />
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-rose-600" />
+                Declared Android Permissions &amp; Privileges ({unifiedPermissions.length})
+              </h4>
+              <p className="text-xs text-slate-500">
+                Audited against Android framework dangerous permissions, privileged system capabilities, and MITRE Mobile techniques.
+              </p>
             </div>
-            <div className="flex items-center gap-1.5">
-              {(['all', 'critical', 'high', 'medium'] as const).map(sev => (
-                <button
-                  key={sev}
-                  onClick={() => setPermFilter(sev)}
-                  className={`text-xs px-2.5 py-1 rounded-lg capitalize transition-all ${
-                    permFilter === sev
-                      ? 'bg-slate-900 text-white font-semibold'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {sev}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg font-bold">
+                {unifiedPermissions.filter(p => p.is_dangerous).length} Dangerous
+              </span>
+              <span className="text-xs px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-medium">
+                {unifiedPermissions.filter(p => !p.is_dangerous).length} Standard
+              </span>
             </div>
           </div>
 
-          {filteredPerms.length > 0 ? (
+          {/* Filter and Search Bar */}
+          <div className="space-y-2.5">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={permSearch}
+                  onChange={e => setPermSearch(e.target.value)}
+                  placeholder="Search permission string, title, or threat..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
+                />
+              </div>
+
+              {/* Type Filter: All / Dangerous / Standard */}
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                <span className="text-[11px] font-semibold text-slate-400 mr-1">Type:</span>
+                {[
+                  { id: 'all', label: `All (${unifiedPermissions.length})` },
+                  { id: 'dangerous', label: `Dangerous (${unifiedPermissions.filter(p => p.is_dangerous).length})` },
+                  { id: 'standard', label: `Standard (${unifiedPermissions.filter(p => !p.is_dangerous).length})` }
+                ].map(typeTab => (
+                  <button
+                    key={typeTab.id}
+                    onClick={() => setPermTypeFilter(typeTab.id as any)}
+                    className={`text-xs px-2.5 py-1 rounded-lg capitalize transition-all cursor-pointer ${
+                      permTypeFilter === typeTab.id
+                        ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {typeTab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Severity Filter Pills (if viewing all or dangerous) */}
+            {permTypeFilter !== 'standard' && (
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <span className="text-[11px] font-semibold text-slate-400 mr-1">Severity:</span>
+                {(['all', 'critical', 'high', 'medium', 'low'] as const).map(sev => {
+                  const count = sev === 'all'
+                    ? unifiedPermissions.filter(p => p.is_dangerous).length
+                    : unifiedPermissions.filter(p => p.is_dangerous && p.severity === sev).length;
+                  return (
+                    <button
+                      key={sev}
+                      onClick={() => setPermFilter(sev)}
+                      className={`text-[11px] px-2.5 py-0.5 rounded-lg capitalize transition-all cursor-pointer ${
+                        permFilter === sev
+                          ? 'bg-rose-600 text-white font-semibold'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {sev} {sev !== 'all' && `(${count})`}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {filteredUnifiedPerms.length > 0 ? (
             <div className="space-y-2.5">
-              {filteredPerms.map((dp, idx) => (
+              {filteredUnifiedPerms.map((dp, idx) => (
                 <div
                   key={idx}
-                  className="p-4 bg-slate-50 hover:bg-slate-100/80 transition-all rounded-2xl border border-slate-200 space-y-1.5"
+                  className={`p-4 transition-all rounded-2xl border space-y-1.5 ${
+                    dp.is_dangerous
+                      ? 'bg-slate-50 hover:bg-slate-100/90 border-slate-200'
+                      : 'bg-white hover:bg-slate-50 border-slate-200/80'
+                  }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${getSeverityBadge(dp.severity)}`}>
-                        {dp.severity}
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
+                        dp.is_dangerous ? getSeverityBadge(dp.severity) : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                        {dp.is_dangerous ? dp.severity : 'Standard'}
                       </span>
                       <strong className="text-xs font-bold text-slate-900">{dp.title}</strong>
                     </div>
@@ -1530,14 +1820,23 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                       </span>
                     )}
                   </div>
-                  <div className="font-mono text-xs text-slate-600 font-semibold">{dp.permission}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-mono text-xs text-slate-700 font-semibold truncate">{dp.permission}</div>
+                    <button
+                      onClick={() => handleCopy(dp.permission, `perm_${idx}`)}
+                      className="text-slate-400 hover:text-slate-600 p-0.5 shrink-0"
+                      title="Copy permission name"
+                    >
+                      {copiedKey === `perm_${idx}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                   <p className="text-xs text-slate-500 leading-relaxed">{dp.description}</p>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="p-8 text-center text-slate-400 text-xs">
-              No dangerous permissions match current filters. Total package permissions: {permissions.length}.
+            <div className="p-8 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-slate-200">
+              No permissions match current filters. Total package permissions: {unifiedPermissions.length}.
             </div>
           )}
         </div>
@@ -1546,23 +1845,44 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
       {/* Tab: Components & Attack Surface */}
       {activeTab === 'components' && (
         <div className="space-y-6">
+          {/* Top Component Architecture Breakdown */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <div
+              onClick={() => setComponentTypeFilter('activities')}
+              className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
+                componentTypeFilter === 'activities' ? 'bg-sky-50 border-sky-300 shadow-xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
+              }`}
+            >
               <span className="text-[10px] uppercase text-slate-400 block font-sans">Activities</span>
               <strong className="text-slate-900 text-sm">{activities.length}</strong>
               <span className="text-[10px] text-amber-600 block">({exportedActivities.length} Exported)</span>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <div
+              onClick={() => setComponentTypeFilter('services')}
+              className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
+                componentTypeFilter === 'services' ? 'bg-indigo-50 border-indigo-300 shadow-xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
+              }`}
+            >
               <span className="text-[10px] uppercase text-slate-400 block font-sans">Services</span>
               <strong className="text-slate-900 text-sm">{services.length}</strong>
               <span className="text-[10px] text-amber-600 block">({exportedServices.length} Exported)</span>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <div
+              onClick={() => setComponentTypeFilter('receivers')}
+              className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
+                componentTypeFilter === 'receivers' ? 'bg-purple-50 border-purple-300 shadow-xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
+              }`}
+            >
               <span className="text-[10px] uppercase text-slate-400 block font-sans">Receivers</span>
               <strong className="text-slate-900 text-sm">{receivers.length}</strong>
               <span className="text-[10px] text-amber-600 block">({exportedReceivers.length} Exported)</span>
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <div
+              onClick={() => setComponentTypeFilter('providers')}
+              className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
+                componentTypeFilter === 'providers' ? 'bg-emerald-50 border-emerald-300 shadow-xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
+              }`}
+            >
               <span className="text-[10px] uppercase text-slate-400 block font-sans">Content Providers</span>
               <strong className="text-slate-900 text-sm">{providers.length}</strong>
               <span className="text-[10px] text-amber-600 block">({exportedProviders.length} Exported)</span>
@@ -1583,59 +1903,203 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             </div>
           )}
 
-          {/* Detailed Component List */}
-          <div className="space-y-4">
-            {receivers.length > 0 && (
-              <div className="space-y-2">
-                <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Broadcast Receivers (Persistence &amp; Boot Triggers)
-                </h5>
-                <div className="space-y-1.5">
-                  {receivers.map((rec, i) => (
-                    <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-                      <div className="font-mono text-slate-800 truncate mr-2">
-                        {rec.name}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {rec.exported && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
+          {/* Search & Category Filter Controls */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={componentSearch}
+                  onChange={e => setComponentSearch(e.target.value)}
+                  placeholder="Filter components by name, action, or authority..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
+                />
+              </div>
+
+              {/* Exported Only Toggle */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={componentExportedOnly}
+                    onChange={e => setComponentExportedOnly(e.target.checked)}
+                    className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                  />
+                  <span>Exported Only ({totalExported})</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Category Selector Pills */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { id: 'all', label: `All Components (${allComponentsList.length})` },
+                { id: 'activities', label: `Activities (${activities.length})` },
+                { id: 'services', label: `Services (${services.length})` },
+                { id: 'receivers', label: `Broadcast Receivers (${receivers.length})` },
+                { id: 'providers', label: `Content Providers (${providers.length})` }
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setComponentTypeFilter(cat.id as any)}
+                  className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
+                    componentTypeFilter === cat.id
+                      ? 'bg-slate-900 text-white font-semibold shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Component List */}
+          {filteredComponentsList.length > 0 ? (
+            <div className="space-y-3">
+              {filteredComponentsList.map((comp, idx) => {
+                const isExpanded = expandedComponentIndex === idx;
+                const typeColors = {
+                  activity: 'bg-sky-50 text-sky-700 border-sky-200',
+                  service: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                  receiver: 'bg-purple-50 text-purple-700 border-purple-200',
+                  provider: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                };
+
+                return (
+                  <div
+                    key={idx}
+                    className="p-4 bg-white hover:bg-slate-50/80 transition-all rounded-2xl border border-slate-200 space-y-2.5 shadow-xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${typeColors[comp.componentType]}`}>
+                          {comp.componentType}
+                        </span>
+
+                        {comp.exported ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-200 rounded-md">
                             EXPORTED
                           </span>
+                        ) : (
+                          <span className="text-[10px] font-medium px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md">
+                            PRIVATE
+                          </span>
                         )}
-                        {rec.actions && rec.actions.some(a => a.includes('BOOT_COMPLETED')) && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-800 rounded">
-                            BOOT_COMPLETED
+
+                        {comp.is_launcher && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-md">
+                            MAIN / LAUNCHER
+                          </span>
+                        )}
+
+                        {comp.is_boot && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-800 border border-rose-200 rounded-md">
+                            BOOT TRIGGER
+                          </span>
+                        )}
+
+                        {comp.is_sms && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-800 border border-rose-200 rounded-md">
+                            SMS LISTENER
+                          </span>
+                        )}
+
+                        {comp.authorities && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 bg-teal-50 text-teal-800 border border-teal-200 rounded-md">
+                            AUTHORITY: {comp.authorities}
                           </span>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {services.length > 0 && (
-              <div className="space-y-2">
-                <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Background Services ({services.length})
-                </h5>
-                <div className="space-y-1.5">
-                  {services.slice(0, 10).map((srv, i) => (
-                    <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-                      <div className="font-mono text-slate-800 truncate mr-2">
-                        {srv.name}
-                      </div>
-                      {srv.exported && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-800 rounded shrink-0">
-                          EXPORTED
+                      {comp.permission && (
+                        <span className="text-[11px] font-mono px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-md">
+                          Requires: {comp.permission.split('.').pop()}
                         </span>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-mono text-xs font-semibold text-slate-800 truncate" title={comp.name}>
+                        {comp.name}
+                      </div>
+                      <button
+                        onClick={() => handleCopy(comp.name, `comp_${idx}`)}
+                        className="text-slate-400 hover:text-slate-600 p-0.5 shrink-0"
+                        title="Copy component class name"
+                      >
+                        {copiedKey === `comp_${idx}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+
+                    {comp.label && (
+                      <div className="text-xs text-slate-500">
+                        <span className="font-medium text-slate-600">Label:</span> {comp.label}
+                      </div>
+                    )}
+
+                    {/* Intent Filters (Actions & Categories) */}
+                    {comp.intent_filters && Array.isArray(comp.intent_filters) && comp.intent_filters.length > 0 && (
+                      <div className="pt-1 border-t border-slate-100 space-y-1">
+                        <button
+                          onClick={() => setExpandedComponentIndex(isExpanded ? null : idx)}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                        >
+                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                          <span>Intent Filters ({comp.intent_filters.length})</span>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2 text-xs">
+                            {comp.intent_filters.map((flt, fIdx) => {
+                              if (typeof flt === 'string') {
+                                return (
+                                  <div key={fIdx} className="font-mono text-[11px] text-slate-700">
+                                    • {flt}
+                                  </div>
+                                );
+                              }
+                              const actions = flt.actions || [];
+                              const categories = flt.categories || [];
+                              return (
+                                <div key={fIdx} className="space-y-1">
+                                  {actions.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-1 font-mono text-[10px]">
+                                      <span className="text-slate-400 font-sans">Actions:</span>
+                                      {actions.map((act, aIdx) => (
+                                        <span key={aIdx} className="px-1.5 py-0.2 bg-white border border-slate-200 rounded text-slate-800">
+                                          {act}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {categories.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-1 font-mono text-[10px]">
+                                      <span className="text-slate-400 font-sans">Categories:</span>
+                                      {categories.map((cat, cIdx) => (
+                                        <span key={cIdx} className="px-1.5 py-0.2 bg-white border border-slate-200 rounded text-slate-600">
+                                          {cat}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-8 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-slate-200">
+              No components match the selected category and filter. Total package components: {allComponentsList.length}.
+            </div>
+          )}
         </div>
       )}
 
@@ -1650,9 +2114,33 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
               </p>
             </div>
             <div className="text-right">
-              <span className="text-xs font-bold text-rose-600 block">
+              <span className={`text-xs font-bold block ${
+                (dex_info.detected_apis || []).length > 0 ? 'text-rose-600' : 'text-emerald-600'
+              }`}>
                 {(dex_info.detected_apis || []).length} Sensitive APIs Detected
               </span>
+            </div>
+          </div>
+
+          {/* DEX Architecture Breakdown */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">DEX Files</span>
+              <strong className="text-slate-900 text-sm">{dex_info.dex_count || 1}</strong>
+            </div>
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">Classes Audited</span>
+              <strong className="text-slate-900 text-sm">{(classes.length || dex_info.classes_count || 0).toLocaleString()}</strong>
+            </div>
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">String Table</span>
+              <strong className="text-slate-900 text-sm">{(dex_info.total_strings_count || 0).toLocaleString()}</strong>
+            </div>
+            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center">
+              <span className="text-[10px] uppercase text-slate-400 block font-sans">Flagged APIs</span>
+              <strong className={(dex_info.detected_apis || []).length > 0 ? 'text-rose-600 text-sm' : 'text-emerald-600 text-sm'}>
+                {(dex_info.detected_apis || []).length}
+              </strong>
             </div>
           </div>
 
@@ -1829,9 +2317,21 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                 })}
               </div>
             </div>
+          ) : (dex_info.detected_apis || []).length === 0 ? (
+            <div className="p-6 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl flex items-start gap-3.5">
+              <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <strong className="text-sm font-bold text-emerald-950 block">Clean Dalvik API Triage</strong>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  No malicious or high-risk Dalvik API signatures were identified across {(classes.length || dex_info.classes_count || 0).toLocaleString()} classes and {(dex_info.total_strings_count || 0).toLocaleString()} strings audited. The Dalvik bytecode analysis engine scanned for dynamic code execution (DexClassLoader), unencrypted TLS MitM, SMS toll fraud, accessibility service abuse, root privilege escalation, and anti-analysis evasion techniques.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="p-8 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-slate-200">
-              No sensitive Dalvik API signatures matched your filter criteria.
+              No sensitive Dalvik API signatures matched your filter criteria ({(dex_info.detected_apis || []).length} detected across other categories).
             </div>
           )}
 
@@ -1905,15 +2405,14 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
 
           {/* Secrets Highlight Section */}
           {(selectedStringCategory === 'all' || selectedStringCategory === 'secrets') &&
-            categorized_strings.secrets_and_keys &&
-            categorized_strings.secrets_and_keys.length > 0 && (
+            filteredSecrets.length > 0 && (
               <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-2">
                 <div className="flex items-center gap-2 text-rose-800 font-bold text-xs">
                   <Key className="w-4 h-4 text-rose-600" />
-                  Hardcoded API Keys, Tokens &amp; Credentials ({categorized_strings.secrets_and_keys.length})
+                  Hardcoded API Keys, Tokens &amp; Credentials ({filteredSecrets.length})
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {categorized_strings.secrets_and_keys.map((sec, i) => (
+                  {filteredSecrets.map((sec, i) => (
                     <div
                       key={i}
                       className="p-3 bg-white rounded-xl border border-rose-200 flex items-center justify-between text-xs font-mono"
@@ -1923,6 +2422,11 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                           {sec.type}
                         </span>
                         <span className="text-slate-800">{sec.value}</span>
+                        {sec.location && (
+                          <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                            Loc: {sec.location}
+                          </span>
+                        )}
                       </div>
                       <button
                         onClick={() => handleCopy(sec.value, `sec_${i}`)}
@@ -1937,11 +2441,24 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
               </div>
             )}
 
+          {selectedStringCategory === 'secrets' && filteredSecrets.length === 0 && (
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs">
+              No hardcoded API keys or high-entropy credentials match current criteria.
+            </div>
+          )}
+
           {/* Strings Stream */}
           <div className="bg-slate-900 text-slate-200 p-4 rounded-2xl font-mono text-xs max-h-96 overflow-y-auto space-y-1">
             {(() => {
               let items: string[] = [];
               const q = stringSearch.toLowerCase();
+              if (selectedStringCategory === 'all' || selectedStringCategory === 'secrets') {
+                items.push(
+                  ...(categorized_strings.secrets_and_keys || []).map(
+                    s => `[KEY: ${s.type.toUpperCase()}] ${s.value}${s.location ? ` (${s.location})` : ''}`
+                  )
+                );
+              }
               if (selectedStringCategory === 'all' || selectedStringCategory === 'urls') {
                 items.push(...(categorized_strings.urls || []).map(u => `[URL] ${u}`));
               }
@@ -2000,6 +2517,26 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
               </p>
             </div>
           </div>
+
+          {/* Multi-Certificate Chain Selector */}
+          {certChain.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-100 pb-3">
+              <span className="text-xs font-semibold text-slate-400 mr-2">Certificates ({certChain.length}):</span>
+              {certChain.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedCertIndex(idx)}
+                  className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
+                    selectedCertIndex === idx
+                      ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Certificate #{idx + 1} {idx === 0 ? '(Signer)' : '(Chain)'}
+                </button>
+              ))}
+            </div>
+          )}
 
           {signing_info.is_debug_key && (
             <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 flex items-start gap-3 text-rose-800">
@@ -2062,32 +2599,32 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100 text-xs">
             <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <span className="font-semibold text-slate-500">Certificate Subject</span>
-              <span className="font-mono text-slate-800">{signing_info.subject || 'N/A'}</span>
+              <span className="font-mono text-slate-800 break-all">{activeCert.subject || signing_info.subject || 'N/A'}</span>
             </div>
             <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <span className="font-semibold text-slate-500">Issuer</span>
-              <span className="font-mono text-slate-800">{signing_info.issuer || 'N/A'}</span>
+              <span className="font-mono text-slate-800 break-all">{activeCert.issuer || signing_info.issuer || 'N/A'}</span>
             </div>
             <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <span className="font-semibold text-slate-500">Serial Number</span>
-              <span className="font-mono text-slate-800">{signing_info.serial_number || 'N/A'}</span>
+              <span className="font-mono text-slate-800">{activeCert.serial_number || signing_info.serial_number || 'N/A'}</span>
             </div>
             <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <span className="font-semibold text-slate-500">Validity Window</span>
               <span className="font-mono text-slate-800">
-                {signing_info.valid_from ? `${signing_info.valid_from} to ${signing_info.valid_until}` : 'N/A'}
+                {activeCert.valid_from ? `${activeCert.valid_from} to ${activeCert.valid_until}` : (signing_info.valid_from ? `${signing_info.valid_from} to ${signing_info.valid_until}` : 'N/A')}
               </span>
             </div>
             <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <span className="font-semibold text-slate-500">SHA-256 Fingerprint</span>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-slate-800 text-[11px] truncate max-w-xs">
-                  {signing_info.sha256_fingerprint || 'N/A'}
+                  {activeCert.sha256_fingerprint || signing_info.sha256_fingerprint || 'N/A'}
                 </span>
-                {signing_info.sha256_fingerprint && (
+                {(activeCert.sha256_fingerprint || signing_info.sha256_fingerprint) && (
                   <button
-                    onClick={() => handleCopy(signing_info.sha256_fingerprint!, 'fp')}
-                    className="p-1 text-slate-400 hover:text-slate-600"
+                    onClick={() => handleCopy((activeCert.sha256_fingerprint || signing_info.sha256_fingerprint)!, 'fp')}
+                    className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
                     {copiedKey === 'fp' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
@@ -2096,8 +2633,10 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             </div>
             <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <span className="font-semibold text-slate-500">Self-Signed Status</span>
-              <span className={`font-semibold ${signing_info.is_self_signed ? 'text-amber-600' : 'text-slate-800'}`}>
-                {signing_info.is_self_signed ? 'Yes (Self-Signed Key)' : 'No (CA Issued)'}
+              <span className={`font-semibold ${
+                (activeCert.is_self_signed ?? signing_info.is_self_signed) ? 'text-amber-600' : 'text-slate-800'
+              }`}>
+                {(activeCert.is_self_signed ?? signing_info.is_self_signed) ? 'Yes (Self-Signed Key)' : 'No (CA Issued)'}
               </span>
             </div>
           </div>
@@ -2117,7 +2656,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                 Full parsed application manifest specification, intent filters, receiver definitions, and permission grants.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="relative w-48 sm:w-64">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -2128,9 +2667,20 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
+              {manifestSearch.trim() && (
+                <button
+                  onClick={() => setManifestFilterOnly(!manifestFilterOnly)}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    manifestFilterOnly ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                  }`}
+                  title={manifestFilterOnly ? 'Show all lines' : 'Show only matching lines'}
+                >
+                  {manifestFilterOnly ? 'Matches Only' : 'Highlight All'}
+                </button>
+              )}
               <button
                 onClick={() => handleCopy(manifest_xml, 'manifest')}
-                className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-all shrink-0"
+                className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer"
               >
                 {copiedKey === 'manifest' ? (
                   <>
@@ -2147,8 +2697,36 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-2xl font-mono text-xs text-emerald-300 max-h-[600px] overflow-auto border border-slate-800">
-            <pre className="whitespace-pre leading-relaxed">{manifest_xml}</pre>
+          {manifestSearch.trim() && (
+            <div className="text-xs px-2 text-slate-500 font-mono flex items-center justify-between">
+              <span>Found {manifestMatchesCount} matching lines across {manifestLines.length} lines</span>
+              <button
+                onClick={() => setManifestSearch('')}
+                className="text-indigo-600 hover:underline cursor-pointer"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+
+          <div className="bg-slate-950 p-4 rounded-2xl font-mono text-xs text-emerald-300 max-h-[600px] overflow-auto border border-slate-800 space-y-0.5">
+            {displayedManifestLines.map((line, idx) => (
+              <div
+                key={idx}
+                className={`flex items-start gap-3 py-0.5 px-2 rounded font-mono ${
+                  line.isMatch
+                    ? 'bg-amber-950/80 text-amber-200 border-l-2 border-amber-400 font-semibold'
+                    : 'hover:bg-slate-900/60 text-emerald-300/90'
+                }`}
+              >
+                <span className="w-10 text-right text-slate-600 select-none text-[11px] shrink-0 font-sans">
+                  {line.lineNum}
+                </span>
+                <span className="whitespace-pre flex-1 overflow-x-auto leading-relaxed">
+                  {line.text}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
