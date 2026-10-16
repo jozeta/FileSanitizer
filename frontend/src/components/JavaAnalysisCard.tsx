@@ -7,7 +7,9 @@ import {
   Check,
   Code,
   Bug,
-  Binary
+  Binary,
+  AlertTriangle,
+  ShieldCheck
 } from 'lucide-react';
 import { JavaAnalysisData, Finding } from '../types';
 
@@ -339,30 +341,72 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
           </div>
 
           {dangerous_apis.length > 0 ? (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {dangerous_apis.map((api, idx) => (
                 <div
                   key={idx}
-                  className="p-4 bg-slate-50 hover:bg-slate-100/80 transition-all rounded-2xl border border-slate-200 space-y-1.5"
+                  className="p-4 bg-slate-50 hover:bg-slate-100/80 transition-all rounded-2xl border border-slate-200 space-y-2.5"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${getSeverityBadge(api.severity)}`}>
                         {api.severity}
                       </span>
+                      {api.category && (
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                          {api.category}
+                        </span>
+                      )}
                       <strong className="text-xs font-bold text-slate-900">{api.title}</strong>
                       {api.class_file && (
                         <span className="text-[11px] font-mono text-slate-500">({api.class_file})</span>
                       )}
                     </div>
-                    {api.mitre && (
-                      <span className="text-[11px] font-mono px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-md">
-                        MITRE {api.mitre} ({api.mitre_name})
-                      </span>
-                    )}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {api.cwe && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md">
+                          {api.cwe}
+                        </span>
+                      )}
+                      {api.owasp && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md">
+                          {api.owasp}
+                        </span>
+                      )}
+                      {api.mitre && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-md">
+                          MITRE {api.mitre} ({api.mitre_name})
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="font-mono text-xs text-slate-700 font-semibold">{api.api}</div>
-                  <p className="text-xs text-slate-500 leading-relaxed">{api.description}</p>
+
+                  <div className="font-mono text-xs text-rose-700 font-semibold bg-white p-2 rounded-xl border border-slate-200 break-all">
+                    {api.api}
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">{api.description}</p>
+
+                  {/* Threat Explanation */}
+                  {api.risk_explanation && (
+                    <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                      <span className="font-bold flex items-center gap-1.5 text-amber-800">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        Threat Model &amp; Exploitation Rationale:
+                      </span>
+                      <p className="leading-relaxed text-amber-800/90">{api.risk_explanation}</p>
+                    </div>
+                  )}
+
+                  {/* Remediation */}
+                  {api.remediation && (
+                    <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-xs text-emerald-900 space-y-1">
+                      <span className="font-bold flex items-center gap-1.5 text-emerald-800">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        Remediation &amp; Secure Pattern:
+                      </span>
+                      <p className="leading-relaxed text-emerald-800/90">{api.remediation}</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

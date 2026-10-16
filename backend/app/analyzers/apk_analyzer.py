@@ -329,36 +329,481 @@ ANDROID_API_LEVELS = {
     35: "Android 15 (Vanilla Ice Cream)"
 }
 
-# Suspicious DEX Heuristics & API Signatures
+# Suspicious DEX Heuristics & Malicious API Signatures (MobSF & Threat Model Mapped)
 DEX_API_SIGNATURES = [
-    # Dynamic Code Execution & Reflection
-    (re.compile(r'dalvik/system/(?:DexClassLoader|PathClassLoader|InMemoryDexClassLoader)', re.I), "Dynamic DEX/Bytecode Loading", "critical", "T1437", "Application Layer Protocol / Dynamic Loading"),
-    (re.compile(r'java/lang/reflect/Method;->invoke', re.I), "Reflective Method Invocation", "high", "T1626", "Obfuscated Files or Information"),
-    (re.compile(r'java/lang/Class;->forName', re.I), "Dynamic Class Reflection", "medium", "T1626", "Obfuscated Files or Information"),
-    (re.compile(r'java/lang/Runtime;->exec|java/lang/ProcessBuilder', re.I), "Shell Command / Process Execution", "critical", "T1404", "Exploitation for Privilege Escalation"),
-    (re.compile(r'/system/bin/su|/system/xbin/su|/sbin/su|/system/app/Superuser', re.I), "Root Privilege Escalation / su Detection", "critical", "T1404", "Exploitation for Privilege Escalation"),
+    # Cryptographic Weaknesses & Broken Algorithms (CWE-327, CWE-328, CWE-329, CWE-338)
+    {
+        "pattern": re.compile(r'(?:AES|DES|DESede|Blowfish|RC4)/ECB', re.I),
+        "api": "Cipher Mode: ECB",
+        "title": "Insecure Cipher Mode (Electronic Codebook / ECB)",
+        "severity": "high",
+        "category": "crypto",
+        "description": "Uses Electronic Codebook (ECB) mode for symmetric block ciphers without initialization vector.",
+        "risk_explanation": "ECB mode encrypts identical plaintext blocks into identical ciphertext blocks, preserving visual and statistical patterns. Attackers can deduce structures, manipulate block order, and replay payloads without cracking the secret key.",
+        "remediation": "Switch to authenticated encryption algorithms such as AES/GCM/NoPadding with a unique cryptographically random 96-bit or 128-bit IV for each message.",
+        "cwe": "CWE-327: Use of a Broken or Risky Cryptographic Algorithm",
+        "owasp_mobile": "M5: Insufficient Cryptography",
+        "mitre": "T1573",
+        "mitre_name": "Encrypted Channel"
+    },
+    {
+        "pattern": re.compile(r'MessageDigest\.getInstance\s*\(\s*["\'](?:MD5|SHA-?1)["\']|MessageDigest;->getInstance\([^)]*(?:MD5|SHA-?1)', re.I),
+        "api": "MessageDigest(MD5/SHA-1)",
+        "title": "Broken Hash Function (MD5 / SHA-1)",
+        "severity": "high",
+        "category": "crypto",
+        "description": "Instantiates legacy collision-prone hash algorithms (MD5 or SHA-1).",
+        "risk_explanation": "Practical collision attacks exist for MD5 and SHA-1. Malicious actors can generate certificate collisions, forge signatures, and easily reverse credential hashes using precomputed rainbow tables.",
+        "remediation": "Upgrade hashing routines to SHA-256, SHA-384, or SHA-512 for data integrity, and Argon2id, bcrypt, or PBKDF2 for password storage.",
+        "cwe": "CWE-328: Use of Weak Hash",
+        "owasp_mobile": "M5: Insufficient Cryptography",
+        "mitre": "T1573",
+        "mitre_name": "Encrypted Channel"
+    },
+    {
+        "pattern": re.compile(r'Cipher\.getInstance\s*\(\s*["\'](?:DES|DESede|RC4|ARCFOUR|Blowfish)', re.I),
+        "api": "Cipher.getInstance(DES/RC4/Blowfish)",
+        "title": "Deprecated Legacy Cipher (DES / RC4 / Blowfish)",
+        "severity": "critical",
+        "category": "crypto",
+        "description": "Initializes deprecated or broken symmetric encryption algorithms.",
+        "risk_explanation": "DES uses an insecure 56-bit key space brute-forceable in hours. Blowfish suffers from 64-bit block collision vulnerabilities (Sweet32 attack). RC4 exhibits severe statistical keystream biases enabling plaintext recovery.",
+        "remediation": "Standardize exclusively on AES-256 or ChaCha20-Poly1305 with modern authenticated encryption modes.",
+        "cwe": "CWE-327: Use of a Broken or Risky Cryptographic Algorithm",
+        "owasp_mobile": "M5: Insufficient Cryptography",
+        "mitre": "T1573",
+        "mitre_name": "Encrypted Channel"
+    },
+    {
+        "pattern": re.compile(r'new\s+IvParameterSpec\s*\(|IvParameterSpec;\-><init>', re.I),
+        "api": "IvParameterSpec()",
+        "title": "Symmetric IV Parameter Specification",
+        "severity": "medium",
+        "category": "crypto",
+        "description": "Instantiates an Initialization Vector (IV) for block cipher encryption.",
+        "risk_explanation": "If the IV is static, hardcoded, or derived from a predictable seed, attackers can recover plaintexts or forge ciphertext blocks. In GCM mode, reusing an IV with the same key completely destroys authenticity and confidentiality.",
+        "remediation": "Always generate unique, unpredictable IVs using java.security.SecureRandom for every single encryption invocation.",
+        "cwe": "CWE-329: Generation of Predictable IV with CBC Mode",
+        "owasp_mobile": "M5: Insufficient Cryptography",
+        "mitre": "T1573",
+        "mitre_name": "Encrypted Channel"
+    },
+    {
+        "pattern": re.compile(r'java/util/Random;->(?:nextInt|nextBytes)|java/lang/Math;->random', re.I),
+        "api": "java.util.Random / Math.random()",
+        "title": "Predictable Linear PRNG (Non-Cryptographic Randomness)",
+        "severity": "medium",
+        "category": "crypto",
+        "description": "Generates random numbers using standard predictable pseudo-random algorithms.",
+        "risk_explanation": "Standard PRNG seeds can be reverse-engineered after observing consecutive output values, allowing attackers to predict authentication tokens, session IDs, or encryption keys.",
+        "remediation": "Use java.security.SecureRandom for security tokens, cryptographic keys, IVs, and salts.",
+        "cwe": "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator",
+        "owasp_mobile": "M5: Insufficient Cryptography",
+        "mitre": "T1573",
+        "mitre_name": "Encrypted Channel"
+    },
 
-    # Telephony & SMS Operations
-    (re.compile(r'android/telephony/SmsManager;->sendTextMessage|android/telephony/SmsManager;->sendMultipartTextMessage', re.I), "Programmatic SMS Transmission", "critical", "T1412", "Access Call Log / SMS"),
-    (re.compile(r'android/telephony/TelephonyManager;->getDeviceId|getSubscriberId|getImei|getSimSerialNumber', re.I), "Hardware Identifier Telemetry (IMEI/IMSI/SIM)", "high", "T1418", "Software Discovery"),
+    # Network & TLS MitM Bypasses (CWE-295, CWE-297)
+    {
+        "pattern": re.compile(r'TrustAll(?:Trust)?Manager|checkServerTrusted\s*\([^)]*\)\s*\{\s*\}|checkClientTrusted\s*\([^)]*\)\s*\{\s*\}|X509TrustManager', re.I),
+        "api": "X509TrustManager.checkServerTrusted()",
+        "title": "SSL/TLS Certificate Validation Bypass (TrustAllTrustManager)",
+        "severity": "critical",
+        "category": "network_tls",
+        "description": "Defines custom X509TrustManager that accepts untrusted, expired, or self-signed certificates.",
+        "risk_explanation": "A hallmark flaw enabling Man-in-the-Middle (MitM) attacks. Anyone on the local network (rogue Wi-Fi, DNS spoofer, ISP adversary) can intercept, inspect, and modify encrypted HTTPS traffic without triggering security warnings.",
+        "remediation": "Remove empty TrustManagers and let the Android system certificate validation handle TLS handshakes, or configure certificate pinning via network_security_config.xml.",
+        "cwe": "CWE-295: Improper Certificate Validation",
+        "owasp_mobile": "M3: Insecure Communication",
+        "mitre": "T1557",
+        "mitre_name": "Man-in-the-Middle"
+    },
+    {
+        "pattern": re.compile(r'ALLOW_ALL_HOSTNAME_VERIFIER|AllowAllHostnameVerifier|NullHostnameVerifier|setHostnameVerifier\s*\(|verify\s*\([^)]*\)\s*\{\s*return\s+true', re.I),
+        "api": "ALLOW_ALL_HOSTNAME_VERIFIER",
+        "title": "Disabled TLS Hostname Verification",
+        "severity": "critical",
+        "category": "network_tls",
+        "description": "Instructs HTTP client or SSLSocket to bypass hostname verification against certificate Common Name / SAN.",
+        "risk_explanation": "Permits any valid certificate issued for any domain to impersonate the application's backend server, completely nullifying TLS server authentication.",
+        "remediation": "Never return true blindly in HostnameVerifier.verify(). Use default OkHttp or HttpsURLConnection hostname verifiers.",
+        "cwe": "CWE-297: Improper Validation of Certificate with Host Mismatch",
+        "owasp_mobile": "M3: Insecure Communication",
+        "mitre": "T1557",
+        "mitre_name": "Man-in-the-Middle"
+    },
+    {
+        "pattern": re.compile(r'SSLSocketFactory;->createSocket|javax/net/ssl/SSLSocket', re.I),
+        "api": "SSLSocket / SSLSocketFactory",
+        "title": "Raw Low-Level SSLSocket Handshake",
+        "severity": "medium",
+        "category": "network_tls",
+        "description": "Initiates low-level raw SSL/TLS socket connections.",
+        "risk_explanation": "Raw SSLSockets in Android do not perform hostname verification automatically. Without manual post-handshake verification, traffic remains susceptible to MitM interception.",
+        "remediation": "Use high-level HTTP client libraries like OkHttp or HttpsURLConnection which enforce hostname and certificate chain validation out-of-the-box.",
+        "cwe": "CWE-295: Improper Certificate Validation",
+        "owasp_mobile": "M3: Insecure Communication",
+        "mitre": "T1557",
+        "mitre_name": "Man-in-the-Middle"
+    },
 
-    # Surveillance
-    (re.compile(r'android/media/MediaRecorder;->(?:start|setAudioSource)', re.I), "Audio Recording / Microphone Hook", "critical", "T1417", "Audio Capture"),
-    (re.compile(r'android/hardware/Camera;->open|android/hardware/camera2', re.I), "Camera Access / Video Capture", "critical", "T1426", "Video Capture"),
-    (re.compile(r'android/location/LocationManager;->(?:getLastKnownLocation|requestLocationUpdates)', re.I), "GPS Location Tracking Service", "high", "T1430", "Location Tracking"),
+    # WebView Security & JavaScript Bridge (CWE-749, CWE-79, CWE-489)
+    {
+        "pattern": re.compile(r'addJavascriptInterface|android/webkit/WebView;->addJavascriptInterface', re.I),
+        "api": "WebView.addJavascriptInterface()",
+        "title": "WebView JavaScript Bridge RCE (addJavascriptInterface)",
+        "severity": "critical",
+        "category": "webview",
+        "description": "Exposes native Java object instances to JavaScript running in the WebView.",
+        "risk_explanation": "On Android < 4.2 (API 17), this vulnerability allows arbitrary code execution via reflection. On newer systems, hostile web pages or injected XSS scripts can still invoke exposed public methods to steal user tokens or trigger unauthorized local actions.",
+        "remediation": "Ensure targetSdkVersion >= 17, annotate only necessary methods with @JavascriptInterface, and restrict WebView navigation exclusively to trusted first-party HTTPS origins.",
+        "cwe": "CWE-749: Exposed Dangerous Method or Function",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1404",
+        "mitre_name": "Exploitation for Privilege Escalation"
+    },
+    {
+        "pattern": re.compile(r'setAllowUniversalAccessFromFileURLs|setAllowFileAccessFromFileURLs', re.I),
+        "api": "setAllowUniversalAccessFromFileURLs()",
+        "title": "Universal Cross-Origin File Access in WebView",
+        "severity": "high",
+        "category": "webview",
+        "description": "Enables JavaScript loaded from file:// URLs to access content from any origin, including local sandboxed files and remote domains.",
+        "risk_explanation": "Attackers who deliver an HTML payload to the device storage can execute cross-origin requests to read and exfiltrate private SQLite databases, SharedPreferences, and session tokens.",
+        "remediation": "Explicitly disable file access via setAllowUniversalAccessFromFileURLs(false) and setAllowFileAccessFromFileURLs(false).",
+        "cwe": "CWE-79: Cross-site Scripting (XSS)",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1409",
+        "mitre_name": "Access Stored Application Data"
+    },
+    {
+        "pattern": re.compile(r'setAllowFileAccess\s*\(\s*true\s*\)|android/webkit/WebSettings;->setAllowFileAccess', re.I),
+        "api": "WebSettings.setAllowFileAccess(true)",
+        "title": "WebView Local Filesystem Scheme Access Enabled",
+        "severity": "medium",
+        "category": "webview",
+        "description": "Enables loading of local file:// URLs in WebView components.",
+        "risk_explanation": "If the WebView loads attacker-controlled URLs via intent parameters, malicious HTML files can read and exfiltrate application sandbox files located at /data/data/<package>/.",
+        "remediation": "Set setAllowFileAccess(false) and use androidx.webkit.WebViewAssetLoader to serve local assets safely over virtual https:// domains.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1409",
+        "mitre_name": "Access Stored Application Data"
+    },
+    {
+        "pattern": re.compile(r'setWebContentsDebuggingEnabled\s*\(\s*true\s*\)|android/webkit/WebView;->setWebContentsDebuggingEnabled', re.I),
+        "api": "WebView.setWebContentsDebuggingEnabled(true)",
+        "title": "WebView Chrome DevTools Remote Debugging Enabled",
+        "severity": "high",
+        "category": "webview",
+        "description": "Enables Chrome DevTools remote debugging for all WebViews in the process.",
+        "risk_explanation": "Allows anyone with physical or adb access to connect DevTools, inspect DOM contents, execute arbitrary JavaScript, view session cookies, and steal authentication credentials.",
+        "remediation": "Wrap call in BuildConfig.DEBUG check: WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG).",
+        "cwe": "CWE-489: Active Debug Code",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1418",
+        "mitre_name": "Software Discovery"
+    },
 
-    # Accessibility & Overlay
-    (re.compile(r'android/accessibilityservice/AccessibilityService|performGlobalAction|findAccessibilityNodeInfosByViewId', re.I), "Accessibility Service DOM Interception & Automated Clicks", "critical", "T1448", "Abuse Accessibility Features"),
-    (re.compile(r'android/app/admin/DevicePolicyManager;->(?:lockNow|wipeData|resetPassword)', re.I), "Device Admin Screen Lock or Remote Wipe", "critical", "T1407", "Device Administrator Privileges"),
+    # Telephony & SMS Fraud (CWE-250, CWE-200)
+    {
+        "pattern": re.compile(r'android/telephony/SmsManager;->(?:sendTextMessage|sendMultipartTextMessage|sendDataMessage)', re.I),
+        "api": "SmsManager.sendTextMessage()",
+        "title": "Autonomous Background SMS Transmission (Toll Fraud / C2 Exfil)",
+        "severity": "critical",
+        "category": "telephony_sms",
+        "description": "Transmits SMS messages programmatically in the background without UI interaction.",
+        "risk_explanation": "Signature capability of mobile toll fraud malware (FluBot, FakeCalls, Joker). Sends stealth SMS messages to premium-rate numbers incurring financial theft or exfiltrates stolen credentials to attacker phone numbers.",
+        "remediation": "Delegate SMS transmission to the system dialer application using Intent(Intent.ACTION_SENDTO) so the user explicitly approves message delivery.",
+        "cwe": "CWE-250: Execution with Unnecessary Privileges",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1412",
+        "mitre_name": "Access Call Log / SMS"
+    },
+    {
+        "pattern": re.compile(r'android\.provider\.Telephony\.SMS_RECEIVED|android/provider/Telephony\$Sms\$Intents', re.I),
+        "api": "SMS_RECEIVED Broadcast Receiver",
+        "title": "Incoming SMS Interception (2FA OTP Passcode Theft)",
+        "severity": "critical",
+        "category": "telephony_sms",
+        "description": "Monitors or registers broadcast receivers for incoming SMS messages.",
+        "risk_explanation": "Chief vector for mobile banking trojans to intercept one-time verification passwords (2FA OTP) sent by financial institutions, allowing attackers to authorize fraudulent transactions.",
+        "remediation": "Use Google Play Services SMS Retriever API which allows verification without requesting dangerous SMS read/receive permissions.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1412",
+        "mitre_name": "Access Call Log / SMS"
+    },
+    {
+        "pattern": re.compile(r'android/telephony/TelephonyManager;->(?:getDeviceId|getSubscriberId|getImei|getMeid|getSimSerialNumber|getLine1Number)', re.I),
+        "api": "TelephonyManager (IMEI/IMSI/SIM Serials)",
+        "title": "Persistent Hardware & SIM Identifier Harvesting",
+        "severity": "high",
+        "category": "telephony_sms",
+        "description": "Queries non-resettable hardware identifiers (IMEI, IMSI, SIM Serial, phone number).",
+        "risk_explanation": "Malware exfiltrates hardware identifiers to fingerprint infected devices, tie them to victim identities, and coordinate targeted botnet commands.",
+        "remediation": "Use user-resettable advertising identifiers (AAID) or app-specific UUIDs instead of non-resettable hardware serial numbers.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1418",
+        "mitre_name": "Software Discovery"
+    },
 
-    # Evasion & Anti-Analysis
-    (re.compile(r'android/os/Debug;->isDebuggerConnected', re.I), "Anti-Debugging (Debugger Detection)", "medium", "T1622", "Debugger Evasion"),
-    (re.compile(r'goldfish|generic_x86|vbox86p|nox|Genymotion|sdk_google_phone', re.I), "Android Emulator Environment Detection", "high", "T1622", "Virtualization / Sandbox Evasion"),
-    (re.compile(r'frida-server|/data/local/tmp/frida|27042', re.I), "Frida Dynamic Instrumentation Detection", "high", "T1622", "Virtualization / Sandbox Evasion"),
+    # Surveillance & Wiretapping (CWE-250, CWE-200)
+    {
+        "pattern": re.compile(r'android/media/MediaRecorder;->(?:start|setAudioSource)|android/media/AudioRecord;->startRecording', re.I),
+        "api": "MediaRecorder / AudioRecord (start)",
+        "title": "Microphone Audio Recording / Ambient Wiretapping",
+        "severity": "critical",
+        "category": "surveillance",
+        "description": "Activates device microphone hardware to record ambient audio or telephone calls.",
+        "risk_explanation": "Abused by Commercial Spyware (Pegasus, Predator, FinFisher) and RATs to eavesdrop on private room conversations and record phone calls in real-time.",
+        "remediation": "Ensure audio recording is explicitly initiated by the user, displays a prominent foreground notification, and complies with Android background audio restrictions.",
+        "cwe": "CWE-250: Execution with Unnecessary Privileges",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1417",
+        "mitre_name": "Audio Capture"
+    },
+    {
+        "pattern": re.compile(r'android/hardware/Camera;->open|android/hardware/camera2/CameraManager;->openCamera', re.I),
+        "api": "Camera.open() / CameraManager.openCamera()",
+        "title": "Stealth Camera Access / Video Surveillance",
+        "severity": "critical",
+        "category": "surveillance",
+        "description": "Directly opens camera hardware to take photos or record video streams.",
+        "risk_explanation": "Spyware and stalkerware abuse background camera access to covertly capture photographs of the victim and their surroundings without displaying an onscreen preview.",
+        "remediation": "Use Android CameraX with an active viewfinder preview or invoke the system camera via MediaStore.ACTION_IMAGE_CAPTURE.",
+        "cwe": "CWE-250: Execution with Unnecessary Privileges",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1426",
+        "mitre_name": "Video Capture"
+    },
+    {
+        "pattern": re.compile(r'android/location/LocationManager;->(?:requestLocationUpdates|getLastKnownLocation)|com/google/android/gms/location/FusedLocationProviderClient', re.I),
+        "api": "LocationManager / FusedLocationProviderClient",
+        "title": "Persistent GPS & Geographic Location Tracking",
+        "severity": "high",
+        "category": "surveillance",
+        "description": "Subscribes to continuous GPS coordinates and cellular tower location updates.",
+        "risk_explanation": "Enables stalkerware and surveillance tools to trace physical movements, daily routines, and exact coordinates 24/7.",
+        "remediation": "Request ACCESS_COARSE_LOCATION when precise coordinates are not strictly necessary, and discontinue location tracking when the app is backgrounded.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1430",
+        "mitre_name": "Location Tracking"
+    },
+    {
+        "pattern": re.compile(r'android/service/notification/NotificationListenerService', re.I),
+        "api": "NotificationListenerService",
+        "title": "Notification Listener & Push Message Interception",
+        "severity": "critical",
+        "category": "surveillance",
+        "description": "Registers a service to intercept and inspect all incoming system notifications.",
+        "risk_explanation": "Banking malware intercepts push notifications from financial apps, Telegram, WhatsApp, and SMS to capture 2FA tokens and suppress security alerts from security tools.",
+        "remediation": "Do not request NotificationListenerService access unless developing a dedicated notification management utility.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1412",
+        "mitre_name": "Access Call Log / SMS"
+    },
 
-    # Cryptography Weaknesses
-    (re.compile(r'DES/ECB|AES/ECB', re.I), "Weak Insecure Cipher Mode (ECB Mode)", "high", "T1573", "Encrypted Channel"),
-    (re.compile(r'TrustAllTrustManager|ALLOW_ALL_HOSTNAME_VERIFIER', re.I), "SSL/TLS Verification Bypass (Insecure TrustManager)", "high", "T1557", "Man-in-the-Middle")
+    # Accessibility Service & Keylogging Abuse (CWE-250)
+    {
+        "pattern": re.compile(r'android/accessibilityservice/AccessibilityService|performGlobalAction|findAccessibilityNodeInfosByViewId|getRootInActiveWindow', re.I),
+        "api": "AccessibilityService (DOM Inspection / Injections)",
+        "title": "Accessibility Service DOM Scraping & Automated Gestures",
+        "severity": "critical",
+        "category": "accessibility",
+        "description": "Hooks into Android AccessibilityService APIs to inspect UI hierarchies and inject automated touch gestures.",
+        "risk_explanation": "The single most dangerous permission abused by modern Android banking trojans (SharkBot, TeaBot, Godfather). Used to read all onscreen text, steal passwords, bypass 2FA, grant itself permissions, and perform automated fraudulent fund transfers (ATS).",
+        "remediation": "Do not declare or request AccessibilityService unless building an official assistive technology for users with disabilities.",
+        "cwe": "CWE-250: Execution with Unnecessary Privileges",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1448",
+        "mitre_name": "Abuse Accessibility Features"
+    },
+
+    # Screen Overlay & Tapjacking (CWE-1021)
+    {
+        "pattern": re.compile(r'android/view/WindowManager\$LayoutParams;->type\s*=\s*(?:2003|2006|2038)|TYPE_APPLICATION_OVERLAY|TYPE_SYSTEM_ALERT', re.I),
+        "api": "TYPE_APPLICATION_OVERLAY / TYPE_SYSTEM_ALERT",
+        "title": "System Alert Window Overlay Injection (Tapjacking / Phishing)",
+        "severity": "critical",
+        "category": "overlay",
+        "description": "Creates floating window overlays drawn on top of all other running applications.",
+        "risk_explanation": "Used by banking malware to detect when the victim opens a legitimate banking app, instantly drawing a pixel-perfect fake login screen on top to harvest credentials and credit card details.",
+        "remediation": "Protect sensitive activities with setFilterTouchesWhenObscured(true) and android:filterTouchesWhenObscured=\"true\".",
+        "cwe": "CWE-1021: Improper Restriction of Rendered UI Layers or Frames",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1411",
+        "mitre_name": "Input Capture"
+    },
+
+    # Device Admin & Mobile Ransomware (CWE-250)
+    {
+        "pattern": re.compile(r'android/app/admin/DevicePolicyManager;->(?:lockNow|wipeData|resetPassword)', re.I),
+        "api": "DevicePolicyManager (lockNow / wipeData / resetPassword)",
+        "title": "Device Administrator Screen Lock & Remote Wipe (Ransomware)",
+        "severity": "critical",
+        "category": "device_admin",
+        "description": "Invokes DevicePolicyManager to lock the screen, change the device lockscreen PIN, or erase all user data.",
+        "risk_explanation": "Hallmark behavior of Android ransomware (DoubleLocker, Koler, Svpeng). Tricks victims into granting Device Administrator privileges, immediately locks the screen, resets the PIN, and displays a ransom demand.",
+        "remediation": "Enterprise DevicePolicyManager APIs should only be utilized in verified Enterprise Mobility Management (EMM) or MDM agent applications.",
+        "cwe": "CWE-250: Execution with Unnecessary Privileges",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1407",
+        "mitre_name": "Device Administrator Privileges"
+    },
+
+    # Dynamic Code Loading, Droppers & Reflection (CWE-94, CWE-78, CWE-470)
+    {
+        "pattern": re.compile(r'dalvik/system/(?:DexClassLoader|PathClassLoader|InMemoryDexClassLoader)', re.I),
+        "api": "DexClassLoader / InMemoryDexClassLoader",
+        "title": "Runtime Dalvik Executable / Dynamic DEX Loading",
+        "severity": "critical",
+        "category": "code_loading",
+        "description": "Loads and executes external Dalvik bytecode (.dex, .jar, .apk) at runtime.",
+        "risk_explanation": "Core mechanic of dropper malware (Hydra, Alien, Anatsa). Clean stub APKs pass app store security reviews and subsequently download encrypted secondary payload DEX files from C2 servers to execute malware.",
+        "remediation": "Bundle all executable logic into the primary APK. If dynamic loading is required, enforce strict cryptographic digital signature verification on loaded code.",
+        "cwe": "CWE-94: Improper Control of Generation of Code",
+        "owasp_mobile": "M7: Client Code Quality",
+        "mitre": "T1437",
+        "mitre_name": "Application Layer Protocol / Dynamic Loading"
+    },
+    {
+        "pattern": re.compile(r'java/lang/Runtime;->exec|java/lang/ProcessBuilder', re.I),
+        "api": "Runtime.exec() / ProcessBuilder",
+        "title": "Native Operating System Shell Command Execution",
+        "severity": "critical",
+        "category": "code_loading",
+        "description": "Executes command-line shell processes (/system/bin/sh, su, toybox).",
+        "risk_explanation": "Used by exploit kits to run shell scripts, dump system configuration, establish reverse shell connections, or invoke root elevation utilities.",
+        "remediation": "Avoid spawning shell processes. Use native Android SDK APIs for system management.",
+        "cwe": "CWE-78: Improper Neutralization of Special Elements used in an OS Command",
+        "owasp_mobile": "M7: Client Code Quality",
+        "mitre": "T1404",
+        "mitre_name": "Exploitation for Privilege Escalation"
+    },
+    {
+        "pattern": re.compile(r'java/lang/reflect/Method;->invoke', re.I),
+        "api": "Method.invoke()",
+        "title": "Dynamic Method Reflection Invocation",
+        "severity": "high",
+        "category": "code_loading",
+        "description": "Invokes Java/Android methods dynamically by name at runtime.",
+        "risk_explanation": "Extensively leveraged by mobile malware to conceal calls to hidden or restricted system APIs from static analyzers, obfuscating strings to evade automated sandbox scans.",
+        "remediation": "Rely on standard compile-time type-safe references and avoid dynamic reflection for core security operations.",
+        "cwe": "CWE-470: Use of Externally-Controlled Input to Select Classes or Code",
+        "owasp_mobile": "M9: Reverse Engineering",
+        "mitre": "T1626",
+        "mitre_name": "Obfuscated Files or Information"
+    },
+    {
+        "pattern": re.compile(r'java/lang/Class;->forName', re.I),
+        "api": "Class.forName()",
+        "title": "Dynamic Class Resolution & Reflection",
+        "severity": "medium",
+        "category": "code_loading",
+        "description": "Dynamically resolves class types by string name at runtime.",
+        "risk_explanation": "Used alongside reflection to dynamically instantiate hidden classes or unexported Android internals.",
+        "remediation": "Use static class literals rather than string-based reflection.",
+        "cwe": "CWE-470: Use of Externally-Controlled Input to Select Classes or Code",
+        "owasp_mobile": "M9: Reverse Engineering",
+        "mitre": "T1626",
+        "mitre_name": "Obfuscated Files or Information"
+    },
+
+    # Root Privilege Escalation & Detection (CWE-250)
+    {
+        "pattern": re.compile(r'/system/bin/su|/system/xbin/su|/sbin/su|/system/app/Superuser|com\.noshufou\.android\.su|eu\.chainfire\.supersu|com\.topjohnwu\.magisk', re.I),
+        "api": "su / Superuser / Magisk Checks",
+        "title": "Root Elevation / su Binary Execution & Magisk Detection",
+        "severity": "critical",
+        "category": "root_privilege",
+        "description": "Interacts with or probes for su, Superuser, and Magisk root management binaries.",
+        "risk_explanation": "Malware queries root paths to detect if it can escalate privileges to root or to verify if it is running in an analyst environment before executing anti-analysis evasion.",
+        "remediation": "Use reputable hardware-backed root verification like Google Play Integrity API rather than simple filesystem path checks.",
+        "cwe": "CWE-250: Execution with Unnecessary Privileges",
+        "owasp_mobile": "M8: Code Tampering",
+        "mitre": "T1404",
+        "mitre_name": "Exploitation for Privilege Escalation"
+    },
+
+    # Anti-Analysis, Evasion & Virtualization (CWE-489, CWE-754, CWE-693)
+    {
+        "pattern": re.compile(r'android/os/Debug;->(?:isDebuggerConnected|waitingForDebugger)', re.I),
+        "api": "Debug.isDebuggerConnected()",
+        "title": "Anti-Debugging (isDebuggerConnected Probe)",
+        "severity": "medium",
+        "category": "anti_analysis",
+        "description": "Checks if a JDWP/Dalvik debugger is currently attached.",
+        "risk_explanation": "Malware terminates or alters its execution behavior if an analyst attaches a debugger like IDA Pro or Android Studio.",
+        "remediation": "Do not embed debugger detection in production apps; use standard ProGuard / R8 code obfuscation.",
+        "cwe": "CWE-489: Active Debug Code",
+        "owasp_mobile": "M9: Reverse Engineering",
+        "mitre": "T1622",
+        "mitre_name": "Debugger Evasion"
+    },
+    {
+        "pattern": re.compile(r'goldfish|generic_x86|vbox86p|nox|Genymotion|sdk_google_phone|qemu\.sf\.fake_camera|init\.goldfish\.rc', re.I),
+        "api": "Emulator Hardware Fingerprints",
+        "title": "Virtualization & Android Emulator Detection",
+        "severity": "high",
+        "category": "anti_analysis",
+        "description": "Inspects system build properties, hardware fingerprints, and drivers for QEMU, Genymotion, or Nox.",
+        "risk_explanation": "Threat actors deploy sandbox evasion routines so that when automated malware analysis sandboxes run the APK, the malware stays dormant and exhibits clean behavior.",
+        "remediation": "Standard enterprise applications should avoid brittle emulator checks that break automated QA testing pipelines.",
+        "cwe": "CWE-754: Improper Check for Unusual or Exceptional Conditions",
+        "owasp_mobile": "M9: Reverse Engineering",
+        "mitre": "T1622",
+        "mitre_name": "Virtualization / Sandbox Evasion"
+    },
+    {
+        "pattern": re.compile(r'frida-server|/data/local/tmp/frida|27042|com\.saurik\.substrate|de\.robv\.android\.xposed', re.I),
+        "api": "Frida / Xposed Framework Artifacts",
+        "title": "Frida & Xposed Dynamic Hooking Framework Detection",
+        "severity": "high",
+        "category": "anti_analysis",
+        "description": "Detects memory hooks, open ports, and filesystem artifacts associated with Frida and Xposed.",
+        "risk_explanation": "Malware detects reverse engineers attempting to bypass SSL pinning or trace Dalvik methods using dynamic instrumentation.",
+        "remediation": "Combine server-side attestation (Play Integrity API) with client-side code hardening.",
+        "cwe": "CWE-693: Protection Mechanism Failure",
+        "owasp_mobile": "M9: Reverse Engineering",
+        "mitre": "T1622",
+        "mitre_name": "Virtualization / Sandbox Evasion"
+    },
+
+    # Target Discovery & Reconnaissance (CWE-200)
+    {
+        "pattern": re.compile(r'android/content/pm/PackageManager;->(?:getInstalledPackages|getInstalledApplications|queryIntentActivities)', re.I),
+        "api": "PackageManager.getInstalledPackages()",
+        "title": "Installed Application Enumeration (Target Discovery)",
+        "severity": "high",
+        "category": "app_enumeration",
+        "description": "Queries the complete list of installed applications on the Android device.",
+        "risk_explanation": "Used by banking trojans to discover if the victim has specific targeted banking apps, cryptocurrency wallets (MetaMask, Coinbase), or antivirus tools installed, triggering corresponding overlay payloads.",
+        "remediation": "Use specific <queries> declarations in AndroidManifest.xml rather than enumerating all installed packages.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp_mobile": "M1: Improper Platform Usage",
+        "mitre": "T1418",
+        "mitre_name": "Software Discovery"
+    },
+
+    # Clipboard Theft & Hijacking (CWE-200)
+    {
+        "pattern": re.compile(r'android/content/ClipboardManager;->(?:getPrimaryClip|getText|setPrimaryClip)', re.I),
+        "api": "ClipboardManager (getPrimaryClip / setPrimaryClip)",
+        "title": "Clipboard Data Access & Hijacking (Crypto Clipper)",
+        "severity": "medium",
+        "category": "clipboard",
+        "description": "Reads or alters text stored in the system clipboard.",
+        "risk_explanation": "Crypto-clipper malware constantly monitors the clipboard for Bitcoin, Ethereum, and TRON wallet addresses and silently replaces them with the attacker's wallet address upon copy.",
+        "remediation": "Only access clipboard content in direct response to explicit user paste actions.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp_mobile": "M2: Insecure Data Storage",
+        "mitre": "T1414",
+        "mitre_name": "Credentials from Web Browsers / Clipboard"
+    }
 ]
 
 
@@ -674,15 +1119,22 @@ class DexParser:
             if not ip.startswith(("0.", "127.", "255.", "192.168.", "10.")):
                 self.ips.add(ip)
 
-        for pattern, title, sev, mitre_id, mitre_name in DEX_API_SIGNATURES:
+        for sig in DEX_API_SIGNATURES:
+            pattern = sig["pattern"]
             matches = pattern.findall(joined_sample)
             if matches:
                 self.detected_apis.append({
-                    "api": matches[0] if matches else title,
-                    "title": title,
-                    "severity": sev,
-                    "mitre": mitre_id,
-                    "mitre_name": mitre_name,
+                    "api": matches[0] if matches else sig.get("api", sig["title"]),
+                    "title": sig["title"],
+                    "severity": sig["severity"],
+                    "category": sig.get("category", "general"),
+                    "description": sig.get("description", sig["title"]),
+                    "risk_explanation": sig.get("risk_explanation", ""),
+                    "remediation": sig.get("remediation", ""),
+                    "cwe": sig.get("cwe", ""),
+                    "owasp_mobile": sig.get("owasp_mobile", ""),
+                    "mitre": sig.get("mitre", ""),
+                    "mitre_name": sig.get("mitre_name", ""),
                     "count": len(matches),
                     "evidence": matches[:5]
                 })
@@ -976,6 +1428,14 @@ class ApkAnalyzer(BaseAnalyzer):
                 "apkpure_url": ""
             },
             "security_audit": [],
+            "network_security_config": {
+                "found": False,
+                "config_file": "",
+                "cleartext_permitted": False,
+                "trusts_user_certs": False,
+                "has_pinning": False,
+                "details": []
+            },
             "embedded_assets": [],
             "iocs": {
                 "urls": [],
@@ -1267,6 +1727,14 @@ class ApkAnalyzer(BaseAnalyzer):
                                 for api in dp.detected_apis:
                                     if not any(a["title"] == api["title"] for a in data["dex_info"]["detected_apis"]):
                                         data["dex_info"]["detected_apis"].append(api)
+                                        if api.get("severity") in ["critical", "high"]:
+                                            findings.append(Finding(
+                                                category="active_content",
+                                                severity=api["severity"],
+                                                title=f"DEX API: {api['title']}",
+                                                description=f"Dalvik bytecode invokes {api['title']} ({api['count']} references). {api.get('description', '')}",
+                                                details=api
+                                            ))
                         except Exception:
                             pass
 
@@ -1324,6 +1792,9 @@ class ApkAnalyzer(BaseAnalyzer):
                     data["signing_info"]["has_signature"] = True
                     cert_bytes = zf.read(cert_files[0])
                     self._parse_x509_certificate(cert_bytes, data["signing_info"], findings)
+
+                # 7b. Network Security Configuration Audit
+                self._analyze_network_security_config(zf, data, findings)
 
                 # 8. Synthesize MITRE ATT&CK for Mobile Techniques
                 mitre_map = {}
@@ -1411,6 +1882,14 @@ class ApkAnalyzer(BaseAnalyzer):
                 "malwarebazaar_url": f"https://bazaar.abuse.ch/sample/{sha256}/"
             },
             "security_audit": [],
+            "network_security_config": {
+                "found": False,
+                "config_file": "",
+                "cleartext_permitted": False,
+                "trusts_user_certs": False,
+                "has_pinning": False,
+                "details": []
+            },
             "iocs": {"urls": [], "ips": []},
             "mitre_mobile_techniques": [],
             "risk_score": 0,
@@ -1561,7 +2040,8 @@ class ApkAnalyzer(BaseAnalyzer):
         })
 
         # 3. Cleartext Traffic
-        is_cleartext = data["security_flags"].get("usesCleartextTraffic", False)
+        nsc = data.get("network_security_config", {})
+        is_cleartext = data["security_flags"].get("usesCleartextTraffic", False) or nsc.get("cleartext_permitted", False)
         audit.append({
             "check": "Cleartext Network Traffic",
             "status": "FAIL" if is_cleartext else "PASS",
@@ -1626,7 +2106,139 @@ class ApkAnalyzer(BaseAnalyzer):
             "recommendation": "Use standard dialogs rather than SYSTEM_ALERT_WINDOW overlay layers."
         })
 
+        # 9. Network Security Config & User CAs (MitM Protection)
+        if nsc.get("found"):
+            if nsc.get("trusts_user_certs"):
+                audit.append({
+                    "check": "User CA Trust Anchors",
+                    "status": "FAIL",
+                    "severity": "critical",
+                    "title": "User-Installed CA Certificates Trusted (<certificates src=\"user\" />)",
+                    "description": "Application trusts user-installed certificates, allowing adversaries or network proxy tools to decrypt all TLS traffic via custom root CAs.",
+                    "recommendation": "Restrict trust anchors exclusively to system certificates: <trust-anchors><certificates src=\"system\" /></trust-anchors>."
+                })
+            else:
+                audit.append({
+                    "check": "User CA Trust Anchors",
+                    "status": "PASS",
+                    "severity": "info",
+                    "title": "User CA Trust Restricting (Production Compliant)",
+                    "description": "Application enforces system CA trust anchors only, preventing user-installed root CA traffic interception.",
+                    "recommendation": "Maintain system-only trust anchors for production release builds."
+                })
+        else:
+            audit.append({
+                "check": "Network Security Config",
+                "status": "WARN",
+                "severity": "medium",
+                "title": "Missing Network Security Config (network_security_config.xml)",
+                "description": "No network security config XML declared, defaulting to platform default certificate validation behavior.",
+                "recommendation": "Declare res/xml/network_security_config.xml and enforce HTTPS with certificate pinning."
+            })
+
+        # 10. Cryptographic Robustness
+        has_weak_crypto = any(a.get("category") == "crypto" and a.get("severity") in ["critical", "high"] for a in data["dex_info"]["detected_apis"])
+        audit.append({
+            "check": "Cryptographic Robustness",
+            "status": "FAIL" if has_weak_crypto else "PASS",
+            "severity": "high" if has_weak_crypto else "info",
+            "title": "Cryptographic Algorithm Hardening (ECB / Broken Hashes)",
+            "description": "Checks for obsolete symmetric ciphers (DES/RC4/Blowfish), broken hash digests (MD5/SHA-1), and ECB cipher modes.",
+            "recommendation": "Migrate all cryptographic operations to AES-256-GCM and SHA-256/SHA-512."
+        })
+
         data["security_audit"] = audit
+
+    def _analyze_network_security_config(self, zf: zipfile.ZipFile, data: Dict[str, Any], findings: List[Finding]):
+        """
+        Parses and audits Android Network Security Configuration (res/xml/network_security_config.xml).
+        Detects cleartext traffic permissions, user CA trust anchors (MitM vulnerability),
+        and certificate pinning policies.
+        """
+        nsc_data = {
+            "found": False,
+            "config_file": "",
+            "cleartext_permitted": False,
+            "trusts_user_certs": False,
+            "has_pinning": False,
+            "details": []
+        }
+
+        namelist = zf.namelist()
+        target_file = None
+        for name in namelist:
+            if "network_security_config" in name.lower():
+                target_file = name
+                break
+
+        if not target_file:
+            for name in namelist:
+                if name.startswith("res/xml/") and name.endswith(".xml"):
+                    try:
+                        raw = zf.read(name)
+                        if b"network-security-config" in raw or b"cleartextTrafficPermitted" in raw or b"trust-anchors" in raw:
+                            target_file = name
+                            break
+                    except Exception:
+                        pass
+
+        if not target_file:
+            data["network_security_config"] = nsc_data
+            return
+
+        try:
+            raw_bytes = zf.read(target_file)
+            nsc_data["found"] = True
+            nsc_data["config_file"] = target_file
+
+            # Extract strings either from binary AXML or plaintext XML
+            extracted_strings = []
+            if raw_bytes.startswith(b"\x03\x00\x08\x00"):
+                decoder = AxmlDecoder(raw_bytes)
+                if decoder.decode():
+                    extracted_strings = decoder.strings
+            else:
+                txt = raw_bytes.decode("utf-8", errors="ignore")
+                extracted_strings = [txt]
+
+            joined_text = " ".join(extracted_strings).lower()
+
+            # Check 1: Cleartext Traffic Permitted
+            if "cleartexttrafficpermitted" in joined_text:
+                if re.search(r'cleartexttrafficpermitted["\s:=]+true', joined_text) or ('cleartexttrafficpermitted' in joined_text and 'true' in joined_text):
+                    nsc_data["cleartext_permitted"] = True
+                    nsc_data["details"].append("Cleartext HTTP traffic is explicitly permitted in network security configuration.")
+                    findings.append(Finding(
+                        category="network",
+                        severity="high",
+                        title="Network Security Config: Cleartext HTTP Permitted",
+                        description=f"Configuration '{target_file}' explicitly permits unencrypted cleartext HTTP traffic (cleartextTrafficPermitted=true).",
+                        details={"config_file": target_file, "cwe": "CWE-319", "owasp": "M3: Insecure Communication"}
+                    ))
+
+            # Check 2: Trust User Certificates (User CA Trust Anchor)
+            if "certificates" in joined_text and "user" in joined_text:
+                nsc_data["trusts_user_certs"] = True
+                nsc_data["details"].append("Trusts user-installed CA certificates (<certificates src=\"user\" />), enabling trivial Man-in-the-Middle (MitM) TLS interception via custom root CAs.")
+                findings.append(Finding(
+                    category="network",
+                    severity="critical",
+                    title="Network Security Config: User CAs Trusted (MitM Vulnerability)",
+                    description=f"Configuration '{target_file}' trusts user-installed certificate authorities. Attackers or proxy tools can decrypt all HTTPS traffic.",
+                    details={"config_file": target_file, "cwe": "CWE-295", "owasp": "M3: Insecure Communication"}
+                ))
+
+            # Check 3: Certificate Pinning
+            if "pin-set" in joined_text or ("pin" in joined_text and "digest" in joined_text):
+                nsc_data["has_pinning"] = True
+                nsc_data["details"].append("Certificate public key pinning (<pin-set>) is configured.")
+            else:
+                nsc_data["details"].append("No certificate public key pinning (<pin-set>) defined in configuration.")
+
+        except Exception as e:
+            logger.debug(f"Network security config parsing error: {e}")
+
+        data["network_security_config"] = nsc_data
 
     def _parse_x509_certificate(self, cert_bytes: bytes, sig_info: Dict[str, Any], findings: List[Finding]):
         """Extract and inspect X.509 certificate from PKCS#7 block in META-INF/*.RSA."""

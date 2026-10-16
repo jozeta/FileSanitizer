@@ -109,10 +109,10 @@ function getFormatSections(job: JobDetail | null) {
   if (job.category === 'apk' || Boolean(job.apk_info) || job.filename?.match(/\.(apk|aab|xapk|dex)$/i)) {
     sections.push({ id: 'apk', label: 'Android APK & Mobile Security', icon: Smartphone, count: job.apk_info?.dangerous_permissions?.length });
   }
-  if (job.category === 'java' || Boolean(job.java_info) || job.filename?.match(/\.(java|class)$/i)) {
+  if (job.category === 'java' || Boolean(job.java_info) || job.filename?.match(/\.(java|class|jar|war|ear)$/i)) {
     sections.push({ id: 'java', label: 'Java Forensics & Bytecode', icon: Coffee, count: job.java_info?.dangerous_apis?.length });
   }
-  if (Boolean(job.jar_info) || job.filename?.toLowerCase().endsWith('.jar')) {
+  if (Boolean(job.jar_info) || job.filename?.match(/\.(jar|war|ear)$/i)) {
     sections.push({ id: 'jar', label: 'JAR Java Bytecode Triage', icon: Coffee, count: job.jar_info?.suspicious_apis?.length });
   }
   if (job.category === 'image' || Boolean(job.image_info) || Boolean(job.ai_image_provenance) || job.filename?.match(/\.(png|jpe?g|gif|webp|bmp|tiff?)$/i)) {
@@ -405,8 +405,10 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
             setFormatSubTab('office');
           } else if (fullJob.category === 'pdf' || Boolean(fullJob.pdf_info) || fullJob.filename?.toLowerCase().endsWith('.pdf')) {
             setFormatSubTab('pdf');
-          } else if (Boolean(fullJob.jar_info) || fullJob.filename?.toLowerCase().endsWith('.jar')) {
+          } else if (Boolean(fullJob.jar_info) || fullJob.filename?.match(/\.(jar|war|ear)$/i)) {
             setFormatSubTab('jar');
+          } else if (fullJob.category === 'java' || Boolean(fullJob.java_info) || fullJob.filename?.match(/\.(java|class)$/i)) {
+            setFormatSubTab('java');
           } else if (fullJob.category === 'image' || Boolean(fullJob.image_info) || Boolean(fullJob.ai_image_provenance) || fullJob.filename?.match(/\.(png|jpe?g|gif|webp|bmp|tiff?)$/i)) {
             setFormatSubTab('image');
           } else if (fullJob.category === 'executable' || fullJob.category === 'binary' || Boolean(fullJob.binary_info)) {

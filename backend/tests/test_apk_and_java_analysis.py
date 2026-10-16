@@ -278,3 +278,172 @@ def test_comprehensive_apk_technical_analysis(tmp_path: Path):
     assert data["risk_score"] >= 60
     assert data["risk_level"] in ("HIGH", "CRITICAL")
 
+
+def test_apk_network_security_config_and_malicious_apis(tmp_path: Path):
+    """Verify Android APK analyzer flags Network Security Config MitM flaws and explains malicious APIs."""
+    apk_file = tmp_path / "banking_spyware.apk"
+
+    manifest_xml = """<?xml version="1.0" encoding="utf-8"?>
+    <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.mobile.trojan" android:versionCode="1" android:versionName="1.0">
+        <uses-permission android:name="android.permission.SEND_SMS" />
+        <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
+        <application android:networkSecurityConfig="@xml/network_security_config">
+            <activity android:name="com.mobile.trojan.MainActivity" android:exported="true" />
+        </application>
+    </manifest>
+    """
+
+    network_security_config_xml = """<?xml version="1.0" encoding="utf-8"?>
+    <network-security-config>
+        <base-config cleartextTrafficPermitted="true">
+            <trust-anchors>
+                <certificates src="system" />
+                <certificates src="user" />
+            </trust-anchors>
+        </base-config>
+    </network-security-config>
+    """
+
+    # Build a minimal DEX with string table containing malicious APIs
+    # Strings: android/telephony/SmsManager;->sendTextMessage, AES/ECB, android/accessibilityservice/AccessibilityService, TrustAllTrustManager
+    dex_strings = [
+        "Lcom/mobile/trojan/MainActivity;",
+        "android/telephony/SmsManager;->sendTextMessage",
+        "AES/ECB",
+        "android/accessibilityservice/AccessibilityService",
+        "TrustAllTrustManager",
+        "https://c2.bankingtrojan.cc/api"
+    ]
+    str_data = b""
+    str_offsets = []
+    curr_off = 0x70 + len(dex_strings) * 4
+    for s in dex_strings:
+        encoded = len(s).to_bytes(1, "little") + s.encode("utf-8") + b"\x00"
+        str_offsets.append(curr_off + len(str_data))
+        str_data += encoded
+
+    header = bytearray(0x70)
+    header[0:8] = b"dex\n035\x00"
+    struct.pack_into("<I", header, 0x38, len(dex_strings)) # string_ids_size
+    struct.pack_into("<I", header, 0x3C, 0x70)             # string_ids_off
+    struct.pack_into("<I", header, 0x60, 0x70 + len(dex_strings) * 4 + len(str_data)) # data_off
+
+    string_ids = bytearray()
+    for off in str_offsets:
+        string_ids += struct.pack("<I", off)
+
+    dex_bytes = bytes(header) + bytes(string_ids) + str_data
+
+    with zipfile.ZipFile(apk_file, "w") as zf:
+        zf.writestr("AndroidManifest.xml", manifest_xml)
+        zf.writestr("res/xml/network_security_config.xml", network_security_config_xml)
+        zf.writestr("classes.dex", dex_bytes)
+
+    analyzer = ApkAnalyzer()
+    res = analyzer.analyze(apk_file, "banking_spyware.apk", "application/vnd.android.package-archive")
+
+    assert res.success is True
+    data = res.data
+
+    # 1. Network Security Config Audit
+    nsc = data["network_security_config"]
+    assert nsc["found"] is True
+    assert nsc["cleartext_permitted"] is True
+    assert nsc["trusts_user_certs"] is True
+    assert any("User CAs Trusted" in f.title for f in res.findings)
+    assert any("Cleartext HTTP Permitted" in f.title for f in res.findings)
+
+    # 2. Malicious API Calls Flagged with Explanations
+    detected_apis = data["dex_info"]["detected_apis"]
+    assert len(detected_apis) >= 3
+
+    sms_api = next((a for a in detected_apis if "SMS" in a["title"]), None)
+    assert sms_api is not None
+    assert sms_api["severity"] == "critical"
+    assert "risk_explanation" in sms_api and len(sms_api["risk_explanation"]) > 20
+    assert "remediation" in sms_api and len(sms_api["remediation"]) > 10
+    assert sms_api.get("cwe") is not None
+    assert sms_api.get("owasp_mobile") is not None
+
+    crypto_api = next((a for a in detected_apis if "ECB" in a["title"]), None)
+    assert crypto_api is not None
+    assert crypto_api["category"] == "crypto"
+    assert "CWE-327" in crypto_api["cwe"]
+    assert "M5" in crypto_api["owasp_mobile"]
+
+    # 3. Security Audit Checklist
+    audit_dict = {item["check"]: item["status"] for item in data["security_audit"]}
+    assert audit_dict.get("User CA Trust Anchors") == "FAIL"
+    assert audit_dict.get("Cleartext Network Traffic") == "FAIL"
+    assert audit_dict.get("Cryptographic Robustness") == "FAIL"
+
+
+def test_jar_deep_forensics_and_class_disassembly(tmp_path: Path):
+    """Verify JAR archive analysis populates compatibility fields, disassembles classes, and identifies high-risk APIs."""
+    jar_file = tmp_path / "trojan_payload.jar"
+
+    manifest_data = "Manifest-Version: 1.0\r\nMain-Class: com.example.TrojanAgent\r\nPermissions: all-permissions\r\n"
+
+    # Minimal compiled class bytes for com/example/TrojanAgent
+    # Magic CAFEBABE, Java 8 (version 52)
+    # Constant pool with Runtime.exec and AES/ECB strings
+    cp_entries = [
+        (1, "com/example/TrojanAgent"),             # 1: Utf8
+        (7, 1),                                     # 2: Class -> 1
+        (1, "java/lang/Object"),                    # 3: Utf8
+        (7, 3),                                     # 4: Class -> 3
+        (1, "Runtime.getRuntime().exec"),           # 5: Utf8
+        (1, "AES/ECB/PKCS5Padding"),                # 6: Utf8
+        (1, "https://evil-c2.net/payload"),         # 7: Utf8
+    ]
+
+    cp_count = len(cp_entries) + 1
+    cp_bytes = bytearray()
+    for entry in cp_entries:
+        tag = entry[0]
+        if tag == 1:
+            val = entry[1].encode("utf-8")
+            cp_bytes += struct.pack(">BH", tag, len(val)) + val
+        elif tag == 7:
+            cp_bytes += struct.pack(">BH", tag, entry[1])
+
+    class_header = struct.pack(">IHHH", 0xCAFEBABE, 0, 52, cp_count)
+    class_tail = struct.pack(">HHHH", 0x0001, 2, 4, 0) + struct.pack(">HH", 0, 0)
+    class_bytes = class_header + bytes(cp_bytes) + class_tail
+
+    with zipfile.ZipFile(jar_file, "w") as zf:
+        zf.writestr("META-INF/MANIFEST.MF", manifest_data)
+        zf.writestr("com/example/TrojanAgent.class", class_bytes)
+
+    analyzer = JavaAnalyzer()
+    res = analyzer.analyze(jar_file, "trojan_payload.jar", "application/java-archive")
+
+    assert res.success is True
+    data = res.data
+
+    assert data["is_java"] is True
+    assert data["is_jar"] is True
+    assert data["java_subtype"] == "jar"
+    assert data["class_count"] == 1
+    assert data["classes_count"] == 1
+    assert data["main_class"] == "com.example.TrojanAgent"
+    assert "com.example" in data["packages"]
+    assert "trojan_payload.jar" in data["filename"]
+
+    # Verify code preview has both Manifest and Disassembled class
+    assert "META-INF/MANIFEST.MF" in data["manifest_content"] or "Main-Class" in data["manifest_content"]
+    assert "Disassembled Entry / Target Class: com/example/TrojanAgent.class" in data["code_preview"]
+    assert "public class TrojanAgent extends Object" in data["code_preview"]
+
+    # Verify high risk APIs are flagged and explained
+    assert len(data["dangerous_apis"]) >= 2
+    api_names = [a["title"] for a in data["dangerous_apis"]]
+    assert any("Shell Command Execution" in t for t in api_names)
+    assert any("ECB" in t for t in api_names)
+
+    exec_api = next(a for a in data["dangerous_apis"] if "Shell Command Execution" in a["title"])
+    assert exec_api.get("risk_explanation") is not None
+    assert exec_api.get("remediation") is not None
+    assert "CWE-78" in exec_api["cwe"]
+
+

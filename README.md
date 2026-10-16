@@ -525,6 +525,26 @@ Deep static AST and regex inspection for scripts and command files (`.ps1`, `.vb
 * **Component Attack Surface & IPC Security:**
   * **Exported Surface Telemetry:** Analyzes Activities, Services, Broadcast Receivers, and Content Providers. Flags explicitly and implicitly exported components accessible to any third-party app without permissions.
   * **Action & Intent Filter Auditing:** Highlights persistence triggers such as `android.intent.action.BOOT_COMPLETED`, incoming SMS intercepts, and custom URI scheme deep links.
+* **MobSF-Inspired Malicious Dalvik API Catalog & Threat Explanations:**
+  * **Categorized API Signatures (~45 Rules):** Curated static detection rules across 12 distinct threat vectors:
+    1. **Weak Cryptography & Broken PRNG:** Hardcoded static IVs, ECB cipher mode (`AES/ECB/PKCS5Padding`), insecure hashing (`MD5`, `SHA-1`), legacy broken ciphers (`DES`, `RC4`, `Blowfish`), insecure random seeds (`setSeed()`).
+    2. **TLS MitM & Trust Validation Bypass:** Blind trust-all X509TrustManagers (`checkServerTrusted` no-op), hostname verification bypass (`ALLOW_ALL_HOSTNAME_VERIFIER`), permissive SSL socket factories.
+    3. **WebView Vulnerabilities & Code Execution:** Bridge interface code injection (`addJavascriptInterface`), universal file scheme access (`setAllowFileAccessFromFileURLs`), remote debugging enabled in production (`setWebContentsDebuggingEnabled`).
+    4. **Telephony & Toll Fraud:** Autonomous background SMS dispatch (`SmsManager.sendTextMessage`), incoming SMS and 2FA OTP interception (`SMS_RECEIVED` broadcast), IMEI/IMSI/SIM hardware fingerprinting (`getDeviceId`, `getSubscriberId`).
+    5. **Audio, Camera & Persistent Surveillance:** Covert audio recording (`MediaRecorder.AudioSource.MIC`), unauthorized camera captures (`Camera.open`), background GPS geolocation tracking (`ACCESS_FINE_LOCATION`, `requestLocationUpdates`), Notification listener eavesdropping (`NotificationListenerService`).
+    6. **Accessibility & Screen Scraping Abuse:** Accessibility service hijacking (`AccessibilityService`, `AccessibilityEvent`, `AccessibilityNodeInfo`) abused by mobile banking trojans to log keystrokes, scrape 2FA codes, and inject automated clicks.
+    7. **Screen Overlay & Tapjacking (`SYSTEM_ALERT_WINDOW`):** Drawing over victim banking/exchange apps to steal credentials via fake login overlays.
+    8. **Device Administrator & Ransomware:** Screen locking (`DevicePolicyManager.lockNow`), remote factory reset (`wipeData`), screen lock password forced resets (`resetPassword`).
+    9. **Dynamic Code Loading & Stager Payloads:** Execution of secondary drop payloads via `DexClassLoader`, `PathClassLoader`, Dalvik reflection (`Method.invoke`), and OS command execution (`Runtime.getRuntime().exec`, `ProcessBuilder`).
+    10. **Anti-Analysis, Root Evasion & Sandbox Evasion:** Detection of root binaries (`/system/bin/su`, `/system/xbin/su`, Magisk), debugger attachment checks (`Debug.isDebuggerConnected()`), Android emulator hardware artifacts (`goldfish`, `qemu`), and dynamic instrumentation hooks (Frida, Xposed).
+    11. **Installed Application Enumeration & Banking Targets:** Scanning installed packages (`getInstalledPackages`, `getInstalledApplications`) to detect presence of banking or cryptocurrency wallet apps.
+    12. **Clipboard Data Hijacking:** Monitoring system clipboard changes (`ClipboardManager.getPrimaryClip`, `ClipboardManager.getText`) to steal passwords and replace cryptocurrency wallet addresses.
+  * **Explainable Threat Attribution:** Every detected API signature is accompanied by plain-language threat explanations detailing how malware abuses the capability, remediation guidance for mobile developers, relevant Common Weakness Enumeration (CWE) IDs, OWASP Mobile Top 10 classifications, and MITRE ATT&CK for Mobile technique mappings.
+* **Network Security Configuration Audit (`network_security_config.xml`):**
+  * Parses binary AXML and plain XML network security configurations (`res/xml/network_security_config.xml`).
+  * Flags cleartext HTTP traffic permissions (`cleartextTrafficPermitted="true"` - CWE-319, OWASP M3).
+  * Identifies user-installed Certificate Authority trust anchors (`<certificates src="user" />` - CWE-295, OWASP M3) that allow adversary traffic interception (MitM) via proxy tools.
+  * Audits Certificate Public Key Pinning (`<pin-set>`) status.
 * **10-Point Automated Security Compliance Audit:**
   * Evaluates applications against OWASP Mobile Application Security Verification Standard (MASVS) and Android security guidelines:
     1. **Application Debug Mode (`android:debuggable`):** Checks if developer debugging is left active in production.
@@ -542,6 +562,14 @@ Deep static AST and regex inspection for scripts and command files (`.ps1`, `.vb
   * Provides direct analyst pivot links to **Koodous** (crowdsourced mobile malware intelligence), **VirusTotal** (multi-engine AV hash query), **MalwareBazaar** (malware sample repository), **Google Play Store** (official package verification), and **APKPure** (historical APK repository).
 * **Decoded AndroidManifest.xml Viewer:**
   * Pretty-printed, formatted XML source viewer of the decoded manifest with search filtering and copy action.
+
+### In-Depth Java & JAR Archive Bytecode Forensics
+* **Comprehensive Source & Archive Format Support:** Deep static inspection and triage for Java source files (`.java`), compiled bytecode classes (`.class`), and enterprise archives (`.jar`, `.war`, `.ear`).
+* **Archive Manifest & Entry Point Dissection:** Parses `META-INF/MANIFEST.MF` to detect standalone execution (`Main-Class`), elevated sandbox permissions (`Permissions: all-permissions`), and stealthy Java Instrumentation Agent hooks (`Premain-Class`, `Agent-Class`) executed prior to the JVM main routine.
+* **Embedded Entry Point Class Disassembly:** Automatically identifies primary entry classes or high-risk classes within JAR archives, disassembles JVM constant pools, method references, interfaces, and field declarations, and renders bytecode previews.
+* **Dangerous JVM System API Auditing:** Detects OS process creation (`ProcessBuilder`, `Runtime.exec`), unmanaged direct memory manipulation (`sun.misc.Unsafe`), remote JNDI directory lookups (Log4Shell / RMI / LDAP), dynamic reflection invocations (`Method.invoke`), insecure cryptographic algorithms, and system clipboard monitoring with CWE, OWASP, and MITRE mappings.
+* **Embedded Native Dropper Triage:** Identifies and inventories bundled native shared libraries and executables (`.dll`, `.so`, `.dylib`, `.exe`) commonly extracted by multi-stage droppers to bypass JVM sandbox restrictions.
+* **Cross-Platform Java RAT Signatures:** Signature-based detection of notorious Java Remote Access Trojan and Infostealer families (jRAT, Adwind, AlienSpy, AsyncRAT, Netwire).
 
 ### In-Depth Image Forensics & Steganography
 * **LSB Steganography Detection:** Chi-Square distribution analysis and Shannon entropy across RGB pixel bitplanes to flag hidden embedded payloads.

@@ -90,5 +90,6 @@ recordings/
 test-files/ultimate_files/
 test-files/ultimate_detection_80mb.pdf
 test-files/Gemini_image.jpeg
+test-files/*.apk
 backend/ultimate_files/
 

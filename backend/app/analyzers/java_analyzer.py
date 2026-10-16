@@ -29,14 +29,19 @@ JAVA_VERSION_MAP = {
     65: "Java 21 (LTS)", 66: "Java 22", 67: "Java 23"
 }
 
-# Dangerous Java API Signatures across Source and Bytecode
+# Dangerous Java API Signatures across Source and Bytecode (Enterprise & Malware Mapped)
 HIGH_RISK_JAVA_APIS = [
     {
         "pattern": re.compile(r'Runtime\.getRuntime\(\)\.exec|Runtime;->exec|java/lang/Runtime;?\.?exec', re.I),
         "api": "Runtime.exec()",
         "title": "Operating System Shell Command Execution",
         "severity": "critical",
+        "category": "execution",
         "description": "Invokes the native OS command interpreter or executes arbitrary binary processes.",
+        "risk_explanation": "Spawns raw host operating system processes. Threat actors use this to drop secondary malware, run bash/cmd commands, execute curl/wget downloaders, and establish persistence.",
+        "remediation": "Avoid calling host shell binaries. Use type-safe, sandboxed native Java APIs (e.g. java.nio.file) without process invocation.",
+        "cwe": "CWE-78: Improper Neutralization of Special Elements used in an OS Command",
+        "owasp": "A03:2021-Injection",
         "mitre": "T1059",
         "mitre_name": "Command and Scripting Interpreter"
     },
@@ -45,7 +50,12 @@ HIGH_RISK_JAVA_APIS = [
         "api": "ProcessBuilder",
         "title": "Subprocess Creation & Shell Spawning",
         "severity": "critical",
+        "category": "execution",
         "description": "Spawns background processes with customized environment variables and redirected streams.",
+        "risk_explanation": "Creates native subprocesses with customized environment variables and standard I/O redirection, standard for reverse shells and shell script execution.",
+        "remediation": "Refactor logic to utilize standard Java APIs instead of invoking host executables.",
+        "cwe": "CWE-78: OS Command Injection",
+        "owasp": "A03:2021-Injection",
         "mitre": "T1059",
         "mitre_name": "Command and Scripting Interpreter"
     },
@@ -54,7 +64,12 @@ HIGH_RISK_JAVA_APIS = [
         "api": "sun.misc.Unsafe",
         "title": "Direct Unmanaged Memory Manipulation",
         "severity": "critical",
+        "category": "memory",
         "description": "Bypasses JVM memory safety checks, enabling raw memory allocation, arbitrary pointer reads/writes, and type confusion exploits.",
+        "risk_explanation": "Circumvents JVM memory management, allowing direct raw memory allocation, arbitrary pointer dereferencing, and security manager bypass.",
+        "remediation": "Use standard Java memory models and VarHandle / Foreign Function & Memory API (Project Panama) in modern JDKs.",
+        "cwe": "CWE-119: Memory Safety Violation",
+        "owasp": "A04:2021-Insecure Design",
         "mitre": "T1055",
         "mitre_name": "Process Injection"
     },
@@ -63,7 +78,12 @@ HIGH_RISK_JAVA_APIS = [
         "api": "JNDI Remote Lookup",
         "title": "Remote JNDI Naming Lookup (Log4Shell / RCE Vector)",
         "severity": "critical",
+        "category": "injection",
         "description": "Resolves remote JNDI directory resources via LDAP or RMI, enabling arbitrary remote class deserialization (e.g. Log4Shell CVE-2021-44228).",
+        "risk_explanation": "Resolves arbitrary remote directories via LDAP, RMI, or CORBA. Attackers trigger deserialization of remote Java classes leading to instant Remote Code Execution (CVE-2021-44228).",
+        "remediation": "Disable remote protocol lookups, restrict JNDI contexts, and ensure com.sun.jndi.ldap.object.trustURLCodebase=false.",
+        "cwe": "CWE-917: Improper Neutralization of Special Elements used in an Expression Language Statement",
+        "owasp": "A03:2021-Injection",
         "mitre": "T1190",
         "mitre_name": "Exploit Public-Facing Application"
     },
@@ -72,7 +92,12 @@ HIGH_RISK_JAVA_APIS = [
         "api": "Insecure Deserialization",
         "title": "Java Object Deserialization (Insecure Deserialization)",
         "severity": "high",
+        "category": "deserialization",
         "description": "Deserializes untrusted binary object streams without schema validation (ysoserial gadget chain vector).",
+        "risk_explanation": "Deserializes untrusted binary objects without class verification. Attackers provide serialized gadget chains (ysoserial CommonsCollections, Spring, etc.) to trigger arbitrary code execution.",
+        "remediation": "Implement strict ObjectInputFilter validation (JEP 290) or use type-safe serialization formats like JSON/Protocol Buffers.",
+        "cwe": "CWE-502: Deserialization of Untrusted Data",
+        "owasp": "A08:2021-Software and Data Integrity Failures",
         "mitre": "T1203",
         "mitre_name": "Exploitation for Client Execution"
     },
@@ -81,7 +106,12 @@ HIGH_RISK_JAVA_APIS = [
         "api": "Dynamic Reflection",
         "title": "Dynamic Reflection & Obfuscated Method Invocation",
         "severity": "high",
+        "category": "reflection",
         "description": "Invokes methods dynamically by string name at runtime to evade static code inspection and security filters.",
+        "risk_explanation": "Reflectively resolves classes and methods by string name. Malware leverages this to evade static security scanners and antivirus filters.",
+        "remediation": "Use compile-time static bindings and interfaces rather than runtime string-based reflection.",
+        "cwe": "CWE-470: Use of Externally-Controlled Input to Select Classes or Code",
+        "owasp": "A04:2021-Insecure Design",
         "mitre": "T1626",
         "mitre_name": "Obfuscated Files or Information"
     },
@@ -90,7 +120,12 @@ HIGH_RISK_JAVA_APIS = [
         "api": "URLClassLoader",
         "title": "Remote Dynamic Bytecode Loading",
         "severity": "high",
+        "category": "code_loading",
         "description": "Fetches and instantiates executable Java classes from remote HTTP or FTP servers at runtime.",
+        "risk_explanation": "Fetches executable JAR or class files from remote HTTP/FTP servers at runtime, allowing clean stubs to download malicious payloads.",
+        "remediation": "Package all necessary dependencies directly into the application archive and enforce digital code signing.",
+        "cwe": "CWE-94: Improper Control of Generation of Code",
+        "owasp": "A08:2021-Software and Data Integrity Failures",
         "mitre": "T1105",
         "mitre_name": "Ingress Tool Transfer"
     },
@@ -99,7 +134,12 @@ HIGH_RISK_JAVA_APIS = [
         "api": "System.load / Native JNI",
         "title": "Native Dynamic Link Library Injection (.dll / .so)",
         "severity": "high",
+        "category": "native_code",
         "description": "Loads native operating system shared libraries into the JVM process address space.",
+        "risk_explanation": "Loads compiled C/C++ native shared libraries (.dll, .so, .dylib) directly into JVM process memory, bypassing all Java sandbox constraints.",
+        "remediation": "Ensure loaded libraries reside in write-protected system directories and verify cryptographic hashes before loading.",
+        "cwe": "CWE-114: Process Control",
+        "owasp": "A08:2021-Software and Data Integrity Failures",
         "mitre": "T1129",
         "mitre_name": "Shared Modules"
     },
@@ -108,7 +148,12 @@ HIGH_RISK_JAVA_APIS = [
         "api": "AWT Robot",
         "title": "AWT Robot Synthetic Input & Screen Capture (Spyware)",
         "severity": "high",
+        "category": "surveillance",
         "description": "Can generate automated low-level mouse clicks, keystrokes, and capture screenshots of the active desktop.",
+        "risk_explanation": "Captures desktop screen pixels and injects artificial keystrokes and mouse movements. Widely utilized by Java RATs (jRAT, Adwind) for keylogging and desktop surveillance.",
+        "remediation": "Remove java.awt.Robot usage unless developing accessibility testing tools.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp": "A01:2021-Broken Access Control",
         "mitre": "T1056.001",
         "mitre_name": "Keylogging"
     },
@@ -117,7 +162,12 @@ HIGH_RISK_JAVA_APIS = [
         "api": "Raw Sockets",
         "title": "Raw TCP Socket Network Communication",
         "severity": "medium",
+        "category": "network",
         "description": "Opens low-level TCP/IP network sockets for bidirectional communication or reverse shells.",
+        "risk_explanation": "Opens raw low-level sockets commonly used to establish interactive reverse TCP command shells.",
+        "remediation": "Use high-level application protocols (HTTPS, gRPC) with authenticated TLS encryption.",
+        "cwe": "CWE-319: Cleartext Transmission of Sensitive Information",
+        "owasp": "A02:2021-Cryptographic Failures",
         "mitre": "T1095",
         "mitre_name": "Non-Application Layer Protocol"
     },
@@ -126,9 +176,84 @@ HIGH_RISK_JAVA_APIS = [
         "api": "JVM Instrumentation",
         "title": "JVM Bytecode Instrumentation (Java Agent)",
         "severity": "high",
+        "category": "instrumentation",
         "description": "Modifies bytecode of classes at runtime in memory, commonly used by rootkits and memory hooking agents.",
+        "risk_explanation": "Allows agents to redefine and retransform class bytecode dynamically in memory to bypass security controls.",
+        "remediation": "Disallow Java Agents via JVM launch flags (-XX:-EnableJVMCI or security managers) in sensitive production environments.",
+        "cwe": "CWE-1055: Process Injection",
+        "owasp": "A08:2021-Software and Data Integrity Failures",
         "mitre": "T1055",
         "mitre_name": "Process Injection"
+    },
+    {
+        "pattern": re.compile(r'(?:AES|DES|DESede|Blowfish|RC4)/ECB', re.I),
+        "api": "Cipher Mode: ECB",
+        "title": "Insecure Cipher Mode (Electronic Codebook / ECB)",
+        "severity": "high",
+        "category": "crypto",
+        "description": "Uses Electronic Codebook (ECB) mode for symmetric block ciphers without initialization vector.",
+        "risk_explanation": "ECB mode encrypts identical plaintext blocks into identical ciphertext blocks, preserving visual and statistical patterns.",
+        "remediation": "Switch to authenticated encryption algorithms such as AES/GCM/NoPadding with a unique cryptographically random IV.",
+        "cwe": "CWE-327: Broken Cryptographic Algorithm",
+        "owasp": "A02:2021-Cryptographic Failures",
+        "mitre": "T1573",
+        "mitre_name": "Encrypted Channel"
+    },
+    {
+        "pattern": re.compile(r'MessageDigest\.getInstance\s*\(\s*["\'](?:MD5|SHA-?1)["\']', re.I),
+        "api": "MessageDigest(MD5/SHA-1)",
+        "title": "Broken Hash Function (MD5 / SHA-1)",
+        "severity": "high",
+        "category": "crypto",
+        "description": "Instantiates legacy collision-prone hash algorithms (MD5 or SHA-1).",
+        "risk_explanation": "Practical collision attacks exist for MD5 and SHA-1, compromising signature integrity.",
+        "remediation": "Upgrade hashing routines to SHA-256 or SHA-512, or use Argon2id/bcrypt for password storage.",
+        "cwe": "CWE-328: Use of Weak Hash",
+        "owasp": "A02:2021-Cryptographic Failures",
+        "mitre": "T1573",
+        "mitre_name": "Encrypted Channel"
+    },
+    {
+        "pattern": re.compile(r'Cipher\.getInstance\s*\(\s*["\'](?:DES|DESede|RC4|ARCFOUR|Blowfish)', re.I),
+        "api": "Cipher.getInstance(DES/RC4/Blowfish)",
+        "title": "Deprecated Legacy Cipher (DES / RC4 / Blowfish)",
+        "severity": "critical",
+        "category": "crypto",
+        "description": "Initializes deprecated or broken symmetric encryption algorithms.",
+        "risk_explanation": "DES uses an insecure 56-bit key space; Blowfish suffers from Sweet32 block collisions; RC4 exhibits severe statistical keystream biases.",
+        "remediation": "Standardize exclusively on AES-256 or ChaCha20-Poly1305 with modern authenticated encryption modes.",
+        "cwe": "CWE-327: Broken Cryptographic Algorithm",
+        "owasp": "A02:2021-Cryptographic Failures",
+        "mitre": "T1573",
+        "mitre_name": "Encrypted Channel"
+    },
+    {
+        "pattern": re.compile(r'TrustAll(?:Trust)?Manager|ALLOW_ALL_HOSTNAME_VERIFIER|checkServerTrusted\s*\([^)]*\)\s*\{\s*\}', re.I),
+        "api": "TrustAllTrustManager / ALLOW_ALL_HOSTNAME_VERIFIER",
+        "title": "SSL/TLS Verification Bypass (Insecure TrustManager)",
+        "severity": "critical",
+        "category": "network_tls",
+        "description": "Bypasses SSL/TLS certificate or hostname verification.",
+        "risk_explanation": "Allows attackers on the same network to intercept, inspect, and modify encrypted HTTPS traffic without triggering warnings.",
+        "remediation": "Remove empty TrustManagers and let standard JVM certificate validation handle TLS handshakes.",
+        "cwe": "CWE-295: Improper Certificate Validation",
+        "owasp": "A07:2021-Identification and Authentication Failures",
+        "mitre": "T1557",
+        "mitre_name": "Man-in-the-Middle"
+    },
+    {
+        "pattern": re.compile(r'getSystemClipboard|java/awt/datatransfer/Clipboard', re.I),
+        "api": "Toolkit.getSystemClipboard()",
+        "title": "System Clipboard Access & Monitoring",
+        "severity": "medium",
+        "category": "clipboard",
+        "description": "Reads or modifies content stored in the system clipboard.",
+        "risk_explanation": "Clipper malware monitors the clipboard to steal copied credentials or swap crypto wallet addresses.",
+        "remediation": "Access clipboard only in direct response to explicit user paste actions.",
+        "cwe": "CWE-200: Exposure of Sensitive Information",
+        "owasp": "A01:2021-Broken Access Control",
+        "mitre": "T1414",
+        "mitre_name": "Credentials from Web Browsers / Clipboard"
     }
 ]
 
@@ -438,7 +563,12 @@ class JavaAnalyzer(BaseAnalyzer):
                             "api": api_def["api"],
                             "title": api_def["title"],
                             "severity": api_def["severity"],
+                            "category": api_def.get("category", "execution"),
                             "description": api_def["description"],
+                            "risk_explanation": api_def.get("risk_explanation", ""),
+                            "remediation": api_def.get("remediation", ""),
+                            "cwe": api_def.get("cwe", ""),
+                            "owasp": api_def.get("owasp", ""),
                             "mitre": api_def["mitre"],
                             "mitre_name": api_def["mitre_name"]
                         }
@@ -508,7 +638,12 @@ class JavaAnalyzer(BaseAnalyzer):
                             "api": api_def["api"],
                             "title": api_def["title"],
                             "severity": api_def["severity"],
+                            "category": api_def.get("category", "execution"),
                             "description": api_def["description"],
+                            "risk_explanation": api_def.get("risk_explanation", ""),
+                            "remediation": api_def.get("remediation", ""),
+                            "cwe": api_def.get("cwe", ""),
+                            "owasp": api_def.get("owasp", ""),
                             "mitre": api_def["mitre"],
                             "mitre_name": api_def["mitre_name"]
                         })
@@ -641,7 +776,12 @@ class JavaAnalyzer(BaseAnalyzer):
                                         "api": api_def["api"],
                                         "title": api_def["title"],
                                         "severity": api_def["severity"],
+                                        "category": api_def.get("category", "execution"),
                                         "description": api_def["description"],
+                                        "risk_explanation": api_def.get("risk_explanation", ""),
+                                        "remediation": api_def.get("remediation", ""),
+                                        "cwe": api_def.get("cwe", ""),
+                                        "owasp": api_def.get("owasp", ""),
                                         "mitre": api_def["mitre"],
                                         "mitre_name": api_def["mitre_name"]
                                     })
@@ -650,8 +790,50 @@ class JavaAnalyzer(BaseAnalyzer):
                         except Exception:
                             pass
 
+                # Set JAR triage compatibility fields
+                data["is_jar"] = True
+                data["class_count"] = data["classes_count"]
+                data["manifest_content"] = data.get("code_preview", "")
+                data["packages"] = sorted(list(packages))
+                data["total_entries"] = len(namelist)
+                data["suspicious_apis"] = suspicious_apis
                 data["dangerous_apis"] = suspicious_apis
                 data["iocs"]["urls"] = list(all_urls)[:50]
+
+                # Disassemble main entry class or first .class for rich preview
+                target_class_entry = None
+                if data.get("main_class"):
+                    candidate = data["main_class"].replace(".", "/") + ".class"
+                    if candidate in namelist:
+                        target_class_entry = candidate
+                if not target_class_entry:
+                    if suspicious_apis:
+                        target_class_entry = suspicious_apis[0]["class_file"]
+                    elif data["classes_list"]:
+                        target_class_entry = data["classes_list"][0]
+
+                if target_class_entry and target_class_entry in namelist:
+                    try:
+                        cls_bytes = zf.read(target_class_entry)
+                        c_parser = JavaClassParser(cls_bytes)
+                        if c_parser.parse():
+                            lines = [
+                                "",
+                                "// ==========================================================================",
+                                f"// Disassembled Entry / Target Class: {target_class_entry}",
+                                f"// Target JVM: {c_parser.java_version_name} (Major: {c_parser.major_version})",
+                                f"// Superclass: {c_parser.super_class_name}",
+                                f"// Interfaces: {', '.join(c_parser.interfaces) if c_parser.interfaces else 'None'}",
+                                "// ==========================================================================",
+                                f"public class {c_parser.class_name.split('/')[-1]} extends {c_parser.super_class_name.split('/')[-1]} {{",
+                                "    // Method Invocations Resolved from Constant Pool:"
+                            ]
+                            for mc in c_parser.method_calls[:40]:
+                                lines.append(f"    // Invokes: {mc['full']}")
+                            lines.append("}")
+                            data["code_preview"] = (data.get("code_preview", "") + "\n" + "\n".join(lines)).strip()
+                    except Exception as e:
+                        logger.debug(f"Class disassembly in JAR failed: {e}")
 
                 # Group API findings
                 unique_api_titles = list(set(a["title"] for a in suspicious_apis))

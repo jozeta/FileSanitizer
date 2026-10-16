@@ -1406,7 +1406,20 @@ export interface JarTriageInfo {
   embedded_binaries?: string[];
   packages?: string[];
   total_entries?: number;
-  suspicious_apis?: Array<{ class_file: string; api: string; description: string }>;
+  suspicious_apis?: Array<{
+    class_file: string;
+    api: string;
+    title?: string;
+    severity?: string;
+    category?: string;
+    description: string;
+    risk_explanation?: string;
+    remediation?: string;
+    cwe?: string;
+    owasp?: string;
+    mitre?: string;
+    mitre_name?: string;
+  }>;
 }
 
 
@@ -3546,6 +3559,10 @@ export interface ApkDetectedApi {
   severity: 'low' | 'medium' | 'high' | 'critical';
   category: string;
   description: string;
+  risk_explanation?: string;
+  remediation?: string;
+  cwe?: string;
+  owasp_mobile?: string;
   mitre?: string;
   mitre_name?: string;
   count: number;
@@ -3702,6 +3719,14 @@ export interface ApkAnalysisData {
   categorized_strings?: ApkCategorizedStrings;
   online_intel?: ApkOnlineIntel;
   security_audit?: ApkSecurityAuditItem[];
+  network_security_config?: {
+    found: boolean;
+    config_file?: string;
+    cleartext_permitted: boolean;
+    trusts_user_certs: boolean;
+    has_pinning: boolean;
+    details: string[];
+  };
   embedded_assets?: string[];
   iocs?: {
     urls?: string[];
@@ -3723,7 +3748,12 @@ export interface JavaMethodCall {
   api: string;
   title: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
+  category?: string;
   description: string;
+  risk_explanation?: string;
+  remediation?: string;
+  cwe?: string;
+  owasp?: string;
   mitre?: string;
   mitre_name?: string;
   line_number?: number;
