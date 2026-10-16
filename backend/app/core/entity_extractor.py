@@ -366,6 +366,52 @@ class EntityExtractor:
                 cls._add_name(names, reg_name, "WHOIS Domain Registrant")
 
         # -------------------------------------------------------------
+        # 8b. Extract from Android APK Info (job.apk_info)
+        # -------------------------------------------------------------
+        apk = getattr(job, "apk_info", None) or analysis_data.get("apk")
+        if isinstance(apk, dict):
+            iocs = apk.get("iocs") or {}
+            for u in iocs.get("urls", []):
+                try:
+                    parsed = urlparse(u)
+                    host = parsed.hostname or (parsed.netloc.split(":")[0].strip())
+                    if host:
+                        if re.match(r'^\d+\.\d+\.\d+\.\d+$', host):
+                            cls._add_ip(ips, host, "APK Hardcoded Network Endpoint")
+                        else:
+                            cls._add_domain(domains, host, "APK Hardcoded Endpoint Domain")
+                except Exception:
+                    pass
+            for ip_v in iocs.get("ips", []):
+                cls._add_ip(ips, ip_v, "APK Embedded IP Indicator")
+
+            # Signing Certificate Subject
+            sig = apk.get("signing_info") or {}
+            subj = sig.get("subject")
+            if subj and isinstance(subj, str):
+                cls._add_name(names, subj[:50], "APK Code Signing Signer")
+
+        # -------------------------------------------------------------
+        # 8c. Extract from Java Info (job.java_info)
+        # -------------------------------------------------------------
+        java_data = getattr(job, "java_info", None) or analysis_data.get("java")
+        if isinstance(java_data, dict):
+            j_iocs = java_data.get("iocs") or {}
+            for u in j_iocs.get("urls", []):
+                try:
+                    parsed = urlparse(u)
+                    host = parsed.hostname or (parsed.netloc.split(":")[0].strip())
+                    if host:
+                        if re.match(r'^\d+\.\d+\.\d+\.\d+$', host):
+                            cls._add_ip(ips, host, "Java Network Target IP")
+                        else:
+                            cls._add_domain(domains, host, "Java Network Target Domain")
+                except Exception:
+                    pass
+            for ip_v in j_iocs.get("ips", []):
+                cls._add_ip(ips, ip_v, "Java Network Target IP")
+
+        # -------------------------------------------------------------
         # 9. Extract from URLs (job.urls)
         # -------------------------------------------------------------
         urls = getattr(job, "urls", []) or []

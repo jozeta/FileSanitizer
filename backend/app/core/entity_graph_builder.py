@@ -910,6 +910,124 @@ class EntityGraphBuilder:
                     _add_edge(topo_mem_id, ip_node_id, "topology asset", "network")
 
         # ---------------------------------------------------------
+        # 7c. ANDROID APPLICATION PACKAGE (APK) NODES (Tier 2 & 3)
+        # ---------------------------------------------------------
+        apk_info = getattr(job, "apk_info", None) or (getattr(job, "analysis_data", {}) or {}).get("apk") or {}
+        if isinstance(apk_info, dict) and apk_info:
+            pkg_name = apk_info.get("package_name") or ""
+            if pkg_name:
+                pkg_node_id = f"apk_pkg_{re.sub(r'[^a-zA-Z0-9]', '_', pkg_name)}"
+                _add_node(
+                    node_id=pkg_node_id,
+                    label=f"Package: {pkg_name}",
+                    n_type="application",
+                    risk="info" if apk_info.get("risk_score", 0) < 30 else ("critical" if apk_info.get("risk_score", 0) >= 60 else "high"),
+                    tier=1,
+                    details={
+                        "package_name": pkg_name,
+                        "app_name": apk_info.get("app_name"),
+                        "version_name": apk_info.get("version_name"),
+                        "version_code": apk_info.get("version_code"),
+                        "min_sdk": apk_info.get("min_sdk"),
+                        "target_sdk": apk_info.get("target_sdk"),
+                        "risk_score": apk_info.get("risk_score"),
+                        "risk_level": apk_info.get("risk_level")
+                    }
+                )
+                _add_edge("root", pkg_node_id, "defines package", "package")
+
+                # Dangerous Permissions
+                dang_perms = apk_info.get("dangerous_permissions") or []
+                for p_idx, perm in enumerate(dang_perms[:6]):
+                    p_id = f"apk_perm_{p_idx}"
+                    p_name = perm.get("permission", "").split(".")[-1]
+                    _add_node(
+                        node_id=p_id,
+                        label=f"Perm: {p_name}",
+                        n_type="permission",
+                        risk=perm.get("severity", "high"),
+                        tier=2,
+                        details=perm
+                    )
+                    _add_edge(pkg_node_id, p_id, "requests permission", "permission")
+
+                # Signing Certificate
+                sig_info = apk_info.get("signing_info") or {}
+                if sig_info.get("subject"):
+                    cert_node_id = "apk_signing_cert"
+                    is_dbg = sig_info.get("is_debug_key", False)
+                    _add_node(
+                        node_id=cert_node_id,
+                        label=f"Cert: {sig_info.get('subject', 'Android')[:25]}",
+                        n_type="certificate",
+                        risk="critical" if is_dbg else ("warning" if sig_info.get("is_self_signed") else "clean"),
+                        tier=2,
+                        details=sig_info
+                    )
+                    _add_edge(pkg_node_id, cert_node_id, "signed with", "signed_by")
+
+                # Detected Malicious DEX APIs
+                dex_apis = (apk_info.get("dex_info") or {}).get("detected_apis") or []
+                for a_idx, api in enumerate(dex_apis[:5]):
+                    api_node_id = f"apk_api_{a_idx}"
+                    _add_node(
+                        node_id=api_node_id,
+                        label=f"API: {api.get('title', 'API')[:24]}",
+                        n_type="action",
+                        risk=api.get("severity", "high"),
+                        tier=2,
+                        details=api
+                    )
+                    _add_edge(pkg_node_id, api_node_id, "invokes bytecode API", "executes")
+
+        # ---------------------------------------------------------
+        # 7d. JAVA FORENSICS & BYTECODE VECTORS (Tier 2 & 3)
+        # ---------------------------------------------------------
+        java_info = getattr(job, "java_info", None) or (getattr(job, "analysis_data", {}) or {}).get("java") or {}
+        if isinstance(java_info, dict) and java_info:
+            main_cls = java_info.get("main_class")
+            premain_cls = java_info.get("premain_class")
+            j_subtype = java_info.get("java_subtype", "java")
+
+            if main_cls:
+                m_node_id = "java_main_entry"
+                _add_node(
+                    node_id=m_node_id,
+                    label=f"Main: {main_cls}",
+                    n_type="entry_point",
+                    risk="info",
+                    tier=1,
+                    details={"main_class": main_cls, "subtype": j_subtype}
+                )
+                _add_edge("root", m_node_id, "entry point", "executes")
+
+            if premain_cls:
+                pm_node_id = "java_premain_agent"
+                _add_node(
+                    node_id=pm_node_id,
+                    label=f"Agent: {premain_cls}",
+                    n_type="hook",
+                    risk="critical",
+                    tier=1,
+                    details={"premain_class": premain_cls, "hook": "JVM Bytecode Rewriter / Instrumentation"}
+                )
+                _add_edge("root", pm_node_id, "instruments JVM", "hook")
+
+            # Dangerous APIs
+            j_apis = java_info.get("dangerous_apis") or []
+            for j_idx, j_api in enumerate(j_apis[:6]):
+                japi_id = f"java_api_{j_idx}"
+                _add_node(
+                    node_id=japi_id,
+                    label=f"API: {j_api.get('title', 'API')[:24]}",
+                    n_type="action",
+                    risk=j_api.get("severity", "high"),
+                    tier=2,
+                    details=j_api
+                )
+                _add_edge("root", japi_id, "invokes JVM API", "executes")
+
+        # ---------------------------------------------------------
         # 8. EXTRACTED URLS, DOMAINS, RESOLVED IPS & GEOLOCATION (Tier 2 & 3)
         # ---------------------------------------------------------
         urls = getattr(job, "urls", []) or []

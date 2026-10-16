@@ -13,7 +13,9 @@ import {
   Plus,
   X,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Smartphone,
+  Coffee
 } from 'lucide-react';
 import { WorkspaceJob } from '../types';
 
@@ -31,6 +33,12 @@ function getFileIcon(category?: string, filename?: string) {
   const cat = (category || '').toLowerCase();
   const name = (filename || '').toLowerCase();
 
+  if (cat === 'apk' || name.match(/\.(apk|aab|xapk|dex)$/)) {
+    return Smartphone;
+  }
+  if (cat === 'java' || name.match(/\.(java|class|jar)$/)) {
+    return Coffee;
+  }
   if (cat === 'executable' || cat === 'binary' || name.match(/\.(exe|dll|sys|elf|bin|macho)$/)) {
     return Cpu;
   }

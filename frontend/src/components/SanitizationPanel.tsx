@@ -253,6 +253,56 @@ const getCategoryFormatConfig = (category: string): { options: FormatOption[]; l
     };
   }
 
+  if (cat === 'apk') {
+    return {
+      options: [
+        {
+          id: 'original',
+          title: 'Disarmed Android Package Container',
+          badge: '.APK',
+          badgeBg: 'bg-emerald-100',
+          badgeText: 'text-emerald-800',
+          desc: 'Neutralizes dangerous permissions (SMS, Overlay, Camera), defangs C2 endpoints, disables debuggable mode, and purges executable assets.',
+          whatHappens: 'Produces a disarmed APK container with all dangerous runtime permissions stripped and active network vectors neutralized.'
+        },
+        {
+          id: 'pdf',
+          title: 'Download as Forensic Dossier (PDF)',
+          badge: '.PDF',
+          badgeBg: 'bg-rose-100',
+          badgeText: 'text-rose-700',
+          desc: 'Compiles manifest metadata, permissions matrix, and DEX security findings into an unmodifiable, static PDF review report.',
+          whatHappens: 'Permanently converts mobile application bytecode and manifest data into a clean, unmodifiable PDF document.'
+        }
+      ]
+    };
+  }
+
+  if (cat === 'java') {
+    return {
+      options: [
+        {
+          id: 'original',
+          title: 'Sanitized Java Container',
+          badge: '.JAVA / .JAR',
+          badgeBg: 'bg-amber-100',
+          badgeText: 'text-amber-800',
+          desc: 'Disarms Runtime.exec, ProcessBuilder, unmanaged memory (sun.misc.Unsafe), dynamic reflection, and clears executable flags.',
+          whatHappens: 'Removes dangerous JVM execution hooks, dynamic loaders, and embedded native libraries, producing a disarmed Java container.'
+        },
+        {
+          id: 'pdf',
+          title: 'Download as Review Dossier (PDF)',
+          badge: '.PDF',
+          badgeBg: 'bg-rose-100',
+          badgeText: 'text-rose-700',
+          desc: 'Compiles Java source code, bytecode constant pool details, and security findings into a standardized static PDF report.',
+          whatHappens: 'Exports code and forensic details onto clean PDF pages, eliminating all JVM bytecode execution vectors.'
+        }
+      ]
+    };
+  }
+
   // Default / HTML / Generic
   return {
     options: [

@@ -49,6 +49,7 @@ RUN pip install --no-cache-dir --no-compile -r requirements.txt
 
 # Copy backend code
 COPY app ./app
+COPY tests ./tests
 
 # Create jobs workspace directory with correct permissions
 RUN mkdir -p /jobs && chown -R appuser:appgroup /jobs /app

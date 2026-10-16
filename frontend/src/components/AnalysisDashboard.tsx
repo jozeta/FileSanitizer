@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Copy, Check, ArrowLeft, RefreshCw, FileText, Globe, Shield, Sparkles, AlertCircle, ZoomIn, X, Lock, Unlock, Mail, Download, ChevronDown, Cpu, Layers, Terminal, ShieldAlert, BarChart3, Clock, FileCode, FileSpreadsheet, Coffee, Image as ImageIcon, Network, Activity } from 'lucide-react';
+import { Copy, Check, ArrowLeft, RefreshCw, FileText, Globe, Shield, Sparkles, AlertCircle, ZoomIn, X, Lock, Unlock, Mail, Download, ChevronDown, Cpu, Layers, Terminal, ShieldAlert, BarChart3, Clock, FileCode, FileSpreadsheet, Coffee, Image as ImageIcon, Network, Activity, Smartphone } from 'lucide-react';
 import { JobDetail, SanitizationOptions } from '../types';
 import { apiClient } from '../api/client';
 import { formatBytes, truncateHash } from '../utils/formatters';
@@ -34,6 +34,8 @@ import { EvtxTriageCard } from './EvtxTriageCard';
 import { JobDiagnosticsCard } from './JobDiagnosticsCard';
 import { LnkCard } from './LnkCard';
 import { AntiAnalysisInspectorCard } from './AntiAnalysisInspectorCard';
+import { ApkAnalysisCard } from './ApkAnalysisCard';
+import { JavaAnalysisCard } from './JavaAnalysisCard';
 import { DetectionRulesModal } from './DetectionRulesModal';
 import { ErrorBoundary } from './ErrorBoundary';
 import { CrossArtifactNavigator } from './CrossArtifactNavigator';
@@ -66,6 +68,8 @@ type TabType =
   | 'pcap'
   | 'evtx'
   | 'lnk'
+  | 'apk'
+  | 'java'
   | 'diagnostics'
   | 'raw_inspector';
 
@@ -101,6 +105,12 @@ function getFormatSections(job: JobDetail | null) {
   }
   if (job.category === 'pdf' || Boolean(job.pdf_info) || job.filename?.toLowerCase().endsWith('.pdf')) {
     sections.push({ id: 'pdf', label: 'PDF Structure & JavaScript', icon: FileText, count: job.pdf_info?.javascript_streams?.length });
+  }
+  if (job.category === 'apk' || Boolean(job.apk_info) || job.filename?.match(/\.(apk|aab|xapk|dex)$/i)) {
+    sections.push({ id: 'apk', label: 'Android APK & Mobile Security', icon: Smartphone, count: job.apk_info?.dangerous_permissions?.length });
+  }
+  if (job.category === 'java' || Boolean(job.java_info) || job.filename?.match(/\.(java|class)$/i)) {
+    sections.push({ id: 'java', label: 'Java Forensics & Bytecode', icon: Coffee, count: job.java_info?.dangerous_apis?.length });
   }
   if (Boolean(job.jar_info) || job.filename?.toLowerCase().endsWith('.jar')) {
     sections.push({ id: 'jar', label: 'JAR Java Bytecode Triage', icon: Coffee, count: job.jar_info?.suspicious_apis?.length });
@@ -169,6 +179,12 @@ function getFormatTabConfig(sections: any[], job: JobDetail | null) {
   }
   if (job.category === 'pdf' || job.pdf_info || job.filename?.toLowerCase().endsWith('.pdf')) {
     return { label: 'PDF Structure & Triage', icon: FileText };
+  }
+  if (job.category === 'apk' || job.apk_info || job.filename?.match(/\.(apk|aab|xapk|dex)$/i)) {
+    return { label: 'Android APK & Mobile Security', icon: Smartphone };
+  }
+  if (job.category === 'java' || job.java_info || job.filename?.match(/\.(java|class)$/i)) {
+    return { label: 'Java Forensics & Bytecode', icon: Coffee };
   }
   if (job.jar_info || job.filename?.toLowerCase().endsWith('.jar')) {
     return { label: 'JAR Java Triage', icon: Coffee };
@@ -1285,6 +1301,18 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                         onSelectJob={onSelectJob}
                         embeddedFiles={job.embedded_files}
                       />
+                    </ErrorBoundary>
+                  );
+                case 'apk':
+                  return (
+                    <ErrorBoundary fallbackTitle="Android APK Forensic Analysis Error" onReset={() => setActiveTab('security')}>
+                      <ApkAnalysisCard apkInfo={job.apk_info} filename={job.filename} findings={job.findings} />
+                    </ErrorBoundary>
+                  );
+                case 'java':
+                  return (
+                    <ErrorBoundary fallbackTitle="Java Forensic Analysis Error" onReset={() => setActiveTab('security')}>
+                      <JavaAnalysisCard javaInfo={job.java_info} filename={job.filename} findings={job.findings} />
                     </ErrorBoundary>
                   );
                 case 'jar':

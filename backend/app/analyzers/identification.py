@@ -1,5 +1,6 @@
 import hashlib
 import mimetypes
+import struct
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
@@ -103,6 +104,24 @@ def detect_file_type(file_path: Path, filename: str) -> Tuple[str, str, str]:
         if len(tar_header) >= 265 and tar_header[257:262] == b"ustar":
             return "application/x-tar", "archive", "TAR Archive"
 
+    # Check Java Class (.class) vs Mach-O Fat Binary (both start with 0xCAFEBABE)
+    if header.startswith(b"\xCA\xFE\xBA\xBE"):
+        is_java_class = filename.lower().endswith(".class")
+        if not is_java_class and len(header) >= 8:
+            major = struct.unpack_from(">H", header, 6)[0]
+            if 45 <= major <= 70:
+                is_java_class = True
+        if is_java_class:
+            return "application/x-java-class", "java", "Java Bytecode Class File (CLASS)"
+
+    # Check Dalvik Executable (.dex)
+    if header.startswith((b"dex\n035\x00", b"dex\n036\x00", b"dex\n037\x00", b"dex\n038\x00", b"dex\n039\x00")) or filename.lower().endswith(".dex"):
+        return "application/x-dex", "apk", "Dalvik Executable Bytecode (DEX)"
+
+    # Check Android Application Package by extension (.apk, .aab, .xapk)
+    if filename.lower().endswith((".apk", ".aab", ".xapk")):
+        return "application/vnd.android.package-archive", "apk", "Android Application Package (APK)"
+
     # Check known byte signatures
     for sig, mime, ext in FILE_SIGNATURES:
         if header.startswith(sig):
@@ -199,10 +218,13 @@ def inspect_zip_type(file_path: Path) -> Optional[Tuple[str, str, str]]:
     try:
         with zipfile.ZipFile(file_path, 'r') as zf:
             namelist = set(zf.namelist())
+            fn_lower = file_path.name.lower()
+            if "AndroidManifest.xml" in namelist or any(n.endswith(".dex") for n in namelist) or fn_lower.endswith((".apk", ".aab", ".xapk")):
+                return "application/vnd.android.package-archive", "apk", "Android Application Package (APK)"
             if any(n.lower().endswith(".evtx") for n in namelist):
                 return "application/x-windows-event-log-archive", "evtx", "Windows Event Log Archive (ZIP)"
-            if "META-INF/MANIFEST.MF" in namelist or any(n.endswith(".class") for n in namelist) or file_path.name.lower().endswith(".jar"):
-                return "application/java-archive", "archive", "Java Archive (JAR)"
+            if "META-INF/MANIFEST.MF" in namelist or any(n.endswith(".class") for n in namelist) or fn_lower.endswith((".jar", ".war", ".ear")):
+                return "application/java-archive", "java", "Java Archive (JAR)"
             if "[Content_Types].xml" in namelist:
                 if any(n.startswith("word/") for n in namelist):
                     return "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "office", "Microsoft Word (DOCX)"
@@ -271,6 +293,8 @@ def inspect_script_type(file_path: Path, header: bytes, filename: str) -> Option
         return "text/x-ruby", "script", "Ruby Script (RB)"
     if name_lower.endswith((".pl", ".pm")):
         return "text/x-perl", "script", "Perl Script (PL)"
+    if name_lower.endswith(".java"):
+        return "text/x-java-source", "java", "Java Source Code File (JAVA)"
     if name_lower.endswith(".lua"):
         return "text/x-lua", "script", "Lua Script (LUA)"
 
@@ -306,6 +330,10 @@ def inspect_script_type(file_path: Path, header: bytes, filename: str) -> Option
 
 def categorize_mime(mime: str) -> str:
     """Group MIME types into primary application categories."""
+    if mime in ["application/vnd.android.package-archive", "application/x-dex"] or "android" in mime:
+        return "apk"
+    if mime in ["text/x-java-source", "application/x-java-class", "application/java-archive", "application/x-java-archive"] or "java" in mime:
+        return "java"
     if mime in [
         "text/x-powershell", "text/x-vbs", "text/x-vba", "application/x-sh",
         "text/x-php", "application/x-bat", "application/hta", "application/x-applescript",
@@ -329,7 +357,7 @@ def categorize_mime(mime: str) -> str:
     if mime in [
         "application/zip", "application/x-tar", "application/x-7z-compressed", "application/gzip",
         "application/x-rar-compressed", "application/x-rar", "application/vnd.rar",
-        "application/x-chrome-extension", "application/java-archive", "application/x-java-archive"
+        "application/x-chrome-extension"
     ]:
         return "archive"
     if mime in ["application/vnd.tcpdump.pcap", "application/x-pcap", "application/x-pcapng"] or "pcap" in mime:
@@ -395,6 +423,11 @@ class IdentificationAnalyzer(BaseAnalyzer):
                     "application/x-pcapng": ".pcapng",
                     "application/x-windows-event-log": ".evtx",
                     "application/x-shellscript": ".sh",
+                    "application/vnd.android.package-archive": ".apk",
+                    "application/x-dex": ".dex",
+                    "text/x-java-source": ".java",
+                    "application/x-java-class": ".class",
+                    "application/java-archive": ".jar",
                 }
                 suggested_ext = mime_to_ext.get(detected_mime)
                 if not suggested_ext:
@@ -408,6 +441,10 @@ class IdentificationAnalyzer(BaseAnalyzer):
                         suggested_ext = ".png"
                     elif category == "evtx":
                         suggested_ext = ".evtx"
+                    elif category == "apk":
+                        suggested_ext = ".apk"
+                    elif category == "java":
+                        suggested_ext = ".java"
                     else:
                         suggested_ext = f".{category}"
 

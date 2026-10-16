@@ -19,7 +19,9 @@ import {
   Terminal,
   Globe,
   Activity,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Smartphone,
+  Coffee
 } from 'lucide-react';
 
 interface SupportedFormatsProps {
@@ -490,6 +492,68 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
         "Anonymize internal IP subnet ranges and device MAC addresses",
         "Scrub cleartext passwords and authentication bearer tokens",
         "Strip dangerous executable payload transfers from PCAP packet data stream"
+      ]
+    },
+    {
+      id: "apk",
+      category: "Android Mobile Apps & Dalvik Executables",
+      icon: Smartphone,
+      iconColor: "text-emerald-600 bg-emerald-50 border-emerald-200",
+      extensions: [".apk", ".aab", ".xapk", ".dex"],
+      description: "Android package archives and Dalvik executable bytecode evaluated for spyware, banking trojans, dangerous permission abuse, and component attack surfaces.",
+      threats: [
+        "Premium SMS & Banking 2FA OTP Interception",
+        "Background Audio Surveillance & Camera Snooping",
+        "Accessibility Service & Screen Overlay Abuse",
+        "Exported Components & Unauthorized IPC Invocation",
+        "Debuggable Keystore & Cleartext HTTP Vulnerabilities",
+        "Dynamic Bytecode DEX Loading & Shell Spawning"
+      ],
+      checks: [
+        "Pure-Python Android Binary XML (AXML) decoding of AndroidManifest.xml",
+        "Dangerous permission matrix evaluation mapped to MITRE ATT&CK for Mobile",
+        "Component attack surface auditing (Exported Activities, Services, Receivers, Providers)",
+        "DEX Bytecode string pools, reflection, su/Runtime.exec, and SMS telephony APIs",
+        "Cryptographic X.509 code signing certificate verification and debug keystore detection",
+        "Native ELF library architecture cataloging (lib/arm64-v8a, armeabi-v7a, x86_64)",
+        "Embedded secondary executable asset and payload extraction"
+      ],
+      sanitizations: [
+        "Disarm active bytecode and compile forensic dossier into safe Vector PDF review report",
+        "Strip dangerous permissions (SMS, Camera, Microphone, Overlay, Device Admin)",
+        "Neutralize android:debuggable and cleartext HTTP flags",
+        "Defang hardcoded C2 URLs and remote network telemetry endpoints"
+      ]
+    },
+    {
+      id: "java",
+      category: "Java Files & JVM Bytecode",
+      icon: Coffee,
+      iconColor: "text-amber-600 bg-amber-50 border-amber-200",
+      extensions: [".java", ".class", ".jar"],
+      description: "Java source code (.java), compiled bytecode (.class), and Java archive (.jar/.war) packages audited for JVM exploitation vectors, Java Agents, and cross-platform RATs.",
+      threats: [
+        "Remote JNDI Directory Lookup (Log4Shell / RCE)",
+        "Unmanaged Memory Manipulation (sun.misc.Unsafe)",
+        "Java Instrumentation Agent In-Memory Hooks (Premain-Class)",
+        "Insecure Object Deserialization (ysoserial gadget chains)",
+        "Dynamic Class Loading (URLClassLoader / Method.invoke)",
+        "Cross-Platform Java Remote Access Trojans (jRAT, Adwind)"
+      ],
+      checks: [
+        "AST static security parsing of Java source files for shell execution and unmanaged memory",
+        "Compiled .class binary Constant Pool inspection and dangerous method reference resolution",
+        "Java version compatibility decoding from major/minor versions (Java 1.1 to Java 23)",
+        "JAR manifest triage for standalone Main-Class, Premain Java Agent hooks, and all-permissions",
+        "Contained bytecode scanning for OS shell execution (Runtime.exec, ProcessBuilder)",
+        "Cataloging embedded native operating system libraries (.dll, .so, .dylib)",
+        "Structural signature matching against known Java RAT malware families"
+      ],
+      sanitizations: [
+        "Neutralize OS shell spawning and unmanaged memory pointers in source code",
+        "Defang embedded URLs and network socket connections",
+        "Enforce non-executable file permissions (0o644)",
+        "Convert Java code and bytecode into static, non-executable Vector PDF dossier"
       ]
     }
   ];

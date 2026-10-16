@@ -154,6 +154,8 @@ class JobModel(BaseModel):
     evtx_info: Optional[Dict[str, Any]] = None
     lnk_info: Optional[Dict[str, Any]] = None
     archive_info: Optional[Dict[str, Any]] = None
+    apk_info: Optional[Dict[str, Any]] = None
+    java_info: Optional[Dict[str, Any]] = None
     analysis_data: Optional[Dict[str, Any]] = None
     detection_rules: Optional[Dict[str, Any]] = None
     telemetry: Optional[Dict[str, Any]] = None
@@ -424,6 +426,10 @@ class JobManager:
                 fmt_key = "pcap"
             elif lower_name.endswith((".evtx", ".zip")) and job.category == "evtx":
                 fmt_key = "evtx"
+            elif lower_name.endswith((".apk", ".aab", ".xapk", ".dex")) or job.category == "apk":
+                fmt_key = "apk"
+            elif lower_name.endswith((".java", ".class", ".jar")) or job.category == "java":
+                fmt_key = "java"
 
             # Record disabled checks for this job's format so UI can hide corresponding data
             disabled_checks = [k for k, v in settings_store.get_format_checks(fmt_key).items() if not v]
@@ -702,6 +708,63 @@ class JobManager:
                             extracted_urls.add(u)
                     except Exception as as_err:
                         logger.debug(f"AppleScript analyzer note: {as_err}")
+
+            elif job.category == "apk":
+                from app.analyzers.apk_analyzer import ApkAnalyzer
+                job.current_step_label = "Android Package & DEX Bytecode Analysis"
+                apk_res = ApkAnalyzer().analyze(original_path, job.filename, job.mime_type)
+                findings.extend(apk_res.findings)
+                analysis_data["apk"] = apk_res.data
+                job.apk_info = apk_res.data
+                for u in (apk_res.data.get("iocs", {}).get("urls", [])):
+                    extracted_urls.add(u)
+                emb_assets = apk_res.data.get("embedded_assets", [])
+                nat_libs = apk_res.data.get("native_libraries", [])
+                if emb_assets or nat_libs:
+                    existing_embs = list(getattr(job, "embedded_files", []) or [])
+                    for a in emb_assets:
+                        existing_embs.append({
+                            "name": Path(a).name,
+                            "filename": a,
+                            "is_dangerous": True,
+                            "source_type": "apk_asset"
+                        })
+                    for l in nat_libs:
+                        existing_embs.append({
+                            "name": Path(l).name,
+                            "filename": l,
+                            "is_dangerous": False,
+                            "source_type": "apk_native_library"
+                        })
+                    job.embedded_files = existing_embs
+
+            elif job.category == "java":
+                from app.analyzers.java_analyzer import JavaAnalyzer
+                job.current_step_label = "Java Bytecode & Source Forensic Analysis"
+                java_res = JavaAnalyzer().analyze(original_path, job.filename, job.mime_type)
+                findings.extend(java_res.findings)
+                analysis_data["java"] = java_res.data
+                job.java_info = java_res.data
+                if java_res.data.get("java_subtype") == "jar":
+                    job.jar_info = java_res.data
+                if java_res.data.get("code_preview"):
+                    job.extracted_code = {
+                        "code": java_res.data["code_preview"],
+                        "language": "java" if java_res.data.get("java_subtype") == "source" else "text"
+                    }
+                for u in (java_res.data.get("iocs", {}).get("urls", [])):
+                    extracted_urls.add(u)
+                emb_bins = java_res.data.get("embedded_binaries", [])
+                if emb_bins:
+                    existing_embs = list(getattr(job, "embedded_files", []) or [])
+                    for b in emb_bins:
+                        existing_embs.append({
+                            "name": Path(b).name,
+                            "filename": b,
+                            "is_dangerous": True,
+                            "source_type": "jar_embedded_binary"
+                        })
+                    job.embedded_files = existing_embs
 
             # Chrome / Edge Browser Extension Package Triage (.crx / extension zip)
             try:
@@ -1158,6 +1221,11 @@ class JobManager:
                         text_corpus_parts.append(s_code)
                 if job.extracted_code:
                     text_corpus_parts.append(job.extracted_code.get("code", ""))
+                if job.category == "apk" and getattr(job, "apk_info", None):
+                    text_corpus_parts.append(job.apk_info.get("package_name", ""))
+                    text_corpus_parts.append(" ".join(job.apk_info.get("permissions", [])))
+                if job.category == "java" and getattr(job, "java_info", None):
+                    text_corpus_parts.append(job.java_info.get("code_preview", ""))
                 if job.metadata:
                     for fld in job.metadata.general + job.metadata.document + job.metadata.location + job.metadata.camera + job.metadata.embedded:
                         text_corpus_parts.append(fld.value)
@@ -1885,6 +1953,12 @@ class JobManager:
             return ScriptSanitizer()
         elif category in ["executable", "binary"]:
             return ExecutableSanitizer()
+        elif category == "apk":
+            from app.sanitizers.apk_sanitizer import ApkSanitizer
+            return ApkSanitizer()
+        elif category == "java":
+            from app.sanitizers.java_sanitizer import JavaSanitizer
+            return JavaSanitizer()
         return None
 
 

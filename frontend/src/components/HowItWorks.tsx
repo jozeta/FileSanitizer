@@ -39,7 +39,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
       icon: Search,
       tag: "Verification & Hashing",
       tagColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
-      description: "Never trust file extensions. FileSanitizer parses binary magic bytes across Windows PE, Linux ELF, macOS Mach-O, Windows EVTX logs, LNK shortcuts, PCAP packet traces, and OLE/ZIP packages, eliminating double-extension spoofing (e.g. invoice.pdf.exe). Cryptographic SHA-256, SHA-1, MD5, and fuzzy hashes are cataloged as immutable forensic identifiers."
+      description: "Never trust file extensions. FileSanitizer parses binary magic bytes across Windows PE, Linux ELF, macOS Mach-O, Android APK packages (.apk/.dex), Java class bytecode (.class/.jar), Windows EVTX logs, LNK shortcuts, PCAP packet traces, and OLE/ZIP packages, eliminating double-extension spoofing (e.g. invoice.pdf.exe). Cryptographic SHA-256, SHA-1, MD5, and fuzzy hashes are cataloged as immutable forensic identifiers."
     },
     {
       num: "03",
@@ -55,7 +55,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
       icon: Layers,
       tag: "Deep Decomposition",
       tagColor: "bg-purple-50 text-purple-700 border-purple-200",
-      description: "Files are unpacked to atomic primitives: Windows EVTX event streams (generating chronological timelines of logons, process launches, and privilege escalations), PCAP network conversations (HTTP sessions, cleartext credentials, SNI hosts), PDF cross-reference tables and object streams, OpenXML packages, OLE compound files, Windows LNK shell links, and nested archives. Directory traversals (../../) and zip bombs (>100:1 ratio) are blocked."
+      description: "Files are unpacked to atomic primitives: Android Binary XML (AXML) manifests & Dalvik DEX string tables, Java bytecode Constant Pools & JAR manifests, Windows EVTX event streams (generating chronological timelines of logons, process launches, and privilege escalations), PCAP network conversations (HTTP sessions, cleartext credentials, SNI hosts), PDF cross-reference tables and object streams, OpenXML packages, OLE compound files, Windows LNK shell links, and nested archives. Directory traversals (../../) and zip bombs (>100:1 ratio) are blocked."
     },
     {
       num: "05",
@@ -63,7 +63,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
       icon: Cpu,
       tag: "Exploit Disarmament",
       tagColor: "bg-amber-50 text-amber-700 border-amber-200",
-      description: "Static inspection without code execution identifies embedded VBA macros, Excel 4.0 XLM macro sheets, ActiveX controls, remote template injection (attachedTemplate), PDF JavaScript actions, /Launch hooks, CSV formula/DDE execution (=cmd|...), and browser extension permission misuse. Compiled native binaries undergo checksec v3 mitigation audits: Stack Canary, NX / DEP, ASLR / PIE, RELRO, Fortify Source, SafeSEH, and CFG."
+      description: "Static inspection without code execution identifies Android dangerous permissions & Dalvik API surveillance/SMS abuse, Java instrumentation agent hooks (Premain-Class) & unmanaged memory pointers (sun.misc.Unsafe), embedded VBA macros, Excel 4.0 XLM macro sheets, ActiveX controls, remote template injection, PDF JavaScript actions, and CSV formula/DDE execution. Compiled native binaries undergo checksec v3 mitigation audits: Stack Canary, NX / DEP, ASLR / PIE, RELRO, Fortify Source, SafeSEH, and CFG."
     },
     {
       num: "06",
@@ -79,7 +79,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
       icon: Wrench,
       tag: "Reconstruction",
       tagColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
-      description: "Rather than attempting to patch infected documents, Content Disarm & Reconstruction rebuilds clean files from safe raw primitives. Office files have macros purged and relationships neutralized. Images have pixel buffers re-encoded. PDFs can be flattened into high-resolution rendered pixel pages. Windows LNK shortcuts have arguments scrubbed, and archives are re-bundled with safe data only."
+      description: "Rather than attempting to patch infected documents, Content Disarm & Reconstruction rebuilds clean files from safe raw primitives. Android APKs have dangerous permissions disarmed, C2 URLs defanged, and debug flags cleared, or compile into safe static Vector PDF review reports. Java source and bytecode files have OS shell execution and reflection neutralized, or convert into safe PDF dossiers. Office files have macros purged and relationships neutralized. Images have pixel buffers re-encoded, and PDFs can be flattened into high-resolution rendered pixel pages."
     },
     {
       num: "08",

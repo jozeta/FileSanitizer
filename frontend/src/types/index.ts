@@ -1018,6 +1018,8 @@ export interface JobDetail {
   hta_info?: any;
   evtx_info?: EvtxInfo;
   lnk_info?: LnkInfo;
+  apk_info?: ApkAnalysisData;
+  java_info?: JavaAnalysisData;
   detection_rules?: DetectionRules;
   telemetry?: JobTelemetry;
   enriched_iocs?: Record<string, EnrichedIocItem>;
@@ -3515,6 +3517,171 @@ export interface PCAPFleetIntelligence {
   }>;
   unified_protocols?: Record<string, number>;
 }
+
+// -------------------------------------------------------------
+// Android APK Mobile Security & Dalvik DEX Analysis
+// -------------------------------------------------------------
+export interface ApkPermission {
+  permission: string;
+  title: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
+  description: string;
+  mitre?: string;
+  mitre_name?: string;
+}
+
+export interface ApkComponent {
+  name: string;
+  exported: boolean;
+  permission?: string;
+  intent_filters?: string[];
+  actions?: string[];
+}
+
+export interface ApkDetectedApi {
+  pattern?: string;
+  api: string;
+  title: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
+  description: string;
+  mitre?: string;
+  mitre_name?: string;
+  count: number;
+  evidence: string[];
+}
+
+export interface ApkDexInfo {
+  dex_count: number;
+  classes_count: number;
+  total_strings_count: number;
+  detected_apis: ApkDetectedApi[];
+  string_samples?: string[];
+}
+
+export interface ApkCertificate {
+  subject?: string;
+  issuer?: string;
+  serial_number?: string;
+  valid_from?: string;
+  valid_until?: string;
+  sha256_fingerprint?: string;
+  is_debug_key?: boolean;
+  is_self_signed?: boolean;
+}
+
+export interface ApkAnalysisData {
+  is_apk: boolean;
+  is_standalone_dex?: boolean;
+  package_name?: string;
+  version_code?: string;
+  version_name?: string;
+  min_sdk?: string | number;
+  target_sdk?: string | number;
+  compile_sdk?: string | number;
+  app_name?: string;
+  app_icon?: string;
+  security_flags?: {
+    debuggable?: boolean;
+    allow_backup?: boolean;
+    uses_cleartext_traffic?: boolean;
+    network_security_config?: boolean;
+    test_only?: boolean;
+    [key: string]: any;
+  };
+  permissions?: string[];
+  dangerous_permissions?: ApkPermission[];
+  components?: {
+    activities?: ApkComponent[];
+    services?: ApkComponent[];
+    receivers?: ApkComponent[];
+    providers?: ApkComponent[];
+  };
+  exported_components?: {
+    activities?: string[];
+    services?: string[];
+    receivers?: string[];
+    providers?: string[];
+  };
+  signing_info?: {
+    has_v1_signature?: boolean;
+    has_v2_or_v3_signature?: boolean;
+    is_debug_key?: boolean;
+    is_self_signed?: boolean;
+    subject?: string;
+    issuer?: string;
+    serial_number?: string;
+    valid_from?: string;
+    valid_until?: string;
+    sha256_fingerprint?: string;
+    certificates?: ApkCertificate[];
+  };
+  dex_info?: ApkDexInfo;
+  native_architectures?: string[];
+  native_libraries?: string[];
+  embedded_assets?: string[];
+  iocs?: {
+    urls?: string[];
+    ips?: string[];
+  };
+  mitre_mobile_techniques?: Array<{
+    id: string;
+    name: string;
+  }>;
+  risk_score?: number;
+  risk_level?: string;
+}
+
+// -------------------------------------------------------------
+// Java Bytecode & Source Forensic Analysis
+// -------------------------------------------------------------
+export interface JavaMethodCall {
+  class_file?: string;
+  api: string;
+  title: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  mitre?: string;
+  mitre_name?: string;
+  line_number?: number;
+}
+
+export interface JavaAnalysisData {
+  is_java: boolean;
+  java_subtype?: 'source' | 'class' | 'jar';
+  classes_count?: number;
+  packages_count?: number;
+  classes_list?: string[];
+  main_class?: string;
+  premain_class?: string;
+  agent_class?: string;
+  permissions?: string;
+  code_preview?: string;
+  class_info?: {
+    major_version?: number;
+    minor_version?: number;
+    java_version?: string;
+    constant_pool_count?: number;
+    methods_count?: number;
+    fields_count?: number;
+    interfaces_count?: number;
+  };
+  dangerous_apis?: JavaMethodCall[];
+  embedded_binaries?: string[];
+  rat_detections?: string[];
+  iocs?: {
+    urls?: string[];
+    ips?: string[];
+  };
+  mitre_techniques?: Array<{
+    id: string;
+    name: string;
+  }>;
+  risk_score?: number;
+  risk_level?: string;
+}
+
 
 
 
