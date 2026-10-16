@@ -3552,6 +3552,81 @@ export interface ApkDetectedApi {
   evidence: string[];
 }
 
+export interface ApkClassMethod {
+  name: string;
+  descriptor: string;
+  access_flags?: string;
+  instructions_count?: number;
+  instructions?: string[];
+  source?: string;
+}
+
+export interface ApkClassDetail {
+  name: string;
+  package: string;
+  superclass?: string;
+  access_flags?: string;
+  methods_count: number;
+  methods?: ApkClassMethod[];
+  source_code?: string;
+}
+
+export interface ApkEmbeddedSourceFile {
+  filename: string;
+  file_type: 'java' | 'kotlin' | 'javascript' | 'shell' | 'xml' | 'json' | 'other';
+  size: number;
+  content_preview: string;
+  suspicious_findings: string[];
+  danger_level: 'clean' | 'suspicious' | 'malicious';
+}
+
+export interface ApkNativeSoDetail {
+  filename: string;
+  architecture: string;
+  file_size: number;
+  jni_exports?: string[];
+  checksec?: {
+    nx: boolean;
+    pie: boolean;
+    canary: boolean;
+    relro: string;
+  };
+  imported_symbols?: string[];
+  suspicious_calls?: string[];
+}
+
+export interface ApkOnlineIntel {
+  sha256: string;
+  sha1: string;
+  md5: string;
+  package_name: string;
+  koodous_url: string;
+  virustotal_url: string;
+  malwarebazaar_url: string;
+  google_play_url?: string;
+  apkpure_url?: string;
+}
+
+export interface ApkCategorizedStrings {
+  total_count: number;
+  urls: string[];
+  ips: string[];
+  secrets_and_keys: Array<{ type: string; value: string; location?: string }>;
+  shell_commands: string[];
+  crypto_algorithms: string[];
+  sensitive_paths: string[];
+  suspicious_apis: string[];
+}
+
+export interface ApkSecurityAuditItem {
+  check: string;
+  status: 'PASS' | 'WARN' | 'FAIL';
+  severity: 'info' | 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  recommendation: string;
+}
+
 export interface ApkDexInfo {
   dex_count: number;
   classes_count: number;
@@ -3582,6 +3657,7 @@ export interface ApkAnalysisData {
   compile_sdk?: string | number;
   app_name?: string;
   app_icon?: string;
+  manifest_xml?: string;
   security_flags?: {
     debuggable?: boolean;
     allow_backup?: boolean;
@@ -3618,8 +3694,14 @@ export interface ApkAnalysisData {
     certificates?: ApkCertificate[];
   };
   dex_info?: ApkDexInfo;
+  classes?: ApkClassDetail[];
+  embedded_source_files?: ApkEmbeddedSourceFile[];
   native_architectures?: string[];
   native_libraries?: string[];
+  native_so_details?: ApkNativeSoDetail[];
+  categorized_strings?: ApkCategorizedStrings;
+  online_intel?: ApkOnlineIntel;
+  security_audit?: ApkSecurityAuditItem[];
   embedded_assets?: string[];
   iocs?: {
     urls?: string[];

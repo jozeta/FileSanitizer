@@ -99,6 +99,22 @@ export const App: React.FC = () => {
       setCurrentView('sanitizer');
     }
 
+    // 0. Client-side check for max file size (100 MB limit)
+    const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+    const oversizedFiles = files.filter(f => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversizedFiles.length > 0) {
+      const details = oversizedFiles
+        .map(f => `"${f.name}" (${(f.size / (1024 * 1024)).toFixed(1)} MB)`)
+        .join(', ');
+      setDuplicateNotice({
+        message: `Upload cancelled: ${details} exceeds the maximum allowed file size of 100 MB. Please select files smaller than 100 MB.`,
+        type: 'warning'
+      });
+      dragCounterRef.current = 0;
+      setIsDraggingOverWindow(false);
+      return;
+    }
+
     // 1. Deduplicate files within incoming batch
     const uniqueIncomingFiles: File[] = [];
     const seenBatchKeys = new Set<string>();

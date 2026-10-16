@@ -63,11 +63,14 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
   const startFilesProcessing = (files: File[]) => {
     const maxBytes = 100 * 1024 * 1024;
-    for (const file of files) {
-      if (file.size > maxBytes) {
-        setError(`File "${file.name}" exceeds the maximum upload limit of 100 MB.`);
-        return;
-      }
+    const oversized = files.filter(f => f.size > maxBytes);
+    if (oversized.length > 0) {
+      const details = oversized
+        .map(f => `"${f.name}" (${(f.size / (1024 * 1024)).toFixed(1)} MB)`)
+        .join(', ');
+      setError(`Upload halted: ${details} exceeds the maximum allowed file size of 100 MB. Upload stopped.`);
+      setSelectedFiles([]);
+      return;
     }
     setError(null);
     setSelectedFiles(files);

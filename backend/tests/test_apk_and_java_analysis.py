@@ -202,3 +202,79 @@ def test_apk_and_java_sanitizer(tmp_path: Path):
     assert j_pdf_res.success is True
     assert java_pdf_out.exists()
     assert java_pdf_out.read_bytes()[:4] == b"%PDF"
+
+
+def test_comprehensive_apk_technical_analysis(tmp_path: Path):
+    """Test deep technical APK inspection: manifest, permissions, embedded sources, online intel, and security audit."""
+    manifest_xml = """<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.bankbot.trojan"
+    android:versionCode="201"
+    android:versionName="2.0.1">
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <application android:debuggable="true" android:allowBackup="true" android:usesCleartextTraffic="true">
+        <activity android:name="com.bankbot.trojan.MainActivity" android:exported="true" />
+        <receiver android:name="com.bankbot.trojan.BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>"""
+
+    apk_file = tmp_path / "sample_banker.apk"
+    with zipfile.ZipFile(apk_file, "w") as zf:
+        zf.writestr("AndroidManifest.xml", manifest_xml)
+        zf.writestr("classes.dex", b"dex\n035\x00" + b"\x00" * 100)
+        zf.writestr("assets/root_exploit.sh", "#!/bin/sh\nsu -c 'chmod 777 /data/local/tmp'\n")
+        zf.writestr("assets/index.android.bundle", "console.log('App init'); const key = 'AIzaSyD-1234567890123456789012345'; fetch('https://c2.botnet.cc');")
+        zf.writestr("res/values/strings.xml", "<resources><string name='app_name'>BankSecure</string></resources>")
+
+    analyzer = ApkAnalyzer()
+    res = analyzer.analyze(apk_file, "sample_banker.apk", "application/vnd.android.package-archive")
+    assert res.success is True
+    data = res.data
+
+    assert data["is_apk"] is True
+    assert data["package_name"] == "com.bankbot.trojan"
+    assert data["version_code"] == "201"
+    assert data["security_flags"]["debuggable"] is True
+    assert data["security_flags"]["allowBackup"] is True
+    assert data["security_flags"]["usesCleartextTraffic"] is True
+
+    # Check Dangerous Permissions
+    dp_names = [p["permission"] for p in data["dangerous_permissions"]]
+    assert "android.permission.SEND_SMS" in dp_names
+    assert "android.permission.SYSTEM_ALERT_WINDOW" in dp_names
+
+    # Check Exported Components
+    assert "com.bankbot.trojan.MainActivity" in data["exported_components"]["activities"]
+    assert "com.bankbot.trojan.BootReceiver" in data["exported_components"]["receivers"]
+
+    # Check Embedded Source Files Analysis
+    src_files = {s["filename"]: s for s in data["embedded_source_files"]}
+    assert "assets/root_exploit.sh" in src_files
+    assert src_files["assets/root_exploit.sh"]["danger_level"] in ("malicious", "suspicious")
+    assert any("Command Execution" in f for f in src_files["assets/root_exploit.sh"]["suspicious_findings"])
+
+    assert "assets/index.android.bundle" in src_files
+    assert src_files["assets/index.android.bundle"]["file_type"] == "javascript"
+    assert any("Google API Key" in f for f in src_files["assets/index.android.bundle"]["suspicious_findings"])
+
+    # Check Online Threat Intel URLs
+    assert "koodous.com/apks/" in data["online_intel"]["koodous_url"]
+    assert "virustotal.com/gui/file/" in data["online_intel"]["virustotal_url"]
+    assert "play.google.com/store/apps/details?id=com.bankbot.trojan" in data["online_intel"]["google_play_url"]
+
+    # Check Security Compliance Audit
+    audit_checks = {a["check"]: a["status"] for a in data["security_audit"]}
+    assert audit_checks.get("Debuggable Mode") == "FAIL"
+    assert audit_checks.get("Application Backup") == "WARN"
+    assert audit_checks.get("Cleartext Network Traffic") == "FAIL"
+    assert audit_checks.get("Screen Overlay Hijacking") == "WARN"
+
+    # Check Risk Score is Elevated
+    assert data["risk_score"] >= 60
+    assert data["risk_level"] in ("HIGH", "CRITICAL")
+

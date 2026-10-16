@@ -124,6 +124,8 @@ def get_job_analysis(job_id: str):
         "pdf_info": getattr(job, "pdf_info", None),
         "image_info": getattr(job, "image_info", None),
         "jar_info": getattr(job, "jar_info", None),
+        "apk_info": getattr(job, "apk_info", None),
+        "java_info": getattr(job, "java_info", None),
         "anti_analysis": getattr(job, "anti_analysis", None),
         "disabled_checks": getattr(job, "disabled_checks", []),
         "similar_samples": getattr(job, "similar_samples", []),
