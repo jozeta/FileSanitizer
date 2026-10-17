@@ -77,7 +77,7 @@ class DomainAnalyzer:
         return bool(cls.DOMAIN_REGEX.match(clean))
 
     @classmethod
-    def analyze(cls, target: str, deep: bool = False, active_recon: bool = False) -> Dict[str, Any]:
+    def analyze(cls, target: str, deep: bool = False, active_recon: bool = False, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Analyze a domain or IP address with full multi-dimensional intelligence:
         - Universal Input Normalization & Homoglyph Detection
@@ -242,7 +242,7 @@ class DomainAnalyzer:
 
         def _task_cti():
             try:
-                return ThreatIntelligenceAggregator.aggregate_intelligence(clean_target, "ip" if is_ip else "domain")
+                return ThreatIntelligenceAggregator.aggregate_intelligence(clean_target, "ip" if is_ip else "domain", force_refresh=force_refresh)
             except Exception as e:
                 logger.debug(f"CTI aggregation failed for {clean_target}: {e}")
                 return {}
@@ -322,14 +322,14 @@ class DomainAnalyzer:
 
         def _task_shodan():
             try:
-                return ShodanClient.lookup(clean_target, is_ip=is_ip, primary_ip=primary_ip)
+                return ShodanClient.lookup(clean_target, is_ip=is_ip, primary_ip=primary_ip, force_refresh=force_refresh)
             except Exception as e:
                 logger.debug(f"Shodan lookup failed for {clean_target}: {e}")
                 return {"queried": False, "configured": False, "target": clean_target}
 
         def _task_dorks():
             try:
-                return DorkArtifactScanner.scan(clean_target, is_ip=is_ip)
+                return DorkArtifactScanner.scan(clean_target, is_ip=is_ip, force_refresh=force_refresh)
             except Exception as e:
                 logger.debug(f"Dork & sensitive artifact scan failed for {clean_target}: {e}")
                 return {"scanned": False, "target": clean_target, "total_artifacts_found": 0, "artifacts": [], "dork_presets": []}

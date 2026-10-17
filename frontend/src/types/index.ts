@@ -2682,6 +2682,8 @@ export interface DomainIntelligence {
       alienvault_otx?: { queried: boolean; verdict: string; pulse_count: number };
       shodan?: { queried: boolean; configured: boolean; verdict: string; open_ports: number[]; cves: string[]; web_link: string };
     };
+    cached?: boolean;
+    _cache_info?: ApiCacheInfo;
   };
 
   attack_surface?: {
@@ -3071,6 +3073,20 @@ export interface DomainIntelligence {
   dork_findings?: DorkArtifactFindings;
 }
 
+export interface ApiCacheInfo {
+  cached: boolean;
+  cached_at?: string;
+  cached_at_epoch?: number;
+  age_seconds?: number;
+  age_hours?: number;
+  age_days?: number;
+  age_human?: string;
+  service?: string;
+  max_age_limit_hours?: number;
+  mode?: string;
+  stale_fallback?: boolean;
+}
+
 export interface ShodanService {
   port: number;
   transport: string;
@@ -3078,15 +3094,62 @@ export interface ShodanService {
   version?: string | null;
   cpe?: string[];
   banner_snippet?: string | null;
+  raw_banner?: string | null;
   ssl_enabled: boolean;
+  cloud?: { provider?: string; region?: string; service?: string } | null;
+  http?: {
+    title?: string | null;
+    server?: string | null;
+    dom_hash?: number | null;
+    favicon_hash?: number | string | null;
+    cookies?: string[] | null;
+    security_headers?: string[] | null;
+  } | null;
+  ssl?: {
+    enabled?: boolean;
+    cert_subject?: string | null;
+    cert_issuer?: string | null;
+    cipher?: string | null;
+  } | null;
+  vulns?: string[];
 }
 
 export interface ShodanHost {
   ip: string;
+  port?: number;
+  transport?: string;
   hostnames: string[];
-  ports: number[];
+  domains?: string[];
   org?: string | null;
+  isp?: string | null;
+  asn?: string | null;
+  city?: string | null;
+  country_name?: string | null;
+  country_code?: string | null;
+  cloud?: { provider?: string; region?: string; service?: string } | null;
+  cloud_providers?: string[];
+  os?: string | null;
+  product?: string | null;
+  version?: string | null;
+  banner_snippet?: string | null;
+  raw_banner?: string | null;
+  services?: ShodanService[];
+  http?: {
+    title?: string | null;
+    server?: string | null;
+    dom_hash?: number | null;
+    favicon_hash?: number | string | null;
+    cookies?: string[] | null;
+    security_headers?: string[] | null;
+  } | null;
+  ssl?: {
+    enabled?: boolean;
+    cert_subject?: string | null;
+    cert_issuer?: string | null;
+    cipher?: string | null;
+  } | null;
   vulns: string[];
+  ports?: number[];
 }
 
 export interface ShodanResult {
@@ -3104,14 +3167,20 @@ export interface ShodanResult {
   isp?: string | null;
   org?: string | null;
   asn?: string | null;
+  city?: string | null;
+  country_name?: string | null;
+  country_code?: string | null;
   last_update?: string | null;
   total_services?: number;
   total_hosts?: number;
+  cloud_providers?: string[];
   subdomains?: string[];
-  dns_records?: Array<{ sub: string; type: string; value: string; last_seen?: string }>;
+  dns_records?: Array<{ subdomain?: string; sub?: string; type: string; value: string; last_seen?: string }>;
   hosts?: ShodanHost[];
+  primary_ip_telemetry?: any;
   message?: string;
   cached?: boolean;
+  _cache_info?: ApiCacheInfo;
 }
 
 export interface SensitiveArtifactItem {
@@ -3158,6 +3227,8 @@ export interface DorkArtifactFindings {
   artifacts: SensitiveArtifactItem[];
   dork_presets: GoogleDorkPreset[];
   message?: string;
+  cached?: boolean;
+  _cache_info?: ApiCacheInfo;
 }
 
 export interface IndicatorNormalisation {
@@ -3868,6 +3939,17 @@ export interface EntityGraphNode {
   groupedCount?: number;
   groupedVariants?: string[];
   groupedNodes?: any[];
+  // Hierarchy & Parent-Child Tree Fields
+  parentId?: string | null;
+  parentLabel?: string | null;
+  parentType?: string | null;
+  isChild?: boolean;
+  childIds?: string[];
+  childrenCount?: number;
+  childNodes?: EntityGraphNode[];
+  treeLevel?: number;
+  hierarchyRelation?: 'child_endpoint' | 'subdomain' | 'service_port' | 'child_process' | 'embedded_content' | string;
+  is_shared?: boolean;
 }
 
 export interface EntityGraphEdge {
@@ -3875,6 +3957,8 @@ export interface EntityGraphEdge {
   target: string;
   label: string;
   type: string;
+  is_hierarchy?: boolean;
+  is_shared?: boolean;
 }
 
 export interface EntityGraphData {
@@ -3889,10 +3973,22 @@ export interface EntityGraphData {
     similar_count: number;
     certificate_count: number;
     threat_intel_count: number;
-    email_artifacts_count: number;
+    email_artifacts_count?: number;
     forensic_count?: number;
     cross_log_pivots_count?: number;
   };
+}
+
+export interface EntityGroupBox {
+  id: string;
+  title: string;
+  color: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  nodeIds: string[];
+  originalPositions: Record<string, { x: number; y: number }>;
 }
 
 export interface ReanalysisIntelDiff {
@@ -5011,6 +5107,15 @@ export interface IncidentCorrelationData {
       groupedCount?: number;
       groupedVariants?: string[];
       groupedNodes?: any[];
+      parentId?: string | null;
+      parentLabel?: string | null;
+      parentType?: string | null;
+      isChild?: boolean;
+      childIds?: string[];
+      childrenCount?: number;
+      childNodes?: any[];
+      treeLevel?: number;
+      hierarchyRelation?: string;
     }>;
     edges: Array<{
       source: string;
@@ -5018,6 +5123,7 @@ export interface IncidentCorrelationData {
       label: string;
       type: string;
       is_shared?: boolean;
+      is_hierarchy?: boolean;
     }>;
   };
   binary_diff: BinaryDiffData;

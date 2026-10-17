@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DomainIntelligence } from '../types';
+import { DomainIntelligence, ShodanHost } from '../types';
 import { apiClient } from '../api/client';
 import { InvestigateAssetButton } from './InvestigateAssetButton';
 import {
@@ -46,7 +46,9 @@ import {
   Star,
   Cloud,
   Database,
-  Sparkles
+  Sparkles,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 
 export const CLOUD_TAKEOVER_SIGNATURES = [
@@ -132,6 +134,116 @@ export const CLOUD_TAKEOVER_SIGNATURES = [
   }
 ];
 
+interface CacheStatusBadgeProps {
+  cacheInfo?: {
+    cached: boolean;
+    cached_at?: string;
+    cached_at_epoch?: number;
+    age_seconds?: number;
+    age_human?: string;
+    service?: string;
+  };
+  serviceName: string;
+  serviceKey: 'shodan' | 'threat_intel' | 'dorks' | 'all';
+  onRefresh: (service: 'shodan' | 'threat_intel' | 'dorks' | 'all') => void;
+  isRefreshing: boolean;
+  canRefresh?: boolean;
+}
+
+const CacheStatusBadge: React.FC<CacheStatusBadgeProps> = ({
+  cacheInfo,
+  serviceName,
+  serviceKey,
+  onRefresh,
+  isRefreshing,
+  canRefresh = true,
+}) => {
+  const isCached = cacheInfo?.cached === true;
+
+  return (
+    <div
+      className={`p-3.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs transition-all ${
+        isCached
+          ? 'bg-amber-50/95 border-amber-300 text-amber-950'
+          : 'bg-emerald-50/95 border-emerald-300 text-emerald-950'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className={`p-2 rounded-lg shrink-0 ${
+            isCached
+              ? 'bg-amber-200/80 text-amber-900 border border-amber-300'
+              : 'bg-emerald-200/80 text-emerald-900 border border-emerald-300'
+          }`}
+        >
+          {isCached ? <Clock className="w-4 h-4 text-amber-800" /> : <Sparkles className="w-4 h-4 text-emerald-800" />}
+        </div>
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                isCached
+                  ? 'bg-amber-200 text-amber-900 border-amber-400 font-mono'
+                  : 'bg-emerald-200 text-emerald-900 border-emerald-400 font-mono'
+              }`}
+            >
+              {isCached ? 'Cached Data' : 'Live Data'}
+            </span>
+            <span className="text-xs font-bold text-slate-900">{serviceName}</span>
+            {isCached && cacheInfo?.age_human && (
+              <span className="text-xs font-semibold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded border border-amber-300">
+                Fetched {cacheInfo.age_human}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-700 mt-1">
+            {isCached ? (
+              <>
+                Serving preserved results from persistent cache
+                {cacheInfo?.cached_at ? (
+                  <>
+                    {' '}
+                    (stored on <strong className="font-mono text-[11px]">{new Date(cacheInfo.cached_at).toLocaleString()}</strong>)
+                  </>
+                ) : null}
+                . Click <strong>Fetch Fresh Data</strong> to query live remote APIs and update records.
+              </>
+            ) : (
+              <>
+                Live API query completed
+                {cacheInfo?.cached_at ? (
+                  <>
+                    {' '}
+                    at <strong className="font-mono text-[11px]">{new Date(cacheInfo.cached_at).toLocaleTimeString()}</strong>
+                  </>
+                ) : null}
+                . Results are cached according to your policy in Administrator Settings.
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+
+      {canRefresh && (
+        <button
+          type="button"
+          onClick={() => onRefresh(serviceKey)}
+          disabled={isRefreshing}
+          className={`shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer ${
+            isCached
+              ? 'bg-amber-600 hover:bg-amber-700 text-white active:scale-95'
+              : 'bg-slate-800 hover:bg-slate-900 text-white active:scale-95'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          title={isCached ? 'Bypass cache and fetch latest live results' : 'Re-query external APIs'}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>{isRefreshing ? 'Fetching...' : isCached ? 'Fetch Fresh Data' : 'Re-Fetch Live Data'}</span>
+        </button>
+      )}
+    </div>
+  );
+};
+
 interface DomainAnalyticsCardProps {
   domainInfo: DomainIntelligence;
   thumbnailUrl?: string;
@@ -149,13 +261,57 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
 }) => {
   const [domainInfo, setDomainInfo] = useState<DomainIntelligence>(initialDomainInfo);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'normalisation' | 'takeover' | 'relations' | 'email_sec' | 'archive' | 'bgp_pdns' | 'recon' | 'surface' | 'tls' | 'dns' | 'web' | 'cti' | 'exposure' | 'vulnerabilities' | 'typosquatting' | 'dorks'
+    'overview' | 'normalisation' | 'takeover' | 'relations' | 'email_sec' | 'archive' | 'bgp_pdns' | 'recon' | 'surface' | 'tls' | 'dns' | 'web' | 'cti' | 'exposure' | 'vulnerabilities' | 'typosquatting' | 'dorks' | 'shodan'
   >('overview');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [subdomainSearch, setSubdomainSearch] = useState('');
   const [isScanningPorts, setIsScanningPorts] = useState(false);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
   const [isScoreHovered, setIsScoreHovered] = useState<boolean>(false);
+
+  // External API on-demand refresh & cache status feedback
+  const [refreshingService, setRefreshingService] = useState<'shodan' | 'threat_intel' | 'dorks' | 'all' | null>(null);
+  const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
+
+  // Shodan Sub-Tab and Filter State
+  const [shodanSubTab, setShodanSubTab] = useState<'hosts' | 'subdomains' | 'dns'>('hosts');
+  const [shodanSearch, setShodanSearch] = useState<string>('');
+  const [shodanPortFilter, setShodanPortFilter] = useState<string>('all');
+  const [shodanCloudFilter, setShodanCloudFilter] = useState<string>('all');
+
+  // Sync domainInfo whenever initialDomainInfo updates from parent
+  useEffect(() => {
+    setDomainInfo(initialDomainInfo);
+  }, [initialDomainInfo]);
+
+  // Handler for on-demand intelligence refresh
+  const handleRefreshIntelligence = async (service: 'shodan' | 'threat_intel' | 'dorks' | 'all') => {
+    if (!jobId || refreshingService) return;
+    setRefreshingService(service);
+    const serviceLabel =
+      service === 'shodan'
+        ? 'Shodan Telemetry'
+        : service === 'threat_intel'
+        ? 'Threat Intelligence'
+        : service === 'dorks'
+        ? 'Google Dorks'
+        : 'All External APIs';
+    setRefreshFeedback(`Querying live API endpoints for ${serviceLabel} (force refresh)...`);
+    try {
+      const res = await apiClient.refreshIntelligence(jobId, service, true);
+      if (res.success && res.domain_info) {
+        setDomainInfo(res.domain_info);
+        setRefreshFeedback(`Successfully updated ${serviceLabel} with fresh live data!`);
+      } else {
+        setRefreshFeedback(res.message || 'Refresh completed.');
+      }
+    } catch (err: any) {
+      setRefreshFeedback(err.message || `Failed to refresh ${serviceLabel}`);
+    } finally {
+      setRefreshingService(null);
+      setTimeout(() => setRefreshFeedback(null), 5000);
+    }
+  };
 
   // Attack Surface Subdomains Filtering State
   const [subdomainStatusFilter, setSubdomainStatusFilter] = useState<'all' | 'active' | 'unresolving'>('all');
@@ -1206,10 +1362,53 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
             </span>
           ) : null}
         </button>
+
+        {/* SHODAN INTERNET TELEMETRY TAB */}
+        <button
+          onClick={() => setActiveTab('shodan')}
+          className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'shodan'
+              ? 'border-orange-500 text-orange-600 bg-orange-50/40'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5 text-orange-500" />
+          <span className="font-bold">🪐 Shodan Intelligence</span>
+          {shodan?.hosts && shodan.hosts.length > 0 ? (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-orange-100 text-orange-800 border border-orange-200">
+              {shodan.hosts.length} {shodan.hosts.length === 1 ? 'host' : 'hosts'}
+            </span>
+          ) : shodan?.ports && shodan.ports.length > 0 ? (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-orange-100 text-orange-800 border border-orange-200">
+              {shodan.ports.length} ports
+            </span>
+          ) : shodan?.configured ? (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-200 text-slate-700">
+              active
+            </span>
+          ) : null}
+        </button>
       </div>
 
       {/* ----------------- TAB CONTENTS ----------------- */}
       <div className="p-6">
+        {/* Refresh feedback toast / banner */}
+        {refreshFeedback && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-xl text-xs flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className="font-semibold">{refreshFeedback}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRefreshFeedback(null)}
+              className="text-blue-500 hover:text-blue-800 text-xs font-bold px-2 py-0.5 rounded cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* ================= TAB: OVERVIEW ================= */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
@@ -4671,6 +4870,16 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
         {/* ================= TAB: THREAT FEEDS (CTI) ================= */}
         {activeTab === 'cti' && (
           <div className="space-y-6">
+            {/* Cache Status & On-Demand Refresh Badge */}
+            <CacheStatusBadge
+              cacheInfo={cti?._cache_info}
+              serviceName="Multi-Source Threat Intelligence Feeds (VirusTotal, URLhaus, ThreatFox, AbuseIPDB, AlienVault)"
+              serviceKey="threat_intel"
+              onRefresh={handleRefreshIntelligence}
+              isRefreshing={refreshingService === 'threat_intel'}
+              canRefresh={!!jobId}
+            />
+
             {cti ? (
               <>
                 {/* 1. Global Threat Verdict Hero Card */}
@@ -4894,6 +5103,8 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                         }`}>
                           {shodan?.vulns && shodan.vulns.length > 0
                             ? `${shodan.vulns.length} CVEs`
+                            : shodan?.hosts && shodan.hosts.length > 0
+                            ? `${shodan.hosts.length} Hosts Indexed`
                             : shodan?.ports && shodan.ports.length > 0
                             ? `${shodan.ports.length} Open Ports`
                             : shodan?.queried
@@ -4904,8 +5115,9 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       <p className="text-xs text-slate-600 font-mono">
                         {shodan?.queried ? (
                           <>
-                            Ports: {shodan.ports && shodan.ports.length > 0 ? shodan.ports.slice(0, 5).join(', ') : 'None'}
+                            Hosts: <strong>{shodan.hosts?.length || shodan.total_hosts || 1}</strong> • Ports: {shodan.ports && shodan.ports.length > 0 ? shodan.ports.slice(0, 5).join(', ') : 'None'}
                             {shodan.ports && shodan.ports.length > 5 ? ` +${shodan.ports.length - 5} more` : ''}
+                            {shodan.cloud_providers && shodan.cloud_providers.length > 0 ? ` • ${shodan.cloud_providers.join(', ')}` : ''}
                             {shodan.os ? ` | OS: ${shodan.os}` : ''}
                           </>
                         ) : (
@@ -4925,14 +5137,22 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                         </div>
                       )}
                     </div>
-                    <div className="pt-2 border-t border-slate-200">
+                    <div className="pt-2 border-t border-slate-200 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('shodan')}
+                        className="inline-flex items-center gap-1 text-orange-600 hover:text-orange-800 text-[11px] font-bold cursor-pointer transition-colors"
+                      >
+                        <span>Full Shodan Analysis 🪐</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
                       <a
                         href={shodan?.web_link || `https://www.shodan.io/search?query=${encodeURIComponent(domainInfo.target)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-[11px] font-medium"
+                        className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-700 text-[11px] font-medium"
                       >
-                        <span>Shodan Host Report</span>
+                        <span>Shodan.io</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
@@ -6138,6 +6358,16 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
 
           return (
             <div className="space-y-6">
+              {/* External API Cache Status & Refresh Badge */}
+              <CacheStatusBadge
+                cacheInfo={dorkFindings?._cache_info}
+                serviceName="Sensitive Files & Automated Google Dorks Scanner"
+                serviceKey="dorks"
+                onRefresh={handleRefreshIntelligence}
+                isRefreshing={refreshingService === 'dorks'}
+                canRefresh={!!jobId}
+              />
+
               {/* Header Banner */}
               <div className={`p-4 rounded-xl border ${
                 sevCounts.critical > 0
@@ -6499,6 +6729,653 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     ))}
                   </div>
                 </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ================= TAB: SHODAN INTERNET INTELLIGENCE ================= */}
+        {activeTab === 'shodan' && (() => {
+          const hosts: ShodanHost[] = shodan?.hosts && shodan.hosts.length > 0
+            ? shodan.hosts
+            : (shodan?.queried && shodan.ports && shodan.ports.length > 0)
+            ? [{
+                ip: domainInfo.target,
+                ports: shodan.ports,
+                hostnames: shodan.hostnames || [],
+                domains: [domainInfo.target],
+                os: shodan.os,
+                isp: shodan.isp,
+                org: shodan.org,
+                asn: shodan.asn,
+                city: shodan.city,
+                country_name: shodan.country_name,
+                country_code: shodan.country_code,
+                vulns: shodan.vulns || [],
+                cloud_providers: shodan.cloud_providers || [],
+                services: shodan.services || [],
+                cloud: null,
+                http: null,
+                ssl: null,
+                banner_snippet: null,
+                raw_banner: null
+              }]
+            : [];
+
+          const subdomains = shodan?.subdomains || [];
+          const dnsRecords = shodan?.dns_records || [];
+          const cloudProviders = shodan?.cloud_providers || [];
+          const distinctPorts = shodan?.ports || Array.from(new Set(hosts.flatMap(h => h.ports || (h.port ? [h.port] : [])))).sort((a, b) => a - b);
+          const allVulns = shodan?.vulns || Array.from(new Set(hosts.flatMap(h => h.vulns || [])));
+
+          // Filter hosts based on user search, port, and cloud filters
+          const filteredHosts = hosts.filter(h => {
+            const q = shodanSearch.trim().toLowerCase();
+            const matchesSearch = !q ||
+              h.ip.toLowerCase().includes(q) ||
+              (h.hostnames || []).some(hn => hn.toLowerCase().includes(q)) ||
+              (h.org || '').toLowerCase().includes(q) ||
+              (h.asn || '').toLowerCase().includes(q) ||
+              (h.city || '').toLowerCase().includes(q) ||
+              (h.country_name || '').toLowerCase().includes(q) ||
+              (h.product || '').toLowerCase().includes(q) ||
+              (h.banner_snippet || '').toLowerCase().includes(q) ||
+              (h.ports || []).some(p => p.toString().includes(q)) ||
+              (h.port && h.port.toString().includes(q));
+
+            const matchesPort = shodanPortFilter === 'all' ||
+              (h.port && h.port.toString() === shodanPortFilter) ||
+              (h.ports && h.ports.includes(Number(shodanPortFilter)));
+
+            const matchesCloud = shodanCloudFilter === 'all' ||
+              (h.cloud_providers && h.cloud_providers.some(cp => cp.toLowerCase().includes(shodanCloudFilter.toLowerCase()))) ||
+              (h.cloud && (h.cloud.provider || '').toLowerCase().includes(shodanCloudFilter.toLowerCase()));
+
+            return matchesSearch && matchesPort && matchesCloud;
+          });
+
+          // Filter subdomains
+          const filteredSubdomains = subdomains.filter(s =>
+            !shodanSearch.trim() || s.toLowerCase().includes(shodanSearch.trim().toLowerCase())
+          );
+
+          // Filter DNS records
+          const filteredDns = dnsRecords.filter(r => {
+            const q = shodanSearch.trim().toLowerCase();
+            return !q ||
+              (r.subdomain || r.sub || '').toLowerCase().includes(q) ||
+              (r.type || '').toLowerCase().includes(q) ||
+              (r.value || '').toLowerCase().includes(q);
+          });
+
+          return (
+            <div className="space-y-6">
+              {/* External API Cache Status & Refresh Badge */}
+              <CacheStatusBadge
+                cacheInfo={shodan?._cache_info}
+                serviceName="Shodan Internet Telemetry & Banner Intelligence"
+                serviceKey="shodan"
+                onRefresh={handleRefreshIntelligence}
+                isRefreshing={refreshingService === 'shodan'}
+                canRefresh={!!jobId}
+              />
+
+              {/* Shodan Unconfigured State */}
+              {!shodan?.configured && (
+                <div className="p-8 bg-amber-50/70 border border-amber-200 rounded-2xl text-center space-y-4">
+                  <div className="w-14 h-14 bg-amber-100 border border-amber-300 rounded-2xl flex items-center justify-center mx-auto text-amber-700">
+                    <Globe className="w-7 h-7" />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-1.5">
+                    <h4 className="text-base font-bold text-amber-950">Shodan API Key Not Configured</h4>
+                    <p className="text-xs text-amber-900/80 leading-relaxed">
+                      Add your Shodan API key in <strong>Administrator Settings &gt; External APIs</strong> to enable automated exposed server discovery, banner capturing, open port auditing, and cloud infrastructure mapping for <strong>{domainInfo.target}</strong>.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-3 pt-2">
+                    <a
+                      href={shodan?.web_link || `https://www.shodan.io/search?query=hostname:${encodeURIComponent(domainInfo.target)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 transition-colors shadow-2xs"
+                    >
+                      <span>Manual Search on Shodan.io</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Shodan Configured & Queried Display */}
+              {shodan?.configured && (
+                <>
+                  {/* Hero Metric Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    {/* 1. Exposed Hosts */}
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs flex flex-col justify-between">
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Exposed Hosts</span>
+                        <Server className="w-4 h-4 text-orange-500" />
+                      </div>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-slate-900">{hosts.length || shodan.total_hosts || 0}</span>
+                        <span className="text-xs text-slate-500">indexed</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 truncate">
+                        Target: {domainInfo.target}
+                      </p>
+                    </div>
+
+                    {/* 2. Open Ports */}
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs flex flex-col justify-between">
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Open Ports</span>
+                        <Radio className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-slate-900">{distinctPorts.length}</span>
+                        <span className="text-xs text-slate-500">distinct</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 truncate">
+                        {distinctPorts.length > 0 ? distinctPorts.slice(0, 5).join(', ') + (distinctPorts.length > 5 ? '...' : '') : 'No open ports'}
+                      </p>
+                    </div>
+
+                    {/* 3. Discovered Subdomains */}
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs flex flex-col justify-between">
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Shodan Subdomains</span>
+                        <Network className="w-4 h-4 text-indigo-500" />
+                      </div>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-slate-900">{subdomains.length}</span>
+                        <span className="text-xs text-slate-500">records</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 truncate">
+                        DNS Domain Endpoint
+                      </p>
+                    </div>
+
+                    {/* 4. Discovered CVEs */}
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs flex flex-col justify-between">
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Known CVEs</span>
+                        <Bug className="w-4 h-4 text-rose-500" />
+                      </div>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className={`text-2xl font-black ${allVulns.length > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          {allVulns.length}
+                        </span>
+                        <span className="text-xs text-slate-500">correlated</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 truncate">
+                        {allVulns.length > 0 ? 'Public vulnerabilities' : 'No indexed CVEs'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Cloud Providers & ASN Banner */}
+                  {(cloudProviders.length > 0 || shodan.asn || shodan.org) && (
+                    <div className="p-4 bg-slate-900 text-white rounded-xl shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-slate-800">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Cloud Infrastructure &amp; Network Provider
+                          </span>
+                          {cloudProviders.map((cp, cidx) => (
+                            <span
+                              key={cidx}
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40"
+                            >
+                              <Cloud className="w-3.5 h-3.5 text-sky-400" />
+                              <span>{cp}</span>
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-xs text-slate-300 font-mono">
+                          {shodan.asn ? <strong className="text-sky-400">{shodan.asn}</strong> : null}
+                          {shodan.org ? ` • ${shodan.org}` : null}
+                          {shodan.isp && shodan.isp !== shodan.org ? ` (${shodan.isp})` : null}
+                          {shodan.city || shodan.country_name ? ` • ${[shodan.city, shodan.country_name].filter(Boolean).join(', ')}` : null}
+                        </p>
+                      </div>
+
+                      <a
+                        href={shodan.web_link || `https://www.shodan.io/search?query=hostname:${encodeURIComponent(domainInfo.target)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors shrink-0 shadow-2xs"
+                      >
+                        <span>Open Shodan Search</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Sub-Navigation Tabs */}
+                  <div className="flex items-center border-b border-slate-200 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShodanSubTab('hosts')}
+                      className={`py-2 px-3 text-xs font-bold border-b-2 cursor-pointer transition-all flex items-center gap-1.5 ${
+                        shodanSubTab === 'hosts'
+                          ? 'border-orange-500 text-orange-600'
+                          : 'border-transparent text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Server className="w-3.5 h-3.5" />
+                      <span>Exposed Hosts &amp; Services ({hosts.length})</span>
+                    </button>
+                    {subdomains.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShodanSubTab('subdomains')}
+                        className={`py-2 px-3 text-xs font-bold border-b-2 cursor-pointer transition-all flex items-center gap-1.5 ${
+                          shodanSubTab === 'subdomains'
+                            ? 'border-orange-500 text-orange-600'
+                            : 'border-transparent text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Network className="w-3.5 h-3.5" />
+                        <span>Discovered Subdomains ({subdomains.length})</span>
+                      </button>
+                    )}
+                    {dnsRecords.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShodanSubTab('dns')}
+                        className={`py-2 px-3 text-xs font-bold border-b-2 cursor-pointer transition-all flex items-center gap-1.5 ${
+                          shodanSubTab === 'dns'
+                            ? 'border-orange-500 text-orange-600'
+                            : 'border-transparent text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Database className="w-3.5 h-3.5" />
+                        <span>DNS Records ({dnsRecords.length})</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter Toolbar */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+                      <div className="relative flex-1">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={shodanSearch}
+                          onChange={(e) => setShodanSearch(e.target.value)}
+                          placeholder="Search IP, hostname, banner keyword, port, product..."
+                          className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs placeholder:text-slate-400 focus:outline-hidden focus:border-orange-500"
+                        />
+                      </div>
+                      {shodanSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setShodanSearch('')}
+                          className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1 bg-slate-200 rounded-md"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+
+                    {shodanSubTab === 'hosts' && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Port filter */}
+                        {distinctPorts.length > 0 && (
+                          <div className="flex items-center gap-1 text-xs">
+                            <span className="text-slate-500 font-medium">Port:</span>
+                            <select
+                              value={shodanPortFilter}
+                              onChange={(e) => setShodanPortFilter(e.target.value)}
+                              className="px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs focus:outline-hidden focus:border-orange-500"
+                            >
+                              <option value="all">All Ports ({distinctPorts.length})</option>
+                              {distinctPorts.map((p) => (
+                                <option key={p} value={p.toString()}>
+                                  Port {p}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Cloud filter */}
+                        {cloudProviders.length > 0 && (
+                          <div className="flex items-center gap-1 text-xs">
+                            <span className="text-slate-500 font-medium">Cloud:</span>
+                            <select
+                              value={shodanCloudFilter}
+                              onChange={(e) => setShodanCloudFilter(e.target.value)}
+                              className="px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs focus:outline-hidden focus:border-orange-500"
+                            >
+                              <option value="all">All Clouds</option>
+                              {cloudProviders.map((cp, idx) => (
+                                <option key={idx} value={cp}>
+                                  {cp}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sub-tab 1: Hosts & Services */}
+                  {shodanSubTab === 'hosts' && (
+                    <div className="space-y-4">
+                      {filteredHosts.length === 0 ? (
+                        <div className="p-8 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500">
+                          No exposed hosts matching your query filters.
+                        </div>
+                      ) : (
+                        filteredHosts.map((h, hIdx) => {
+                          const hostKey = `host-${h.ip}-${h.port || hIdx}`;
+                          return (
+                            <div
+                              key={hostKey}
+                              className="p-5 bg-white border border-slate-200 rounded-2xl shadow-2xs hover:border-orange-300 transition-all space-y-4"
+                            >
+                              {/* Host Header */}
+                              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-black font-mono text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                                      {h.ip}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => copyToClipboard(h.ip, hostKey)}
+                                      className="p-1 text-slate-400 hover:text-slate-700 rounded transition-colors"
+                                      title="Copy IP"
+                                    >
+                                      {copiedKey === hostKey ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                    </button>
+                                    {h.port && (
+                                      <span className="px-2 py-0.5 rounded-full text-xs font-bold font-mono bg-orange-100 text-orange-900 border border-orange-300">
+                                        Port {h.port}/{h.transport || 'tcp'}
+                                      </span>
+                                    )}
+                                    {h.cloud && (
+                                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-300 flex items-center gap-1">
+                                        <Cloud className="w-3 h-3 text-sky-600" />
+                                        <span>{h.cloud.provider || 'Cloud'} {h.cloud.region ? `(${h.cloud.region})` : ''}</span>
+                                      </span>
+                                    )}
+                                    {h.city || h.country_name ? (
+                                      <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
+                                        <span>📍</span>
+                                        <span>{[h.city, h.country_name].filter(Boolean).join(', ')}</span>
+                                        {h.country_code ? <strong className="font-mono text-slate-600">({h.country_code})</strong> : null}
+                                      </span>
+                                    ) : null}
+                                  </div>
+
+                                  {/* Hostnames */}
+                                  {h.hostnames && h.hostnames.length > 0 && (
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                      <span className="text-[11px] font-semibold text-slate-400">Hostnames:</span>
+                                      {h.hostnames.map((hn, hnIdx) => (
+                                        <span
+                                          key={hnIdx}
+                                          className="text-xs font-mono font-semibold px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-slate-700"
+                                        >
+                                          {hn}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {h.asn && (
+                                    <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">
+                                      {h.asn}
+                                    </span>
+                                  )}
+                                  <a
+                                    href={`https://www.shodan.io/host/${h.ip}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors shadow-2xs"
+                                  >
+                                    <span>Shodan Host</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              </div>
+
+                              {/* CVEs */}
+                              {h.vulns && h.vulns.length > 0 && (
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1">
+                                    <Bug className="w-3 h-3" /> Correlated Vulnerabilities ({h.vulns.length}):
+                                  </span>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {h.vulns.map((cve) => (
+                                      <a
+                                        key={cve}
+                                        href={`https://www.cve.org/CVERecord?id=${cve}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 inline-flex items-center gap-1 transition-colors"
+                                      >
+                                        <span>{cve}</span>
+                                        <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* HTTP Service Details */}
+                              {h.http && (
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
+                                  <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                                      <Globe className="w-3.5 h-3.5 text-blue-600" />
+                                      <span>HTTP Web Service Telemetry</span>
+                                    </span>
+                                    {h.http.server && (
+                                      <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
+                                        Server: {h.http.server}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {h.http.title && (
+                                    <p className="text-slate-700">
+                                      <strong>Title:</strong> {h.http.title}
+                                    </p>
+                                  )}
+
+                                  {/* Cookies */}
+                                  {h.http.cookies && h.http.cookies.length > 0 && (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-[11px] text-slate-500 font-medium">Set-Cookies:</span>
+                                      {h.http.cookies.map((ck, cidx) => (
+                                        <span key={cidx} className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-200">
+                                          {ck}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Favicon / DOM Hashes */}
+                                  <div className="flex items-center gap-3 flex-wrap text-[11px] text-slate-500 font-mono">
+                                    {h.http.favicon_hash ? (
+                                      <a
+                                        href={`https://www.shodan.io/search?query=http.favicon.hash%3A${h.http.favicon_hash}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-orange-600 hover:underline flex items-center gap-1"
+                                      >
+                                        <span>Favicon Hash: {h.http.favicon_hash}</span>
+                                        <ExternalLink className="w-2.5 h-2.5" />
+                                      </a>
+                                    ) : null}
+                                    {h.http.dom_hash ? (
+                                      <span>DOM Hash: {h.http.dom_hash}</span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* SSL/TLS Details */}
+                              {h.ssl && (
+                                <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-1.5 text-xs">
+                                  <div className="flex items-center gap-1.5 font-bold text-indigo-950">
+                                    <Lock className="w-3.5 h-3.5 text-indigo-600" />
+                                    <span>SSL / TLS Certificate Profile</span>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono">
+                                    {h.ssl.cert_subject && (
+                                      <div>
+                                        <span className="text-slate-500 font-sans">Subject CN: </span>
+                                        <strong className="text-indigo-900">{h.ssl.cert_subject}</strong>
+                                      </div>
+                                    )}
+                                    {h.ssl.cert_issuer && (
+                                      <div>
+                                        <span className="text-slate-500 font-sans">Issuer: </span>
+                                        <span className="text-slate-700">{h.ssl.cert_issuer}</span>
+                                      </div>
+                                    )}
+                                    {h.ssl.cipher && (
+                                      <div className="sm:col-span-2">
+                                        <span className="text-slate-500 font-sans">Cipher: </span>
+                                        <span className="text-slate-700">{h.ssl.cipher}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Service Banner Snippet */}
+                              {(h.banner_snippet || h.raw_banner) && (
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                                    <span>Raw Service Banner &amp; Header Telemetry</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => copyToClipboard(h.raw_banner || h.banner_snippet || '', `${hostKey}-banner`)}
+                                      className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+                                    >
+                                      {copiedKey === `${hostKey}-banner` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-slate-500" />}
+                                      <span>Copy Banner</span>
+                                    </button>
+                                  </div>
+                                  <pre className="p-3 bg-slate-950 text-emerald-400 font-mono text-[11px] rounded-xl overflow-x-auto max-h-48 border border-slate-800 leading-relaxed whitespace-pre-wrap select-all">
+                                    {h.banner_snippet || h.raw_banner}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-tab 2: Discovered Subdomains */}
+                  {shodanSubTab === 'subdomains' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-600">
+                          Discovered {filteredSubdomains.length} subdomains in Shodan DNS repository
+                        </span>
+                        {subdomains.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(subdomains.join('\n'), 'shodan-all-subs')}
+                            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            {copiedKey === 'shodan-all-subs' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>Copy All {subdomains.length} Subdomains</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                        {filteredSubdomains.map((sub, sIdx) => (
+                          <div
+                            key={sIdx}
+                            className="p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-mono flex items-center justify-between gap-1 shadow-2xs hover:border-orange-300"
+                          >
+                            <span className="truncate text-slate-800 font-medium" title={sub}>
+                              {sub}
+                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(sub, `sub-${sIdx}`)}
+                                className="p-1 text-slate-400 hover:text-slate-600"
+                                title="Copy"
+                              >
+                                {copiedKey === `sub-${sIdx}` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                              </button>
+                              <a
+                                href={`https://www.shodan.io/search?query=hostname:${encodeURIComponent(sub)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 text-slate-400 hover:text-orange-600"
+                                title="Search Shodan"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-tab 3: DNS Records */}
+                  {shodanSubTab === 'dns' && (
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-slate-50 border-b border-slate-200 font-bold uppercase tracking-wider text-slate-500 text-[10px]">
+                          <tr>
+                            <th className="py-2.5 px-4">Subdomain / Host</th>
+                            <th className="py-2.5 px-4">Type</th>
+                            <th className="py-2.5 px-4">Resolved Value / Target</th>
+                            <th className="py-2.5 px-4">Last Seen</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-mono">
+                          {filteredDns.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="py-4 text-center text-slate-400 font-sans">
+                                No DNS records matching filter.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredDns.map((r, rIdx) => (
+                              <tr key={rIdx} className="hover:bg-slate-50/50">
+                                <td className="py-2.5 px-4 font-semibold text-slate-800">
+                                  {r.subdomain || r.sub || '@'}
+                                </td>
+                                <td className="py-2.5 px-4">
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 font-bold border border-blue-200 text-[10px]">
+                                    {r.type}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-4 text-slate-700 break-all select-all">
+                                  {r.value}
+                                </td>
+                                <td className="py-2.5 px-4 text-slate-400 text-[11px]">
+                                  {r.last_seen ? new Date(r.last_seen).toLocaleDateString() : 'N/A'}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );

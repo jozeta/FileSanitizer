@@ -54,33 +54,147 @@ def is_finding_suppressed(finding: Any, disabled_checks: List[str]) -> bool:
     desc_lower = (getattr(finding, "description", "") or (finding.get("description", "") if isinstance(finding, dict) else "")).lower()
 
     check_keywords = {
+        # Image
         "check_ai_provenance": ["synthetic ai", "provenance", "c2pa", "generative ai", "diffusion"],
         "check_steganography_slack": ["steganography", "slack space", "padding", "steghide"],
         "check_exif": ["exif", "metadata"],
-        "check_gps": ["gps", "location coordinates"],
+        "check_gps": ["gps", "location coordinates", "geotag"],
+        "check_icc": ["icc profile", "color profile"],
+        "check_xmp_iptc": ["xmp", "iptc"],
+        "check_comments": ["comment field", "jpeg comment"],
+
+        # Email
+        "check_headers": ["mime header", "received header", "spoofed header"],
         "check_tracking_pixels": ["tracking pixel", "beacon", "web beacon"],
+        "check_attachments": ["attachment", "suspicious attachment"],
+        "check_links": ["phishing link", "suspicious link", "embedded url"],
+        "check_domain_dns_rdap": ["rdap", "whois", "domain age", "suspicious registrar"],
         "check_spf_dkim_dmarc": ["spf", "dkim", "dmarc"],
         "check_thread_hijacking": ["thread hijacking", "in-reply-to mismatch"],
         "check_phishing_urgency": ["phishing", "urgency", "social engineering"],
+
+        # Office
         "check_vba_macros": ["macro", "vba", "autoopen", "document_open"],
-        "check_vba_stomping": ["stomping", "p-code"],
-        "check_dde_links": ["dde", "dynamic data exchange"],
+        "check_olevba_inspection": ["olevba", "vba stream", "macro keyword"],
+        "check_vba_stomping": ["stomping", "p-code", "vba stomping"],
+        "check_activex": ["activex", "flash object", "activex control"],
+        "check_ole_objects": ["ole object", "embedded ole", "package object"],
+        "check_external_relationships": ["external relationship", "relationship target"],
         "check_remote_templates": ["remote template", "attachedtemplate"],
+        "check_revisions_comments": ["tracked revision", "hidden comment", "author metadata"],
+        "check_dde_links": ["dde", "dynamic data exchange", "msxml2.xmlhttp"],
+
+        # PDF
         "check_javascript": ["javascript", "/js", "eval(", "unescape("],
+        "check_didier_pdfid": ["pdfid", "pdf header", "suspicious stream"],
         "check_launch_actions": ["/launch", "launch action"],
+        "check_embedded_files": ["embedded file", "filespec", "/embeddedfiles"],
         "check_open_actions": ["/openaction", "open action"],
-        "check_xfa_acroforms": ["xfa", "acroform"],
+        "check_xfa_acroforms": ["xfa", "acroform", "xfa template"],
+        "check_incremental_updates": ["incremental update", "shadow attack", "multiple revisions"],
+        "check_external_uris": ["external uri", "/uri action", "/uri"],
+
+        # Archive
         "check_zip_bomb": ["zip bomb", "compression ratio", "decompression bomb"],
         "check_path_traversal": ["path traversal", "directory traversal", "../"],
+        "check_executables": ["embedded executable", "archive executable", "executable payload"],
+        "check_nested_archives": ["nested archive", "recursive archive"],
+        "check_encryption_passwords": ["encrypted archive", "password-protected", "aes encryption"],
+
+        # Executable (PE / ELF / Mach-O)
         "check_sections_entropy": ["entropy", "high entropy section"],
-        "check_packers_upx": ["upx", "packed executable", "packer"],
-        "check_authenticode_signature": ["authenticode", "digital signature", "invalid signature"],
+        "check_suspicious_imports": ["suspicious import", "api hashing", "kernel32", "ntdll"],
+        "check_authenticode_signature": ["authenticode", "digital signature", "invalid signature", "untrusted certificate"],
+        "check_packers_upx": ["upx", "packed executable", "packer", "aspack"],
+        "check_disassembly": ["disassembly", "instruction decode", "disassembled function"],
+        "check_capabilities": ["capability", "mitre technique", "persistence mechanism"],
         "check_anti_analysis": ["anti-debug", "sandbox evasion", "virtual machine detection", "anti-analysis"],
-        "check_obfuscation": ["obfuscated", "obfuscation"],
-        "check_base64_decode": ["base64", "encoded payload"],
-        "check_process_spawning": ["spawns process", "powershell.exe", "cmd.exe", "wscript"],
-        "check_network_cradle": ["download cradle", "webclient", "curl", "invoke-webrequest"],
-        "check_manifest_permissions": ["dangerous permission", "broad permissions"],
+        "check_elf_header": ["elf header", "elf class", "entry point"],
+        "check_elf_symbols": ["elf symbol", "dynamic symbol", "stripped symbol"],
+        "check_elf_sections": ["elf section", "writable executable segment"],
+        "check_segments_memory": ["memory segment", "pt_load", "rwx segment"],
+        "check_security_hardening": ["relro", "canary", "stack protector", "pie", "nx/dep", "fortify"],
+        "check_macho_slices": ["fat binary", "macho slice", "universal binary"],
+        "check_load_commands": ["load command", "lc_load_dylib", "rpath"],
+        "check_code_signature": ["code directory", "entitlements", "adhoc signature"],
+
+        # Script
+        "check_obfuscation": ["obfuscated", "obfuscation", "string concatenation", "charcode"],
+        "check_base64_decode": ["base64", "encoded payload", "frombase64string"],
+        "check_process_spawning": ["spawns process", "powershell.exe", "cmd.exe", "wscript", "cscript"],
+        "check_network_cradle": ["download cradle", "webclient", "curl", "invoke-webrequest", "net.webclient"],
+
+        # Web & HTML
+        "check_event_handlers": ["event handler", "onload", "onerror", "onclick", "svg script"],
+        "check_external_resources": ["external resource", "remote stylesheet", "tracking script"],
+        "check_iframes_forms": ["iframe", "hidden form", "credential harvest form"],
+
+        # Text
+        "check_urls": ["url in text", "extracted url", "suspicious uri"],
+        "check_suspicious_scripts": ["embedded scriptblock", "inline powershell", "hex shellcode in text"],
+
+        # Extension
+        "check_manifest_permissions": ["manifest permission", "all_urls", "broad permissions", "webrequestblocking"],
+        "check_background_scripts": ["background script", "service worker", "persistent background"],
+        "check_content_scripts": ["content script", "dom injection", "document_start"],
+        "check_webstore_telemetry": ["telemetry exfiltration", "off-store installation", "external c2"],
+
+        # Domain
+        "check_whois_rdap": ["whois", "rdap", "registrar", "creation date"],
+        "check_dns_records": ["dns record", "mx record", "txt record", "dmarc record"],
+        "check_subdomains": ["subdomain", "subdomain enumeration", "cname takeover"],
+        "check_ssl_tls_cert": ["ssl certificate", "tls cert", "self-signed cert", "expired certificate"],
+        "check_mx_reputation": ["mx reputation", "mail server", "open relay"],
+
+        # AppleScript
+        "check_osa_decompilation": ["osa decompilation", "applescript syntax", "compiled script"],
+        "check_apple_events": ["apple event", "do shell script", "tell application"],
+        "check_keychain_access": ["keychain", "security find-generic-password", "credential prompt"],
+        "check_privilege_escalation": ["with administrator privileges", "sudo osascript", "privilege escalation"],
+
+        # PCAP
+        "check_conversations_flows": ["network flow", "conversation", "top talkers"],
+        "check_dns_queries": ["dns query", "dns tunneling", "dga domain"],
+        "check_tls_certificates": ["ja3", "ja4", "tls handshake", "self-signed tls"],
+        "check_http_ftp_traffic": ["plaintext http", "ftp credential", "cleartext transmission"],
+        "check_plaintext_credentials": ["cleartext password", "basic auth", "login credentials"],
+        "check_extracted_payloads": ["carved file", "extracted payload", "transferred executable"],
+
+        # EVTX
+        "check_log_clearing": ["log cleared", "event 1102", "event 104", "anti-forensics"],
+        "check_ransomware_indicators": ["ransomware indicator", "shadow copy", "vssadmin", "mass rename"],
+        "check_account_manipulation": ["user created", "group membership", "event 4720", "event 4728"],
+        "check_powershell_scriptblocks": ["script block logging", "event 4104", "powershell execution"],
+        "check_scheduled_tasks": ["scheduled task", "event 4698", "schtasks"],
+        "check_network_connections": ["network connection", "event 5156", "event 3"],
+        "check_defender_tampering": ["defender disabled", "event 5001", "event 5007", "tamper protection"],
+
+        # APK
+        "check_manifest_xml": ["manifest", "debuggable", "allowbackup", "cleartext", "testonly", "minsdk", "targetsdk", "shareduserid"],
+        "check_permissions": ["permission", "dangerous permission", "send_sms", "receive_sms", "record_audio", "camera", "read_contacts", "access_fine_location", "system_alert_window"],
+        "check_components": ["component", "exported activity", "exported service", "exported receiver", "exported provider", "intent-filter", "deeplink"],
+        "check_signing_certificates": ["certificate", "signing", "v1 signature", "v2 signature", "v3 signature", "keystore", "janus", "debug certificate", "testkey", "masquerad"],
+        "check_dex_bytecode": ["dex", "dalvik", "smali", "bytecode", "reflection", "dex_count", "classes_count", "decompiler"],
+        "check_embedded_assets": ["embedded asset", "react native", "embedded source", "source file", "apk_asset"],
+        "check_native_libraries": ["native library", "native libraries", ".so", "elf", "relro", "canary", "nx", "checksec"],
+        "check_secrets_and_strings": ["api key", "hardcoded secret", "aws_key", "firebase", "jwt", "private key", "categorized strings"],
+        "check_packer_obfuscation": ["packer", "packed apk", "obfuscated", "dexguard", "jiagu", "secshell", "bangcle", "ijiami"],
+        "check_threat_intelligence": ["koodous", "mobile malware", "malware signature", "trojan-banker", "spyware", "threat intelligence"],
+
+        # LNK
+        "check_header_flags": ["header flags", "show command", "stealth window", "minimized", "hidden window", "file attributes"],
+        "check_target_id_list": ["target id list", "shell item", "clsid", "drive letter", "volume metadata"],
+        "check_command_arguments": ["command line argument", "command line", "arguments", "relative path", "working directory"],
+        "check_lolbins_cradles": ["lolbin", "powershell", "cmd.exe", "mshta", "rundll32", "cscript", "wscript", "certutil", "bitsadmin", "download cradle"],
+        "check_extra_data_blocks": ["extra data", "trackerdatablock", "consoledatablock", "environmentvariable"],
+        "check_overlay_payloads": ["overlay", "appended payload", "trailing data", "embedded archive", "cab archive"],
+
+        # Java
+        "check_manifest_entrypoint": ["main-class", "premain-class", "agent-class", "manifest entrypoint"],
+        "check_bytecode_dangerous_apis": ["dangerous api", "runtime.exec", "processbuilder", "sun.misc.unsafe", "method.invoke", "socket", "jndi"],
+        "check_embedded_binaries": ["embedded binary", "embedded executable", "jar_embedded_binary"],
+        "check_java_rat_signatures": ["jrat", "adwind", "alienspy", "asyncrat", "java rat"],
+        "check_obfuscator_detection": ["proguard", "allatori", "dasho", "zelix", "obfuscator"],
     }
 
     for check in disabled_checks:
@@ -418,18 +532,18 @@ class JobManager:
                     fmt_key = "executable"
             elif job.category in ["svg", "html"]:
                 fmt_key = "svg_html"
-            elif lower_name.endswith(".jar") or job.category == "jar":
-                fmt_key = "jar"
+            elif lower_name.endswith((".apk", ".aab", ".xapk", ".dex")) or job.category == "apk":
+                fmt_key = "apk"
+            elif lower_name.endswith(".lnk") or job.category == "lnk":
+                fmt_key = "lnk"
+            elif lower_name.endswith((".java", ".class", ".jar")) or job.category in ["java", "jar"]:
+                fmt_key = "java"
             elif lower_name.endswith(".crx") or job.category == "extension":
                 fmt_key = "extension"
             elif lower_name.endswith((".pcap", ".pcapng", ".cap")) or job.category == "pcap":
                 fmt_key = "pcap"
             elif lower_name.endswith((".evtx", ".zip")) and job.category == "evtx":
                 fmt_key = "evtx"
-            elif lower_name.endswith((".apk", ".aab", ".xapk", ".dex")) or job.category == "apk":
-                fmt_key = "apk"
-            elif lower_name.endswith((".java", ".class", ".jar")) or job.category == "java":
-                fmt_key = "java"
 
             # Record disabled checks for this job's format and globally so UI can hide corresponding data
             disabled_checks = [k for k, v in settings_store.get_format_checks(fmt_key).items() if not v]
@@ -728,7 +842,7 @@ class JobManager:
 
             elif job.category == "lnk":
                 from app.analyzers.lnk_analyzer import LnkAnalyzer
-                lnk_res = LnkAnalyzer().analyze(original_path, job.filename, job.mime_type)
+                lnk_res = LnkAnalyzer().analyze(original_path, job.filename, job.mime_type, disabled_checks=job.disabled_checks)
                 findings.extend(lnk_res.findings)
                 analysis_data["lnk"] = lnk_res.data
                 job.lnk_info = lnk_res.data
@@ -801,7 +915,7 @@ class JobManager:
             elif job.category == "apk":
                 from app.analyzers.apk_analyzer import ApkAnalyzer
                 job.current_step_label = "Android Package & DEX Bytecode Analysis"
-                apk_res = ApkAnalyzer().analyze(original_path, job.filename, job.mime_type)
+                apk_res = ApkAnalyzer().analyze(original_path, job.filename, job.mime_type, disabled_checks=job.disabled_checks)
                 findings.extend(apk_res.findings)
                 analysis_data["apk"] = apk_res.data
                 job.apk_info = apk_res.data
@@ -830,7 +944,7 @@ class JobManager:
             elif job.category == "java":
                 from app.analyzers.java_analyzer import JavaAnalyzer
                 job.current_step_label = "Java Bytecode & Source Forensic Analysis"
-                java_res = JavaAnalyzer().analyze(original_path, job.filename, job.mime_type)
+                java_res = JavaAnalyzer().analyze(original_path, job.filename, job.mime_type, disabled_checks=job.disabled_checks)
                 findings.extend(java_res.findings)
                 analysis_data["java"] = java_res.data
                 job.java_info = java_res.data
@@ -1505,6 +1619,63 @@ class JobManager:
                 job.binary_info.pop("disassembly", None)
             if "check_tracking_pixels" in job.disabled_checks and job.email_info:
                 job.email_info["tracking_pixels"] = []
+
+            # APK data suppression
+            if getattr(job, "apk_info", None):
+                if "check_manifest_xml" in job.disabled_checks:
+                    job.apk_info["manifest_xml"] = ""
+                    job.apk_info["security_flags"] = {}
+                if "check_permissions" in job.disabled_checks:
+                    job.apk_info["permissions"] = []
+                    job.apk_info["dangerous_permissions"] = []
+                if "check_components" in job.disabled_checks:
+                    job.apk_info["components"] = {"activities_count": 0, "exported_activities_count": 0, "services_count": 0, "exported_services_count": 0, "receivers_count": 0, "exported_receivers_count": 0, "providers_count": 0, "exported_providers_count": 0, "activities": [], "services": [], "receivers": [], "providers": []}
+                    job.apk_info["exported_components"] = {"activities": [], "services": [], "receivers": [], "providers": []}
+                if "check_signing_certificates" in job.disabled_checks:
+                    job.apk_info["signing_info"] = None
+                    job.apk_info["keystore_audit"] = None
+                if "check_dex_bytecode" in job.disabled_checks:
+                    job.apk_info["dex_info"] = None
+                    job.apk_info["classes"] = []
+                if "check_embedded_assets" in job.disabled_checks:
+                    job.apk_info["embedded_source_files"] = []
+                    job.apk_info["embedded_assets"] = []
+                if "check_native_libraries" in job.disabled_checks:
+                    job.apk_info["native_libraries"] = []
+                    job.apk_info["native_so_details"] = []
+                    job.apk_info["native_architectures"] = []
+                if "check_secrets_and_strings" in job.disabled_checks:
+                    job.apk_info["categorized_strings"] = None
+                if "check_packer_obfuscation" in job.disabled_checks:
+                    job.apk_info["packer_info"] = None
+                if "check_threat_intelligence" in job.disabled_checks:
+                    job.apk_info["malware_signatures"] = []
+                    job.apk_info["threat_intel"] = None
+
+            # LNK data suppression
+            if getattr(job, "lnk_info", None):
+                if "check_command_arguments" in job.disabled_checks:
+                    if "targets_and_paths" in job.lnk_info and isinstance(job.lnk_info["targets_and_paths"], dict):
+                        job.lnk_info["targets_and_paths"]["command_line_arguments"] = ""
+                    job.lnk_info["deobfuscated_payload"] = None
+                if "check_lolbins_cradles" in job.disabled_checks:
+                    job.lnk_info["lolbins"] = []
+                if "check_extra_data_blocks" in job.disabled_checks:
+                    job.lnk_info["extra_blocks"] = []
+                if "check_overlay_payloads" in job.disabled_checks:
+                    job.lnk_info["overlay"] = None
+
+            # Java data suppression
+            if getattr(job, "java_info", None):
+                if "check_bytecode_dangerous_apis" in job.disabled_checks:
+                    job.java_info["dangerous_apis"] = []
+                if "check_embedded_binaries" in job.disabled_checks:
+                    job.java_info["embedded_binaries"] = []
+                if "check_java_rat_signatures" in job.disabled_checks:
+                    job.java_info["rat_detections"] = []
+                if "check_obfuscator_detection" in job.disabled_checks:
+                    job.java_info["obfuscator_detected"] = False
+                    job.java_info["obfuscators"] = []
 
             job.risk = RiskEngine.evaluate(
                 findings=findings,

@@ -374,7 +374,14 @@ function fromHexdump(input: string): string {
     }
   }
   if (byteValues.length === 0) return input;
-  return new TextDecoder().decode(new Uint8Array(byteValues));
+  const u8 = new Uint8Array(byteValues);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(u8);
+  } catch {
+    let s = '';
+    for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+    return s;
+  }
 }
 
 function toCharcode(input: string, base: number = 10, delimiter: string = ', '): string {
@@ -428,7 +435,14 @@ function fromDecimal(input: string, delimiter: string = 'auto'): string {
     tokens = input.split(delimiter);
   }
   const bytes = tokens.map(t => parseInt(t.trim(), 10)).filter(n => !isNaN(n) && n >= 0 && n <= 255);
-  return new TextDecoder().decode(new Uint8Array(bytes));
+  const u8 = new Uint8Array(bytes);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(u8);
+  } catch {
+    let s = '';
+    for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+    return s;
+  }
 }
 
 function toOctal(input: string, delimiter: string = ' '): string {
@@ -444,7 +458,14 @@ function fromOctal(input: string, delimiter: string = 'auto'): string {
     tokens = input.split(delimiter);
   }
   const bytes = tokens.map(t => parseInt(t.trim(), 8)).filter(n => !isNaN(n) && n >= 0 && n <= 255);
-  return new TextDecoder().decode(new Uint8Array(bytes));
+  const u8 = new Uint8Array(bytes);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(u8);
+  } catch {
+    let s = '';
+    for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+    return s;
+  }
 }
 
 function escapeString(input: string, escapeAll: boolean = false): string {
@@ -678,7 +699,7 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
     id: 'from_base64',
     name: 'From Base64',
     category: 'Encodings',
-    description: 'Decodes Base64 encoded text into UTF-8 characters.',
+    description: 'Decodes Base64 encoded text into UTF-8 characters or raw binary bytes.',
     params: [
       {
         id: 'strict',
@@ -688,12 +709,21 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
         description: 'Rejects strings with invalid padding or characters'
       }
     ],
-    run: (input) => {
+    run: (input, args) => {
       let clean = input.trim().replace(/-/g, '+').replace(/_/g, '/');
+      if (!args?.strict) {
+        clean = clean.replace(/[^A-Za-z0-9+/=]/g, '');
+      }
+      if (!clean) return '';
       while (clean.length % 4 !== 0) {
         clean += '=';
       }
-      return decodeURIComponent(escape(atob(clean)));
+      const raw = atob(clean);
+      try {
+        return decodeURIComponent(escape(raw));
+      } catch {
+        return raw;
+      }
     }
   },
   {
@@ -740,7 +770,7 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
     id: 'from_hex',
     name: 'From Hex',
     category: 'Encodings',
-    description: 'Decodes hexadecimal bytes into readable text.',
+    description: 'Decodes hexadecimal bytes into readable text or raw binary string.',
     params: [
       {
         id: 'ignore_errors',
@@ -763,7 +793,15 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
       for (let i = 0; i < clean.length; i += 2) {
         bytes[i / 2] = parseInt(clean.substring(i, i + 2), 16);
       }
-      return new TextDecoder().decode(bytes);
+      try {
+        return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      } catch {
+        let bin = '';
+        for (let i = 0; i < bytes.length; i++) {
+          bin += String.fromCharCode(bytes[i]);
+        }
+        return bin;
+      }
     }
   },
   {
@@ -793,7 +831,18 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
     description: 'Decodes percent-encoded URL strings (%20 -> space).',
     params: [],
     run: (input) => {
-      return decodeURIComponent(input.replace(/\+/g, ' '));
+      const text = input.replace(/\+/g, ' ');
+      try {
+        return decodeURIComponent(text);
+      } catch {
+        return text.replace(/%([0-9a-fA-F]{2})/g, (match, hex) => {
+          try {
+            return decodeURIComponent(match);
+          } catch {
+            return String.fromCharCode(parseInt(hex, 16));
+          }
+        });
+      }
     }
   },
   {
@@ -888,7 +937,14 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
           bytes.push(parseInt(byteStr, 2));
         }
       }
-      return new TextDecoder().decode(new Uint8Array(bytes));
+      const u8 = new Uint8Array(bytes);
+      try {
+        return new TextDecoder('utf-8', { fatal: true }).decode(u8);
+      } catch {
+        let s = '';
+        for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+        return s;
+      }
     }
   },
   {
@@ -1162,7 +1218,7 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
         name: 'Key',
         type: 'string',
         default: 'secret',
-        description: 'String key used for repeating XOR'
+        description: 'String or hex key (e.g. 5A, 0x5A, secret) used for repeating XOR'
       },
       {
         id: 'hex_output',
@@ -1173,11 +1229,39 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
       }
     ],
     run: (input, args) => {
-      const key = args.key || 'key';
-      const inputBytes = new TextEncoder().encode(input);
-      const keyBytes = new TextEncoder().encode(key);
-      const outBytes = new Uint8Array(inputBytes.length);
+      const keyStr = String(args.key ?? 'key');
+      let keyBytes: Uint8Array;
+      const isHexKey = /^0x[0-9a-fA-F]+$/i.test(keyStr) || /^[0-9a-fA-F]{2}$/i.test(keyStr);
+      if (isHexKey) {
+        const clean = keyStr.replace(/^0x/i, '');
+        const arr: number[] = [];
+        for (let i = 0; i < clean.length; i += 2) {
+          arr.push(parseInt(clean.substring(i, i + 2), 16));
+        }
+        keyBytes = new Uint8Array(arr.length ? arr : [0]);
+      } else {
+        keyBytes = new TextEncoder().encode(keyStr || 'key');
+      }
 
+      let isBinary = true;
+      for (let i = 0; i < input.length; i++) {
+        if (input.charCodeAt(i) > 255) {
+          isBinary = false;
+          break;
+        }
+      }
+
+      let inputBytes: Uint8Array;
+      if (isBinary) {
+        inputBytes = new Uint8Array(input.length);
+        for (let i = 0; i < input.length; i++) {
+          inputBytes[i] = input.charCodeAt(i) & 0xff;
+        }
+      } else {
+        inputBytes = new TextEncoder().encode(input);
+      }
+
+      const outBytes = new Uint8Array(inputBytes.length);
       for (let i = 0; i < inputBytes.length; i++) {
         outBytes[i] = inputBytes[i] ^ keyBytes[i % keyBytes.length];
       }
@@ -1185,7 +1269,15 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
       if (args.hex_output) {
         return Array.from(outBytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
       }
-      return new TextDecoder().decode(outBytes);
+      try {
+        return new TextDecoder('utf-8', { fatal: true }).decode(outBytes);
+      } catch {
+        let res = '';
+        for (let i = 0; i < outBytes.length; i++) {
+          res += String.fromCharCode(outBytes[i]);
+        }
+        return res;
+      }
     }
   },
   {
@@ -1435,14 +1527,23 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
       if (parts.length < 2) {
         throw new Error('Input is not a valid JWT token (must contain at least 2 dot-separated parts).');
       }
-      const decodeB64Url = (str: string) => {
+      const decodeB64Url = (str: string, section: string) => {
         let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
         while (b64.length % 4 !== 0) b64 += '=';
-        return JSON.parse(decodeURIComponent(escape(atob(b64))));
+        try {
+          const raw = atob(b64);
+          try {
+            return JSON.parse(decodeURIComponent(escape(raw)));
+          } catch {
+            return JSON.parse(raw);
+          }
+        } catch (e: any) {
+          throw new Error(`Failed to decode JWT ${section}: ${e.message}`);
+        }
       };
 
-      const header = decodeB64Url(parts[0]);
-      const payload = decodeB64Url(parts[1]);
+      const header = decodeB64Url(parts[0], 'header');
+      const payload = decodeB64Url(parts[1], 'payload');
 
       return JSON.stringify(
         {
@@ -1929,8 +2030,9 @@ export const DECODER_OPERATIONS: DecoderOperation[] = [
     description: 'Converts Windows 64-bit FileTime (100ns intervals since Jan 1, 1601) into ISO 8601 UTC date.',
     params: [],
     run: (input) => {
-      const numStr = input.trim();
-      const filetime = BigInt(numStr);
+      const clean = input.replace(/[^0-9]/g, '');
+      if (!clean) throw new Error('Input is not a valid numeric Windows FileTime.');
+      const filetime = BigInt(clean);
       // Windows epoch starts 1601-01-01, Unix epoch starts 1970-01-01.
       // Difference is 11,644,473,600 seconds = 116,444,736,000,000,000 100ns intervals.
       const EPOCH_DIFFERENCE = BigInt('116444736000000000');

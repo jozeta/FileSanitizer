@@ -100,6 +100,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
   const [cacheStats, setCacheStats] = useState<any>(null);
   const [isLoadingCache, setIsLoadingCache] = useState<boolean>(false);
   const [cacheMsg, setCacheMsg] = useState<string>('');
+  const [cacheMode, setCacheMode] = useState<'use_cache' | 'always_fetch'>('use_cache');
+  const [cacheMaxAgeValue, setCacheMaxAgeValue] = useState<number>(24);
+  const [cacheMaxAgeUnit, setCacheMaxAgeUnit] = useState<'hours' | 'days'>('hours');
+  const [isSavingCachePolicy, setIsSavingCachePolicy] = useState<boolean>(false);
 
   // Upload History State
   const [uploadHistory, setUploadHistory] = useState<any[]>([]);
@@ -514,17 +518,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     }
   };
 
-  // --- Threat Intel Redis Cache Handlers ---
+  // --- Threat Intel & External API Cache Handlers ---
   const fetchCacheStats = async () => {
     if (!token) return;
     setIsLoadingCache(true);
     try {
       const res = await apiClient.getCacheStats(token);
       setCacheStats(res.stats || null);
+      if (res.stats?.policy) {
+        setCacheMode(res.stats.policy.mode || 'use_cache');
+        setCacheMaxAgeValue(Number(res.stats.policy.max_age_value) || 24);
+        setCacheMaxAgeUnit(res.stats.policy.max_age_unit || 'hours');
+      }
     } catch (err: any) {
       console.error('Failed to fetch cache stats:', err);
     } finally {
       setIsLoadingCache(false);
+    }
+  };
+
+  const handleSaveCachePolicy = async () => {
+    if (!token) return;
+    setIsSavingCachePolicy(true);
+    try {
+      await apiClient.updateCacheSettings(token, {
+        mode: cacheMode,
+        max_age_value: cacheMaxAgeValue,
+        max_age_unit: cacheMaxAgeUnit,
+        auto_cache_enabled: true
+      });
+      setCacheMsg('✓ External API cache policy saved successfully.');
+      fetchCacheStats();
+      setTimeout(() => setCacheMsg(''), 3500);
+    } catch (err: any) {
+      setCacheMsg(`Error saving cache policy: ${err.message}`);
+    } finally {
+      setIsSavingCachePolicy(false);
     }
   };
 
@@ -2259,7 +2288,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   office: { label: 'Microsoft Office & ODF', icon: '📑', desc: 'VBA macros, stomping, ActiveX, OLE objects, DDE links' },
                   pdf: { label: 'Adobe PDF Documents', icon: '📄', desc: 'PDF streams, embedded JavaScript, launch actions, XFA' },
                   archive: { label: 'Archives (ZIP / 7Z / TAR)', icon: '📦', desc: 'Decompression bombs, path traversal, nested archives' },
-                  jar: { label: 'Java Archives (JAR / CLASS)', icon: '☕', desc: 'Manifest entries, bytecode reflection, dangerous APIs' },
+                  apk: { label: 'Android Application (APK / AAB / DEX)', icon: '🤖', desc: 'Manifest XML, permissions, components, DEX bytecode, native .so, secrets' },
+                  lnk: { label: 'Windows Shortcut (LNK)', icon: '🔗', desc: 'Header flags, target CLSIDs, LOLBins invocation, extra data, overlay' },
+                  java: { label: 'Java (Source / Class / JAR)', icon: '☕', desc: 'Source AST heuristics, constant pool, dangerous JVM APIs, Java RATs, agents' },
+                  jar: { label: 'Java Archives (JAR / WAR / EAR)', icon: '☕', desc: 'Manifest entries, bytecode reflection, dangerous APIs, RAT signatures' },
                   image: { label: 'Raster Images (PNG / JPG)', icon: '🖼️', desc: 'EXIF metadata, GPS geotags, steganography, C2PA AI provenance' },
                   email: { label: 'Email Messages (EML / MSG)', icon: '✉️', desc: 'MIME headers, SPF/DKIM/DMARC, tracking pixels, relay hops' },
                   script: { label: 'Scripts (PS1 / Bash / VBS)', icon: '📜', desc: 'Obfuscation, base64 stages, process spawning, cradles' },
@@ -6425,16 +6457,16 @@ jobs:
         </div>
       )}
 
-      {/* TAB: Threat Intelligence Redis Cache Management */}
+      {/* TAB: Threat Intelligence & External API Cache Management */}
       {activeTab === 'cache' && (
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <span>⚡</span> Threat Intelligence Caching & Redis Infrastructure
+                <span>⚡</span> External API Intelligence Caching & Lifetime Policy
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                TTL-based caching layer for VirusTotal, CrowdStrike, ThreatFox, AlienVault OTX, WHOIS, and IPinfo
+                Persistent SQLite + Redis accelerator for Shodan, VirusTotal, ThreatFox, URLhaus, WHOIS, and Google Dork scans
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -6462,28 +6494,155 @@ jobs:
             </div>
           )}
 
-          {/* Connection Status Banner */}
-          <div className={`p-4 rounded-2xl border flex items-center justify-between ${
-            cacheStats?.connected
-              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
-              : 'bg-amber-50 border-amber-200 text-amber-900'
-          }`}>
-            <div className="flex items-center gap-3">
-              <span className={`w-3 h-3 rounded-full ${cacheStats?.connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+          {/* External API Cache Policy & Lifetime Configuration */}
+          <div className="p-5 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border border-blue-200/80 rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider block">
-                  {cacheStats?.connected ? 'Redis Cache Server: Operational (Online)' : 'Operating in In-Memory Fallback Mode'}
-                </span>
-                <span className="text-[11px] text-slate-600 font-mono">
-                  {cacheStats?.connected ? 'redis://filesanitizer-redis:6379/0' : 'Redis offline or unreachable. Memory pass-through active.'}
-                </span>
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <span>🗄️</span> External API Caching Strategy & Expiration Policy
+                </h4>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Configure whether third-party intelligence queries (Shodan, VirusTotal, URLhaus, CTI) should reuse cached data or fetch fresh live telemetry.
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={handleSaveCachePolicy}
+                disabled={isSavingCachePolicy}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                {isSavingCachePolicy ? 'Saving...' : '💾 Save Cache Policy'}
+              </button>
             </div>
-            {cacheStats?.used_memory_human && (
-              <span className="text-xs font-mono font-semibold px-2.5 py-1 bg-white rounded-lg border border-slate-200">
-                Memory: {cacheStats.used_memory_human}
-              </span>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              {/* Option 1: Reuse Cached Data */}
+              <label
+                onClick={() => setCacheMode('use_cache')}
+                className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                  cacheMode === 'use_cache'
+                    ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
+                    : 'bg-white/60 border-slate-200 hover:bg-white'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="cache_mode"
+                  checked={cacheMode === 'use_cache'}
+                  onChange={() => setCacheMode('use_cache')}
+                  className="mt-1 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>Reuse Cached Intelligence</span>
+                    <span className="px-2 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-semibold uppercase">Recommended</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Saves API query credits, avoids rate limits, and speeds up analysis by serving cached responses if newer than your threshold.
+                  </p>
+                </div>
+              </label>
+
+              {/* Option 2: Always Fetch Fresh Data */}
+              <label
+                onClick={() => setCacheMode('always_fetch')}
+                className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                  cacheMode === 'always_fetch'
+                    ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
+                    : 'bg-white/60 border-slate-200 hover:bg-white'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="cache_mode"
+                  checked={cacheMode === 'always_fetch'}
+                  onChange={() => setCacheMode('always_fetch')}
+                  className="mt-1 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-slate-900">Always Fetch Live Data</div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Bypasses all cached intelligence on every scan and queries external APIs directly for real-time live telemetry.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Threshold Settings (Visible if use_cache is active) */}
+            {cacheMode === 'use_cache' && (
+              <div className="p-4 bg-white rounded-xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <label className="text-xs font-bold text-slate-800">
+                    Max Cache Age Threshold (Data Expiration)
+                  </label>
+                  <p className="text-[11px] text-slate-500">
+                    External API data older than this threshold will be considered expired and re-fetched live on demand.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-600 font-medium">Expire after:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={cacheMaxAgeValue}
+                    onChange={(e) => setCacheMaxAgeValue(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20 px-3 py-1.5 text-xs font-mono font-semibold bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  />
+                  <select
+                    value={cacheMaxAgeUnit}
+                    onChange={(e) => setCacheMaxAgeUnit(e.target.value as any)}
+                    className="px-3 py-1.5 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="hours">Hour(s)</option>
+                    <option value="days">Day(s)</option>
+                  </select>
+                </div>
+              </div>
             )}
+          </div>
+
+          {/* Connection Status Banner */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={`p-4 rounded-2xl border flex items-center justify-between ${
+              cacheStats?.connected
+                ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className={`w-3 h-3 rounded-full ${cacheStats?.connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider block">
+                    {cacheStats?.connected ? 'Redis Accelerator: Operational (Online)' : 'Redis Offline (In-Memory Fallback)'}
+                  </span>
+                  <span className="text-[11px] text-slate-600 font-mono">
+                    {cacheStats?.connected ? 'redis://filesanitizer-redis:6379/0' : 'SQLite persistent layer active.'}
+                  </span>
+                </div>
+              </div>
+              {cacheStats?.used_memory_human && (
+                <span className="text-xs font-mono font-semibold px-2.5 py-1 bg-white rounded-lg border border-slate-200">
+                  Memory: {cacheStats.used_memory_human}
+                </span>
+              )}
+            </div>
+
+            <div className="p-4 rounded-2xl border bg-slate-50 border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-blue-500" />
+                <div>
+                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                    Persistent SQLite Database
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-mono">
+                    /jobs/config/external_api_cache.sqlite
+                  </span>
+                </div>
+              </div>
+              <span className="text-xs font-mono font-semibold px-2.5 py-1 bg-white rounded-lg border border-slate-200">
+                Size: {cacheStats?.db_size_bytes ? `${(cacheStats.db_size_bytes / 1024).toFixed(1)} KB` : 'Active'}
+              </span>
+            </div>
           </div>
 
           {/* Cache Metrics Grid */}
@@ -6491,9 +6650,9 @@ jobs:
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Total Cached Queries</span>
               <span className="text-2xl font-black text-slate-900 font-mono">
-                {cacheStats?.total_cached_items ?? 0}
+                {cacheStats?.total_items || cacheStats?.total_cached_items || 0}
               </span>
-              <span className="text-[10px] text-slate-400 block mt-1">Live keys stored with TTL</span>
+              <span className="text-[10px] text-slate-400 block mt-1">Durable records stored on disk</span>
             </div>
 
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
@@ -6517,7 +6676,7 @@ jobs:
               <span className="text-2xl font-black text-slate-600 font-mono">
                 {cacheStats?.misses ?? 0}
               </span>
-              <span className="text-[10px] text-slate-400 block mt-1">First-time indicator lookups</span>
+              <span className="text-[10px] text-slate-400 block mt-1">Live external API queries</span>
             </div>
           </div>
 
@@ -6527,9 +6686,37 @@ jobs:
               Granular Intelligence Cache Invalidation
             </h4>
             <p className="text-xs text-slate-500">
-              Flush individual threat feeds when new threat signatures are published or API quotas are reset:
+              Flush individual intelligence feeds when new threat signatures are published or to force live re-indexing:
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleClearCache('shodan_domain')}
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              >
+                Clear Shodan Domain Cache
+              </button>
+              <button
+                type="button"
+                onClick={() => handleClearCache('shodan_ip')}
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              >
+                Clear Shodan IP Cache
+              </button>
+              <button
+                type="button"
+                onClick={() => handleClearCache('threat_intel')}
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              >
+                Clear Threat Intel Feeds
+              </button>
+              <button
+                type="button"
+                onClick={() => handleClearCache('dork_scan')}
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              >
+                Clear Google Dorks Cache
+              </button>
               <button
                 type="button"
                 onClick={() => handleClearCache('virustotal')}

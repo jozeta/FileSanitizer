@@ -125,6 +125,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
   // Drag and Drop State
   const [isDraggingOverPipeline, setIsDraggingOverPipeline] = useState<boolean>(false);
   const [draggedStepIndex, setDraggedStepIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
 
   // Saved Recipes State (Backed by localStorage)
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>(() => {
@@ -267,14 +268,48 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
     });
   };
 
-  const handleReorderStep = (sourceIndex: number, targetIndex: number) => {
-    if (sourceIndex === targetIndex) return;
+  const handleReorderStep = (sourceIndex: number, targetInsertionIndex: number) => {
+    if (sourceIndex === targetInsertionIndex || sourceIndex === targetInsertionIndex - 1) return;
     setRecipe((prev) => {
       const next = [...prev];
       const [moved] = next.splice(sourceIndex, 1);
-      next.splice(targetIndex, 0, moved);
+      const destinationIndex = sourceIndex < targetInsertionIndex ? targetInsertionIndex - 1 : targetInsertionIndex;
+      next.splice(destinationIndex, 0, moved);
       return next;
     });
+  };
+
+  const handleDropAt = (targetInsertionIndex: number, e: React.DragEvent) => {
+    try {
+      const jsonStr = e.dataTransfer.getData('application/json');
+      if (jsonStr) {
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.type === 'reorder-step' && typeof parsed.sourceIndex === 'number') {
+          handleReorderStep(parsed.sourceIndex, targetInsertionIndex);
+          return;
+        }
+        if (parsed.type === 'new-op' && parsed.operationId) {
+          const newOp = getOperationById(parsed.operationId);
+          if (newOp) {
+            handleAddOperation(newOp, targetInsertionIndex);
+            return;
+          }
+        }
+      }
+    } catch {}
+
+    if (draggedStepIndex !== null) {
+      handleReorderStep(draggedStepIndex, targetInsertionIndex);
+      return;
+    }
+
+    const raw = e.dataTransfer.getData('text/plain');
+    if (raw) {
+      const opObj = getOperationById(raw);
+      if (opObj) {
+        handleAddOperation(opObj, targetInsertionIndex);
+      }
+    }
   };
 
   const handleStepArgChange = (stepIndex: number, paramId: string, value: any) => {
@@ -645,35 +680,21 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
         <div
           onDragOver={(e) => {
             e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy';
+            e.dataTransfer.dropEffect = draggedStepIndex !== null ? 'move' : 'copy';
             setIsDraggingOverPipeline(true);
           }}
           onDragLeave={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               setIsDraggingOverPipeline(false);
+              setDropTargetIndex(null);
             }
           }}
           onDrop={(e) => {
             e.preventDefault();
             setIsDraggingOverPipeline(false);
-            try {
-              const jsonStr = e.dataTransfer.getData('application/json');
-              if (jsonStr) {
-                const parsed = JSON.parse(jsonStr);
-                if (parsed.type === 'new-op' && parsed.operationId) {
-                  const op = getOperationById(parsed.operationId);
-                  if (op) {
-                    handleAddOperation(op);
-                    return;
-                  }
-                }
-              }
-            } catch {}
-            const rawId = e.dataTransfer.getData('text/plain');
-            if (rawId) {
-              const op = getOperationById(rawId);
-              if (op) handleAddOperation(op);
-            }
+            setDropTargetIndex(null);
+            handleDropAt(recipe.length, e);
+            setDraggedStepIndex(null);
           }}
           className={`lg:col-span-4 bg-white border rounded-3xl p-5 shadow-xs space-y-4 transition-all ${
             isDraggingOverPipeline
@@ -769,201 +790,259 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
             </div>
           </div>
 
-          {/* Drag & Drop Hint Banner */}
-          {isDraggingOverPipeline && (
-            <div className="p-3 border-2 border-dashed border-indigo-400 bg-indigo-50/80 rounded-2xl text-center text-xs font-semibold text-indigo-800 animate-pulse">
-              Drop operation here to append to pipeline
-            </div>
-          )}
-
-          {/* Recipe Steps Cards */}
+          {/* Recipe Steps Cards Container */}
           <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin">
             {recipe.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 border border-dashed border-slate-200 rounded-2xl space-y-2">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.dataTransfer.dropEffect = 'copy';
+                  setDropTargetIndex(0);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDropAt(0, e);
+                  setDraggedStepIndex(null);
+                  setDropTargetIndex(null);
+                  setIsDraggingOverPipeline(false);
+                }}
+                className={`p-8 text-center border-2 border-dashed rounded-2xl space-y-2 transition-all cursor-pointer ${
+                  dropTargetIndex === 0
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-800'
+                    : 'border-slate-200 text-slate-400'
+                }`}
+              >
                 <FileCode className="w-8 h-8 mx-auto text-slate-300" />
                 <p className="text-xs font-semibold text-slate-600">Recipe is empty</p>
                 <p className="text-[11px] text-slate-400">
-                  Drag operations from the library on the left or select a preset to begin.
+                  Drag operations from the library on the left or click an operation to begin.
                 </p>
               </div>
             ) : (
-              recipe.map((step, idx) => {
-                const op = getOperationById(step.operationId);
-                if (!op) return null;
-                const isErrorStep = errorStepIndex === idx;
+              <>
+                {recipe.map((step, idx) => {
+                  const op = getOperationById(step.operationId);
+                  if (!op) return null;
+                  const isErrorStep = errorStepIndex === idx;
 
-                return (
-                  <div
-                    key={step.stepId}
-                    draggable
-                    onDragStart={(e) => {
-                      setDraggedStepIndex(idx);
-                      e.dataTransfer.setData('text/plain', String(idx));
-                      e.dataTransfer.setData(
-                        'application/json',
-                        JSON.stringify({ type: 'reorder-step', sourceIndex: idx })
-                      );
-                      e.dataTransfer.effectAllowed = 'move';
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      try {
-                        const jsonStr = e.dataTransfer.getData('application/json');
-                        if (jsonStr) {
-                          const parsed = JSON.parse(jsonStr);
-                          if (parsed.type === 'reorder-step' && typeof parsed.sourceIndex === 'number') {
-                            handleReorderStep(parsed.sourceIndex, idx);
-                            setDraggedStepIndex(null);
-                            return;
-                          }
-                          if (parsed.type === 'new-op' && parsed.operationId) {
-                            const newOp = getOperationById(parsed.operationId);
-                            if (newOp) {
-                              handleAddOperation(newOp, idx);
-                              return;
-                            }
-                          }
-                        }
-                      } catch {}
-                      const raw = e.dataTransfer.getData('text/plain');
-                      const opObj = getOperationById(raw);
-                      if (opObj) {
-                        handleAddOperation(opObj, idx);
-                      }
-                      setDraggedStepIndex(null);
-                    }}
-                    className={`rounded-2xl border p-3 transition-all ${
-                      draggedStepIndex === idx
-                        ? 'opacity-40 border-indigo-400'
-                        : step.disabled
-                        ? 'bg-slate-100/60 border-slate-200 opacity-60'
-                        : isErrorStep
-                        ? 'bg-rose-50/50 border-rose-300'
-                        : 'bg-white border-slate-200 shadow-2xs hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600"
-                          title="Drag to reorder step"
-                        >
-                          <GripVertical className="w-3.5 h-3.5" />
+                  return (
+                    <div key={step.stepId} className="space-y-1.5">
+                      {/* Insertion Line Indicator Above Card */}
+                      {dropTargetIndex === idx && (
+                        <div className="flex items-center gap-1.5 py-1 animate-pulse">
+                          <div className="w-2 h-2 rounded-full bg-indigo-600 ring-2 ring-indigo-200" />
+                          <div className="h-1 flex-1 bg-indigo-500 rounded-full shadow-xs" />
+                          <div className="w-2 h-2 rounded-full bg-indigo-600 ring-2 ring-indigo-200" />
                         </div>
-                        <span className="w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-bold flex items-center justify-center font-mono">
-                          {idx + 1}
-                        </span>
-                        <span className="text-xs font-bold text-slate-900">
-                          {op.name}
-                        </span>
-                        {step.disabled && (
-                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-slate-200 text-slate-600">
-                            Bypassed
-                          </span>
+                      )}
+
+                      <div
+                        draggable
+                        onDragStart={(e) => {
+                          setDraggedStepIndex(idx);
+                          e.dataTransfer.setData('text/plain', String(idx));
+                          e.dataTransfer.setData(
+                            'application/json',
+                            JSON.stringify({ type: 'reorder-step', sourceIndex: idx })
+                          );
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragEnd={() => {
+                          setDraggedStepIndex(null);
+                          setDropTargetIndex(null);
+                          setIsDraggingOverPipeline(false);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.dataTransfer.dropEffect = draggedStepIndex !== null ? 'move' : 'copy';
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const midY = rect.top + rect.height / 2;
+                          const isAfter = e.clientY > midY;
+                          const targetIdx = isAfter ? idx + 1 : idx;
+                          if (dropTargetIndex !== targetIdx) {
+                            setDropTargetIndex(targetIdx);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const midY = rect.top + rect.height / 2;
+                          const isAfter = e.clientY > midY;
+                          const targetIdx = isAfter ? idx + 1 : idx;
+                          handleDropAt(targetIdx, e);
+                          setDraggedStepIndex(null);
+                          setDropTargetIndex(null);
+                          setIsDraggingOverPipeline(false);
+                        }}
+                        className={`rounded-2xl border p-3 transition-all ${
+                          draggedStepIndex === idx
+                            ? 'opacity-40 border-indigo-400 bg-indigo-50/20'
+                            : step.disabled
+                            ? 'bg-slate-100/60 border-slate-200 opacity-60'
+                            : isErrorStep
+                            ? 'bg-rose-50/50 border-rose-300'
+                            : 'bg-white border-slate-200 shadow-2xs hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                              title="Drag to reorder step anywhere in the pipeline"
+                            >
+                              <GripVertical className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-bold flex items-center justify-center font-mono">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs font-bold text-slate-900">
+                              {op.name}
+                            </span>
+                            {step.disabled && (
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-slate-200 text-slate-600">
+                                Bypassed
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Step Controls: Move Up/Down, Disable, Delete */}
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              onClick={() => handleMoveStep(idx, 'up')}
+                              disabled={idx === 0}
+                              className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                              title="Move step up"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleMoveStep(idx, 'down')}
+                              disabled={idx === recipe.length - 1}
+                              className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                              title="Move step down"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleToggleDisableStep(idx)}
+                              className="p-1 rounded text-slate-400 hover:text-indigo-600 cursor-pointer"
+                              title={step.disabled ? 'Enable step' : 'Disable (bypass) step'}
+                            >
+                              {step.disabled ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              onClick={() => handleRemoveStep(idx)}
+                              className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                              title="Remove step"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Step Arguments / Form Controls */}
+                        {op.params.length > 0 && !step.disabled && (
+                          <div className="pt-2.5 space-y-2 text-xs">
+                            {op.params.map((param) => {
+                              const val = step.args[param.id] !== undefined ? step.args[param.id] : param.default;
+
+                              if (param.type === 'boolean') {
+                                return (
+                                  <label key={param.id} className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(val)}
+                                      onChange={(e) => handleStepArgChange(idx, param.id, e.target.checked)}
+                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                    />
+                                    <span className="text-[11px] font-medium text-slate-700">{param.name}</span>
+                                  </label>
+                                );
+                              }
+
+                              if (param.type === 'select') {
+                                return (
+                                  <div key={param.id} className="flex items-center justify-between gap-2">
+                                    <span className="text-[11px] font-medium text-slate-600">{param.name}:</span>
+                                    <select
+                                      value={val}
+                                      onChange={(e) => handleStepArgChange(idx, param.id, e.target.value)}
+                                      className="text-xs py-1 px-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 font-medium focus:outline-none"
+                                    >
+                                      {param.options?.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                          {opt.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div key={param.id} className="space-y-1">
+                                  <span className="text-[11px] font-medium text-slate-600">{param.name}:</span>
+                                  <input
+                                    type={param.type === 'number' ? 'number' : 'text'}
+                                    value={val}
+                                    onChange={(e) =>
+                                      handleStepArgChange(
+                                        idx,
+                                        param.id,
+                                        param.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value
+                                      )
+                                    }
+                                    className="w-full px-2.5 py-1 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900"
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
-
-                      {/* Step Controls: Move Up/Down, Disable, Delete */}
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          onClick={() => handleMoveStep(idx, 'up')}
-                          disabled={idx === 0}
-                          className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
-                          title="Move step up"
-                        >
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleMoveStep(idx, 'down')}
-                          disabled={idx === recipe.length - 1}
-                          className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
-                          title="Move step down"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleDisableStep(idx)}
-                          className="p-1 rounded text-slate-400 hover:text-indigo-600 cursor-pointer"
-                          title={step.disabled ? 'Enable step' : 'Disable (bypass) step'}
-                        >
-                          {step.disabled ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                        <button
-                          onClick={() => handleRemoveStep(idx)}
-                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                          title="Remove step"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
                     </div>
+                  );
+                })}
 
-                    {/* Step Arguments / Form Controls */}
-                    {op.params.length > 0 && !step.disabled && (
-                      <div className="pt-2.5 space-y-2 text-xs">
-                        {op.params.map((param) => {
-                          const val = step.args[param.id] !== undefined ? step.args[param.id] : param.default;
-
-                          if (param.type === 'boolean') {
-                            return (
-                              <label key={param.id} className="flex items-center gap-2 cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(val)}
-                                  onChange={(e) => handleStepArgChange(idx, param.id, e.target.checked)}
-                                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                                />
-                                <span className="text-[11px] font-medium text-slate-700">{param.name}</span>
-                              </label>
-                            );
-                          }
-
-                          if (param.type === 'select') {
-                            return (
-                              <div key={param.id} className="flex items-center justify-between gap-2">
-                                <span className="text-[11px] font-medium text-slate-600">{param.name}:</span>
-                                <select
-                                  value={val}
-                                  onChange={(e) => handleStepArgChange(idx, param.id, e.target.value)}
-                                  className="text-xs py-1 px-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 font-medium focus:outline-none"
-                                >
-                                  {param.options?.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div key={param.id} className="space-y-1">
-                              <span className="text-[11px] font-medium text-slate-600">{param.name}:</span>
-                              <input
-                                type={param.type === 'number' ? 'number' : 'text'}
-                                value={val}
-                                onChange={(e) =>
-                                  handleStepArgChange(
-                                    idx,
-                                    param.id,
-                                    param.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value
-                                  )
-                                }
-                                className="w-full px-2.5 py-1 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900"
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                {/* Bottom Drop Zone so user can always drop to the end */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = draggedStepIndex !== null ? 'move' : 'copy';
+                    if (dropTargetIndex !== recipe.length) {
+                      setDropTargetIndex(recipe.length);
+                    }
+                  }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      if (dropTargetIndex === recipe.length) setDropTargetIndex(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDropAt(recipe.length, e);
+                    setDraggedStepIndex(null);
+                    setDropTargetIndex(null);
+                    setIsDraggingOverPipeline(false);
+                  }}
+                  className={`p-3 rounded-2xl border-2 border-dashed transition-all text-center text-xs font-semibold cursor-pointer select-none ${
+                    dropTargetIndex === recipe.length
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm ring-2 ring-indigo-200'
+                      : 'border-slate-200 hover:border-slate-300 text-slate-400 bg-slate-50/50 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <ArrowDown className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Drop operation here to place at bottom of pipeline</span>
                   </div>
-                );
-              })
+                </div>
+              </>
             )}
           </div>
         </div>

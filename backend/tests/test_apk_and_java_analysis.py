@@ -1257,4 +1257,84 @@ def test_apk_checklist_comprehensive_security_analysis(tmp_path: Path):
     assert any("Vulnerable Android Library Dependency" in t for t in finding_titles)
 
 
+def test_apk_java_lnk_format_checks_disabled(tmp_path: Path):
+    """
+    Validate format-specific deep inspection rules:
+    When one or more checks are unchecked (disabled), the app must NOT perform that check,
+    and must suppress corresponding data and findings.
+    """
+    from app.analyzers.lnk_analyzer import LnkAnalyzer
+    from app.core.job_manager import JobManager
 
+    # 1. Test ApkAnalyzer with disabled checks
+    apk_file = tmp_path / "disabled_checks.apk"
+    with zipfile.ZipFile(apk_file, "w") as zf:
+        zf.writestr("AndroidManifest.xml", '<?xml version="1.0"?><manifest package="com.test.app"></manifest>')
+        zf.writestr("classes.dex", b"dex\n035\x00" + b"\x00" * 100)
+        zf.writestr("lib/arm64-v8a/libmalware.so", b"\x7fELF" + b"\x00" * 100)
+        zf.writestr("assets/secret.txt", "AIzaSyD-1234567890123456789012345")
+        zf.writestr("assets/libjiagu.so", b"\x7fELF" + b"\x00" * 100)
+
+    analyzer = ApkAnalyzer()
+    disabled_apk = [
+        "check_native_libraries",
+        "check_secrets_and_strings",
+        "check_packer_obfuscation",
+        "check_signing_certificates",
+        "check_threat_intelligence"
+    ]
+    res = analyzer.analyze(apk_file, "disabled_checks.apk", "application/vnd.android.package-archive", disabled_checks=disabled_apk)
+    assert res.success is True
+    data = res.data
+
+    # Verify native libs, secrets, packers are suppressed
+    assert data["native_libraries"] == []
+    assert data["packer_info"]["is_packed"] is False
+    assert data["secrets_and_ctf"]["detected"] is False
+    assert not any("Native Binary" in f.title for f in res.findings)
+    assert not any("Hardcoded Secret" in f.title for f in res.findings)
+    assert not any("Packer" in f.title for f in res.findings)
+
+    # 2. Test JavaAnalyzer with disabled checks
+    jar_file = tmp_path / "disabled_checks.jar"
+    manifest = "Manifest-Version: 1.0\r\nMain-Class: com.test.Main\r\n"
+    with zipfile.ZipFile(jar_file, "w") as zf:
+        zf.writestr("META-INF/MANIFEST.MF", manifest)
+        zf.writestr("com/test/Main.class", b"\xca\xfe\xba\xbe\x00\x00\x00\x34Runtime.getRuntime().exec ALLATORIxDEMO")
+        zf.writestr("native/exploit.dll", b"MZ\x90\x00" + b"\x00" * 100)
+
+    java_analyzer = JavaAnalyzer()
+    disabled_java = [
+        "check_bytecode_dangerous_apis",
+        "check_embedded_binaries",
+        "check_java_rat_signatures"
+    ]
+    res_java = java_analyzer.analyze(jar_file, "disabled_checks.jar", "application/java-archive", disabled_checks=disabled_java)
+    assert res_java.success is True
+    data_java = res_java.data
+
+    assert data_java["dangerous_apis"] == []
+    assert data_java["embedded_binaries"] == []
+    assert data_java["behavioral_analysis"] is None
+    assert data_java["rat_detections"] == []
+    assert not any("Shell Command" in f.title for f in res_java.findings)
+    assert not any("Embedded Native" in f.title for f in res_java.findings)
+    assert not any("STRRAT" in f.title for f in res_java.findings)
+
+    # 3. Test JobManager finding suppression for APK, Java, and LNK
+    from app.analyzers.base import Finding
+    from app.core.job_manager import is_finding_suppressed
+    f_apk_native = Finding(category="apk", title="Native Shared Library Exploit", description="libmalware.so found", severity="high")
+    assert is_finding_suppressed(f_apk_native, ["check_native_libraries"]) is True
+
+    f_apk_secret = Finding(category="apk", title="Hardcoded API Secret Detected", description="Google API key leaked", severity="medium")
+    assert is_finding_suppressed(f_apk_secret, ["check_secrets_and_strings"]) is True
+
+    f_java_api = Finding(category="java", title="Dangerous Java Reflection & Command Exec", description="Runtime.exec", severity="high")
+    assert is_finding_suppressed(f_java_api, ["check_bytecode_dangerous_apis"]) is True
+
+    f_lnk_overlay = Finding(category="lnk", title="Malicious Overlay Payload Appended", description="Appended payload", severity="critical")
+    assert is_finding_suppressed(f_lnk_overlay, ["check_overlay_payloads"]) is True
+
+    f_lnk_lolbin = Finding(category="lnk", title="LOLBin Execution Cradle Discovered", description="mshta.exe invoked", severity="high")
+    assert is_finding_suppressed(f_lnk_lolbin, ["check_lolbins_cradles"]) is True

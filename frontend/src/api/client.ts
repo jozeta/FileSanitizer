@@ -991,12 +991,33 @@ export const apiClient = {
     return res.json();
   },
 
-  // Threat Intel Redis Cache Management
+  // Threat Intel & External API Cache Management
   async getCacheStats(token: string): Promise<{ success: boolean; stats: any }> {
     const res = await fetch(`${API_BASE}/settings/cache`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('Failed to fetch cache statistics');
+    return res.json();
+  },
+
+  async getCacheSettings(token?: string): Promise<{ success: boolean; cache_settings: any }> {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/settings/cache/settings`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch cache policy settings');
+    return res.json();
+  },
+
+  async updateCacheSettings(token: string, config: any): Promise<{ success: boolean; cache_settings: any }> {
+    const res = await fetch(`${API_BASE}/settings/cache/settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(config),
+    });
+    if (!res.ok) throw new Error('Failed to update cache settings');
     return res.json();
   },
 
@@ -1007,6 +1028,19 @@ export const apiClient = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('Failed to clear threat intelligence cache');
+    return res.json();
+  },
+
+  async refreshIntelligence(jobId: string, service: string = 'all', forceRefresh: boolean = true): Promise<{ success: boolean; message?: string; target?: string; domain_info: any }> {
+    const res = await fetch(`${API_BASE}/jobs/${encodeURIComponent(jobId)}/refresh-intelligence`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ service, force_refresh: forceRefresh }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to refresh intelligence data');
+    }
     return res.json();
   },
 

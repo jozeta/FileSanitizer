@@ -2137,7 +2137,9 @@ class ApkAnalyzer(BaseAnalyzer):
         if parsed_providers:
             data["components"]["providers"] = parsed_providers
 
-    def analyze(self, file_path: Path, filename: str, mime_type: str) -> AnalyzerResult:
+    def analyze(self, file_path: Path, filename: str, mime_type: str, disabled_checks: Optional[List[str]] = None) -> AnalyzerResult:
+        if disabled_checks is None:
+            disabled_checks = []
         findings: List[Finding] = []
         name_lower = filename.lower()
 
@@ -2786,29 +2788,31 @@ class ApkAnalyzer(BaseAnalyzer):
                         ))
 
                 # 5. Native .so Libraries Inspection
-                native_libs = [n for n in namelist if n.lower().endswith(".so") and not n.endswith("/")]
-                data["native_libraries"] = native_libs
-                archs = set()
-                for nl in native_libs:
-                    parts = nl.split("/")
-                    if len(parts) >= 2 and parts[0] == "lib":
-                        archs.add(parts[1])
-                data["native_architectures"] = sorted(list(archs))
+                if "check_native_libraries" not in disabled_checks:
+                    native_libs = [n for n in namelist if n.lower().endswith(".so") and not n.endswith("/")]
+                    data["native_libraries"] = native_libs
+                    archs = set()
+                    for nl in native_libs:
+                        parts = nl.split("/")
+                        if len(parts) >= 2 and parts[0] == "lib":
+                            archs.add(parts[1])
+                    data["native_architectures"] = sorted(list(archs))
 
-                so_details = NativeLibraryAnalyzer.inspect_native_libraries(zf)
-                data["native_so_details"] = so_details
-                for so in so_details:
-                    if so.get("suspicious_calls"):
-                        findings.append(Finding(
-                            category="binary",
-                            severity="high",
-                            title=f"Native Binary Suspicious Syscalls: {Path(so['filename']).name}",
-                            description=f"Native library invokes sensitive OS functions: {', '.join(so['suspicious_calls'])}",
-                            details=so
-                        ))
+                    so_details = NativeLibraryAnalyzer.inspect_native_libraries(zf)
+                    data["native_so_details"] = so_details
+                    for so in so_details:
+                        if so.get("suspicious_calls"):
+                            findings.append(Finding(
+                                category="binary",
+                                severity="high",
+                                title=f"Native Binary Suspicious Syscalls: {Path(so['filename']).name}",
+                                description=f"Native library invokes sensitive OS functions: {', '.join(so['suspicious_calls'])}",
+                                details=so
+                            ))
 
                 # 6. Strings Categorization & Hardcoded Secrets Table
-                self._categorize_all_strings(all_strings_collected, data)
+                if "check_secrets_and_strings" not in disabled_checks:
+                    self._categorize_all_strings(all_strings_collected, data)
 
                 # 7. Code Signing & Certificate Verification (v1 JAR and v2/v3 APK Signing Block)
                 if andro_apk is not None:
@@ -2882,25 +2886,30 @@ class ApkAnalyzer(BaseAnalyzer):
                 self._analyze_network_security_config(zf, data, findings)
 
                 # 7c. Known Android Packers & Code Obfuscator Signatures
-                self._detect_packers(namelist, data, findings)
+                if "check_packer_obfuscation" not in disabled_checks:
+                    self._detect_packers(namelist, data, findings)
 
                 # 7d. Specialized Android Malware Family Signatures
                 self._detect_specialized_malware_signatures(andro_apk, data, findings)
 
                 # 7e. Keystore Intelligence, Brand Masquerading & Janus Audit
-                self._audit_keystore_vulnerabilities(data, findings)
+                if "check_signing_certificates" not in disabled_checks:
+                    self._audit_keystore_vulnerabilities(data, findings)
 
                 # 7f. Covert Exfiltration Channels & CTI IoC Pivoting
-                self._extract_exfiltration_tokens_and_pivot_iocs(all_strings_collected, data, findings)
+                if "check_threat_intelligence" not in disabled_checks:
+                    self._extract_exfiltration_tokens_and_pivot_iocs(all_strings_collected, data, findings)
 
                 # 7g. Live Google Play Authenticity & Multi-Feed CTI Probing
-                self._perform_online_reputation_probes(sha256_hex, data, findings)
+                if "check_threat_intelligence" not in disabled_checks:
+                    self._perform_online_reputation_probes(sha256_hex, data, findings)
 
                 # 7h. Android SDK Inventory & CycloneDX v1.4 SBOM (Checklist Sec 8 & 11)
                 self._detect_sdks_and_generate_sbom(all_strings_collected, all_dex_classes, namelist, sha256_hex, data, findings)
 
                 # 7i. Capture The Flag (CTF) Flags & Hardcoded Cloud Credentials Audit (Checklist Sec 9 & 12)
-                self._scan_secrets_and_ctf(all_strings_collected, namelist, zf, data, findings)
+                if "check_secrets_and_strings" not in disabled_checks:
+                    self._scan_secrets_and_ctf(all_strings_collected, namelist, zf, data, findings)
 
                 # 8. Synthesize MITRE ATT&CK for Mobile Techniques
                 mitre_map = {}

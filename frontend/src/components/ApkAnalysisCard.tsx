@@ -76,11 +76,13 @@ interface ApkAnalysisCardProps {
   apkInfo?: ApkAnalysisData;
   filename?: string;
   findings?: Finding[];
+  disabledChecks?: string[];
 }
 
 export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
   apkInfo,
-  filename = 'application.apk'
+  filename = 'application.apk',
+  disabledChecks = []
 }) => {
   const [activeTab, setActiveTab] = useState<
     | 'overview'
@@ -98,6 +100,27 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
     | 'dependencies'
     | 'secrets_ctf'
   >('overview');
+
+  const isCheckDisabled = (chk: string) => (disabledChecks || []).includes(chk);
+
+  React.useEffect(() => {
+    const isTabDisabled = (tab: typeof activeTab): boolean => {
+      if (!disabledChecks || disabledChecks.length === 0) return false;
+      if (tab === 'decompiler' || tab === 'dex') return disabledChecks.includes('check_dex_bytecode');
+      if (tab === 'embedded_sources') return disabledChecks.includes('check_embedded_assets');
+      if (tab === 'native_so') return disabledChecks.includes('check_native_libraries');
+      if (tab === 'permissions') return disabledChecks.includes('check_permissions');
+      if (tab === 'components') return disabledChecks.includes('check_components');
+      if (tab === 'strings' || tab === 'secrets_ctf') return disabledChecks.includes('check_secrets_and_strings');
+      if (tab === 'certificate') return disabledChecks.includes('check_signing_certificates');
+      if (tab === 'manifest') return disabledChecks.includes('check_manifest_xml');
+      return false;
+    };
+
+    if (isTabDisabled(activeTab)) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, disabledChecks]);
 
   // Permissions Tab State
   const [permSearch, setPermSearch] = useState('');
@@ -692,7 +715,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           </button>
         )}
 
-        {secrets_and_ctf && (secrets_and_ctf.total_count > 0 || (secrets_and_ctf.ctf_flags && secrets_and_ctf.ctf_flags.length > 0) || (secrets_and_ctf.secrets && secrets_and_ctf.secrets.length > 0)) && (
+        {!isCheckDisabled('check_secrets_and_strings') && secrets_and_ctf && (secrets_and_ctf.total_count > 0 || (secrets_and_ctf.ctf_flags && secrets_and_ctf.ctf_flags.length > 0) || (secrets_and_ctf.secrets && secrets_and_ctf.secrets.length > 0)) && (
           <button
             onClick={() => setActiveTab('secrets_ctf')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
@@ -706,19 +729,21 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           </button>
         )}
 
-        <button
-          onClick={() => setActiveTab('decompiler')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-            activeTab === 'decompiler'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <Code2 className="w-3.5 h-3.5" />
-          Decompiler &amp; Bytecode ({classes.length || dex_info.classes_count || 0})
-        </button>
+        {!isCheckDisabled('check_dex_bytecode') && (
+          <button
+            onClick={() => setActiveTab('decompiler')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'decompiler'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            Decompiler &amp; Bytecode ({classes.length || dex_info.classes_count || 0})
+          </button>
+        )}
 
-        {embedded_source_files.length > 0 && (
+        {!isCheckDisabled('check_embedded_assets') && embedded_source_files.length > 0 && (
           <button
             onClick={() => setActiveTab('embedded_sources')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
@@ -732,7 +757,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           </button>
         )}
 
-        {(native_so_details.length > 0 || native_libraries.length > 0) && (
+        {!isCheckDisabled('check_native_libraries') && (native_so_details.length > 0 || native_libraries.length > 0) && (
           <button
             onClick={() => setActiveTab('native_so')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
@@ -746,7 +771,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           </button>
         )}
 
-        {!is_standalone_dex && (
+        {!isCheckDisabled('check_permissions') && !is_standalone_dex && (
           <button
             onClick={() => setActiveTab('permissions')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
@@ -760,7 +785,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           </button>
         )}
 
-        {!is_standalone_dex && (
+        {!isCheckDisabled('check_components') && !is_standalone_dex && (
           <button
             onClick={() => setActiveTab('components')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
@@ -774,19 +799,21 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           </button>
         )}
 
-        <button
-          onClick={() => setActiveTab('dex')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-            activeTab === 'dex'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <Cpu className="w-3.5 h-3.5" />
-          Sensitive APIs ({(dex_info.detected_apis || []).length})
-        </button>
+        {!isCheckDisabled('check_dex_bytecode') && (
+          <button
+            onClick={() => setActiveTab('dex')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'dex'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            Sensitive APIs ({(dex_info.detected_apis || []).length})
+          </button>
+        )}
 
-        {categorized_strings && (
+        {!isCheckDisabled('check_secrets_and_strings') && categorized_strings && (
           <button
             onClick={() => setActiveTab('strings')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
@@ -800,7 +827,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           </button>
         )}
 
-        {!is_standalone_dex && (
+        {!isCheckDisabled('check_signing_certificates') && !is_standalone_dex && (
           <button
             onClick={() => setActiveTab('certificate')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
@@ -814,7 +841,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           </button>
         )}
 
-        {manifest_xml && (
+        {!isCheckDisabled('check_manifest_xml') && manifest_xml && (
           <button
             onClick={() => setActiveTab('manifest')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${

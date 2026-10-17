@@ -385,6 +385,87 @@ def trigger_active_recon(job_id: str, payload: ActiveReconRequest):
         "risk_scores": scores
     }
 
+class RefreshIntelligenceRequest(BaseModel):
+    service: Optional[str] = "shodan"  # "shodan", "threat_intel", "dorks", "all"
+    force_refresh: bool = True
+
+@router.post("/{job_id}/refresh-intelligence")
+def refresh_job_intelligence(job_id: str, payload: Optional[RefreshIntelligenceRequest] = None):
+    """
+    On-Demand Live Refresh of External API Intelligence for a Domain/IP Target.
+    Bypasses the cache and executes fresh queries against Shodan, Threat Intelligence,
+    or Dorks, persisting the updated results into the workspace and job model.
+    """
+    job = job_manager.get_job(job_id)
+    ws = job_manager.get_workspace(job_id)
+    if not job or not ws:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    if getattr(job, "category", "") != "domain":
+        raise HTTPException(status_code=400, detail="Intelligence refresh is only supported for domain/IP jobs.")
+
+    req = payload or RefreshIntelligenceRequest()
+    service = (req.service or "all").lower().strip()
+    force_refresh = req.force_refresh
+
+    dom_info = getattr(job, "domain_info", {}) or {}
+    target = dom_info.get("target") or job.filename
+    from app.analyzers.domain_analyzer import DomainAnalyzer
+    is_ip = DomainAnalyzer._is_ip_address(target)
+    primary_ip = dom_info.get("network", {}).get("ip")
+
+    from app.network.shodan_client import ShodanClient
+    from app.network.threat_intelligence import ThreatIntelligenceAggregator
+    from app.network.dork_scanner import DorkArtifactScanner
+
+    updated_services = []
+
+    if service in ("shodan", "all"):
+        try:
+            shodan_res = ShodanClient.lookup(target, is_ip=is_ip, primary_ip=primary_ip, force_refresh=force_refresh)
+            dom_info["shodan"] = shodan_res
+            updated_services.append("shodan")
+        except Exception as e:
+            logger.error("Failed to refresh Shodan intelligence for %s: %s", target, e)
+
+    if service in ("threat_intel", "cti", "all"):
+        try:
+            ind_type = "ip" if is_ip else "domain"
+            cti_res = ThreatIntelligenceAggregator.aggregate_intelligence(target, indicator_type=ind_type, force_refresh=force_refresh)
+            dom_info["threat_intelligence"] = cti_res
+            updated_services.append("threat_intel")
+        except Exception as e:
+            logger.error("Failed to refresh Threat Intelligence for %s: %s", target, e)
+
+    if service in ("dorks", "all"):
+        try:
+            dork_res = DorkArtifactScanner.scan(target, is_ip=is_ip, force_refresh=force_refresh)
+            dom_info["dork_findings"] = dork_res
+            updated_services.append("dorks")
+        except Exception as e:
+            logger.error("Failed to refresh Dork artifacts for %s: %s", target, e)
+
+    job.domain_info = dom_info
+    job_manager._save_job_to_disk(job)
+
+    # Rewrite HTML report in workspace
+    try:
+        from app.network.url_fetcher import URLFileFetcher
+        orig_path = ws.original_file_path(job.filename)
+        report_html = URLFileFetcher._build_domain_report_html(target, dom_info)
+        orig_path.write_bytes(report_html)
+        job.file_size = len(report_html)
+    except Exception as b_err:
+        logger.debug("Could not rewrite domain report HTML on refresh: %s", b_err)
+
+    return {
+        "success": True,
+        "job_id": job_id,
+        "target": target,
+        "updated_services": updated_services,
+        "domain_info": dom_info
+    }
+
 @router.post("/{job_id}/enrich-iocs")
 def enrich_job_iocs(job_id: str, payload: EnrichIocsRequest):
     """

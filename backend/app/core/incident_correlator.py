@@ -5,6 +5,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Set, Tuple
+from urllib.parse import urlparse
 
 from app.core.job_manager import job_manager, JobModel
 from app.analyzers.forensic_timeline import ForensicTimelineBuilder
@@ -1506,11 +1507,39 @@ class IncidentCorrelator:
         node_ids = set()
         node_jobs: Dict[str, Set[str]] = {}
 
-        def _add_node(nid: str, label: str, ntype: str, risk: str = "clean", tier: int = 1, details: Optional[Dict[str, Any]] = None, is_shared: bool = False):
+        def _add_node(
+            nid: str,
+            label: str,
+            ntype: str,
+            risk: str = "clean",
+            tier: int = 1,
+            details: Optional[Dict[str, Any]] = None,
+            is_shared: bool = False,
+            parent_id: Optional[str] = None,
+            parent_label: Optional[str] = None,
+            parent_type: Optional[str] = None,
+            is_child: bool = False,
+            child_ids: Optional[List[str]] = None,
+            children_count: Optional[int] = None,
+            hierarchy_relation: Optional[str] = None,
+        ):
             if nid in node_ids:
+                for n in nodes:
+                    if n["id"] == nid:
+                        if parent_id and not n.get("parentId"):
+                            n["parentId"] = parent_id
+                            n["parentLabel"] = parent_label
+                            n["parentType"] = parent_type
+                            n["isChild"] = True
+                            n["hierarchyRelation"] = hierarchy_relation
+                        if child_ids:
+                            c_set = set(n.get("childIds", [])) | set(child_ids)
+                            n["childIds"] = list(c_set)
+                            n["childrenCount"] = len(n["childIds"])
                 return
             node_ids.add(nid)
             clean_l = str(label)[:40] + ("..." if len(str(label)) > 40 else "")
+            c_ids = list(child_ids) if child_ids else []
             nodes.append({
                 "id": nid,
                 "label": clean_l,
@@ -1519,24 +1548,46 @@ class IncidentCorrelator:
                 "risk": (risk or "clean").lower(),
                 "tier": tier,
                 "is_shared": is_shared,
-                "details": details or {}
+                "details": details or {},
+                "parentId": parent_id,
+                "parentLabel": parent_label,
+                "parentType": parent_type,
+                "isChild": is_child or bool(parent_id),
+                "childIds": c_ids,
+                "childrenCount": children_count if children_count is not None else len(c_ids),
+                "hierarchyRelation": hierarchy_relation,
             })
 
-        def _add_edge(src: str, dst: str, label: str, etype: str = "connected", is_shared: bool = False):
+        def _add_edge(src: str, dst: str, label: str, etype: str = "connected", is_shared: bool = False, is_hierarchy: bool = False):
             if src == dst or src not in node_ids or dst not in node_ids:
                 return
             edge_key = f"{src}->{dst}:{etype}"
             for e in edges:
                 if e.get("_key") == edge_key:
                     return
+            is_hier = is_hierarchy or etype in ("parent_child", "subdomain_of", "service_port", "child_endpoint", "embedded_content")
             edges.append({
                 "_key": edge_key,
                 "source": src,
                 "target": dst,
                 "label": label,
                 "type": etype,
-                "is_shared": is_shared
+                "is_shared": is_shared,
+                "is_hierarchy": is_hier,
             })
+            if is_hier:
+                src_node = next((n for n in nodes if n["id"] == src), None)
+                tgt_node = next((n for n in nodes if n["id"] == dst), None)
+                if src_node and tgt_node:
+                    if dst not in src_node.get("childIds", []):
+                        src_node.setdefault("childIds", []).append(dst)
+                        src_node["childrenCount"] = len(src_node["childIds"])
+                    tgt_node["parentId"] = src
+                    tgt_node["parentLabel"] = src_node.get("full_label") or src_node.get("label")
+                    tgt_node["parentType"] = src_node.get("type")
+                    tgt_node["isChild"] = True
+                    if not tgt_node.get("hierarchyRelation"):
+                        tgt_node["hierarchyRelation"] = etype if etype != "connected" else "child_item"
             for jid, fnid in file_node_ids.items():
                 if src == fnid:
                     node_jobs.setdefault(dst, set()).add(jid)
@@ -2159,10 +2210,13 @@ class IncidentCorrelator:
                     if jid:
                         _link_artifact_to_job(jid, asn_id, "traffic via ASN", "geolocation")
 
-        # 6. Domains & URLs
+        # 6. Domains & URLs (Hierarchical Structure)
+        domain_node_map: Dict[str, str] = {}
         for item in ioc_data.get("domains", []):
             dom_val = item["domain"]
-            dnid = f"dom_{re.sub(r'[^a-zA-Z0-9]', '_', dom_val)}"
+            clean_dom = dom_val.strip().lower()
+            dnid = f"dom_{re.sub(r'[^a-zA-Z0-9]', '_', clean_dom)}"
+            domain_node_map[clean_dom] = dnid
             risk_val = "critical" if item.get("is_shared") else "high"
             _add_node(
                 nid=dnid,
@@ -2177,6 +2231,64 @@ class IncidentCorrelator:
                 jid = f.get("job_id")
                 if jid:
                     _link_artifact_to_job(jid, dnid, "shared domain C2" if item.get("is_shared") else "resolves domain", "network")
+
+        # Add child URLs and link hierarchically under their domain
+        for u_item in ioc_data.get("urls", []):
+            u_val = u_item.get("url")
+            if not u_val:
+                continue
+            u_clean = u_val.strip()
+            # Extract domain from URL
+            dom = ""
+            try:
+                parsed = urlparse(u_clean)
+                dom = parsed.netloc.split(":")[0].strip().lower()
+            except Exception:
+                pass
+
+            unid = f"url_{abs(hash(u_clean)) % 10000000}"
+            u_risk = "critical" if u_item.get("is_shared") else "high"
+
+            parent_dnid = None
+            if dom:
+                if dom in domain_node_map:
+                    parent_dnid = domain_node_map[dom]
+                else:
+                    # Create parent domain node if not previously added
+                    parent_dnid = f"dom_{re.sub(r'[^a-zA-Z0-9]', '_', dom)}"
+                    domain_node_map[dom] = parent_dnid
+                    _add_node(
+                        nid=parent_dnid,
+                        label=dom,
+                        ntype="domain",
+                        risk=u_risk,
+                        tier=2,
+                        is_shared=u_item.get("is_shared", False),
+                        details={"domain": dom}
+                    )
+
+            _add_node(
+                nid=unid,
+                label=u_clean,
+                ntype="url",
+                risk=u_risk,
+                tier=3 if parent_dnid else 2,
+                is_shared=u_item.get("is_shared", False),
+                details=u_item,
+                parent_id=parent_dnid,
+                parent_label=dom if parent_dnid else None,
+                parent_type="domain" if parent_dnid else None,
+                is_child=bool(parent_dnid),
+                hierarchy_relation="child_endpoint" if parent_dnid else None
+            )
+
+            if parent_dnid:
+                _add_edge(parent_dnid, unid, "child endpoint", "parent_child", is_hierarchy=True)
+            else:
+                for f in u_item.get("seen_in_files", []):
+                    jid = f.get("job_id")
+                    if jid:
+                        _link_artifact_to_job(jid, unid, "shared URL C2" if u_item.get("is_shared") else "contains URL", "network")
 
         # 7. Usernames / Identities
         for item in ioc_data.get("usernames", []):
@@ -2393,6 +2505,9 @@ class IncidentCorrelator:
             source_id = edge["source"]
             if edge.get("is_shared") or (target_id in node_jobs and len(node_jobs[target_id]) > 1) or (source_id in node_jobs and len(node_jobs[source_id]) > 1):
                 edge["is_shared"] = True
+
+        from app.core.entity_graph_builder import EntityGraphBuilder
+        EntityGraphBuilder._enrich_parent_child_hierarchies(nodes, edges)
 
         return {
             "total_nodes": len(nodes),

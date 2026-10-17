@@ -48,6 +48,7 @@ class SettingsUpdateRequest(BaseModel):
     evtx_severity_rules: Optional[Dict[str, str]] = None
     time_display: Optional[Dict[str, Any]] = None
     ui_preferences: Optional[Dict[str, Any]] = None
+    cache_settings: Optional[Dict[str, Any]] = None
 
 class YaraRuleCreateRequest(BaseModel):
     name: str
@@ -928,23 +929,39 @@ def export_audit_logs(
             headers={"Content-Disposition": f'attachment; filename="filesanitizer_audit_logs_{now_str}.log"'}
         )
 
-# --- Redis Threat Intelligence Cache Management ---
+# --- External API & Threat Intelligence Cache Management ---
 @router.get("/cache")
 def get_cache_stats(admin=Depends(require_admin)):
-    """Retrieve Redis threat intelligence cache statistics and hit/miss rates."""
+    """Retrieve external API cache statistics, policy, and Redis hit/miss rates."""
+    from app.core.external_cache import external_api_cache
     from app.core.redis_cache import redis_cache
-    stats = redis_cache.get_stats()
+    stats = external_api_cache.get_stats()
+    redis_stats = redis_cache.get_stats()
+    stats["redis"] = redis_stats
+    stats["connected"] = redis_stats.get("connected", False)
+    stats["used_memory_human"] = redis_stats.get("used_memory_human", "0B")
     return {"success": True, "stats": stats}
+
+@router.get("/cache/settings")
+def get_cache_settings():
+    """Retrieve external API cache lifetime and mode policies."""
+    return {"success": True, "cache_settings": settings_store.get_cache_settings()}
+
+@router.put("/cache/settings")
+def update_cache_settings(config: Dict[str, Any], admin=Depends(require_admin)):
+    """Update external API cache lifetime (hours/days) and policy (always fetch vs use cache)."""
+    settings_store.set_cache_settings(config)
+    return {"success": True, "cache_settings": settings_store.get_cache_settings()}
 
 @router.post("/cache/clear")
 def clear_intelligence_cache(
     namespace: Optional[str] = Query(None),
     admin=Depends(require_admin)
 ):
-    """Flush cached threat intelligence records from Redis."""
-    from app.core.redis_cache import redis_cache
-    deleted = redis_cache.clear_cache(namespace=namespace)
-    logger.info("Admin flushed Redis cache (namespace=%s, keys_deleted=%d)", namespace, deleted)
+    """Flush cached threat intelligence records from persistent SQLite and Redis."""
+    from app.core.external_cache import external_api_cache
+    deleted = external_api_cache.clear(service=namespace)
+    logger.info("Admin flushed external API cache (service=%s, keys_deleted=%d)", namespace, deleted)
     return {"success": True, "keys_deleted": deleted, "namespace": namespace or "all"}
 
 # --- Archive Password Pipeline Dictionary Management ---

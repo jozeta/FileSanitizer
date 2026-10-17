@@ -799,7 +799,9 @@ class JavaAnalyzer(BaseAnalyzer):
             pass
         return False
 
-    def analyze(self, file_path: Path, filename: str, mime_type: str) -> AnalyzerResult:
+    def analyze(self, file_path: Path, filename: str, mime_type: str, disabled_checks: Optional[List[str]] = None) -> AnalyzerResult:
+        if disabled_checks is None:
+            disabled_checks = []
         findings: List[Finding] = []
         name_lower = filename.lower()
 
@@ -850,6 +852,24 @@ class JavaAnalyzer(BaseAnalyzer):
         # 3. Java Archive (.jar, .war, .ear)
         elif name_lower.endswith((".jar", ".war", ".ear")) or zipfile.is_zipfile(file_path):
             self._analyze_java_archive(file_path, data, findings)
+
+        # Suppress data and findings for disabled checks
+        if "check_bytecode_dangerous_apis" in disabled_checks:
+            data["dangerous_apis"] = []
+            findings[:] = [f for f in findings if not any(k in f.title.lower() for k in ("dangerous api", "command execution", "shell command", "reflection", "jndi", "crypto", "ecb"))]
+        if "check_embedded_binaries" in disabled_checks:
+            data["embedded_binaries"] = []
+            findings[:] = [f for f in findings if not any(k in f.title.lower() for k in ("embedded native", "embedded binaries", "dll", "so", "exe"))]
+        if "check_java_rat_signatures" in disabled_checks:
+            data["rat_detections"] = []
+            data["behavioral_analysis"] = None
+            data["strrat_profile"] = None
+            findings[:] = [f for f in findings if not any(k in f.title.lower() for k in ("rat", "strrat", "behavioral", "pillar", "ransomware", "credential harvesting", "persistence"))]
+        if "check_manifest_entrypoint" in disabled_checks:
+            data["main_class"] = ""
+            data["premain_class"] = ""
+            data["agent_class"] = ""
+            findings[:] = [f for f in findings if not any(k in f.title.lower() for k in ("main-class", "premain-class", "agent-class"))]
 
         # Calculate Overall Risk Score
         crit_count = sum(1 for f in findings if f.severity == "critical")

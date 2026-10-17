@@ -17,9 +17,10 @@ interface LnkCardProps {
   lnkInfo?: LnkInfo | null;
   filename?: string;
   findings?: Finding[];
+  disabledChecks?: string[];
 }
 
-export const LnkCard: React.FC<LnkCardProps> = ({ lnkInfo, filename = 'shortcut.lnk', findings = [] }) => {
+export const LnkCard: React.FC<LnkCardProps> = ({ lnkInfo, filename = 'shortcut.lnk', findings = [], disabledChecks = [] }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   if (!lnkInfo) {
@@ -85,7 +86,7 @@ export const LnkCard: React.FC<LnkCardProps> = ({ lnkInfo, filename = 'shortcut.
                   ⚠️ Stealth Mode (SW_SHOWMINNOACTIVE)
                 </span>
               )}
-              {overlay && (
+              {overlay && !disabledChecks?.includes('check_overlay_payloads') && (
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-red-50 text-red-700 border border-red-300">
                   ⚠️ Appended Overlay ({formatBytes(overlay.size)})
                 </span>
@@ -98,7 +99,7 @@ export const LnkCard: React.FC<LnkCardProps> = ({ lnkInfo, filename = 'shortcut.
         </div>
 
         {/* LOLBin Quick Badges */}
-        {lolbins.length > 0 && (
+        {lolbins.length > 0 && !disabledChecks?.includes('check_lolbins_cradles') && (
           <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
             {lolbins.map((lb, idx) => (
               <span key={idx} className="px-2.5 py-1 rounded-xl bg-rose-100 text-rose-800 border border-rose-300 font-bold flex items-center gap-1">
@@ -308,7 +309,7 @@ export const LnkCard: React.FC<LnkCardProps> = ({ lnkInfo, filename = 'shortcut.
       </div>
 
       {/* Appended Trailing Overlay Alert */}
-      {overlay && (
+      {overlay && !disabledChecks?.includes('check_overlay_payloads') && (
         <div className="p-4 bg-rose-50/80 border border-rose-300 rounded-2xl space-y-3">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3">
@@ -347,7 +348,7 @@ export const LnkCard: React.FC<LnkCardProps> = ({ lnkInfo, filename = 'shortcut.
       )}
 
       {/* ExtraData Blocks */}
-      {extra_blocks.length > 0 && (
+      {extra_blocks.length > 0 && !disabledChecks?.includes('check_extra_data_blocks') && (
         <div className="space-y-2">
           <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
             <Layers className="w-4 h-4 text-slate-500" />

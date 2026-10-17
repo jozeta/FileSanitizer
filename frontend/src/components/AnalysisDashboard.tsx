@@ -1310,13 +1310,13 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                 case 'apk':
                   return (
                     <ErrorBoundary fallbackTitle="Android APK Forensic Analysis Error" onReset={() => setActiveTab('security')}>
-                      <ApkAnalysisCard apkInfo={job.apk_info} filename={job.filename} findings={job.findings} />
+                      <ApkAnalysisCard apkInfo={job.apk_info} filename={job.filename} findings={job.findings} disabledChecks={(job as any).disabled_checks} />
                     </ErrorBoundary>
                   );
                 case 'java':
                   return (
                     <ErrorBoundary fallbackTitle="Java Forensic Analysis Error" onReset={() => setActiveTab('security')}>
-                      <JavaAnalysisCard javaInfo={job.java_info} filename={job.filename} findings={job.findings} />
+                      <JavaAnalysisCard javaInfo={job.java_info} filename={job.filename} findings={job.findings} disabledChecks={(job as any).disabled_checks} />
                     </ErrorBoundary>
                   );
                 case 'jar':
@@ -1404,7 +1404,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                 case 'lnk':
                   return (
                     <ErrorBoundary fallbackTitle="LNK Shortcut Dissection Error" onReset={() => setActiveTab('security')}>
-                      <LnkCard lnkInfo={job.lnk_info} filename={job.filename} findings={job.findings} />
+                      <LnkCard lnkInfo={job.lnk_info} filename={job.filename} findings={job.findings} disabledChecks={(job as any).disabled_checks} />
                     </ErrorBoundary>
                   );
                 case 'raw_inspector':

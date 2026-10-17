@@ -11,6 +11,7 @@ import httpx
 
 from app.core.logging_config import logger
 from app.core.settings_store import settings_store
+from app.core.external_cache import external_api_cache
 
 
 # Known cloud providers by ASN or Org name
@@ -32,11 +33,17 @@ class ThreatIntelligenceAggregator:
     """
 
     @classmethod
-    def aggregate_intelligence(cls, indicator: str, indicator_type: str = "domain") -> Dict[str, Any]:
+    def aggregate_intelligence(cls, indicator: str, indicator_type: str = "domain", force_refresh: bool = False) -> Dict[str, Any]:
         """
         Queries all configured and public threat intelligence feeds for an indicator.
         """
         clean = indicator.strip()
+        cache_key = f"{indicator_type.lower()}:{clean.lower()}"
+
+        cached, cache_info = external_api_cache.get("threat_intel", cache_key, force_refresh=force_refresh)
+        if cached and isinstance(cached, dict):
+            return cached
+
         result: Dict[str, Any] = {
             "indicator": clean,
             "indicator_type": indicator_type,
@@ -79,7 +86,7 @@ class ThreatIntelligenceAggregator:
                 cls._query_abuseipdb(clean, result)
 
             # 5. Shodan (IP or Domain)
-            cls._query_shodan(clean, indicator_type, result)
+            cls._query_shodan(clean, indicator_type, result, force_refresh=force_refresh)
 
         # 5. Synthesize Consensus Verdict
         if result["malicious_votes"] >= 3:
@@ -92,6 +99,7 @@ class ThreatIntelligenceAggregator:
         result["threat_tags"] = sorted(list(set(result["threat_tags"])))
         result["malware_families"] = sorted(list(set(result["malware_families"])))
 
+        external_api_cache.set("threat_intel", cache_key, result)
         return result
 
     @classmethod
@@ -289,12 +297,12 @@ class ThreatIntelligenceAggregator:
             logger.debug(f"CIRCL Hashlookup note for {indicator}: {e}")
 
     @classmethod
-    def _query_shodan(cls, indicator: str, indicator_type: str, result: Dict[str, Any]) -> None:
+    def _query_shodan(cls, indicator: str, indicator_type: str, result: Dict[str, Any], force_refresh: bool = False) -> None:
         """Queries Shodan API or provides quick intelligence web links."""
         try:
             from app.network.shodan_client import ShodanClient
             is_ip = indicator_type.lower() in ("ip", "ipv4", "ipv6")
-            shodan_res = ShodanClient.lookup(indicator, is_ip=is_ip)
+            shodan_res = ShodanClient.lookup(indicator, is_ip=is_ip, force_refresh=force_refresh)
             feed = result["feeds"]["shodan"]
             feed["queried"] = bool(shodan_res.get("queried", False))
             feed["configured"] = bool(shodan_res.get("configured", False))

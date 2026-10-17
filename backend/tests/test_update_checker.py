@@ -25,19 +25,21 @@ def test_settings_store_ui_preferences_update_check():
     settings_store.set_ui_preferences({"check_for_updates": True})
     assert settings_store.get_ui_preferences()["check_for_updates"] is True
 
+from app.config import settings as app_settings
+
 def test_check_for_updates_endpoint_simulated():
     # Newer version
-    res_newer = check_for_updates(force=True, simulate_version="2.5.0")
+    res_newer = check_for_updates(force=True, simulate_version="3.0.0")
     assert res_newer["success"] is True
     assert res_newer["has_update"] is True
-    assert res_newer["latest_version"] == "2.5.0"
+    assert res_newer["latest_version"] == "3.0.0"
 
     # Same version
-    res_same = check_for_updates(force=True, simulate_version="2.4.0")
+    res_same = check_for_updates(force=True, simulate_version=app_settings.APP_VERSION)
     assert res_same["success"] is True
     assert res_same["has_update"] is False
 
     # Older version
-    res_older = check_for_updates(force=True, simulate_version="2.2.0")
+    res_older = check_for_updates(force=True, simulate_version="2.0.0")
     assert res_older["success"] is True
     assert res_older["has_update"] is False

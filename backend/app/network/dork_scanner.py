@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 
 from app.core.logging_config import logger
 from app.network.ssrf import validate_url_for_ssrf
+from app.core.external_cache import external_api_cache
 
 
 # Artifact category definitions & regex matchers
@@ -123,7 +124,7 @@ class DorkArtifactScanner:
         return presets
 
     @classmethod
-    def scan(cls, target: str, is_ip: bool = False, max_results: int = 50) -> Dict[str, Any]:
+    def scan(cls, target: str, is_ip: bool = False, max_results: int = 50, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Executes automated sensitive artifact and document discovery for a target.
         """
@@ -131,6 +132,10 @@ class DorkArtifactScanner:
         if "://" in clean_target:
             clean_target = clean_target.split("://", 1)[1].split("/", 1)[0]
         clean_target = clean_target.split(":", 1)[0]
+
+        cached, cache_info = external_api_cache.get("dork_scan", clean_target, force_refresh=force_refresh)
+        if cached and isinstance(cached, dict):
+            return cached
 
         presets = cls.generate_dork_presets(clean_target)
 
@@ -202,6 +207,7 @@ class DorkArtifactScanner:
             f"{result['category_counts']['logs']} server log(s)."
         )
 
+        external_api_cache.set("dork_scan", clean_target, result)
         return result
 
     @classmethod

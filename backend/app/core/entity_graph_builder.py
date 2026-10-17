@@ -8,10 +8,11 @@ protocols, TLS SNIs, DNS queries, credentials), embedded payloads, extracted URL
 resolved IPs, geolocations, digital certificates, MITRE ATT&CK techniques, and fuzzy hash similarity clusters.
 """
 
+import ipaddress
 import math
 import re
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional, Set, Tuple
 from urllib.parse import urlparse
 
 from app.core.entity_extractor import EntityExtractor
@@ -256,7 +257,7 @@ class EntityGraphBuilder:
             )
             _add_edge("di_target", fav_id, "SHARES_FAVICON_HASH", "shares_favicon_hash")
 
-        # Attack Surface Active Subdomains (SUBDOMAIN_OF)
+        # Attack Surface Active Subdomains (SUBDOMAIN_OF / Hierarchy)
         surface = dom_info.get("attack_surface") or {}
         for sub_idx, sub_item in enumerate((surface.get("subdomains") or [])[:6]):
             s_name = sub_item.get("subdomain")
@@ -268,9 +269,186 @@ class EntityGraphBuilder:
                     n_type="domain",
                     risk="clean",
                     tier=3,
-                    details=sub_item
+                    details=sub_item,
+                    parent_id="di_target",
+                    parent_label=target,
+                    parent_type="domain",
+                    is_child=True,
+                    hierarchy_relation="subdomain",
                 )
-                _add_edge("di_target", sub_node_id, "SUBDOMAIN_OF", "subdomain_of")
+                _add_edge("di_target", sub_node_id, "SUBDOMAIN_OF", "parent_child", is_hierarchy=True)
+
+    @classmethod
+    def _enrich_parent_child_hierarchies(cls, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]) -> None:
+        """
+        Infers and establishes hierarchical parent-child relationships across nodes:
+        - Subnets -> Host IPs (subnet math: 10.10.10.0/24 contains 10.10.10.34 but NOT 10.10.20.12)
+        - Domains -> Subdomains (closest immediate parent matching)
+        - Domains -> Child Endpoints (URLs)
+        - Host IPs -> Service Ports / Endpoints (10.10.10.34 -> 10.10.10.34:8080)
+        - Files -> Embedded / Carved payloads
+        """
+        node_map = {n["id"]: n for n in nodes}
+        edge_keys = {f"{e['source']}->{e['target']}" for e in edges}
+
+        def _link_parent_child(parent_id: str, child_id: str, relation: str, label: str):
+            if parent_id == child_id:
+                return
+            parent = node_map.get(parent_id)
+            child = node_map.get(child_id)
+            if not parent or not child:
+                return
+
+            child["parentId"] = parent_id
+            child["parentLabel"] = parent.get("full_label") or parent.get("label")
+            child["parentType"] = parent.get("type")
+            child["isChild"] = True
+            child["hierarchyRelation"] = relation
+
+            c_ids = parent.setdefault("childIds", [])
+            if child_id not in c_ids:
+                c_ids.append(child_id)
+            parent["childrenCount"] = len(c_ids)
+
+            edge_key = f"{parent_id}->{child_id}"
+            if edge_key not in edge_keys:
+                edge_keys.add(edge_key)
+                edges.append({
+                    "_key": f"{edge_key}:parent_child",
+                    "source": parent_id,
+                    "target": child_id,
+                    "label": label,
+                    "type": "parent_child",
+                    "is_hierarchy": True,
+                    "is_shared": False,
+                })
+            else:
+                for e in edges:
+                    if e["source"] == parent_id and e["target"] == child_id:
+                        e["is_hierarchy"] = True
+                        e["type"] = "parent_child"
+
+        # 1. IP Subnet Hierarchy
+        # Discover all subnets in the graph
+        subnet_nodes: List[Tuple[Dict[str, Any], Any]] = []
+        for n in nodes:
+            cidrs = n.get("details", {}).get("cidrs") or []
+            if isinstance(cidrs, list) and cidrs:
+                raw_cand = cidrs[0]
+            else:
+                raw_cand = n.get("details", {}).get("cidr") or n.get("full_label") or n.get("label") or ""
+
+            is_net_type = n.get("type") in ("network", "subnet")
+            clean_s = re.sub(r'^(Network|Subnet|IP:?)\s*', '', str(raw_cand), flags=re.IGNORECASE).strip()
+
+            parsed_net = None
+            if "/" in clean_s:
+                try:
+                    parsed_net = ipaddress.ip_network(clean_s.split()[0], strict=False)
+                except Exception:
+                    pass
+            elif clean_s.endswith(".0"):
+                try:
+                    parts = clean_s.split(".")
+                    if len(parts) == 4:
+                        if parts[1] == "0" and parts[2] == "0" and parts[3] == "0":
+                            p_len = 8
+                        elif parts[2] == "0" and parts[3] == "0":
+                            p_len = 16
+                        else:
+                            p_len = 24
+                        parsed_net = ipaddress.ip_network(f"{clean_s}/{p_len}", strict=False)
+                except Exception:
+                    pass
+            elif is_net_type:
+                match = re.search(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:/\d{1,2})?\b', clean_s)
+                if match:
+                    try:
+                        c_str = match.group(0)
+                        if "/" not in c_str and c_str.endswith(".0"):
+                            c_str = f"{c_str}/24"
+                        parsed_net = ipaddress.ip_network(c_str, strict=False)
+                    except Exception:
+                        pass
+
+            if parsed_net:
+                subnet_nodes.append((n, parsed_net))
+
+        # Match host IP nodes to most specific subnet
+        for n in nodes:
+            if n.get("parentId"):
+                continue
+            raw_ip = str(n.get("details", {}).get("ip") or n.get("details", {}).get("ip_address") or n.get("full_label") or n.get("label") or "").strip()
+            clean_ip = re.sub(r'^(IP:?)\s*', '', raw_ip, flags=re.IGNORECASE).split(':')[0].strip()
+            try:
+                parsed_ip = ipaddress.ip_address(clean_ip)
+            except Exception:
+                continue
+
+            matching = []
+            for s_node, s_net in subnet_nodes:
+                if s_node["id"] == n["id"]:
+                    continue
+                # Host IP belongs to subnet if in subnet and not the network address itself
+                if parsed_ip in s_net and parsed_ip != s_net.network_address:
+                    matching.append((s_node, s_net))
+
+            if matching:
+                # Longest prefix first (most specific subnet)
+                matching.sort(key=lambda x: -x[1].prefixlen)
+                best_sub, _ = matching[0]
+                _link_parent_child(best_sub["id"], n["id"], "subnet_member", "subnet member")
+
+        # 2. Domain Hierarchy (Multi-level closest domain parent matching)
+        domain_nodes = [n for n in nodes if n.get("type") == "domain"]
+        dom_sorted = sorted(domain_nodes, key=lambda d: len(str(d.get("details", {}).get("domain") or d.get("full_label") or d.get("label")).strip()), reverse=True)
+        for sub in domain_nodes:
+            if sub.get("parentId"):
+                continue
+            sub_dom = str(sub.get("details", {}).get("domain") or sub.get("full_label") or sub.get("label")).strip().lower()
+            for parent in dom_sorted:
+                if parent["id"] == sub["id"]:
+                    continue
+                p_dom = str(parent.get("details", {}).get("domain") or parent.get("full_label") or parent.get("label")).strip().lower()
+                if p_dom and sub_dom.endswith("." + p_dom):
+                    _link_parent_child(parent["id"], sub["id"], "subdomain", "subdomain of")
+                    break
+
+        # 3. URL -> Domain Hierarchy
+        for n in nodes:
+            if n.get("parentId") or n.get("type") != "url":
+                continue
+            u_val = str(n.get("details", {}).get("url") or n.get("full_label") or n.get("label")).strip()
+            u_host = ""
+            try:
+                parsed = urlparse(u_val)
+                u_host = (parsed.netloc or "").split(":")[0].strip().lower()
+            except Exception:
+                pass
+            if u_host:
+                for parent in dom_sorted:
+                    p_dom = str(parent.get("details", {}).get("domain") or parent.get("full_label") or parent.get("label")).strip().lower()
+                    if u_host == p_dom:
+                        _link_parent_child(parent["id"], n["id"], "child_endpoint", "child endpoint")
+                        break
+
+        # 4. Port / Service -> Host IP Hierarchy
+        ip_nodes = [n for n in nodes if n.get("type") == "ip"]
+        ip_lookup = {}
+        for ip_n in ip_nodes:
+            raw_ip = str(ip_n.get("details", {}).get("ip") or ip_n.get("full_label") or ip_n.get("label")).strip()
+            clean_ip = re.sub(r'^(IP:?)\s*', '', raw_ip, flags=re.IGNORECASE).split(':')[0].strip()
+            if clean_ip:
+                ip_lookup[clean_ip] = ip_n
+
+        for n in nodes:
+            if n.get("parentId"):
+                continue
+            raw_label = str(n.get("full_label") or n.get("label")).strip()
+            if ":" in raw_label and re.search(r':\d+$', raw_label):
+                host_part = raw_label.split(":")[0].strip()
+                if host_part in ip_lookup:
+                    _link_parent_child(ip_lookup[host_part]["id"], n["id"], "service_port", "service port")
 
     @classmethod
     def build(cls, job: Any) -> Dict[str, Any]:
@@ -284,12 +462,33 @@ class EntityGraphBuilder:
             n_type: str,
             risk: str = "clean",
             details: Optional[Dict[str, Any]] = None,
-            tier: int = 1
+            tier: int = 1,
+            parent_id: Optional[str] = None,
+            parent_label: Optional[str] = None,
+            parent_type: Optional[str] = None,
+            is_child: bool = False,
+            child_ids: Optional[List[str]] = None,
+            children_count: Optional[int] = None,
+            hierarchy_relation: Optional[str] = None,
         ):
             if node_id in node_ids:
+                # Update existing node with hierarchy attributes if newly provided
+                for n in nodes:
+                    if n["id"] == node_id:
+                        if parent_id and not n.get("parentId"):
+                            n["parentId"] = parent_id
+                            n["parentLabel"] = parent_label
+                            n["parentType"] = parent_type
+                            n["isChild"] = True
+                            n["hierarchyRelation"] = hierarchy_relation
+                        if child_ids:
+                            c_set = set(n.get("childIds", [])) | set(child_ids)
+                            n["childIds"] = list(c_set)
+                            n["childrenCount"] = len(n["childIds"])
                 return
             node_ids.add(node_id)
             clean_label = str(label) if label is not None else ""
+            c_ids = list(child_ids) if child_ids else []
             nodes.append({
                 "id": node_id,
                 "label": clean_label[:40] + ("..." if len(clean_label) > 40 else ""),
@@ -297,23 +496,46 @@ class EntityGraphBuilder:
                 "type": n_type,
                 "risk": (risk or "clean").lower(),
                 "tier": tier,
-                "details": details or {}
+                "details": details or {},
+                "parentId": parent_id,
+                "parentLabel": parent_label,
+                "parentType": parent_type,
+                "isChild": is_child or bool(parent_id),
+                "childIds": c_ids,
+                "childrenCount": children_count if children_count is not None else len(c_ids),
+                "hierarchyRelation": hierarchy_relation,
             })
 
-        def _add_edge(source: str, target: str, label: str, e_type: str = "references"):
+        def _add_edge(source: str, target: str, label: str, e_type: str = "references", is_hierarchy: bool = False, is_shared: bool = False):
             if source == target or source not in node_ids or target not in node_ids:
                 return
             edge_key = f"{source}->{target}:{e_type}"
             for e in edges:
                 if e.get("_key") == edge_key:
                     return
+            is_hier = is_hierarchy or e_type in ("parent_child", "subdomain_of", "service_port", "child_endpoint", "embedded_content")
             edges.append({
                 "_key": edge_key,
                 "source": source,
                 "target": target,
                 "label": label,
-                "type": e_type
+                "type": e_type,
+                "is_hierarchy": is_hier,
+                "is_shared": is_shared
             })
+            if is_hier:
+                src_node = next((n for n in nodes if n["id"] == source), None)
+                tgt_node = next((n for n in nodes if n["id"] == target), None)
+                if src_node and tgt_node:
+                    if target not in src_node.get("childIds", []):
+                        src_node.setdefault("childIds", []).append(target)
+                        src_node["childrenCount"] = len(src_node["childIds"])
+                    tgt_node["parentId"] = source
+                    tgt_node["parentLabel"] = src_node.get("full_label") or src_node.get("label")
+                    tgt_node["parentType"] = src_node.get("type")
+                    tgt_node["isChild"] = True
+                    if not tgt_node.get("hierarchyRelation"):
+                        tgt_node["hierarchyRelation"] = e_type if e_type != "references" else "child_item"
 
         # ---------------------------------------------------------
         # 1. ROOT FILE NODE (Tier 0 - Center)
@@ -1028,17 +1250,100 @@ class EntityGraphBuilder:
                 _add_edge("root", japi_id, "invokes JVM API", "executes")
 
         # ---------------------------------------------------------
-        # 8. EXTRACTED URLS, DOMAINS, RESOLVED IPS & GEOLOCATION (Tier 2 & 3)
+        # 8. EXTRACTED URLS, DOMAINS, RESOLVED IPS & GEOLOCATION (Hierarchical Parent-Child)
         # ---------------------------------------------------------
         urls = getattr(job, "urls", []) or []
-        seen_domains: Set[str] = set()
-        seen_ips_urls: Set[str] = set()
+        domain_to_urls: Dict[str, List[Any]] = {}
+        standalone_urls: List[Any] = []
 
-        for u_idx, u_item in enumerate(urls[:10]):
+        for u_item in urls[:25]:
             u_str = u_item.get("url") if isinstance(u_item, dict) else str(u_item)
             if not u_str:
                 continue
-            u_id = f"url_{u_idx}"
+            try:
+                parsed = urlparse(u_str)
+                dom = parsed.netloc.split(":")[0].strip().lower()
+                if dom:
+                    domain_to_urls.setdefault(dom, []).append((u_str, u_item, parsed))
+                else:
+                    standalone_urls.append((u_str, u_item))
+            except Exception:
+                standalone_urls.append((u_str, u_item))
+
+        seen_domains: Set[str] = set()
+        seen_ips_urls: Set[str] = set()
+        dom_counter = 0
+
+        for dom, url_tuples in domain_to_urls.items():
+            dom_counter += 1
+            dom_id = f"domain_{dom_counter}"
+            seen_domains.add(dom)
+
+            # Determine aggregate domain risk from URLs or default to medium
+            dom_risks = [t[1].get("risk", "medium") if isinstance(t[1], dict) else "medium" for t in url_tuples]
+            highest_risk = "medium"
+            for r in ["critical", "high", "warning", "medium", "low", "clean"]:
+                if any((x or "").lower() == r for x in dom_risks):
+                    highest_risk = r
+                    break
+
+            _add_node(
+                node_id=dom_id,
+                label=dom,
+                n_type="domain",
+                risk=highest_risk,
+                tier=2,
+                details={"domain": dom, "total_child_endpoints": len(url_tuples)},
+                child_ids=[],
+                children_count=0
+            )
+            _add_edge("root", dom_id, f"references domain ({highest_risk})", "domain")
+
+            # Add each child URL under this domain
+            for u_sub_idx, (u_str, u_item, parsed) in enumerate(url_tuples[:12]):
+                u_id = f"url_{dom_counter}_{u_sub_idx}"
+                u_risk = u_item.get("risk", "medium") if isinstance(u_item, dict) else "medium"
+                _add_node(
+                    node_id=u_id,
+                    label=u_str,
+                    n_type="url",
+                    risk=u_risk,
+                    tier=3,
+                    details={
+                        "url": u_str,
+                        "domain": dom,
+                        "path": parsed.path or "/",
+                        "query": parsed.query or None,
+                        "is_ssrf_safe": u_item.get("is_ssrf_safe", True) if isinstance(u_item, dict) else True,
+                        "http_status": u_item.get("http_status") if isinstance(u_item, dict) else None
+                    },
+                    parent_id=dom_id,
+                    parent_label=dom,
+                    parent_type="domain",
+                    is_child=True,
+                    hierarchy_relation="child_endpoint"
+                )
+                _add_edge(dom_id, u_id, "child endpoint", "parent_child", is_hierarchy=True)
+
+                # Extract IP if available on url item
+                if isinstance(u_item, dict) and u_item.get("ip"):
+                    dom_ip = u_item.get("ip")
+                    if dom_ip not in seen_ips_urls:
+                        seen_ips_urls.add(dom_ip)
+                        ip_node_id = f"net_ip_{len(seen_ips_urls)}"
+                        _add_node(
+                            node_id=ip_node_id,
+                            label=dom_ip,
+                            n_type="ip",
+                            risk="clean",
+                            tier=3,
+                            details={"ip": dom_ip}
+                        )
+                        _add_edge(dom_id, ip_node_id, "points to", "dns_a")
+
+        # Standalone URLs without a parsable domain
+        for s_idx, (u_str, u_item) in enumerate(standalone_urls[:5]):
+            u_id = f"url_standalone_{s_idx}"
             u_risk = u_item.get("risk", "medium") if isinstance(u_item, dict) else "medium"
             _add_node(
                 node_id=u_id,
@@ -1053,41 +1358,6 @@ class EntityGraphBuilder:
                 }
             )
             _add_edge("root", u_id, f"link ({u_risk})", "connects")
-
-            # Extract Domain
-            try:
-                parsed = urlparse(u_str)
-                dom = parsed.netloc.split(":")[0].strip().lower()
-                if dom and dom not in seen_domains:
-                    seen_domains.add(dom)
-                    dom_id = f"domain_{len(seen_domains)}"
-                    _add_node(
-                        node_id=dom_id,
-                        label=dom,
-                        n_type="domain",
-                        risk=u_risk,
-                        tier=3,
-                        details={"domain": dom}
-                    )
-                    _add_edge(u_id, dom_id, "resolves to", "resolves")
-
-                    # Extract IP if available on url item
-                    if isinstance(u_item, dict) and u_item.get("ip"):
-                        dom_ip = u_item.get("ip")
-                        if dom_ip not in seen_ips_urls:
-                            seen_ips_urls.add(dom_ip)
-                            ip_node_id = f"net_ip_{len(seen_ips_urls)}"
-                            _add_node(
-                                node_id=ip_node_id,
-                                label=dom_ip,
-                                n_type="ip",
-                                risk="clean",
-                                tier=3,
-                                details={"ip": dom_ip}
-                            )
-                            _add_edge(dom_id, ip_node_id, "points to", "dns_a")
-            except Exception:
-                pass
 
         # ---------------------------------------------------------
         # 8b. DOMAIN / IP OWNERSHIP INTELLIGENCE (target, IPs, ASN, network block, owner, related domains)
@@ -1419,13 +1689,23 @@ class EntityGraphBuilder:
             # 2. Domains
             for dom in extracted.get("domains", [])[:12]:
                 d_val = dom["value"]
+                d_clean = d_val.strip().lower()
+                if d_clean in seen_domains:
+                    # Enrich existing domain node with extraction sources
+                    for n in nodes:
+                        if n["type"] == "domain" and (n["details"].get("domain", "").lower() == d_clean or n["full_label"].lower() == d_clean):
+                            existing_sources = set(n["details"].get("sources", []))
+                            existing_sources.update(dom.get("sources", []))
+                            n["details"]["sources"] = list(existing_sources)
+                    continue
+                seen_domains.add(d_clean)
                 dom_id = f"ent_dom_{abs(hash(d_val)) % 1000000}"
                 _add_node(
                     node_id=dom_id,
                     label=d_val,
                     n_type="domain",
                     risk=dom.get("risk", "clean"),
-                    tier=3,
+                    tier=2,
                     details={"domain": d_val, "sources": list(dom.get("sources", []))}
                 )
                 _add_edge("root", dom_id, "references domain", "domain")
@@ -1512,6 +1792,9 @@ class EntityGraphBuilder:
         # 11. MULTI-TIER CONCENTRIC CIRCLE COORDINATE GENERATION
         # ---------------------------------------------------------
         # Canvas dimensions: 960 x 640
+        # Enrich and link parent-child hierarchies (IP subnet math, closest domains, URLs, ports)
+        cls._enrich_parent_child_hierarchies(nodes, edges)
+
         center_x = 480.0
         center_y = 320.0
 
@@ -1562,7 +1845,9 @@ class EntityGraphBuilder:
                 "source": e["source"],
                 "target": e["target"],
                 "label": e["label"],
-                "type": e["type"]
+                "type": e["type"],
+                "is_hierarchy": e.get("is_hierarchy", False),
+                "is_shared": e.get("is_shared", False)
             })
 
         return {

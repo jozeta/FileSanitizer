@@ -73,7 +73,9 @@ class LnkAnalyzer(BaseAnalyzer):
     def name(self) -> str:
         return "LnkAnalyzer"
 
-    def analyze(self, file_path: Path, filename: str, mime_type: str) -> AnalyzerResult:
+    def analyze(self, file_path: Path, filename: str, mime_type: str, disabled_checks: Optional[List[str]] = None) -> AnalyzerResult:
+        if disabled_checks is None:
+            disabled_checks = []
         findings: List[Finding] = []
         urls: Set[str] = set()
 
@@ -248,19 +250,20 @@ class LnkAnalyzer(BaseAnalyzer):
             # Extract any embedded strings from extra blocks
             extra_strings = [s.decode("latin-1", errors="ignore") for s in re.findall(b"[\x20-\x7E]{4,}", block_bytes)]
 
-            extra_blocks.append({
-                "signature": f"{block_sig:#010x}",
-                "type": sig_name,
-                "size": block_size,
-                "strings": extra_strings[:5]
-            })
+            if "check_extra_data_blocks" not in disabled_checks:
+                extra_blocks.append({
+                    "signature": f"{block_sig:#010x}",
+                    "type": sig_name,
+                    "size": block_size,
+                    "strings": extra_strings[:5]
+                })
 
             offset += block_size
             terminal_offset = offset
 
         # 6. Trailing Overlay Data (Appended bytes)
         overlay_size = max(0, len(raw_bytes) - terminal_offset)
-        has_overlay = overlay_size > 32
+        has_overlay = overlay_size > 32 and ("check_overlay_payloads" not in disabled_checks)
         overlay_data = {}
         if has_overlay:
             overlay_bytes = raw_bytes[terminal_offset:]
@@ -279,18 +282,19 @@ class LnkAnalyzer(BaseAnalyzer):
         full_command = f"{target_binary} {arguments_str}".strip()
 
         detected_lolbins = []
-        for lb, desc in LOLBINS.items():
-            if lb in full_command.lower():
-                detected_lolbins.append({
-                    "binary": lb,
-                    "executable": lb,
-                    "role": desc,
-                    "description": desc
-                })
+        if "check_lolbins_cradles" not in disabled_checks:
+            for lb, desc in LOLBINS.items():
+                if lb in full_command.lower():
+                    detected_lolbins.append({
+                        "binary": lb,
+                        "executable": lb,
+                        "role": desc,
+                        "description": desc
+                    })
 
         # Deobfuscate any Base64 encoded commands in arguments
         deobfuscated_command = ""
-        encoded_match = re.search(r'(?i)(?:-e|-enc|-encodedcommand)\s+([A-Za-z0-9+/=]{12,})', full_command)
+        encoded_match = re.search(r'(?i)(?:-e|-enc|-encodedcommand)\s+([A-Za-z0-9+/=]{12,})', full_command) if "check_command_arguments" not in disabled_checks else None
         if encoded_match:
             try:
                 import base64

@@ -34,12 +34,21 @@ import {
   EyeOff,
   CheckSquare,
   Link2,
-  ChevronDown
+  ChevronDown,
+  Box,
 } from 'lucide-react';
 import {
   IncidentCorrelationData,
-  WorkspaceJob
+  WorkspaceJob,
+  EntityGroupBox,
 } from '../types';
+import {
+  createEntityGroupBox,
+  resizeEntityGroupBox,
+  moveEntityGroupBox,
+  ungroupEntityGroupBox,
+} from '../utils/graphBoxManager';
+import { EntityGroupBoxOverlay } from './EntityGroupBoxOverlay';
 import { apiClient } from '../api/client';
 import { BinDiffViewer } from './BinDiffViewer';
 import { EvtxTriageCard } from './EvtxTriageCard';
@@ -47,6 +56,7 @@ import { MultiEvtxSwimlaneView } from './MultiEvtxSwimlaneView';
 import { ReferencedText } from './ReferencedFileLink';
 import { HIGHLIGHT_COLOR_OPTIONS, DEFAULT_HIGHLIGHT_COLOR } from './EntityGraphCard';
 import { groupSimilarNodesInGraph } from '../utils/entityNormalizer';
+import { GroupedNodesInspectorCard, HierarchyInspectorCard } from './GroupedNodesInspectorCard';
 
 interface RelationshipMappingViewProps {
   jobs: WorkspaceJob[];
@@ -171,6 +181,15 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const dragInitialPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const dragOriginWorldRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  // Custom Interactive Grouping Enclosure Boxes
+  const [groupBoxes, setGroupBoxes] = useState<EntityGroupBox[]>([]);
+  const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
+  const boxDraggingIdRef = useRef<string | null>(null);
+  const boxDragTypeRef = useRef<'move' | 'resize' | null>(null);
+  const boxDragOriginWorldRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const boxInitialBoundsRef = useRef<EntityGroupBox | null>(null);
+  const boxInitialPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+
   const clientToWorld = (clientX: number, clientY: number) => {
     const svgEl = svgRef.current;
     if (!svgEl) return { x: clientX, y: clientY };
@@ -179,6 +198,63 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       x: (clientX - rect.left - graphPan.x) / graphZoom,
       y: (clientY - rect.top - graphPan.y) / graphZoom,
     };
+  };
+
+  // Group Box Interaction Handlers
+  const handleStartMoveBox = (e: React.MouseEvent, boxId: string) => {
+    e.stopPropagation();
+    const box = groupBoxes.find((b) => b.id === boxId);
+    if (!box) return;
+    const worldPos = clientToWorld(e.clientX, e.clientY);
+    boxDraggingIdRef.current = boxId;
+    boxDragTypeRef.current = 'move';
+    boxDragOriginWorldRef.current = worldPos;
+    boxInitialBoundsRef.current = { ...box };
+    boxInitialPositionsRef.current = { ...nodePositions };
+    setSelectedBoxId(boxId);
+  };
+
+  const handleStartResizeBox = (e: React.MouseEvent, boxId: string) => {
+    e.stopPropagation();
+    const box = groupBoxes.find((b) => b.id === boxId);
+    if (!box) return;
+    const worldPos = clientToWorld(e.clientX, e.clientY);
+    boxDraggingIdRef.current = boxId;
+    boxDragTypeRef.current = 'resize';
+    boxDragOriginWorldRef.current = worldPos;
+    boxInitialBoundsRef.current = { ...box };
+    boxInitialPositionsRef.current = { ...nodePositions };
+    setSelectedBoxId(boxId);
+  };
+
+  const handleGroupSelectedIntoBox = () => {
+    if (selectedNodeIds.size < 2) return;
+    const { box, updatedPositions } = createEntityGroupBox(
+      Array.from(selectedNodeIds),
+      nodePositions,
+      groupBoxes.length
+    );
+    setGroupBoxes((prev) => [...prev, box]);
+    setNodePositions(updatedPositions);
+    setSelectedBoxId(box.id);
+    setSelectedNodeIds(new Set());
+  };
+
+  const handleRenameBox = (boxId: string, newTitle: string) => {
+    setGroupBoxes((prev) => prev.map((b) => (b.id === boxId ? { ...b, title: newTitle } : b)));
+  };
+
+  const handleChangeColorBox = (boxId: string, newColorKey: string) => {
+    setGroupBoxes((prev) => prev.map((b) => (b.id === boxId ? { ...b, color: newColorKey } : b)));
+  };
+
+  const handleUngroupBox = (boxId: string) => {
+    const box = groupBoxes.find((b) => b.id === boxId);
+    if (!box) return;
+    const restoredPositions = ungroupEntityGroupBox(box, nodePositions);
+    setNodePositions(restoredPositions);
+    setGroupBoxes((prev) => prev.filter((b) => b.id !== boxId));
+    if (selectedBoxId === boxId) setSelectedBoxId(null);
   };
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
@@ -209,6 +285,38 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    // Handle Interactive Group Box Move & Resize Dragging
+    if (boxDraggingIdRef.current && boxInitialBoundsRef.current) {
+      const boxId = boxDraggingIdRef.current;
+      const worldPos = clientToWorld(e.clientX, e.clientY);
+      const dx = worldPos.x - boxDragOriginWorldRef.current.x;
+      const dy = worldPos.y - boxDragOriginWorldRef.current.y;
+      const initBox = boxInitialBoundsRef.current;
+
+      if (boxDragTypeRef.current === 'move') {
+        const { updatedBox, updatedPositions } = moveEntityGroupBox(
+          initBox,
+          dx,
+          dy,
+          boxInitialPositionsRef.current
+        );
+        setGroupBoxes((prev) => prev.map((b) => (b.id === boxId ? updatedBox : b)));
+        setNodePositions(updatedPositions);
+      } else if (boxDragTypeRef.current === 'resize') {
+        const newW = initBox.width + dx;
+        const newH = initBox.height + dy;
+        const { updatedBox, updatedPositions } = resizeEntityGroupBox(
+          initBox,
+          newW,
+          newH,
+          boxInitialPositionsRef.current
+        );
+        setGroupBoxes((prev) => prev.map((b) => (b.id === boxId ? updatedBox : b)));
+        setNodePositions(updatedPositions);
+      }
+      return;
+    }
+
     if (draggingNodeId) {
       if (nodeMouseDownPosRef.current) {
         const dist = Math.hypot(e.clientX - nodeMouseDownPosRef.current.x, e.clientY - nodeMouseDownPosRef.current.y);
@@ -253,6 +361,9 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   const handleMouseUp = () => {
     setDraggingNodeId(null);
     setIsPanning(false);
+    boxDraggingIdRef.current = null;
+    boxDragTypeRef.current = null;
+    boxInitialBoundsRef.current = null;
   };
 
   // Node styling matching EntityGraphCard
@@ -779,22 +890,32 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         });
       });
     } else if (layout === 'hierarchical') {
-      // 5. HIERARCHICAL FORENSIC TIERS
+      // 5. HIERARCHICAL FORENSIC TIERS WITH PARENT-CHILD ALIGNMENT
       const tiers: any[][] = [[], [], [], []];
+      const childNodes: any[] = [];
+      const parentNodes: any[] = [];
+      const unparentedNodes: any[] = [];
+
       sortedNodes.forEach((n) => {
         if (n.type === 'file') {
           tiers[0].push(n);
+        } else if (n.isChild || n.parentId) {
+          childNodes.push(n);
         } else if (['vulnerability', 'technique'].includes(n.type)) {
           tiers[1].push(n);
-        } else if (['hash', 'timestamp', 'geolocation', 'ip', 'domain', 'url'].includes(n.type)) {
+        } else if (['domain', 'ip', 'hostname', 'computer', 'host'].includes(n.type) || (n.childrenCount && n.childrenCount > 0)) {
           tiers[2].push(n);
+          parentNodes.push(n);
         } else {
-          tiers[3].push(n);
+          unparentedNodes.push(n);
         }
       });
 
       const tierY = [65 * prox, 185 * prox, 325 * prox, 475 * prox];
-      tiers.forEach((tierNodes, tIdx) => {
+
+      // Position File Nodes (Tier 0), Techniques (Tier 1), and Parents (Tier 2)
+      [0, 1, 2].forEach((tIdx) => {
+        const tierNodes = tiers[tIdx];
         const count = tierNodes.length;
         if (count === 0) return;
 
@@ -809,6 +930,53 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           };
         });
       });
+
+      // Position Subordinate Children in Tier 3 directly under their parent's X coordinate!
+      const childrenByParent = new Map<string, any[]>();
+      const orphanChildren: any[] = [];
+
+      childNodes.forEach((cn) => {
+        if (cn.parentId && positions[cn.parentId]) {
+          const list = childrenByParent.get(cn.parentId) || [];
+          list.push(cn);
+          childrenByParent.set(cn.parentId, list);
+        } else {
+          orphanChildren.push(cn);
+        }
+      });
+
+      childrenByParent.forEach((cList, pId) => {
+        const pPos = positions[pId];
+        const pX = pPos ? pPos.x : centerX;
+        const cCount = cList.length;
+        const cSpacing = Math.min(130 * prox, Math.max(75 * prox, 220 / (cCount || 1)));
+        const cStart = pX - ((cCount - 1) * cSpacing) / 2;
+
+        cList.forEach((cNode, cIdx) => {
+          positions[cNode.id] = {
+            x: cStart + cIdx * cSpacing,
+            y: tierY[3],
+          };
+        });
+      });
+
+      // Position unparented Tier 3 items
+      const remainingTier3 = [...unparentedNodes, ...orphanChildren];
+      if (remainingTier3.length > 0) {
+        const count = remainingTier3.length;
+        const baseSpacing = Math.min(180 * prox, Math.max(90 * prox, (width - 240) / (count || 1)));
+        const totalSpan = (count - 1) * baseSpacing;
+        const startX = centerX - totalSpan / 2;
+
+        remainingTier3.forEach((node, idx) => {
+          if (!positions[node.id]) {
+            positions[node.id] = {
+              x: startX + idx * baseSpacing,
+              y: tierY[3],
+            };
+          }
+        });
+      }
     } else if (layout === 'grid') {
       // 6. STRUCTURED GRID MATRIX
       const count = sortedNodes.length;
@@ -2392,6 +2560,17 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   <span>
                     <strong>{selectedNodeIds.size}</strong> nodes selected — drag any selected node to move the group
                   </span>
+                  {selectedNodeIds.size >= 2 && (
+                    <button
+                      type="button"
+                      onClick={handleGroupSelectedIntoBox}
+                      className="ml-1.5 px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                      title="Group selected entities into a resizable, colorable box enclosure"
+                    >
+                      <Box className="w-3.5 h-3.5" />
+                      <span>Group into Box</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => selectAllOfType('none')}
@@ -2437,6 +2616,9 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                 <marker id="threat-arrow-purple" markerWidth="9" markerHeight="6" refX="17" refY="3" orient="auto">
                   <polygon points="0 0, 9 3, 0 6" fill="#a855f7" />
                 </marker>
+                <marker id="threat-arrow-emerald" markerWidth="9" markerHeight="6" refX="17" refY="3" orient="auto">
+                  <polygon points="0 0, 9 3, 0 6" fill="#059669" />
+                </marker>
 
                 {/* Subtle Dot Matrix Pattern */}
                 <pattern id="threat-light-dot-grid" width="24" height="24" patternUnits="userSpaceOnUse">
@@ -2449,6 +2631,18 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
               {/* Content Group with Zoom/Pan */}
               <g transform={`translate(${graphPan.x}, ${graphPan.y}) scale(${graphZoom})`}>
+                {/* Custom Interactive Grouping Enclosure Boxes */}
+                <EntityGroupBoxOverlay
+                  boxes={groupBoxes}
+                  onStartMoveBox={handleStartMoveBox}
+                  onStartResizeBox={handleStartResizeBox}
+                  onRenameBox={handleRenameBox}
+                  onChangeColorBox={handleChangeColorBox}
+                  onUngroupBox={handleUngroupBox}
+                  selectedBoxId={selectedBoxId}
+                  onSelectBox={setSelectedBoxId}
+                />
+
                 {/* Visual Layout Guides / Category & Tier Headers */}
                 {layoutMode === 'category' && (
                   <g className="select-none pointer-events-none">
@@ -2512,6 +2706,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   if (!srcPos || !dstPos) return null;
 
                   const isSharedEdge = edge.is_shared;
+                  const isHierarchy = edge.is_hierarchy || edge.type === 'parent_child';
                   const isThreat = edge.type === 'contains' || edge.type === 'threat';
                   const midX = (srcPos.x + dstPos.x) / 2;
                   const midY = (srcPos.y + dstPos.y) / 2;
@@ -2520,7 +2715,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   let strokeWidth = 1.2;
                   let markerUrl = 'url(#threat-arrow-slate)';
 
-                  if (isThreat) {
+                  if (isHierarchy) {
+                    strokeColor = '#059669';
+                    strokeWidth = 1.6;
+                    markerUrl = 'url(#threat-arrow-emerald)';
+                  } else if (isThreat) {
                     strokeColor = '#f43f5e';
                     strokeWidth = 1.8;
                     markerUrl = 'url(#threat-arrow-danger)';
@@ -2755,6 +2954,30 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         </g>
                       )}
 
+                      {/* Subordinate Child Count Badge */}
+                      {Boolean(node.childrenCount && node.childrenCount > 0) && (
+                        <g transform={`translate(${-nodeRadius * 0.72}, ${nodeRadius * 0.72})`}>
+                          <circle
+                            r={8}
+                            fill="#059669"
+                            stroke="#ffffff"
+                            strokeWidth={1.8}
+                            className="filter drop-shadow-xs"
+                          />
+                          <text
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fill="#ffffff"
+                            fontWeight="bold"
+                            fontSize="8.5px"
+                            fontFamily="ui-monospace, monospace"
+                            className="pointer-events-none select-none"
+                          >
+                            {node.childrenCount}
+                          </text>
+                        </g>
+                      )}
+
                       {/* Node Label Text */}
                       <g transform={`translate(0, ${nodeRadius + 14})`}>
                         <rect
@@ -2841,37 +3064,23 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     </div>
                   </div>
 
-                  {/* Grouped Variants Display */}
-                  {selectedNode.groupedCount && selectedNode.groupedCount > 1 && (
-                    <div className="p-3 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-2">
-                      <div className="flex items-center justify-between text-indigo-900 font-bold text-xs">
-                        <span className="flex items-center gap-1.5">
-                          <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>Consolidated Group</span>
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800 text-[10px] font-mono">
-                          {selectedNode.groupedCount} variants
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-indigo-700 leading-snug">
-                        Similar indicator variants normalized and grouped together:
-                      </p>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
-                        {(selectedNode.groupedVariants || []).map((v: string, i: number) => (
-                          <div key={i} className="text-[11px] font-mono bg-white/90 px-2.5 py-1 rounded-lg border border-indigo-100 text-slate-800 break-all select-all flex items-center justify-between gap-1.5">
-                            <span>{v}</span>
-                            <button
-                              onClick={() => handleCopy(v, `variant_${i}`)}
-                              className="p-1 rounded text-slate-400 hover:text-indigo-600 shrink-0 cursor-pointer"
-                              title="Copy variant"
-                            >
-                              {copiedKey === `variant_${i}` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Grouped Variants & Member Forensic Telemetry */}
+                  <GroupedNodesInspectorCard
+                    node={selectedNode}
+                    allNodes={processedGraphNodes}
+                    onSelectNode={setSelectedNode}
+                    copiedKey={copiedKey}
+                    onCopy={handleCopy}
+                  />
+
+                  {/* Hierarchy Tree & Parent/Child Relationships */}
+                  <HierarchyInspectorCard
+                    node={selectedNode}
+                    allNodes={processedGraphNodes}
+                    onSelectNode={setSelectedNode}
+                    copiedKey={copiedKey}
+                    onCopy={handleCopy}
+                  />
 
                   {/* Operator Visibility & Highlighting Panel */}
                   <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">

@@ -105,11 +105,50 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
             "check_clamav": True,
             "check_yara": True,
         },
+        "apk": {
+            "check_manifest_xml": True,
+            "check_permissions": True,
+            "check_components": True,
+            "check_signing_certificates": True,
+            "check_dex_bytecode": True,
+            "check_embedded_assets": True,
+            "check_native_libraries": True,
+            "check_secrets_and_strings": True,
+            "check_packer_obfuscation": True,
+            "check_threat_intelligence": True,
+            "check_virustotal": True,
+            "check_clamav": True,
+            "check_yara": True,
+        },
+        "lnk": {
+            "check_header_flags": True,
+            "check_target_id_list": True,
+            "check_command_arguments": True,
+            "check_lolbins_cradles": True,
+            "check_extra_data_blocks": True,
+            "check_overlay_payloads": True,
+            "check_virustotal": True,
+            "check_clamav": True,
+            "check_yara": True,
+        },
+        "java": {
+            "check_manifest_entrypoint": True,
+            "check_permissions": True,
+            "check_bytecode_dangerous_apis": True,
+            "check_embedded_binaries": True,
+            "check_java_rat_signatures": True,
+            "check_obfuscator_detection": True,
+            "check_virustotal": True,
+            "check_clamav": True,
+            "check_yara": True,
+        },
         "jar": {
             "check_manifest_entrypoint": True,
             "check_permissions": True,
             "check_bytecode_dangerous_apis": True,
             "check_embedded_binaries": True,
+            "check_java_rat_signatures": True,
+            "check_obfuscator_detection": True,
             "check_virustotal": True,
             "check_clamav": True,
             "check_yara": True,
@@ -348,6 +387,13 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
         "allow_threat_intel_lookups": True,
         "allow_geolocation_lookups": True,
         "allow_clamav_official_updates": True,
+    },
+    # External API Caching Policies (Configurable TTL / Threshold vs Always Fetch)
+    "cache_settings": {
+        "mode": "use_cache",            # "use_cache" or "always_fetch"
+        "max_age_value": 24,            # default 24
+        "max_age_unit": "hours",        # "hours" or "days"
+        "auto_cache_enabled": True
     },
     # Aggregated Usage Statistics
     "statistics": {
@@ -883,7 +929,7 @@ class SettingsStore:
                     saved = json.load(f)
                 # Deep merge with defaults so newly added keys are always present
                 merged = json.loads(json.dumps(DEFAULT_SETTINGS))
-                for section in ["global_checks", "format_checks", "api_keys", "external_connections", "statistics"]:
+                for section in ["global_checks", "format_checks", "api_keys", "external_connections", "cache_settings", "statistics"]:
                     if section in saved and isinstance(saved[section], dict):
                         if section == "format_checks":
                             for fmt, flags in saved[section].items():
@@ -1028,7 +1074,30 @@ class SettingsStore:
         copy_data["evtx_severity_rules"] = dict(self._data.get("evtx_severity_rules", DEFAULT_SETTINGS.get("evtx_severity_rules", {})))
         copy_data["time_display"] = dict(self._data.get("time_display", DEFAULT_SETTINGS.get("time_display", {})))
         copy_data["ui_preferences"] = dict(self._data.get("ui_preferences", DEFAULT_SETTINGS.get("ui_preferences", {})))
+        copy_data["cache_settings"] = dict(self._data.get("cache_settings", DEFAULT_SETTINGS.get("cache_settings", {})))
         return copy_data
+
+    def get_cache_settings(self) -> Dict[str, Any]:
+        self._check_reload()
+        with self._lock:
+            return dict(self._data.get("cache_settings", DEFAULT_SETTINGS.get("cache_settings", {})))
+
+    def set_cache_settings(self, config: Dict[str, Any]) -> None:
+        with self._lock:
+            current = dict(self._data.get("cache_settings", DEFAULT_SETTINGS.get("cache_settings", {})))
+            if "mode" in config and config["mode"] in ["use_cache", "always_fetch"]:
+                current["mode"] = config["mode"]
+            if "max_age_value" in config:
+                try:
+                    current["max_age_value"] = max(1, int(config["max_age_value"]))
+                except (ValueError, TypeError):
+                    pass
+            if "max_age_unit" in config and config["max_age_unit"] in ["hours", "days"]:
+                current["max_age_unit"] = config["max_age_unit"]
+            if "auto_cache_enabled" in config:
+                current["auto_cache_enabled"] = bool(config["auto_cache_enabled"])
+            self._data["cache_settings"] = current
+            self._save()
 
     def get_time_display(self) -> Dict[str, Any]:
         self._check_reload()
@@ -1122,6 +1191,9 @@ class SettingsStore:
 
         if "ui_preferences" in updates and isinstance(updates["ui_preferences"], dict):
             self.set_ui_preferences(updates["ui_preferences"])
+
+        if "cache_settings" in updates and isinstance(updates["cache_settings"], dict):
+            self.set_cache_settings(updates["cache_settings"])
 
         if "upload_history_enabled" in updates:
             self._data["upload_history_enabled"] = bool(updates["upload_history_enabled"])

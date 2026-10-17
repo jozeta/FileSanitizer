@@ -14,11 +14,20 @@ import {
   Eye,
   EyeOff,
   CheckSquare,
-  Sparkles
+  Sparkles,
+  Box,
 } from 'lucide-react';
-import { EntityGraphData, EntityGraphNode } from '../types';
+import { EntityGraphData, EntityGraphNode, EntityGroupBox } from '../types';
 import { InvestigateAssetButton } from './InvestigateAssetButton';
 import { groupSimilarNodesInGraph } from '../utils/entityNormalizer';
+import { GroupedNodesInspectorCard, HierarchyInspectorCard } from './GroupedNodesInspectorCard';
+import {
+  createEntityGroupBox,
+  resizeEntityGroupBox,
+  moveEntityGroupBox,
+  ungroupEntityGroupBox,
+} from '../utils/graphBoxManager';
+import { EntityGroupBoxOverlay } from './EntityGroupBoxOverlay';
 
 export const HIGHLIGHT_COLOR_OPTIONS = [
   { value: '#f59e0b', label: 'Amber / Gold' },
@@ -166,6 +175,15 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   const dragInitialPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const dragOriginWorldRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement | null>(null);
+
+  // Custom Interactive Grouping Enclosure Boxes
+  const [groupBoxes, setGroupBoxes] = useState<EntityGroupBox[]>([]);
+  const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
+  const boxDraggingIdRef = useRef<string | null>(null);
+  const boxDragTypeRef = useRef<'move' | 'resize' | null>(null);
+  const boxDragOriginWorldRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const boxInitialBoundsRef = useRef<EntityGroupBox | null>(null);
+  const boxInitialPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
 
   // Category counts for filter badges
   const categoryCounts = useMemo(() => {
@@ -614,18 +632,28 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
       const tiers: EntityGraphNode[][] = [[], [], [], []];
       tiers[0].push(rootNode);
 
+      const childNodes: EntityGraphNode[] = [];
+      const parentNodes: EntityGraphNode[] = [];
+      const unparentedNodes: EntityGraphNode[] = [];
+
       nonRootNodes.forEach((n) => {
-        if (['threat_intel', 'threat_signature', 'technique', 'similar_sample'].includes(n.type)) {
+        if (n.isChild || n.parentId) {
+          childNodes.push(n);
+        } else if (['threat_intel', 'threat_signature', 'technique', 'similar_sample'].includes(n.type)) {
           tiers[1].push(n);
-        } else if (['url', 'domain', 'ip', 'geolocation', 'asn', 'network', 'embedded_file', 'hash'].includes(n.type)) {
+        } else if (['domain', 'ip', 'hostname', 'computer', 'host'].includes(n.type) || (n.childrenCount && n.childrenCount > 0)) {
           tiers[2].push(n);
+          parentNodes.push(n);
         } else {
-          tiers[3].push(n);
+          unparentedNodes.push(n);
         }
       });
 
-      const tierY = [65 * prox, 200 * prox, 350 * prox, 500 * prox];
-      tiers.forEach((tierNodes, tIdx) => {
+      const tierY = [65 * prox, 190 * prox, 330 * prox, 490 * prox];
+
+      // Position Root (Tier 0), Threat Intel / Techniques (Tier 1), and Parents (Tier 2)
+      [0, 1, 2].forEach((tIdx) => {
+        const tierNodes = tiers[tIdx];
         const count = tierNodes.length;
         if (count === 0) return;
 
@@ -640,6 +668,53 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
           };
         });
       });
+
+      // Position Subordinate Child nodes in Tier 3 directly under their respective parent's X coordinate!
+      const childrenByParent = new Map<string, EntityGraphNode[]>();
+      const orphanChildren: EntityGraphNode[] = [];
+
+      childNodes.forEach((cn) => {
+        if (cn.parentId && positions[cn.parentId]) {
+          const list = childrenByParent.get(cn.parentId) || [];
+          list.push(cn);
+          childrenByParent.set(cn.parentId, list);
+        } else {
+          orphanChildren.push(cn);
+        }
+      });
+
+      childrenByParent.forEach((cList, pId) => {
+        const pPos = positions[pId];
+        const pX = pPos ? pPos.x : centerX;
+        const cCount = cList.length;
+        const cSpacing = Math.min(130 * prox, Math.max(75 * prox, 220 / (cCount || 1)));
+        const cStart = pX - ((cCount - 1) * cSpacing) / 2;
+
+        cList.forEach((cNode, cIdx) => {
+          positions[cNode.id] = {
+            x: cStart + cIdx * cSpacing,
+            y: tierY[3],
+          };
+        });
+      });
+
+      // Position any unparented or leaf nodes across Tier 3
+      const remainingTier3 = [...unparentedNodes, ...orphanChildren];
+      if (remainingTier3.length > 0) {
+        const count = remainingTier3.length;
+        const baseSpacing = Math.min(180 * prox, Math.max(90 * prox, (width - 200) / (count || 1)));
+        const totalSpan = (count - 1) * baseSpacing;
+        const startX = centerX - totalSpan / 2;
+
+        remainingTier3.forEach((node, idx) => {
+          if (!positions[node.id]) {
+            positions[node.id] = {
+              x: startX + idx * baseSpacing,
+              y: tierY[3],
+            };
+          }
+        });
+      }
     } else if (layout === 'grid') {
       const count = sortedNodes.length;
       const cols = Math.max(3, Math.min(6, Math.ceil(Math.sqrt(count * 1.1))));
@@ -776,6 +851,63 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
     };
   };
 
+  // Group Box Interaction Handlers
+  const handleStartMoveBox = (e: React.MouseEvent, boxId: string) => {
+    e.stopPropagation();
+    const box = groupBoxes.find(b => b.id === boxId);
+    if (!box) return;
+    const worldPos = clientToWorld(e.clientX, e.clientY);
+    boxDraggingIdRef.current = boxId;
+    boxDragTypeRef.current = 'move';
+    boxDragOriginWorldRef.current = worldPos;
+    boxInitialBoundsRef.current = { ...box };
+    boxInitialPositionsRef.current = { ...nodePositions };
+    setSelectedBoxId(boxId);
+  };
+
+  const handleStartResizeBox = (e: React.MouseEvent, boxId: string) => {
+    e.stopPropagation();
+    const box = groupBoxes.find(b => b.id === boxId);
+    if (!box) return;
+    const worldPos = clientToWorld(e.clientX, e.clientY);
+    boxDraggingIdRef.current = boxId;
+    boxDragTypeRef.current = 'resize';
+    boxDragOriginWorldRef.current = worldPos;
+    boxInitialBoundsRef.current = { ...box };
+    boxInitialPositionsRef.current = { ...nodePositions };
+    setSelectedBoxId(boxId);
+  };
+
+  const handleGroupSelectedIntoBox = () => {
+    if (selectedNodeIds.size < 2) return;
+    const { box, updatedPositions } = createEntityGroupBox(
+      Array.from(selectedNodeIds),
+      nodePositions,
+      groupBoxes.length
+    );
+    setGroupBoxes(prev => [...prev, box]);
+    setNodePositions(updatedPositions);
+    setSelectedBoxId(box.id);
+    setSelectedNodeIds(new Set());
+  };
+
+  const handleRenameBox = (boxId: string, newTitle: string) => {
+    setGroupBoxes(prev => prev.map(b => b.id === boxId ? { ...b, title: newTitle } : b));
+  };
+
+  const handleChangeColorBox = (boxId: string, newColorKey: string) => {
+    setGroupBoxes(prev => prev.map(b => b.id === boxId ? { ...b, color: newColorKey } : b));
+  };
+
+  const handleUngroupBox = (boxId: string) => {
+    const box = groupBoxes.find(b => b.id === boxId);
+    if (!box) return;
+    const restoredPositions = ungroupEntityGroupBox(box, nodePositions);
+    setNodePositions(restoredPositions);
+    setGroupBoxes(prev => prev.filter(b => b.id !== boxId));
+    if (selectedBoxId === boxId) setSelectedBoxId(null);
+  };
+
   // Canvas Pan Handlers
   const handleSvgMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).tagName === 'svg' || (e.target as HTMLElement).id === 'graph-canvas-bg') {
@@ -808,6 +940,38 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    // Handle Interactive Group Box Move & Resize Dragging
+    if (boxDraggingIdRef.current && boxInitialBoundsRef.current) {
+      const boxId = boxDraggingIdRef.current;
+      const worldPos = clientToWorld(e.clientX, e.clientY);
+      const dx = worldPos.x - boxDragOriginWorldRef.current.x;
+      const dy = worldPos.y - boxDragOriginWorldRef.current.y;
+      const initBox = boxInitialBoundsRef.current;
+
+      if (boxDragTypeRef.current === 'move') {
+        const { updatedBox, updatedPositions } = moveEntityGroupBox(
+          initBox,
+          dx,
+          dy,
+          boxInitialPositionsRef.current
+        );
+        setGroupBoxes(prev => prev.map(b => b.id === boxId ? updatedBox : b));
+        setNodePositions(updatedPositions);
+      } else if (boxDragTypeRef.current === 'resize') {
+        const newW = initBox.width + dx;
+        const newH = initBox.height + dy;
+        const { updatedBox, updatedPositions } = resizeEntityGroupBox(
+          initBox,
+          newW,
+          newH,
+          boxInitialPositionsRef.current
+        );
+        setGroupBoxes(prev => prev.map(b => b.id === boxId ? updatedBox : b));
+        setNodePositions(updatedPositions);
+      }
+      return;
+    }
+
     if (draggingNodeId) {
       if (nodeMouseDownPosRef.current) {
         const dist = Math.hypot(e.clientX - nodeMouseDownPosRef.current.x, e.clientY - nodeMouseDownPosRef.current.y);
@@ -852,6 +1016,9 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   const handleMouseUp = () => {
     setIsPanning(false);
     setDraggingNodeId(null);
+    boxDraggingIdRef.current = null;
+    boxDragTypeRef.current = null;
+    boxInitialBoundsRef.current = null;
   };
 
   const handleResetView = () => {
@@ -1328,7 +1495,18 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
             {selectedNodeIds.size > 0 && (
               <div className="flex items-center gap-2 text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                <span>{selectedNodeIds.size} node{selectedNodeIds.size > 1 ? 's' : ''} selected — drag to move group</span>
+                <span>{selectedNodeIds.size} node{selectedNodeIds.size > 1 ? 's' : ''} selected</span>
+                {selectedNodeIds.size >= 2 && (
+                  <button
+                    type="button"
+                    onClick={handleGroupSelectedIntoBox}
+                    className="ml-1.5 px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                    title="Group selected nodes into a resizable, colorable box enclosure"
+                  >
+                    <Box className="w-3.5 h-3.5" />
+                    <span>Group into Box</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1383,6 +1561,16 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
             >
               <polygon points="0 0, 9 3, 0 6" fill="#6366f1" />
             </marker>
+            <marker
+              id="arrowhead-hierarchy"
+              markerWidth="9"
+              markerHeight="6"
+              refX="17"
+              refY="3"
+              orient="auto"
+            >
+              <polygon points="0 0, 9 3, 0 6" fill="#059669" />
+            </marker>
 
             {/* Subtle Dot Matrix Pattern */}
             <pattern id="light-dot-grid" width="24" height="24" patternUnits="userSpaceOnUse">
@@ -1395,6 +1583,18 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
 
           {/* Graph Content Group with Zoom/Pan */}
           <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+            {/* Custom Interactive Grouping Enclosure Boxes */}
+            <EntityGroupBoxOverlay
+              boxes={groupBoxes}
+              onStartMoveBox={handleStartMoveBox}
+              onStartResizeBox={handleStartResizeBox}
+              onRenameBox={handleRenameBox}
+              onChangeColorBox={handleChangeColorBox}
+              onUngroupBox={handleUngroupBox}
+              selectedBoxId={selectedBoxId}
+              onSelectBox={setSelectedBoxId}
+            />
+
             {/* Category Cluster Labels when in Category Layout Mode */}
             {layoutMode === 'category' &&
               categoryClusterLabels.map((cl) => (
@@ -1431,6 +1631,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
               const tgtPos = nodePositions[edge.target];
               if (!srcPos || !tgtPos) return null;
 
+              const isHierarchy = edge.is_hierarchy || edge.type === 'parent_child';
               const isDanger = edge.type === 'contains' || edge.type === 'signature_match' || edge.type === 'similar_to';
               const isDirect = edge.source === 'root' || edge.target === 'root';
               const midX = (srcPos.x + tgtPos.x) / 2;
@@ -1440,7 +1641,11 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
               let strokeColor = '#94a3b8';
               let strokeWidth = 1.2;
 
-              if (isDanger) {
+              if (isHierarchy) {
+                markerUrl = 'url(#arrowhead-hierarchy)';
+                strokeColor = '#059669';
+                strokeWidth = 1.6;
+              } else if (isDanger) {
                 markerUrl = 'url(#arrowhead-danger)';
                 strokeColor = '#f43f5e';
                 strokeWidth = 1.8;
@@ -1665,6 +1870,30 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                     </g>
                   )}
 
+                  {/* Subordinate Child Count Badge */}
+                  {Boolean(node.childrenCount && node.childrenCount > 0) && (
+                    <g transform={`translate(${-radius * 0.72}, ${radius * 0.72})`}>
+                      <circle
+                        r={8.5}
+                        fill="#059669"
+                        stroke="#ffffff"
+                        strokeWidth={1.8}
+                        className="filter drop-shadow-xs"
+                      />
+                      <text
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fill="#ffffff"
+                        fontWeight="700"
+                        fontSize="9"
+                        fontFamily="ui-monospace, monospace"
+                        className="pointer-events-none select-none"
+                      >
+                        {node.childrenCount}
+                      </text>
+                    </g>
+                  )}
+
                   {/* Node Label Below */}
                   <g transform={`translate(0, ${radius + 14})`}>
                     <rect
@@ -1839,37 +2068,23 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                 </div>
               )}
 
-              {/* Grouped Variants Display */}
-              {selectedNode.groupedCount && selectedNode.groupedCount > 1 && (
-                <div className="p-3 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-2">
-                  <div className="flex items-center justify-between text-indigo-900 font-bold text-xs">
-                    <span className="flex items-center gap-1.5">
-                      <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Consolidated Group</span>
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800 text-[10px] font-mono">
-                      {selectedNode.groupedCount} variants
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-indigo-700 leading-snug">
-                    Similar indicator variants normalized and grouped together:
-                  </p>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {(selectedNode.groupedVariants || []).map((v: string, i: number) => (
-                      <div key={i} className="text-[11px] font-mono bg-white/90 px-2.5 py-1 rounded-lg border border-indigo-100 text-slate-800 break-all select-all flex items-center justify-between gap-1.5">
-                        <span>{v}</span>
-                        <button
-                          onClick={() => copyToClipboard(v, `variant_${i}`)}
-                          className="text-slate-400 hover:text-indigo-600 shrink-0 cursor-pointer"
-                          title="Copy variant"
-                        >
-                          {copiedKey === `variant_${i}` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Grouped Variants & Member Forensic Telemetry */}
+              <GroupedNodesInspectorCard
+                node={selectedNode}
+                allNodes={processedNodes}
+                onSelectNode={setSelectedNode}
+                copiedKey={copiedKey}
+                onCopy={copyToClipboard}
+              />
+
+              {/* Hierarchy Tree & Parent/Child Relationships */}
+              <HierarchyInspectorCard
+                node={selectedNode}
+                allNodes={processedNodes}
+                onSelectNode={setSelectedNode}
+                copiedKey={copiedKey}
+                onCopy={copyToClipboard}
+              />
 
               {/* Dynamic Metadata Attributes */}
               {selectedNode.details &&

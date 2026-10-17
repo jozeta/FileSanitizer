@@ -22,14 +22,28 @@ interface JavaAnalysisCardProps {
   javaInfo?: JavaAnalysisData;
   filename?: string;
   findings?: Finding[];
+  disabledChecks?: string[];
 }
 
 export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
   javaInfo,
-  filename = 'application.java'
+  filename = 'application.java',
+  disabledChecks = []
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'behavioral' | 'apis' | 'code' | 'binaries' | 'rat'>('overview');
   const [copiedCode, setCopiedCode] = useState(false);
+
+  const isCheckDisabled = (chk: string) => (disabledChecks || []).includes(chk);
+
+  React.useEffect(() => {
+    if (activeTab === 'apis' && isCheckDisabled('check_bytecode_dangerous_apis')) {
+      setActiveTab('overview');
+    } else if (activeTab === 'binaries' && isCheckDisabled('check_embedded_binaries')) {
+      setActiveTab('overview');
+    } else if (activeTab === 'rat' && isCheckDisabled('check_java_rat_signatures')) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, disabledChecks]);
 
   if (!javaInfo) {
     return (
@@ -185,17 +199,19 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
           Behavioral Forensics (STRRAT Triage)
         </button>
 
-        <button
-          onClick={() => setActiveTab('apis')}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-            activeTab === 'apis'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <ShieldAlert className="w-3.5 h-3.5" />
-          Dangerous JVM APIs ({dangerous_apis.length})
-        </button>
+        {!isCheckDisabled('check_bytecode_dangerous_apis') && (
+          <button
+            onClick={() => setActiveTab('apis')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+              activeTab === 'apis'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Dangerous JVM APIs ({dangerous_apis.length})
+          </button>
+        )}
 
         {code_preview && (
           <button
@@ -211,7 +227,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
           </button>
         )}
 
-        {embedded_binaries.length > 0 && (
+        {!isCheckDisabled('check_embedded_binaries') && embedded_binaries.length > 0 && (
           <button
             onClick={() => setActiveTab('binaries')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all ${
@@ -225,7 +241,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
           </button>
         )}
 
-        {rat_detections.length > 0 && (
+        {!isCheckDisabled('check_java_rat_signatures') && rat_detections.length > 0 && (
           <button
             onClick={() => setActiveTab('rat')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all ${
