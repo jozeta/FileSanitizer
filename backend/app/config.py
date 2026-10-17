@@ -5,7 +5,7 @@ import os
 
 class Settings(BaseSettings):
     APP_NAME: str = "FileSanitizer"
-    APP_VERSION: str = "2.4.2"
+    APP_VERSION: str = "2.5.0"
     APP_ENV: str = "production"
     DEBUG: bool = False
     API_PREFIX: str = "/api"
@@ -79,6 +79,10 @@ class Settings(BaseSettings):
 
     ALIENVAULT_OTX_ENABLED: bool = False
     ALIENVAULT_OTX_API_KEY: Optional[str] = None
+
+    # Shodan Threat Intelligence API
+    SHODAN_ENABLED: bool = True
+    SHODAN_API_KEY: Optional[str] = None
 
     # Screenshot Sandbox Service
     SCREENSHOT_ENABLED: bool = True

@@ -52,7 +52,8 @@ class ThreatIntelligenceAggregator:
                 "abuseipdb": {"queried": False, "verdict": "unknown", "abuse_confidence_score": 0, "total_reports": 0},
                 "alienvault_otx": {"queried": False, "verdict": "unknown", "pulse_count": 0},
                 "malwarebazaar": {"queried": False, "verdict": "unknown", "tags": []},
-                "circl_hashlookup": {"queried": False, "verdict": "unknown"}
+                "circl_hashlookup": {"queried": False, "verdict": "unknown"},
+                "shodan": {"queried": False, "verdict": "unknown", "open_ports": [], "vulns_count": 0, "vulns": [], "tags": [], "web_link": ""}
             }
         }
 
@@ -76,6 +77,9 @@ class ThreatIntelligenceAggregator:
             # 4. AbuseIPDB (If indicator is IP and key exists)
             if indicator_type in ("ip", "ipv4", "ipv6"):
                 cls._query_abuseipdb(clean, result)
+
+            # 5. Shodan (IP or Domain)
+            cls._query_shodan(clean, indicator_type, result)
 
         # 5. Synthesize Consensus Verdict
         if result["malicious_votes"] >= 3:
@@ -283,6 +287,45 @@ class ThreatIntelligenceAggregator:
                     feed["verdict"] = "unknown_or_unlisted"
         except Exception as e:
             logger.debug(f"CIRCL Hashlookup note for {indicator}: {e}")
+
+    @classmethod
+    def _query_shodan(cls, indicator: str, indicator_type: str, result: Dict[str, Any]) -> None:
+        """Queries Shodan API or provides quick intelligence web links."""
+        try:
+            from app.network.shodan_client import ShodanClient
+            is_ip = indicator_type.lower() in ("ip", "ipv4", "ipv6")
+            shodan_res = ShodanClient.lookup(indicator, is_ip=is_ip)
+            feed = result["feeds"]["shodan"]
+            feed["queried"] = bool(shodan_res.get("queried", False))
+            feed["configured"] = bool(shodan_res.get("configured", False))
+            feed["web_link"] = shodan_res.get("web_link", "")
+            feed["open_ports"] = shodan_res.get("ports", [])
+            feed["vulns"] = shodan_res.get("vulns", [])
+            feed["vulns_count"] = len(shodan_res.get("vulns", []))
+            feed["tags"] = shodan_res.get("tags", [])
+            feed["services"] = shodan_res.get("services", [])
+            feed["os"] = shodan_res.get("os")
+            feed["isp"] = shodan_res.get("isp")
+            feed["org"] = shodan_res.get("org")
+
+            if feed["queried"]:
+                result["total_feeds_queried"] += 1
+                if len(feed["vulns"]) > 0:
+                    feed["verdict"] = "malicious"
+                    result["malicious_votes"] += 2
+                    for v in feed["vulns"]:
+                        result["threat_tags"].append(f"shodan:{v}")
+                elif any(t in ["c2", "compromised", "malware", "botnet"] for t in feed["tags"]):
+                    feed["verdict"] = "malicious"
+                    result["malicious_votes"] += 2
+                elif len(feed["open_ports"]) > 0:
+                    feed["verdict"] = "suspicious" if any(p in [23, 3389, 445, 5900, 6379, 27017] for p in feed["open_ports"]) else "clean"
+                else:
+                    feed["verdict"] = "clean"
+            else:
+                feed["verdict"] = "unknown"
+        except Exception as e:
+            logger.debug(f"Shodan feed query error for {indicator}: {e}")
 
     @classmethod
     def probe_google_play_store(cls, package_name: str) -> Dict[str, Any]:

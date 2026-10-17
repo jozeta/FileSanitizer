@@ -29,6 +29,8 @@ from app.network.reverse_infrastructure import ReverseInfrastructurePivoter
 from app.network.typosquat_generator import TyposquattingGenerator
 from app.network.tracking_pivots import TrackingIdentifierPivoter
 from app.network.snapshot_differ import InvestigationSnapshotDiffer
+from app.network.shodan_client import ShodanClient
+from app.network.dork_scanner import DorkArtifactScanner
 
 # Cache for RDAP lookups to avoid rate limiting
 _RDAP_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
@@ -126,6 +128,8 @@ class DomainAnalyzer:
             "passive_dns": None,
             "leak_search": None,
             "active_security_probes": None,
+            "shodan": {},
+            "dork_findings": {},
             "risk_flags": []
         }
 
@@ -316,7 +320,21 @@ class DomainAnalyzer:
                 logger.debug(f"Typosquatting analysis failed for {clean_target}: {e}")
                 return {"tested": False, "target": clean_target}
 
-        with ThreadPoolExecutor(max_workers=16) as pool:
+        def _task_shodan():
+            try:
+                return ShodanClient.lookup(clean_target, is_ip=is_ip, primary_ip=primary_ip)
+            except Exception as e:
+                logger.debug(f"Shodan lookup failed for {clean_target}: {e}")
+                return {"queried": False, "configured": False, "target": clean_target}
+
+        def _task_dorks():
+            try:
+                return DorkArtifactScanner.scan(clean_target, is_ip=is_ip)
+            except Exception as e:
+                logger.debug(f"Dork & sensitive artifact scan failed for {clean_target}: {e}")
+                return {"scanned": False, "target": clean_target, "total_artifacts_found": 0, "artifacts": [], "dork_presets": []}
+
+        with ThreadPoolExecutor(max_workers=18) as pool:
             f_whois = pool.submit(_task_whois)
             f_rev_ip = pool.submit(_task_reverse_ip)
             f_sibling = pool.submit(_task_sibling_domains)
@@ -333,6 +351,8 @@ class DomainAnalyzer:
             f_leak = pool.submit(_task_leak)
             f_rev_infra = pool.submit(_task_rev_infra)
             f_typosquat = pool.submit(_task_typosquat)
+            f_shodan = pool.submit(_task_shodan)
+            f_dorks = pool.submit(_task_dorks)
 
             whois_data = f_whois.result()
             co_hosted_domains, net_info = f_rev_ip.result()
@@ -350,8 +370,31 @@ class DomainAnalyzer:
             leak_data = f_leak.result()
             rev_infra = f_rev_infra.result()
             typo_data = f_typosquat.result()
+            shodan_data = f_shodan.result()
+            dorks_data = f_dorks.result()
 
         # 7. Assemble Parallel Inspection Results & Security Risk Flags
+        res["shodan"] = shodan_data
+        res["dork_findings"] = dorks_data
+
+        # Add risk flags for sensitive file exposures from dork scan
+        for art in dorks_data.get("artifacts", []):
+            if art.get("severity") in ("critical", "high"):
+                res["risk_flags"].append({
+                    "severity": art["severity"],
+                    "title": f"Sensitive Artifact Discovered: {art.get('title')}",
+                    "description": f"Exposed {art.get('category_label', 'file')} ({art.get('filename')}) reachable via {art.get('source')}: {art.get('url')}."
+                })
+
+        # Add risk flags for Shodan vulnerabilities / CVEs
+        if shodan_data.get("vulns"):
+            cve_list = shodan_data["vulns"][:5]
+            res["risk_flags"].append({
+                "severity": "critical" if len(shodan_data["vulns"]) >= 3 else "high",
+                "title": f"Known CVE Vulnerabilities Indexed by Shodan ({len(shodan_data['vulns'])})",
+                "description": f"Shodan reports unpatched CVE vulnerabilities on target infrastructure: {', '.join(cve_list)}."
+            })
+
         res["whois"] = whois_data
         domain_age_days = whois_data.get("domain_age_days")
         if domain_age_days is not None and domain_age_days < 30:

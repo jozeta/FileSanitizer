@@ -588,6 +588,8 @@ def verify_api_key(req: VerifyKeyRequest, admin=Depends(require_admin)):
             key = settings_store.get_api_key("mxtoolbox_api_key")
         elif service in ["ipinfo", "ipinfo_io"]:
             key = settings_store.get_api_key("ipinfo_api_key")
+        elif service == "shodan":
+            key = settings_store.get_api_key("shodan_api_key")
 
     if not key and service not in ["circl", "circl_hashlookup", "hashlookup", "rdap", "whois", "iana", "ipinfo", "ipinfo_io"]:
         raise HTTPException(status_code=400, detail="API key is empty or not provided.")
@@ -663,6 +665,11 @@ def verify_api_key(req: VerifyKeyRequest, admin=Depends(require_admin)):
             from app.analyzers.reputation_client import MXToolboxClient
             valid, msg = MXToolboxClient.verify_key(key)
             return {"valid": valid, "service": "mxtoolbox", "message": msg}
+
+        elif service == "shodan":
+            from app.network.shodan_client import ShodanClient
+            valid, msg = ShodanClient.verify_key(key)
+            return {"valid": valid, "service": "shodan", "message": msg}
 
         elif service in ["rdap", "whois", "iana"]:
             from app.analyzers.reputation_client import RdapClient

@@ -44,7 +44,9 @@ import {
   ChevronDown,
   ChevronUp,
   Star,
-  Cloud
+  Cloud,
+  Database,
+  Sparkles
 } from 'lucide-react';
 
 export const CLOUD_TAKEOVER_SIGNATURES = [
@@ -147,7 +149,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
 }) => {
   const [domainInfo, setDomainInfo] = useState<DomainIntelligence>(initialDomainInfo);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'normalisation' | 'takeover' | 'relations' | 'email_sec' | 'archive' | 'bgp_pdns' | 'recon' | 'surface' | 'tls' | 'dns' | 'web' | 'cti' | 'exposure' | 'vulnerabilities' | 'typosquatting'
+    'overview' | 'normalisation' | 'takeover' | 'relations' | 'email_sec' | 'archive' | 'bgp_pdns' | 'recon' | 'surface' | 'tls' | 'dns' | 'web' | 'cti' | 'exposure' | 'vulnerabilities' | 'typosquatting' | 'dorks'
   >('overview');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [subdomainSearch, setSubdomainSearch] = useState('');
@@ -187,6 +189,45 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
   // Cloud Provider Takeover Signatures Search & Filter State
   const [signatureSearch, setSignatureSearch] = useState<string>('');
   const [signatureProviderFilter, setSignatureProviderFilter] = useState<string>('all');
+
+  // Sensitive Files & Automated Google Dorks State
+  const [dorkCategoryFilter, setDorkCategoryFilter] = useState<string>('all');
+  const [dorkSeverityFilter, setDorkSeverityFilter] = useState<string>('all');
+  const [dorkSearch, setDorkSearch] = useState<string>('');
+  const [dorkSubTab, setDorkSubTab] = useState<'findings' | 'presets'>('findings');
+  const [ingestingUrl, setIngestingUrl] = useState<string | null>(null);
+  const [ingestStatus, setIngestStatus] = useState<{ url: string; success?: boolean; message?: string; jobId?: string } | null>(null);
+
+  const handleWashArtifact = async (artifactUrl: string) => {
+    setIngestingUrl(artifactUrl);
+    setIngestStatus(null);
+    try {
+      const res = await apiClient.fetchUrl(artifactUrl);
+      if (res.jobs && res.jobs.length > 0) {
+        const j = res.jobs[0];
+        setIngestStatus({
+          url: artifactUrl,
+          success: true,
+          message: `Ingested "${j.filename || 'file'}" for sanitization & analysis!`,
+          jobId: j.job_id
+        });
+      } else {
+        setIngestStatus({
+          url: artifactUrl,
+          success: true,
+          message: 'Target fetched and queued for sanitization.',
+        });
+      }
+    } catch (err: any) {
+      setIngestStatus({
+        url: artifactUrl,
+        success: false,
+        message: err.message || 'Failed to fetch and sanitize file.'
+      });
+    } finally {
+      setIngestingUrl(null);
+    }
+  };
 
   // Enforce redirection away from disabled checks/tabs
   useEffect(() => {
@@ -274,6 +315,8 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
   const emailPosture = domainInfo.email_domain_posture;
   const tlsForensics = domainInfo.tls_cert_forensics;
   const webExposureAudit = domainInfo.web_headers_and_exposure;
+  const shodan = domainInfo.shodan;
+  const dorkFindings = domainInfo.dork_findings;
 
   // Filter subdomains for surface map with provenance & status awareness
   const filteredSubdomains = (surface?.subdomains || []).filter(s => {
@@ -1136,6 +1179,30 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
           {typosquat?.active_registered_count ? (
             <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-100 text-amber-800 font-bold">
               {typosquat.active_registered_count} Live
+            </span>
+          ) : null}
+        </button>
+
+        {/* SENSITIVE FILES & GOOGLE DORKS */}
+        <button
+          onClick={() => setActiveTab('dorks')}
+          className={`py-3 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'dorks'
+              ? 'border-indigo-600 text-indigo-600 bg-indigo-50/40'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Search className="w-3.5 h-3.5 text-indigo-600" />
+          <span className="font-bold">Sensitive Files &amp; Dorks</span>
+          {dorkFindings?.total_artifacts_found ? (
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+              (dorkFindings.severity_counts?.critical || 0) > 0
+                ? 'bg-rose-100 text-rose-800'
+                : (dorkFindings.severity_counts?.high || 0) > 0
+                ? 'bg-amber-100 text-amber-800'
+                : 'bg-indigo-100 text-indigo-800'
+            }`}>
+              {dorkFindings.total_artifacts_found}
             </span>
           ) : null}
         </button>
@@ -4810,6 +4877,66 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       </a>
                     </div>
                   </div>
+
+                  {/* Shodan Host & Port Intelligence */}
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <span>🪐</span> Shodan Intelligence
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          shodan?.vulns && shodan.vulns.length > 0
+                            ? 'bg-rose-100 text-rose-800'
+                            : shodan?.ports && shodan.ports.length > 0
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {shodan?.vulns && shodan.vulns.length > 0
+                            ? `${shodan.vulns.length} CVEs`
+                            : shodan?.ports && shodan.ports.length > 0
+                            ? `${shodan.ports.length} Open Ports`
+                            : shodan?.queried
+                            ? 'Clean'
+                            : 'Direct Web'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 font-mono">
+                        {shodan?.queried ? (
+                          <>
+                            Ports: {shodan.ports && shodan.ports.length > 0 ? shodan.ports.slice(0, 5).join(', ') : 'None'}
+                            {shodan.ports && shodan.ports.length > 5 ? ` +${shodan.ports.length - 5} more` : ''}
+                            {shodan.os ? ` | OS: ${shodan.os}` : ''}
+                          </>
+                        ) : (
+                          shodan?.message || 'Shodan search repository'
+                        )}
+                      </p>
+                      {shodan?.vulns && shodan.vulns.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {shodan.vulns.slice(0, 3).map((cve) => (
+                            <span key={cve} className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-rose-100 text-rose-800 font-bold">
+                              {cve}
+                            </span>
+                          ))}
+                          {shodan.vulns.length > 3 && (
+                            <span className="text-[10px] text-slate-500 font-mono">+{shodan.vulns.length - 3}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="pt-2 border-t border-slate-200">
+                      <a
+                        href={shodan?.web_link || `https://www.shodan.io/search?query=${encodeURIComponent(domainInfo.target)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-[11px] font-medium"
+                      >
+                        <span>Shodan Host Report</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
                 </div>
 
                 {/* 3. External CTI Quick Pivots */}
@@ -5976,6 +6103,406 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
           </div>
         )}
 
+        {/* ================= TAB: SENSITIVE FILES & GOOGLE DORKS ================= */}
+        {activeTab === 'dorks' && (() => {
+          const artifacts = dorkFindings?.artifacts || [];
+          const presets = dorkFindings?.dork_presets || [];
+          const counts = dorkFindings?.category_counts || {
+            documents: 0,
+            secrets: 0,
+            database: 0,
+            logs: 0,
+            admin: 0,
+            other: 0,
+          };
+          const sevCounts = dorkFindings?.severity_counts || {
+            critical: 0,
+            high: 0,
+            medium: 0,
+            low: 0,
+          };
+
+          const filteredArtifacts = artifacts.filter((art) => {
+            const q = dorkSearch.trim().toLowerCase();
+            const matchesSearch =
+              !q ||
+              art.filename.toLowerCase().includes(q) ||
+              art.title.toLowerCase().includes(q) ||
+              art.url.toLowerCase().includes(q) ||
+              (art.snippet || '').toLowerCase().includes(q) ||
+              art.category_label.toLowerCase().includes(q);
+            const matchesCategory = dorkCategoryFilter === 'all' || art.category === dorkCategoryFilter;
+            const matchesSeverity = dorkSeverityFilter === 'all' || art.severity === dorkSeverityFilter;
+            return matchesSearch && matchesCategory && matchesSeverity;
+          });
+
+          return (
+            <div className="space-y-6">
+              {/* Header Banner */}
+              <div className={`p-4 rounded-xl border ${
+                sevCounts.critical > 0
+                  ? 'bg-rose-50/90 border-rose-300 text-rose-950'
+                  : sevCounts.high > 0
+                  ? 'bg-amber-50/90 border-amber-300 text-amber-950'
+                  : 'bg-indigo-50/70 border-indigo-200 text-indigo-950'
+              }`}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold flex items-center gap-2">
+                      <Search className="w-4 h-4 text-indigo-600" />
+                      <span>Automated Sensitive Files &amp; Google Dorks Discovery</span>
+                    </h4>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Continuously audits exposed configuration files, database backups, logs, and sensitive internal documents (.pdf, .docx, .env, .sql, .log) across target attack surface, plus interactive Google Dork search presets.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                      sevCounts.critical > 0
+                        ? 'bg-rose-100 text-rose-800 border-rose-300'
+                        : sevCounts.high > 0
+                        ? 'bg-amber-100 text-amber-800 border-amber-300'
+                        : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    }`}>
+                      {dorkFindings?.total_artifacts_found || 0} Artifacts Discovered
+                    </span>
+                  </div>
+                </div>
+
+                {/* Metric Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-3 text-xs">
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Total Found</span>
+                    <p className="text-base font-extrabold text-slate-900 mt-0.5">{dorkFindings?.total_artifacts_found || 0}</p>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="text-[10px] font-bold text-rose-600 uppercase">Critical / High</span>
+                    <p className={`text-base font-extrabold mt-0.5 ${(sevCounts.critical + sevCounts.high) > 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                      {sevCounts.critical + sevCounts.high}
+                    </p>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="text-[10px] font-bold text-indigo-600 uppercase">Documents</span>
+                    <p className="text-base font-extrabold text-indigo-900 mt-0.5">{counts.documents || 0}</p>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="text-[10px] font-bold text-amber-600 uppercase">Secrets &amp; Keys</span>
+                    <p className="text-base font-extrabold text-amber-900 mt-0.5">{counts.secrets || 0}</p>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="text-[10px] font-bold text-purple-600 uppercase">DB Backups</span>
+                    <p className="text-base font-extrabold text-purple-900 mt-0.5">{counts.database || 0}</p>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                    <span className="text-[10px] font-bold text-slate-600 uppercase">Logs &amp; Dumps</span>
+                    <p className="text-base font-extrabold text-slate-800 mt-0.5">{counts.logs || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sub-Tabs: Discovered Artifacts vs Curated Dorks Launchpad */}
+              <div className="flex border-b border-slate-200 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setDorkSubTab('findings')}
+                  className={`pb-2.5 text-xs font-bold border-b-2 cursor-pointer transition-colors flex items-center gap-1.5 ${
+                    dorkSubTab === 'findings'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Discovered Sensitive Artifacts ({artifacts.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDorkSubTab('presets')}
+                  className={`pb-2.5 text-xs font-bold border-b-2 cursor-pointer transition-colors flex items-center gap-1.5 ${
+                    dorkSubTab === 'presets'
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Curated Google Dorks Launchpad ({presets.length})</span>
+                </button>
+              </div>
+
+              {/* Ingestion Notification Feedback */}
+              {ingestStatus && (
+                <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 text-xs ${
+                  ingestStatus.success
+                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                    : 'bg-rose-50 text-rose-900 border-rose-300'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {ingestStatus.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />}
+                    <span>{ingestStatus.message}</span>
+                  </div>
+                  {ingestStatus.jobId && onNavigateToJob && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToJob(ingestStatus.jobId!)}
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                    >
+                      <span>Open Sanitized File</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* SUBTAB 1: DISCOVERED ARTIFACTS */}
+              {dorkSubTab === 'findings' && (
+                <div className="space-y-4">
+                  {/* Search and Filters */}
+                  <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <div className="flex flex-wrap items-center gap-2 flex-1">
+                      <div className="relative flex-1 min-w-[200px]">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                        <input
+                          type="text"
+                          value={dorkSearch}
+                          onChange={(e) => setDorkSearch(e.target.value)}
+                          placeholder="Search filename, URL, secret, or preview snippet..."
+                          className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+
+                      {/* Category Filter */}
+                      <select
+                        value={dorkCategoryFilter}
+                        onChange={(e) => setDorkCategoryFilter(e.target.value)}
+                        className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 font-medium cursor-pointer focus:outline-none"
+                      >
+                        <option value="all">All Categories ({artifacts.length})</option>
+                        <option value="document">Documents ({counts.documents || 0})</option>
+                        <option value="secret">Secrets &amp; Credentials ({counts.secrets || 0})</option>
+                        <option value="database">Database Backups ({counts.database || 0})</option>
+                        <option value="log">Logs &amp; Dumps ({counts.logs || 0})</option>
+                        <option value="admin">Admin Portals ({counts.admin || 0})</option>
+                      </select>
+
+                      {/* Severity Filter */}
+                      <div className="flex items-center gap-1">
+                        {(['all', 'critical', 'high', 'medium', 'low'] as const).map((sev) => (
+                          <button
+                            key={sev}
+                            type="button"
+                            onClick={() => setDorkSeverityFilter(sev)}
+                            className={`px-2 py-1 rounded-md text-[11px] font-bold capitalize transition-colors cursor-pointer ${
+                              dorkSeverityFilter === sev
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                            }`}
+                          >
+                            {sev}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-slate-500 font-mono shrink-0">
+                      Showing {filteredArtifacts.length} of {artifacts.length} findings
+                    </div>
+                  </div>
+
+                  {/* Artifacts List */}
+                  {filteredArtifacts.length === 0 ? (
+                    <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                      <div className="text-2xl">🛡️</div>
+                      <h5 className="text-xs font-bold text-slate-700">No Sensitive Artifacts Match Query</h5>
+                      <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                        {artifacts.length === 0
+                          ? 'Automated inspection of direct exposure paths, sitemaps, robots.txt, and search dorks did not surface publicly accessible sensitive files or credentials on this target.'
+                          : 'Try clearing your search query or adjusting your category/severity filter.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredArtifacts.map((art, idx) => (
+                        <div
+                          key={idx}
+                          className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs hover:border-indigo-300 transition-all space-y-3"
+                        >
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Severity Badge */}
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase tracking-wider border ${
+                                art.severity === 'critical'
+                                  ? 'bg-rose-100 text-rose-800 border-rose-300'
+                                  : art.severity === 'high'
+                                  ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                  : art.severity === 'medium'
+                                  ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                  : 'bg-slate-100 text-slate-700 border-slate-300'
+                              }`}>
+                                {art.severity}
+                              </span>
+
+                              {/* Category Badge */}
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
+                                {art.category === 'database' ? (
+                                  <Database className="w-3 h-3 text-purple-600" />
+                                ) : art.category === 'secret' ? (
+                                  <Key className="w-3 h-3 text-amber-600" />
+                                ) : (
+                                  <FileText className="w-3 h-3 text-indigo-600" />
+                                )}
+                                <span>{art.category_label}</span>
+                              </span>
+
+                              {/* Source Badge */}
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-500 bg-slate-100">
+                                {art.source}
+                              </span>
+
+                              {art.status_code && (
+                                <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
+                                  art.status_code === 200 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
+                                }`}>
+                                  HTTP {art.status_code}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Actions Toolbar */}
+                            <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(art.url, `art_${idx}`)}
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium cursor-pointer transition-colors inline-flex items-center gap-1"
+                                title="Copy full URL"
+                              >
+                                {copiedKey === `art_${idx}` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-slate-500" />}
+                                <span>Copy URL</span>
+                              </button>
+
+                              <a
+                                href={art.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium inline-flex items-center gap-1"
+                                title="Open URL in new tab"
+                              >
+                                <span>Open</span>
+                                <ExternalLink className="w-3 h-3 text-slate-500" />
+                              </a>
+
+                              {/* 1-Click Wash & Sanitize */}
+                              <button
+                                type="button"
+                                onClick={() => handleWashArtifact(art.url)}
+                                disabled={ingestingUrl === art.url}
+                                className="px-3 py-1 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 shadow-2xs disabled:opacity-60"
+                                title="Ingest this file into FileSanitizer for deep triage, malware scan, and CDR sanitization"
+                              >
+                                {ingestingUrl === art.url ? (
+                                  <>
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    <span>Sanitizing...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="w-3 h-3 text-amber-300" />
+                                    <span>Wash in FileSanitizer</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Filename & URL */}
+                          <div>
+                            <h5 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                              <FileCode className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                              <span className="font-mono">{art.filename}</span>
+                              {art.title && art.title !== art.filename && (
+                                <span className="text-slate-500 font-normal">({art.title})</span>
+                              )}
+                            </h5>
+                            <p className="text-[11px] font-mono text-slate-600 break-all select-all mt-0.5">
+                              {art.url}
+                            </p>
+                          </div>
+
+                          {/* Evidence / Snippet Preview */}
+                          {art.snippet && (
+                            <div className="p-2.5 bg-slate-900 text-slate-200 rounded-lg text-[11px] font-mono leading-relaxed overflow-x-auto border border-slate-800">
+                              <span className="text-slate-400 select-none text-[10px] block mb-0.5 font-sans font-semibold uppercase">Exposed Content Evidence:</span>
+                              <code>{art.snippet}</code>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUBTAB 2: CURATED GOOGLE DORKS LAUNCHPAD */}
+              {dorkSubTab === 'presets' && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1">
+                    <h5 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                      <Search className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Ready-to-Use Google Dork Intelligence Queries</span>
+                    </h5>
+                    <p className="text-xs text-indigo-900/80 leading-relaxed">
+                      Pivot directly into Google search indexing with pre-calibrated reconnaissance dorks tailored to <strong>{domainInfo.target}</strong>.
+                      Launch live queries or copy search operators directly to your clipboard.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {presets.map((p) => (
+                      <div
+                        key={p.id}
+                        className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs hover:border-indigo-300 transition-all flex flex-col justify-between space-y-3"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                              {p.category}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">Google Search Operator</span>
+                          </div>
+                          <h5 className="text-xs font-bold text-slate-900">{p.title}</h5>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">{p.description}</p>
+                          <div className="p-2 bg-slate-900 text-emerald-400 rounded-lg font-mono text-[11px] break-all select-all border border-slate-800">
+                            {p.query}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(p.query, p.id)}
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium cursor-pointer transition-colors inline-flex items-center gap-1"
+                            title="Copy Google Dork query"
+                          >
+                            {copiedKey === p.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-slate-500" />}
+                            <span>Copy Dork</span>
+                          </button>
+
+                          <a
+                            href={p.google_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <span>Search on Google</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

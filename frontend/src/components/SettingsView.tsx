@@ -1569,6 +1569,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     const mx = fd.get('mxtoolbox_api_key')?.toString();
     const us = fd.get('urlscan_api_key')?.toString();
     const ipi = fd.get('ipinfo_api_key')?.toString();
+    const sho = fd.get('shodan_api_key')?.toString();
 
     const isMaskedOrEmpty = (val: string | undefined) => {
       if (!val) return true;
@@ -1584,6 +1585,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     if (mx !== undefined && !isMaskedOrEmpty(mx)) updates['mxtoolbox_api_key'] = mx.trim();
     if (us !== undefined && !isMaskedOrEmpty(us)) updates['urlscan_api_key'] = us.trim();
     if (ipi !== undefined && !isMaskedOrEmpty(ipi)) updates['ipinfo_api_key'] = ipi.trim();
+    if (sho !== undefined && !isMaskedOrEmpty(sho)) updates['shodan_api_key'] = sho.trim();
 
 
     try {
@@ -2205,6 +2207,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 { key: 'crowdstrike_enabled', label: 'CrowdStrike / Hybrid Analysis', desc: 'Query crowd-sourced sandbox verdicts & Falcon telemetry' },
                 { key: 'circl_hashlookup_enabled', label: 'CIRCL Hashlookup', desc: 'NSRL and known benign / malware hash lookup' },
                 { key: 'malwarebazaar_enabled', label: 'MalwareBazaar (abuse.ch)', desc: 'Check known malware sample registry and YARA signatures' },
+                { key: 'shodan_enabled', label: 'Shodan Threat Intel', desc: 'Enrich hosts with exposed ports, service banners, and CVE correlation' },
               ].map((item) => {
                 const enabled = settingsData.global_checks?.[item.key] ?? false;
                 return (
@@ -3174,6 +3177,54 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 }`}>
                   <span>{keyVerification['ipinfo'].valid ? '✅' : '❌'}</span>
                   <span className="font-medium">{keyVerification['ipinfo'].message}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Shodan API Key */}
+            <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                  <span>🪐</span> Shodan Host Intelligence & CVE Search API Key
+                </label>
+                <a
+                  href="https://account.shodan.io/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-indigo-600 hover:underline font-medium"
+                >
+                  Get Shodan API Key ↗
+                </a>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  id="shodan_api_key_input"
+                  type="text"
+                  name="shodan_api_key"
+                  defaultValue={settingsData.api_keys?.shodan_api_key || ''}
+                  placeholder="32-character Shodan API Key"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleVerifyApiKey('shodan', 'shodan_api_key_input')}
+                  disabled={keyVerification['shodan']?.loading}
+                  className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-300 transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-2xs"
+                >
+                  {keyVerification['shodan']?.loading ? '⚡ Testing...' : '⚡ Verify Key'}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Correlates target IP addresses and hostnames against Shodan's global repository to enumerate open ports, running services, software banners, and verified CVE vulnerabilities.
+              </p>
+              {keyVerification['shodan'] && !keyVerification['shodan'].loading && (
+                <div className={`p-2.5 rounded-xl text-xs flex items-center gap-2 border ${
+                  keyVerification['shodan'].valid
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}>
+                  <span>{keyVerification['shodan'].valid ? '✅' : '❌'}</span>
+                  <span className="font-medium">{keyVerification['shodan'].message}</span>
                 </div>
               )}
             </div>

@@ -2,7 +2,7 @@
 
 > **"Don't trust the file. Wash it first."** *(featuring 30+ dynamic cybersecurity slogans rotating on every reload)*
 
-[![Release](https://img.shields.io/badge/release-v2.4.2-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
+[![Release](https://img.shields.io/badge/release-v2.5.0-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
 [![Python](https://img.shields.io/badge/python-3.11-brightgreen.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
@@ -199,7 +199,7 @@ CLEAN FILE READY FOR DOWNLOAD
 | **Android Applications (APK)** | APK, AAB, XAPK, DEX | Hybrid Androguard 4.x & pure-Python AXML engine, multi-DEX class extraction & bytecode analysis, **Dalvik/Smali Opcode Disassembler & High-Level Java Decompiler** with interactive class & method browser, embedded source code & framework bundle scanner (`.java`, `.kt`, React Native/JS `index.android.bundle`, shell scripts `.sh`, `.xml`, `.json`), native ELF library triage (`lib/**/*.so`) with JNI export mapping and Checksec mitigations (NX, PIE, Canary, RELRO), dangerous permissions matrix with MITRE Mobile ATT&CK correlation, IPC attack surface (Activities, Services, Receivers with `BOOT_COMPLETED`, Providers), 10-point automated security compliance audit (OWASP MASVS), X.509 code signing certificates (debug keystore detection), and integrated online threat intel (Koodous, VirusTotal, MalwareBazaar, Google Play Store, APKPure). | **Mobile Disarm & Dossier:** Neutralize dangerous permissions, defang C2 URLs, clear debuggable flag, purge secondary executables, or compile into static Vector PDF review dossier. |
 | **Java Files & Bytecode** | JAVA, CLASS, JAR, WAR | Java source code AST & static security heuristics (`Runtime.exec`, `ProcessBuilder`, `sun.misc.Unsafe`, dynamic reflection, JNDI lookups/Log4Shell, SQLi), compiled bytecode (`.class`) Constant Pool parsing and dangerous method reference resolution (Java 1.1 to Java 23), JAR manifest triage (`Main-Class`, `Premain-Class` Java Agent memory hooks, `all-permissions`), native library packaging, and Java RAT signatures (jRAT, Adwind, AlienSpy, AsyncRAT). | **Java Disarm & Dossier:** Disarm OS shell execution and reflection hooks, defang URLs, enforce non-executable file permissions (`0o644`), or compile into clean Vector PDF review report. |
 | **Scripts & Command Files** | PS1, VBS, VBA, SH, JS, PHP, CMD, BAT | Static AST & regex analysis: dynamic code execution (`IEX`, `eval`), download cradles (`DownloadString`, `curl | sh`), memory injection / AMSI bypass, Base64 block decoding with preview, LOLBin usage (`certutil`, `bitsadmin`, `mshta`), PHP webshell signatures, Shannon entropy | **Script Sanitizer:** Defang all URLs, disarm dynamic execution hooks (`IEX`, `eval`, `system`), append security disclosure banners, enforce non-executable permissions (`0o644`), or compile into read-only vector PDF review document. |
-| **Domain/IP & Infrastructure** | URL, Domain, IPv4, IPv6 | Non-blocking async threat platform: Live sandboxed Chromium webpage screenshot, full DNS resolution & Forward-Confirmed Reverse DNS (FCrDNS), BGP routing & ASN profiling, Nmap Active Service Reconnaissance (`nmap -sS -sV --version-light -T3 --open -Pn --reason -oA`), Active Security Probes (sensitive file exposure, WAF detection, CORS/HTTP methods), Web Archive (Wayback Machine) calendar integration & snapshot diffing, Smart Infrastructure Pivots (separating direct affiliates from CDN/DDoS edge noise), Typosquatting Radar, and Email Security (DMARC/DKIM/SPF). | **Network Defang & Report:** Defang active URLs and domain IOCs (`hxxp://`, `[.]`), export structured threat intelligence dossiers (JSON/PDF). |
+| **Domain/IP & Infrastructure** | URL, Domain, IPv4, IPv6 | Non-blocking async threat platform: Live sandboxed Chromium webpage screenshot, full DNS resolution & Forward-Confirmed Reverse DNS (FCrDNS), BGP routing & ASN profiling, **Official Shodan Host & Port Intelligence API** (open ports, service banners, CPEs, CVE correlation), **Automated Sensitive Files & Google Dorks Discovery Engine** (automatic discovery of exposed .env, .sql, .log, and internal documents with 1-click "Wash & Sanitize in FileSanitizer" and 7 curated Google Dork presets), Nmap Active Service Reconnaissance (`nmap -sS -sV --version-light -T3 --open -Pn --reason -oA`), Active Security Probes (sensitive file exposure, WAF detection, CORS/HTTP methods), Web Archive (Wayback Machine) calendar integration & snapshot diffing, Smart Infrastructure Pivots (separating direct affiliates from CDN/DDoS edge noise), Typosquatting Radar, and Email Security (DMARC/DKIM/SPF). | **Network Defang, Ingestion & Report:** Defang active URLs and domain IOCs (`hxxp://`, `[.]`), 1-click wash & sanitize discovered sensitive files, export structured threat intelligence dossiers (JSON/PDF). |
 | **Plain Text & Data** | TXT, CSV, JSON, XML, YAML, Markdown | Character encoding analysis (UTF-8, UTF-16, BOM), CSV formula injection (DDE execution attacks) | **Text Sanitizer:** Strip BOM, sanitize DDE formula prefixes (`=`, `+`, `-`, `@`), strip control characters. |
 
 ---
@@ -635,6 +635,28 @@ Modern domains hosted behind DDoS mitigation scrubbers or Content Delivery Netwo
 * **Web Application Firewall (WAF) Fingerprinting:** Identifies active WAF/DDoS protection layers (Cloudflare, AWS WAF, Akamai, Imperva, Baffin Bay) by evaluating HTTP response headers, cookie flags, and block page challenge signatures.
 * **CORS & Dangerous HTTP Methods:** Audits Cross-Origin Resource Sharing policies (`Access-Control-Allow-Origin: *`) and tests for dangerous HTTP verbs (`PUT`, `DELETE`, `TRACE`).
 * **TLS Cryptography Audit:** Audits TLS version support (TLS 1.0, 1.1, 1.2, 1.3), cipher suite strength, certificate expiration delta, and HSTS enforcement.
+
+### Shodan Threat Intelligence & Host Attack Surface Integration
+FileSanitizer features native integration with the **Shodan Search Engine API**:
+* **Passive Open Port & Service Enumeration:** Correlates target IP addresses and hostnames against Shodan's global scanning repository to discover active listening ports and running network daemons without generating active probe traffic towards the target.
+* **Banner Analysis & CPE Fingerprinting:** Extracts daemon software products, versions, transport layers, Common Platform Enumeration (CPE) strings, and SSL/TLS configuration flags.
+* **Automated CVE Correlation:** Matches indexed services against Shodan's vulnerability catalog to surface confirmed and high-risk CVEs associated with the exposed infrastructure.
+* **Multi-Engine Threat Grid & Consensus Scoring:** Shodan results sit alongside VirusTotal, URLhaus, ThreatFox, AbuseIPDB, and AlienVault OTX in the CTI overview, directly contributing to consensus maliciousness verdicts and threat tags.
+* **1-Click Administrator Verification & Redis Caching:** Configure your Shodan API key in Administrator Settings with real-time API verification (`/api-info`) and automatic TTL-based Redis caching to optimize credit usage.
+
+### Automated Sensitive Files & Google Dorks Discovery Engine
+FileSanitizer removes the friction of manual search engine dorking by automating sensitive artifact discovery:
+* **100% Automated Multi-Strategy Discovery:**
+  1. *Anti-SSRF Direct Path Probing:* Non-intrusive, SSRF-guarded probing of high-value administrative and configuration paths (`/.env`, `/.git/config`, `/.git/HEAD`, `/backup.sql`, `/dump.sql`, `/web.config`, `/error.log`, `/id_rsa`).
+  2. *Sitemap & Robots.txt Harvesting:* Automatically downloads and indexes `robots.txt` and `sitemap.xml` entries, extracting links to internal documents, staging routes, and backup archives.
+  3. *Search Dork Engine Scraping:* Discovers publicly indexed sensitive files (`.pdf`, `.docx`, `.xlsx`, `.sql`, `.bak`, `.log`) with automatic classification.
+* **Intelligent Category & Severity Classification:**
+  * **Documents:** Internal whitepapers, financial budgets, NDAs, and confidential memos (`.pdf`, `.docx`, `.xlsx`, `.pptx`).
+  * **Secrets & Credentials:** Environment configurations, private keys, authentication tokens (`.env`, `.git`, `.key`, `.pem`, `.kdbx`).
+  * **Databases & Backups:** Database dumps and migration snapshots (`.sql`, `.bak`, `.dump`, `.tar.gz`, `.zip`).
+  * **Logs & Dumps:** Error logs, access logs, memory dumps (`.log`, `.dmp`, `/debug`).
+* **1-Click "Wash & Sanitize in FileSanitizer" Ingestion:** Any discovered sensitive document or archive can be ingested directly into FileSanitizer's file pipeline with a single click, instantly launching full forensic triage, malware scanning, and Content Disarm & Reconstruction (CDR).
+* **Curated Google Dorks Launchpad:** Includes 7 pre-calibrated Google Dork search presets tailored to the target domain (`site:<target> filetype:pdf`, `site:<target> (ext:env | ext:sql)`, `site:<target> inurl:admin`, etc.) with 1-click Google search launch and copyable query operators.
 
 ### Subdomain Topology & Attack Surface Mapping
 * **Passive & Active Discovery:** Discovers subdomains via Certificate Transparency (crt.sh), TLS Subject Alternative Names (SANs), DNS CNAME chains, and active resolution probes.

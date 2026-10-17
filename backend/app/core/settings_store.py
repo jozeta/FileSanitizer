@@ -31,6 +31,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
         "rdap_enabled": True,
         "url_reputation_enabled": True,
         "url_screenshot_enabled": True,
+        "shodan_enabled": True,
     },
     # Format-specific checks
     "format_checks": {
@@ -335,6 +336,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
         "hybrid_analysis_api_key": "",
         "mxtoolbox_api_key": "",
         "ipinfo_api_key": "",
+        "shodan_api_key": "",
     },
 
     # External Connection Policies (Granular switches to disable outbound network touches)
@@ -991,6 +993,9 @@ class SettingsStore:
             data["api_keys"]["safe_browsing_api_key"] = settings.SAFE_BROWSING_API_KEY
         if settings.URLHAUS_API_KEY:
             data["api_keys"]["urlhaus_api_key"] = settings.URLHAUS_API_KEY
+        if settings.SHODAN_API_KEY:
+            data["api_keys"]["shodan_api_key"] = settings.SHODAN_API_KEY
+            data["global_checks"]["shodan_enabled"] = True
         self._data = data
         self._save()
 
@@ -1135,6 +1140,13 @@ class SettingsStore:
         elif not updates.get("global_checks", {}).get("hybrid_analysis_enabled", False):
             self._data["global_checks"]["hybrid_analysis_enabled"] = False
 
+        # Update SHODAN_ENABLED automatically based on key presence
+        shodan_key = self._data["api_keys"].get("shodan_api_key", "").strip()
+        if shodan_key:
+            self._data["global_checks"]["shodan_enabled"] = True
+        elif not updates.get("global_checks", {}).get("shodan_enabled", True):
+            self._data["global_checks"]["shodan_enabled"] = False
+
         self._save()
         return self.get_all(mask_keys=True)
 
@@ -1171,6 +1183,8 @@ class SettingsStore:
                 return settings.SAFE_BROWSING_API_KEY or ""
             elif service == "urlhaus_api_key":
                 return settings.URLHAUS_API_KEY or ""
+            elif service == "shodan_api_key":
+                return settings.SHODAN_API_KEY or ""
         return key
 
     # Upload History Log Methods

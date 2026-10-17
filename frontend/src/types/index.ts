@@ -2680,6 +2680,7 @@ export interface DomainIntelligence {
       threatfox?: { queried: boolean; verdict: string; ioc_count: number; tags?: string[] };
       abuseipdb?: { queried: boolean; verdict: string; abuse_confidence_score: number; total_reports: number };
       alienvault_otx?: { queried: boolean; verdict: string; pulse_count: number };
+      shodan?: { queried: boolean; configured: boolean; verdict: string; open_ports: number[]; cves: string[]; web_link: string };
     };
   };
 
@@ -3066,6 +3067,97 @@ export interface DomainIntelligence {
     http_findings?: string[];
     ip_findings?: string[];
   };
+  shodan?: ShodanResult;
+  dork_findings?: DorkArtifactFindings;
+}
+
+export interface ShodanService {
+  port: number;
+  transport: string;
+  product?: string | null;
+  version?: string | null;
+  cpe?: string[];
+  banner_snippet?: string | null;
+  ssl_enabled: boolean;
+}
+
+export interface ShodanHost {
+  ip: string;
+  hostnames: string[];
+  ports: number[];
+  org?: string | null;
+  vulns: string[];
+}
+
+export interface ShodanResult {
+  configured: boolean;
+  queried: boolean;
+  target: string;
+  is_ip: boolean;
+  web_link: string;
+  ports?: number[];
+  vulns?: string[];
+  services?: ShodanService[];
+  tags?: string[];
+  hostnames?: string[];
+  os?: string | null;
+  isp?: string | null;
+  org?: string | null;
+  asn?: string | null;
+  last_update?: string | null;
+  total_services?: number;
+  total_hosts?: number;
+  subdomains?: string[];
+  dns_records?: Array<{ sub: string; type: string; value: string; last_seen?: string }>;
+  hosts?: ShodanHost[];
+  message?: string;
+  cached?: boolean;
+}
+
+export interface SensitiveArtifactItem {
+  url: string;
+  filename: string;
+  extension: string;
+  title: string;
+  category: 'document' | 'secret' | 'database' | 'log' | 'admin' | 'other' | string;
+  category_label: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  source: string;
+  snippet?: string | null;
+  status_code?: number | null;
+  content_length?: number | null;
+}
+
+export interface GoogleDorkPreset {
+  id: string;
+  category: string;
+  title: string;
+  query: string;
+  google_url: string;
+  description: string;
+}
+
+export interface DorkArtifactFindings {
+  scanned: boolean;
+  target: string;
+  total_artifacts_found: number;
+  category_counts: {
+    documents: number;
+    secrets: number;
+    database: number;
+    logs: number;
+    admin: number;
+    other: number;
+  };
+  severity_counts: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  artifacts: SensitiveArtifactItem[];
+  dork_presets: GoogleDorkPreset[];
+  message?: string;
 }
 
 export interface IndicatorNormalisation {
