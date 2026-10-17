@@ -1231,6 +1231,18 @@ class DomainAnalyzer:
             "city": None
         }
 
+        # Guard against querying private/loopback/cloud metadata IPs
+        try:
+            import ipaddress
+            from app.network.ssrf import is_ip_blocked
+            ip_obj = ipaddress.ip_address(ip)
+            if is_ip_blocked(ip_obj):
+                net_info["network_name"] = "Private / Internal Address Space (RFC 1918 / Loopback / Link-Local)"
+                net_info["isp"] = "Internal Infrastructure"
+                return [], net_info
+        except Exception:
+            pass
+
         # 1. PTR Reverse DNS
         try:
             host, _, _ = socket.gethostbyaddr(ip)

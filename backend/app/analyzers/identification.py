@@ -172,15 +172,15 @@ def detect_file_type(file_path: Path, filename: str) -> Tuple[str, str, str]:
     if fn_lower.endswith(".evtx"):
         return "application/x-windows-event-log", "evtx", "Windows Event Log (EVTX)"
 
-    # Check text / XML / SVG / HTML
-    text_check = inspect_text_type(header)
-    if text_check:
-        return text_check
-
     # Check Email messages (.eml, .msg, .mbox, RFC 822)
     email_check = inspect_email_type(file_path, header, filename)
     if email_check:
         return email_check
+
+    # Check text / XML / SVG / HTML
+    text_check = inspect_text_type(header)
+    if text_check:
+        return text_check
 
     # Check Windows Shell Link Shortcut (.lnk)
     if fn_lower.endswith(".lnk") or header.startswith(b"\x4C\x00\x00\x00\x01\x14\x02\x00"):
@@ -220,12 +220,15 @@ def detect_file_type(file_path: Path, filename: str) -> Tuple[str, str, str]:
 def inspect_email_type(file_path: Path, header: bytes, filename: str) -> Optional[Tuple[str, str, str]]:
     """Detect RFC 822 / EML email messages by extension or common mail headers."""
     name_lower = filename.lower()
-    if name_lower.endswith(".eml") or name_lower.endswith(".msg") or name_lower.endswith(".mbox"):
+    if name_lower.endswith((".eml", ".msg", ".mbox")):
         return "message/rfc822", "email", "Email Message (RFC 822 / EML)"
 
     try:
         text_start = header[:512].decode('utf-8', errors='ignore').lower()
-        email_header_keys = ["from:", "to:", "subject:", "date:", "received:", "return-path:", "message-id:"]
+        email_header_keys = [
+            "from:", "to:", "subject:", "date:", "received:", "return-path:",
+            "message-id:", "mime-version:", "content-type:", "content-transfer-encoding:"
+        ]
         matches = sum(1 for k in email_header_keys if k in text_start)
         if matches >= 2:
             return "message/rfc822", "email", "Email Message (RFC 822 / EML)"
@@ -273,18 +276,21 @@ def inspect_text_type(header: bytes) -> Optional[Tuple[str, str, str]]:
     """Determine if a text-like file is SVG, HTML, XML, JSON, or plain text."""
     try:
         snippet = header.decode('utf-8', errors='ignore').strip().lower()
-        if "<svg" in snippet or ('xmlns="http://www.w3.org/2000/svg"' in snippet):
+        if not snippet:
+            return None
+        # SVG document starts with <svg or <?xml ... <svg
+        if snippet.startswith("<svg") or (snippet.startswith("<?xml") and "<svg" in snippet[:300]):
             return "image/svg+xml", "svg", "Scalable Vector Graphics (SVG)"
-        if snippet.startswith("<!doctype html") or "<html" in snippet:
+        # HTML document starts with <!doctype html or <html
+        if snippet.startswith("<!doctype html") or snippet.startswith("<html"):
             return "text/html", "html", "HTML Document"
         if snippet.startswith("<?xml"):
-            if "<svg" in snippet:
-                return "image/svg+xml", "svg", "Scalable Vector Graphics (SVG)"
             return "application/xml", "text", "XML Document"
         if snippet.startswith("{") or snippet.startswith("["):
             return "application/json", "text", "JSON Document"
     except Exception:
         pass
+    return None
 def inspect_script_type(file_path: Path, header: bytes, filename: str) -> Optional[Tuple[str, str, str]]:
     """Detect scripts and command files by extension or shebang headers."""
     name_lower = filename.lower()

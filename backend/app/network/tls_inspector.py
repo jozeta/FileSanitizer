@@ -11,6 +11,7 @@ import hashlib
 import concurrent.futures
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Set, Tuple
+import ipaddress
 import httpx
 
 from app.core.logging_config import logger
@@ -270,7 +271,7 @@ class TLSInspector:
             )
             result["cipher_suites_audit"] = ciphers_audit
 
-            if ciphers_audit.get("has_weak_ciphers"):
+            if isinstance(ciphers_audit, dict) and ciphers_audit.get("has_weak_ciphers"):
                 weak_list = ciphers_audit.get("weak_ciphers", [])
                 weak_names = [c["name"] for c in weak_list[:3]]
                 result["security_findings"].append({
@@ -322,8 +323,39 @@ class TLSInspector:
                 return False
 
     @classmethod
+    def _is_safe_host(cls, host: str, port: int = 443) -> Tuple[bool, Optional[str]]:
+        """Validate destination against SSRF: resolve IPs and ensure none are private/loopback/cloud metadata."""
+        from app.network.ssrf import is_ip_blocked
+        try:
+            if cls._is_ip(host):
+                ip_obj = ipaddress.ip_address(host)
+                if is_ip_blocked(ip_obj):
+                    return False, None
+                return True, host
+
+            addr_info = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+            if not addr_info:
+                return False, None
+            safe_ip = None
+            for family, _, _, _, sockaddr in addr_info:
+                ip_str = sockaddr[0]
+                ip_obj = ipaddress.ip_address(ip_str)
+                if is_ip_blocked(ip_obj):
+                    return False, None
+                if not safe_ip:
+                    safe_ip = ip_str
+            return True, safe_ip
+        except Exception:
+            return False, None
+
+    @classmethod
     def _perform_tls_handshake(cls, host: str, port: int) -> Optional[Dict[str, Any]]:
         """Connects via TLS and extracts certificate metadata and cipher details."""
+        is_safe, target_ip = cls._is_safe_host(host, port)
+        if not is_safe or not target_ip:
+            logger.warning(f"[TLSInspector] SSRF guard blocked TLS connection attempt to {host}:{port}")
+            return None
+
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE  # We inspect regardless of validity
@@ -331,7 +363,7 @@ class TLSInspector:
         server_name = None if cls._is_ip(host) else host
 
         try:
-            with socket.create_connection((host, port), timeout=5.0) as sock:
+            with socket.create_connection((target_ip, port), timeout=5.0) as sock:
                 try:
                     ssock = ctx.wrap_socket(sock, server_hostname=server_name)
                 except ssl.SSLError:
@@ -340,7 +372,7 @@ class TLSInspector:
                         sock.close()
                     except Exception:
                         pass
-                    sock = socket.create_connection((host, port), timeout=5.0)
+                    sock = socket.create_connection((target_ip, port), timeout=5.0)
                     ssock = ctx.wrap_socket(sock, server_hostname=None)
 
                 with ssock:
@@ -536,34 +568,37 @@ class TLSInspector:
             "RC4-MD5"
         ]
 
-        def _test_single_cipher(c_name: str) -> Tuple[str, bool]:
-            if active_cipher and c_name.lower() == active_cipher.lower():
-                return c_name, True
-            try:
-                ctx = ssl.create_default_context()
-                ctx.check_hostname = False
-                ctx.verify_mode = ssl.CERT_NONE
+        is_safe, target_ip = cls._is_safe_host(host, port)
+        probe_results: Dict[str, bool] = {}
+
+        if is_safe and target_ip:
+            def _test_single_cipher(c_name: str) -> Tuple[str, bool]:
+                if active_cipher and c_name.lower() == active_cipher.lower():
+                    return c_name, True
                 try:
-                    ctx.set_ciphers(c_name)
-                except ssl.SSLError:
+                    ctx = ssl.create_default_context()
+                    ctx.check_hostname = False
+                    ctx.verify_mode = ssl.CERT_NONE
+                    try:
+                        ctx.set_ciphers(c_name)
+                    except ssl.SSLError:
+                        return c_name, False
+
+                    server_name = None if cls._is_ip(host) else host
+                    with socket.create_connection((target_ip, port), timeout=0.8) as sock:
+                        with ctx.wrap_socket(sock, server_hostname=server_name) as ssock:
+                            return c_name, True
+                except Exception:
                     return c_name, False
 
-                server_name = None if cls._is_ip(host) else host
-                with socket.create_connection((host, port), timeout=0.8) as sock:
-                    with ctx.wrap_socket(sock, server_hostname=server_name) as ssock:
-                        return c_name, True
-            except Exception:
-                return c_name, False
-
-        probe_results: Dict[str, bool] = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            fut_to_cipher = {executor.submit(_test_single_cipher, c): c for c in candidates_to_test}
-            for fut in concurrent.futures.as_completed(fut_to_cipher, timeout=2.5):
-                try:
-                    c_name, is_sup = fut.result()
-                    probe_results[c_name] = is_sup
-                except Exception:
-                    pass
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                fut_to_cipher = {executor.submit(_test_single_cipher, c): c for c in candidates_to_test}
+                for fut in concurrent.futures.as_completed(fut_to_cipher, timeout=2.5):
+                    try:
+                        c_name, is_sup = fut.result()
+                        probe_results[c_name] = is_sup
+                    except Exception:
+                        pass
 
         for c_name, meta in CIPHER_SECURITY_CATALOG.items():
             is_active = bool(active_cipher and c_name.lower() == active_cipher.lower())

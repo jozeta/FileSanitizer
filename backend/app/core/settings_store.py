@@ -5,6 +5,8 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 import jwt
+import secrets
+import hashlib
 from pydantic import BaseModel, Field
 
 from app.config import settings, get_effective_jobs_dir
@@ -1830,12 +1832,22 @@ class SettingsStore:
 
 # JWT Auth Helpers
 def verify_admin_login(username: str, password: str) -> bool:
-    """Verify admin login credentials against configuration with whitespace and CRLF resilience."""
+    """Verify admin login credentials against configuration using constant-time comparison."""
     clean_user = (username or "").strip()
     clean_pass = (password or "").strip()
     expected_user = (getattr(settings, "ADMIN_USERNAME", "admin") or "admin").strip()
     expected_pass = (getattr(settings, "ADMIN_PASSWORD", "admin") or "admin").strip()
-    return clean_user == expected_user and clean_pass == expected_pass
+
+    user_ok = secrets.compare_digest(clean_user.encode("utf-8"), expected_user.encode("utf-8"))
+
+    if expected_pass.startswith("sha256:"):
+        expected_hash = expected_pass.split(":", 1)[1]
+        pass_hash = hashlib.sha256(clean_pass.encode("utf-8")).hexdigest()
+        pass_ok = secrets.compare_digest(pass_hash.encode("utf-8"), expected_hash.encode("utf-8"))
+    else:
+        pass_ok = secrets.compare_digest(clean_pass.encode("utf-8"), expected_pass.encode("utf-8"))
+
+    return user_ok and pass_ok
 
 def create_admin_token(username: str, expires_in_seconds: int = 86400) -> str:
     """Generate a signed JWT token for the authenticated admin."""

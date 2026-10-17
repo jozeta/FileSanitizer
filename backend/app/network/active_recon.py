@@ -168,10 +168,10 @@ class ActiveServiceScanner:
         # Using target ensures SNI/vhost inspection works if hostname, target_ip if direct IP
         scan_target = target if target else target_ip
 
-        # Command attempt 1: sudo nmap -sS -sV --version-light -T3 --open -p <ports> --reason -oA <out> <target>
+        # Command attempt 1: nmap -sS -sV --version-light -T3 --open -p <ports> --reason -oA <out> <target>
         # We also pass -Pn to avoid false drops when ICMP echo is firewalled
         syn_cmd = [
-            "sudo", "nmap",
+            "nmap",
             "-sS",
             "-sV",
             "--version-light",

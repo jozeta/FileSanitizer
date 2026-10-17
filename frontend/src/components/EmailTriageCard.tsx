@@ -837,18 +837,11 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
               </span>
               <span>{emailInfo.has_html ? 'Rendered from HTML' : 'Plaintext Formatted'}</span>
             </div>
-            <div
-              className="border border-slate-200 rounded-2xl bg-white shadow-inner max-h-[600px] overflow-y-auto p-4"
-              onClick={(e) => {
-                const target = e.target as HTMLElement;
-                const link = target.closest('a, area');
-                if (link) {
-                  e.preventDefault();
-                }
-              }}
-              dangerouslySetInnerHTML={{
-                __html: safePreviewHtml
-              }}
+            <iframe
+              title="Sanitized Email Preview"
+              sandbox="allow-popups"
+              srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.6;color:#1e293b;background:#ffffff;padding:16px;margin:0;word-break:break-word;}a{color:#2563eb;pointer-events:none;}img{max-width:100%;height:auto;}</style></head><body>${safePreviewHtml}</body></html>`}
+              className="w-full min-h-[400px] max-h-[600px] border border-slate-200 rounded-2xl bg-white shadow-inner"
             />
           </div>
         )}

@@ -1425,14 +1425,64 @@ def calculate_ip_domain_executive_verdict(
 # 8. ACTIVE & OFFLINE FORENSIC TOOLS CLI GUIDE (LIVE EXECUTION)
 # ============================================================================
 
+_SAFE_INDICATOR_PATTERN = re.compile(r'^[a-zA-Z0-9](?:[a-zA-Z0-9\.\-]{0,253}[a-zA-Z0-9])?$')
+_SAFE_IP_PATTERN = re.compile(r'^[a-fA-F0-9\.:]+$')
+
+def _is_safe_indicator(val: str) -> bool:
+    if not val or len(val) > 255:
+        return False
+    for bad_ch in [";", "&", "|", "`", "$", "(", ")", "<", ">", "\n", "\r", " ", "\t", "'", '"', "\\"]:
+        if bad_ch in val:
+            return False
+    return bool(_SAFE_INDICATOR_PATTERN.match(val) or _SAFE_IP_PATTERN.match(val))
+
 def _execute_cli_tool(tool_info: Dict[str, Any], target: str, is_ip: bool, primary_ip: Optional[str]) -> Dict[str, Any]:
     """
     Executes a forensic command safely in the sandbox environment and returns
     execution duration, exit code, stdout/stderr, and parsed findings.
+    Strictly validates indicators against shell injection and runs all commands
+    as argv lists without shell invocation.
     """
     name = tool_info["name"]
     command_str = tool_info["command"]
     t0 = time.time()
+
+    # 1. Strict indicator validation against command injection
+    clean_target = (target or "").strip()
+    clean_primary_ip = (primary_ip or "").strip() if primary_ip else None
+
+    if not _is_safe_indicator(clean_target) or (clean_primary_ip and not _is_safe_indicator(clean_primary_ip)):
+        result_copy = dict(tool_info)
+        result_copy.update({
+            "executed": False,
+            "status": "rejected",
+            "exit_code": 1,
+            "duration_ms": 0,
+            "stdout": "Command skipped: target contains non-standard or dangerous characters for forensic indicator.",
+            "stderr": "Validation error: invalid indicator syntax.",
+            "parsed_findings": ["Rejected: Invalid indicator syntax"]
+        })
+        return result_copy
+
+    # 2. SSRF Guard: block private/loopback/cloud metadata IP destinations
+    try:
+        from app.network.ssrf import is_ip_blocked
+        if is_ip:
+            ip_obj = ipaddress.ip_address(clean_target)
+            if is_ip_blocked(ip_obj):
+                result_copy = dict(tool_info)
+                result_copy.update({
+                    "executed": False,
+                    "status": "blocked",
+                    "exit_code": 1,
+                    "duration_ms": 0,
+                    "stdout": "Command skipped: target IP address is within a private, loopback, or cloud metadata network.",
+                    "stderr": "SSRF violation: blocked IP destination.",
+                    "parsed_findings": ["Rejected: SSRF blocked destination IP"]
+                })
+                return result_copy
+    except Exception:
+        pass
 
     stdout = ""
     stderr = ""
@@ -1441,51 +1491,43 @@ def _execute_cli_tool(tool_info: Dict[str, Any], target: str, is_ip: bool, prima
 
     try:
         if name == "dig":
-            # Check if dig binary is available; if not, use dnspython to emulate authentic dig output
-            if shutil.which("dig"):
-                res = subprocess.run(
-                    f"dig {target} A +noall +answer && dig {target} AAAA +noall +answer && dig -x {primary_ip or target} +short",
-                    shell=True, capture_output=True, text=True, timeout=3.5
-                )
-                stdout = res.stdout
-                stderr = res.stderr
-                exit_code = res.returncode
-            else:
-                import dns.resolver, dns.reversename
-                dig_lines = [f";; <<>> DiG-Py 9.18 <<>> {target} A", ";; ANSWER SECTION:"]
-                try:
-                    ans_a = dns.resolver.resolve(target, "A", lifetime=2.5)
-                    for rdata in ans_a:
-                        dig_lines.append(f"{target}.\t{ans_a.rrset.ttl}\tIN\tA\t{rdata.address}")
-                        parsed_findings.append(f"A Record: {rdata.address} (TTL: {ans_a.rrset.ttl}s)")
-                except Exception as de:
-                    dig_lines.append(f";; Query failed A: {de}")
+            # Use pure Python dnspython for 100% safe, injection-immune, authentic dig output
+            import dns.resolver, dns.reversename
+            dig_lines = [f";; <<>> DiG-Py 9.18 <<>> {clean_target} A", ";; ANSWER SECTION:"]
+            try:
+                ans_a = dns.resolver.resolve(clean_target, "A", lifetime=2.5)
+                for rdata in ans_a:
+                    dig_lines.append(f"{clean_target}.\t{ans_a.rrset.ttl}\tIN\tA\t{rdata.address}")
+                    parsed_findings.append(f"A Record: {rdata.address} (TTL: {ans_a.rrset.ttl}s)")
+            except Exception as de:
+                dig_lines.append(f";; Query failed A: {de}")
 
+            try:
+                ans_aaaa = dns.resolver.resolve(clean_target, "AAAA", lifetime=1.5)
+                for rdata in ans_aaaa:
+                    dig_lines.append(f"{clean_target}.\t{ans_aaaa.rrset.ttl}\tIN\tAAAA\t{rdata.address}")
+                    parsed_findings.append(f"AAAA Record: {rdata.address}")
+            except Exception:
+                pass
+
+            if clean_primary_ip:
                 try:
-                    ans_aaaa = dns.resolver.resolve(target, "AAAA", lifetime=1.5)
-                    for rdata in ans_aaaa:
-                        dig_lines.append(f"{target}.\t{ans_aaaa.rrset.ttl}\tIN\tAAAA\t{rdata.address}")
-                        parsed_findings.append(f"AAAA Record: {rdata.address}")
+                    rev_name = dns.reversename.from_address(clean_primary_ip)
+                    ans_ptr = dns.resolver.resolve(rev_name, "PTR", lifetime=1.5)
+                    dig_lines.append("\n;; REVERSE PTR SECTION:")
+                    for rdata in ans_ptr:
+                        dig_lines.append(f"{rev_name}.\t{ans_ptr.rrset.ttl}\tIN\tPTR\t{rdata.target}")
+                        parsed_findings.append(f"Reverse PTR: {rdata.target}")
                 except Exception:
                     pass
 
-                if primary_ip:
-                    try:
-                        rev_name = dns.reversename.from_address(primary_ip)
-                        ans_ptr = dns.resolver.resolve(rev_name, "PTR", lifetime=1.5)
-                        dig_lines.append("\n;; REVERSE PTR SECTION:")
-                        for rdata in ans_ptr:
-                            dig_lines.append(f"{rev_name}.\t{ans_ptr.rrset.ttl}\tIN\tPTR\t{rdata.target}")
-                            parsed_findings.append(f"Reverse PTR: {rdata.target}")
-                    except Exception:
-                        pass
-
-                stdout = "\n".join(dig_lines)
-                exit_code = 0
+            stdout = "\n".join(dig_lines)
+            exit_code = 0
 
         elif name == "curl":
+            # Run curl as safe argv list (safe subprocess execution)
             res = subprocess.run(
-                ["curl", "-sS", "-I", "--max-time", "3.5", "-A", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", f"https://{target}/"],
+                ["curl", "-sS", "-I", "--max-time", "3.5", "-A", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", f"https://{clean_target}/"],
                 capture_output=True, text=True, timeout=4.0
             )
             stdout = res.stdout or res.stderr
@@ -1503,21 +1545,58 @@ def _execute_cli_tool(tool_info: Dict[str, Any], target: str, is_ip: bool, prima
                     parsed_findings.append("CSP: Configured")
 
         elif name == "openssl":
-            cmd = f"openssl s_client -connect {target}:443 -servername {target} </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -dates"
-            res = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=3.5)
-            stdout = res.stdout or res.stderr
-            stderr = res.stderr
-            exit_code = res.returncode
-            for line in stdout.splitlines():
-                if "subject=" in line:
-                    parsed_findings.append(f"Subject: {line.replace('subject=', '').strip()}")
-                elif "issuer=" in line:
-                    parsed_findings.append(f"Issuer: {line.replace('issuer=', '').strip()}")
-                elif "notAfter=" in line:
-                    parsed_findings.append(f"Expires: {line.replace('notAfter=', '').strip()}")
+            # Establish safe TLS connection in pure Python or safe argv openssl without shell invocation
+            import ssl, socket
+            ssl_success = False
+            try:
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                with socket.create_connection((clean_target, 443), timeout=3.5) as sock:
+                    with ctx.wrap_socket(sock, server_hostname=clean_target) as ssock:
+                        der = ssock.getpeercert(binary_form=True)
+                        if der:
+                            from cryptography import x509
+                            x509_cert = x509.load_der_x509_certificate(der)
+                            subj_str = x509_cert.subject.rfc4514_string()
+                            issuer_str = x509_cert.issuer.rfc4514_string()
+                            not_after_str = x509_cert.not_valid_after_utc.strftime("%b %d %H:%M:%S %Y GMT")
+                            stdout = f"subject= {subj_str}\nissuer= {issuer_str}\nnotAfter={not_after_str}"
+                            parsed_findings.append(f"Subject: {subj_str}")
+                            parsed_findings.append(f"Issuer: {issuer_str}")
+                            parsed_findings.append(f"Expires: {not_after_str}")
+                            exit_code = 0
+                            ssl_success = True
+            except Exception as ssl_err:
+                stderr = f"TLS handshake note: {ssl_err}"
+
+            if not ssl_success and shutil.which("openssl"):
+                try:
+                    p_sclient = subprocess.run(
+                        ["openssl", "s_client", "-connect", f"{clean_target}:443", "-servername", clean_target],
+                        input="", capture_output=True, text=True, timeout=3.5
+                    )
+                    raw_sclient = p_sclient.stdout or ""
+                    if "-----BEGIN CERTIFICATE-----" in raw_sclient:
+                        p_x509 = subprocess.run(
+                            ["openssl", "x509", "-noout", "-subject", "-issuer", "-dates"],
+                            input=raw_sclient, capture_output=True, text=True, timeout=2.0
+                        )
+                        stdout = p_x509.stdout
+                        exit_code = p_x509.returncode
+                        for line in stdout.splitlines():
+                            if "subject=" in line:
+                                parsed_findings.append(f"Subject: {line.replace('subject=', '').strip()}")
+                            elif "issuer=" in line:
+                                parsed_findings.append(f"Issuer: {line.replace('issuer=', '').strip()}")
+                            elif "notAfter=" in line:
+                                parsed_findings.append(f"Expires: {line.replace('notAfter=', '').strip()}")
+                except Exception as sub_err:
+                    stderr = f"OpenSSL error: {sub_err}"
+                    exit_code = 1
 
         elif name == "rdap":
-            endpoint = f"https://rdap.org/ip/{target}" if is_ip else f"https://rdap.org/domain/{target}"
+            endpoint = f"https://rdap.org/ip/{clean_target}" if is_ip else f"https://rdap.org/domain/{clean_target}"
             res = subprocess.run(
                 ["curl", "-sSL", "--max-time", "4.0", endpoint],
                 capture_output=True, text=True, timeout=4.5
@@ -1540,18 +1619,28 @@ def _execute_cli_tool(tool_info: Dict[str, Any], target: str, is_ip: bool, prima
                     stdout = stdout[:200] + "... [truncated RDAP json]"
 
         elif name == "ipaddress":
-            ip_val = primary_ip or (target if is_ip else "8.8.8.8")
-            cmd = f"python3 -c \"import ipaddress; ip = ipaddress.ip_address('{ip_val}'); print('Canonical:', ip.compressed); print('Version:', 'IPv' + str(ip.version)); print('Private:', ip.is_private); print('Global:', ip.is_global); print('Loopback:', ip.is_loopback)\""
-            res = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=2.0)
-            stdout = res.stdout or res.stderr
-            stderr = res.stderr
-            exit_code = res.returncode
-            for line in stdout.splitlines():
-                if line.strip():
-                    parsed_findings.append(line.strip())
+            # Pure Python ipaddress parsing (NO subprocess, NO shell)
+            ip_val = clean_primary_ip or (clean_target if is_ip else "8.8.8.8")
+            try:
+                ip_obj = ipaddress.ip_address(ip_val)
+                stdout = (
+                    f"Canonical: {ip_obj.compressed}\n"
+                    f"Version: IPv{ip_obj.version}\n"
+                    f"Private: {ip_obj.is_private}\n"
+                    f"Global: {ip_obj.is_global}\n"
+                    f"Loopback: {ip_obj.is_loopback}"
+                )
+                for line in stdout.splitlines():
+                    if line.strip():
+                        parsed_findings.append(line.strip())
+                exit_code = 0
+            except Exception as ip_err:
+                stderr = str(ip_err)
+                stdout = f"Error: {ip_err}"
+                exit_code = 1
 
         elif name == "nmap":
-            stdout = f"Authorized Nmap scan ready for target {target}. Run command in analyst terminal."
+            stdout = f"Authorized Nmap scan ready for target {clean_target}. Run command in analyst terminal."
             parsed_findings.append("Nmap CLI syntax validated for non-intrusive port triage.")
             exit_code = 0
 

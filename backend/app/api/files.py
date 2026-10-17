@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends, Header
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 
@@ -344,7 +344,7 @@ def fetch_file_from_url(
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except Exception as e:
         logger.error(f"Unexpected error in URL file fetcher: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch remote file: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch remote file. An internal error occurred.")
 
     job = job_manager.create_job(raw_bytes, filename)
     if getattr(fetch_res, "is_domain_target", False):
@@ -435,7 +435,7 @@ def investigate_ioc(
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except Exception as e:
         logger.error(f"Error fetching IOC '{target}': {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to investigate asset: {e}")
+        raise HTTPException(status_code=500, detail="Failed to investigate asset. An internal error occurred.")
 
     job = job_manager.create_job(raw_bytes, filename)
     if getattr(fetch_res, "is_domain_target", False):
@@ -494,9 +494,13 @@ def reverse_geocode(lat: float, lon: float):
     from app.network.geo_resolver import geo_resolver
     return geo_resolver.resolve_coordinates(lat, lon)
 
+def _admin_auth_dep(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    from app.api.settings import require_admin
+    return require_admin(authorization)
+
 @router.get("")
-def list_all_jobs():
-    """List all currently active processing jobs."""
+def list_all_jobs(admin: Dict[str, Any] = Depends(_admin_auth_dep)):
+    """List all currently active processing jobs (Admin Authenticated Only)."""
     jobs = job_manager.list_jobs()
     return [{
         "job_id": j.job_id,

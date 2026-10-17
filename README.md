@@ -2,7 +2,7 @@
 
 > **"Don't trust the file. Wash it first."** *(featuring 30+ dynamic cybersecurity slogans rotating on every reload)*
 
-[![Release](https://img.shields.io/badge/release-v2.4.0-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
+[![Release](https://img.shields.io/badge/release-v2.4.2-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
 [![Python](https://img.shields.io/badge/python-3.11-brightgreen.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
@@ -148,7 +148,7 @@ SECURITY ANALYSIS
    ├── URL Extraction & SSRF-Protected Analysis
    ├── Sandboxed Web Preview (Headless browser screenshot)
    ├── Domain/IP Threat Intelligence Platform (Parallel async pipeline, zero-latency SSRF validation)
-   │     ├── Nmap Active Service Reconnaissance (sudo nmap -sS -sV --version-light -T3 --open -Pn --reason -oA)
+   │     ├── Nmap Active Service Reconnaissance (nmap -sS -sV --version-light -T3 --open -Pn --reason -oA)
    │     ├── Forward-Confirmed Reverse DNS (FCrDNS bi-directional PTR validation)
    │     ├── Web Archive (Wayback Machine) Calendar Integration & Delta Diffing
    │     ├── Related Infrastructure & Pivots (Smart separation of Direct Affiliates vs CDN/DDoS edge noise)
@@ -199,7 +199,7 @@ CLEAN FILE READY FOR DOWNLOAD
 | **Android Applications (APK)** | APK, AAB, XAPK, DEX | Hybrid Androguard 4.x & pure-Python AXML engine, multi-DEX class extraction & bytecode analysis, **Dalvik/Smali Opcode Disassembler & High-Level Java Decompiler** with interactive class & method browser, embedded source code & framework bundle scanner (`.java`, `.kt`, React Native/JS `index.android.bundle`, shell scripts `.sh`, `.xml`, `.json`), native ELF library triage (`lib/**/*.so`) with JNI export mapping and Checksec mitigations (NX, PIE, Canary, RELRO), dangerous permissions matrix with MITRE Mobile ATT&CK correlation, IPC attack surface (Activities, Services, Receivers with `BOOT_COMPLETED`, Providers), 10-point automated security compliance audit (OWASP MASVS), X.509 code signing certificates (debug keystore detection), and integrated online threat intel (Koodous, VirusTotal, MalwareBazaar, Google Play Store, APKPure). | **Mobile Disarm & Dossier:** Neutralize dangerous permissions, defang C2 URLs, clear debuggable flag, purge secondary executables, or compile into static Vector PDF review dossier. |
 | **Java Files & Bytecode** | JAVA, CLASS, JAR, WAR | Java source code AST & static security heuristics (`Runtime.exec`, `ProcessBuilder`, `sun.misc.Unsafe`, dynamic reflection, JNDI lookups/Log4Shell, SQLi), compiled bytecode (`.class`) Constant Pool parsing and dangerous method reference resolution (Java 1.1 to Java 23), JAR manifest triage (`Main-Class`, `Premain-Class` Java Agent memory hooks, `all-permissions`), native library packaging, and Java RAT signatures (jRAT, Adwind, AlienSpy, AsyncRAT). | **Java Disarm & Dossier:** Disarm OS shell execution and reflection hooks, defang URLs, enforce non-executable file permissions (`0o644`), or compile into clean Vector PDF review report. |
 | **Scripts & Command Files** | PS1, VBS, VBA, SH, JS, PHP, CMD, BAT | Static AST & regex analysis: dynamic code execution (`IEX`, `eval`), download cradles (`DownloadString`, `curl | sh`), memory injection / AMSI bypass, Base64 block decoding with preview, LOLBin usage (`certutil`, `bitsadmin`, `mshta`), PHP webshell signatures, Shannon entropy | **Script Sanitizer:** Defang all URLs, disarm dynamic execution hooks (`IEX`, `eval`, `system`), append security disclosure banners, enforce non-executable permissions (`0o644`), or compile into read-only vector PDF review document. |
-| **Domain/IP & Infrastructure** | URL, Domain, IPv4, IPv6 | Non-blocking async threat platform: Live sandboxed Chromium webpage screenshot, full DNS resolution & Forward-Confirmed Reverse DNS (FCrDNS), BGP routing & ASN profiling, Nmap Active Service Reconnaissance (`sudo nmap -sS -sV --version-light -T3 --open -Pn --reason -oA`), Active Security Probes (sensitive file exposure, WAF detection, CORS/HTTP methods), Web Archive (Wayback Machine) calendar integration & snapshot diffing, Smart Infrastructure Pivots (separating direct affiliates from CDN/DDoS edge noise), Typosquatting Radar, and Email Security (DMARC/DKIM/SPF). | **Network Defang & Report:** Defang active URLs and domain IOCs (`hxxp://`, `[.]`), export structured threat intelligence dossiers (JSON/PDF). |
+| **Domain/IP & Infrastructure** | URL, Domain, IPv4, IPv6 | Non-blocking async threat platform: Live sandboxed Chromium webpage screenshot, full DNS resolution & Forward-Confirmed Reverse DNS (FCrDNS), BGP routing & ASN profiling, Nmap Active Service Reconnaissance (`nmap -sS -sV --version-light -T3 --open -Pn --reason -oA`), Active Security Probes (sensitive file exposure, WAF detection, CORS/HTTP methods), Web Archive (Wayback Machine) calendar integration & snapshot diffing, Smart Infrastructure Pivots (separating direct affiliates from CDN/DDoS edge noise), Typosquatting Radar, and Email Security (DMARC/DKIM/SPF). | **Network Defang & Report:** Defang active URLs and domain IOCs (`hxxp://`, `[.]`), export structured threat intelligence dossiers (JSON/PDF). |
 | **Plain Text & Data** | TXT, CSV, JSON, XML, YAML, Markdown | Character encoding analysis (UTF-8, UTF-16, BOM), CSV formula injection (DDE execution attacks) | **Text Sanitizer:** Strip BOM, sanitize DDE formula prefixes (`=`, `+`, `-`, `@`), strip control characters. |
 
 ---
@@ -599,7 +599,7 @@ FileSanitizer provides a high-performance, asynchronous threat intelligence plat
 ### Nmap Active Service Reconnaissance & Daemon Versioning (Strictly Opt-In)
 When authorized by the operator, FileSanitizer executes controlled, in-depth service and port reconnaissance using **Nmap 7.95+** with the following production specification:
 ```bash
-sudo nmap -sS -sV --version-light -T3 --open -Pn \
+nmap -sS -sV --version-light -T3 --open -Pn \
   -p 21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1433,1521,2049,2375,3306,3389,5432,5900,5985,5986,6379,8080,8443,9200,11211,27017 \
   --reason -oA nmap-service-scan <target>
 ```
@@ -611,7 +611,7 @@ sudo nmap -sS -sV --version-light -T3 --open -Pn \
 * **Automated CVE & Vulnerability Catalog Matching:** Extracted software product names and version strings (e.g. `OpenSSH 8.9p1`, `nginx 1.24.0`, `Cloudflare http proxy`) automatically feed into FileSanitizer's Vulnerability Intelligence engine to correlate known CVEs and CISA KEV entries.
 * **Collapsible Raw Terminal Drawer:** The UI includes an expandable drawer showing the exact executed command line alongside the full raw terminal output from `nmap-service-scan.nmap`.
 * **Three-Tier Fallback Hierarchy:**
-  1. Primary: `sudo nmap -sS` (Raw SYN scan utilizing `NET_RAW`/`NET_ADMIN` capabilities).
+  1. Primary: `nmap -sS` (Raw SYN scan utilizing Linux capabilities `cap_net_raw,cap_net_admin+eip` without requiring root or `sudo`).
   2. Unprivileged Fallback: `nmap -sT` (TCP Connect scan if host capability restrictions prevent raw socket synthesis).
   3. Safe Fallback: Pure Python socket banner grabber if the `nmap` binary is absent.
 
@@ -1050,3 +1050,34 @@ npm run build
 
 * **PDF Rasterization Trade-offs:** The "Maximum Sanitization" profile rasterizes all pages into image layers. While this guarantees the complete eradication of active JavaScript and malicious stream exploits, the resulting document will not contain selectable or searchable text.
 * **Password-Protected Files:** Files encrypted with unknown passwords cannot be inspected by static scanners without the decryption key.
+
+---
+
+## 13. Version History & Security Hardening (v2.4.2)
+
+FileSanitizer **v2.4.2** includes a comprehensive security hardening release across backend analysis services, authentication, and container runtime configurations:
+
+* **Remote Code Execution & Subprocess Isolation:**
+  * Purged all `shell=True` subprocess invocations and string interpolations in offline and network reconnaissance tools.
+  * Replaced CLI tooling (`dig`, `ipcalc`, `openssl`) with native Python implementations (`dnspython`, `ipaddress`, `ssl`/`cryptography`) and strict, immutable argument vectors.
+  * Added indicator format validation (`_is_safe_indicator`) rejecting shell metacharacters (`;`, `&`, `|`, `$()`, backticks, newlines).
+* **Container Privilege Deprivation:**
+  * Removed passwordless `sudoers` configuration for `appuser` from container images.
+  * Executed Nmap using dedicated Linux capabilities (`cap_net_raw,cap_net_admin+eip`) without elevated root or `sudo` privileges.
+* **Authentication & Authorization Hardening:**
+  * Default/insecure JWT signing keys are rejected in production environments in favor of cryptographically generated 256-bit random keys.
+  * Constant-time verification (`secrets.compare_digest`) for administrator credentials to mitigate timing side-channel attacks.
+  * Added mandatory admin authentication to `GET /api/files` to prevent unauthorized job enumeration.
+* **SSRF Defense & Anti-Rebinding:**
+  * Enforced pre-flight IP validation and connection pinning across TLS inspection and domain intelligence routines, blocking access to RFC 1918 private subnets, loopback interfaces, and cloud metadata services (`169.254.169.254`).
+* **Stored XSS Elimination & Sanitization:**
+  * Migrated email body rendering from inline HTML insertion to a restricted, sandboxed `<iframe>` (`sandbox="allow-popups"`).
+  * Expanded backend email HTML sanitization to decompose `<svg>`, `<math>`, `<style>`, and `<template>` tags.
+* **Detection & Attribution Accuracy:**
+  * Corrected file type inspection priority so RFC 822 email forensics execute before generic HTML/SVG checks, preventing evasion via prepended HTML tags.
+  * Sanitized threat intelligence feeds to separate verified MITRE ATT&CK technique IDs (`^T\d{4}(?:\.\d{3})?$`) from vendor behavioural tags.
+* **API & Information Disclosure Protection:**
+  * Replaced permissive CORS wildcards with configurable explicit origins (`ALLOWED_CORS_ORIGINS`).
+  * Disabled interactive documentation endpoints (`/docs`, `/redoc`, `/openapi.json`) in production mode.
+  * Sanitized 500 error responses to prevent internal stack trace leakage.
+

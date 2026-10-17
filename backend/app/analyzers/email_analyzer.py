@@ -553,8 +553,12 @@ class EmailAnalyzer(BaseAnalyzer):
         deceptive_links: List[Dict[str, Any]] = []
         tracking_pixels: List[Dict[str, Any]] = []
 
-        # Remove dangerous and active elements
-        for tag in soup.find_all(['script', 'object', 'embed', 'iframe', 'form', 'meta', 'applet', 'base']):
+        # Remove dangerous, active, and executable elements
+        dangerous_tags = [
+            'script', 'object', 'embed', 'iframe', 'form', 'meta', 'applet', 'base',
+            'svg', 'math', 'style', 'template', 'button', 'input', 'textarea', 'select', 'link'
+        ]
+        for tag in soup.find_all(dangerous_tags):
             tag.decompose()
 
         # HTML Smuggling Detection

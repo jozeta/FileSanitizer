@@ -5,7 +5,7 @@ import os
 
 class Settings(BaseSettings):
     APP_NAME: str = "FileSanitizer"
-    APP_VERSION: str = "2.4.1"
+    APP_VERSION: str = "2.4.2"
     APP_ENV: str = "production"
     DEBUG: bool = False
     API_PREFIX: str = "/api"
@@ -26,6 +26,33 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD: str = "admin"
     ADMIN_SECRET_KEY: str = "filesanitizer-jwt-secret-key-32byte-minimum-secure-2026"
+
+    @field_validator("ADMIN_SECRET_KEY", mode="after")
+    @classmethod
+    def validate_admin_secret_key(cls, v: str) -> str:
+        insecure_placeholder = "filesanitizer-jwt-secret-key-32byte-minimum-secure-2026"
+        app_env = os.getenv("APP_ENV", "production")
+        if (not v or v == insecure_placeholder) and app_env == "production":
+            secret_file = "/jobs/.jwt_secret" if os.path.exists("/jobs") else "/tmp/.filesanitizer_jwt_secret"
+            try:
+                if os.path.exists(secret_file):
+                    with open(secret_file, "r") as f:
+                        saved = f.read().strip()
+                        if saved:
+                            return saved
+                import secrets
+                new_secret = secrets.token_urlsafe(32)
+                try:
+                    with open(secret_file, "w") as f:
+                        f.write(new_secret)
+                    os.chmod(secret_file, 0o600)
+                except Exception:
+                    pass
+                return new_secret
+            except Exception:
+                import secrets
+                return secrets.token_urlsafe(32)
+        return v or insecure_placeholder
 
     # YARA Rule Engine
     YARA_ENABLED: bool = True

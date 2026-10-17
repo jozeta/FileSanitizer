@@ -1,3 +1,4 @@
+import re
 import time
 from typing import Dict, Any, Optional, Tuple
 import httpx
@@ -571,11 +572,21 @@ class HybridAnalysisClient:
                     av_detect = top.get("multiscan_result")
                     if av_detect is None:
                         av_detect = 0
-                    raw_mitre = top.get("mitre_attcks") or top.get("tags") or []
-                    mitre_tags = [
-                        (m.get("attck_id") if isinstance(m, dict) else str(m))
-                        for m in raw_mitre
-                    ]
+                    _ATTCK_ID_REGEX = re.compile(r'^T\d{4}(?:\.\d{3})?$', re.IGNORECASE)
+                    raw_mitre = top.get("mitre_attcks") or []
+                    mitre_tags = []
+                    for m in raw_mitre:
+                        val = (m.get("attck_id") or m.get("id") or "") if isinstance(m, dict) else str(m)
+                        val_clean = val.strip().upper()
+                        if _ATTCK_ID_REGEX.match(val_clean) and val_clean not in mitre_tags:
+                            mitre_tags.append(val_clean)
+
+                    raw_tags = top.get("tags") or []
+                    tags_list = []
+                    for t in raw_tags:
+                        t_str = str(t).strip()
+                        if t_str and t_str not in tags_list:
+                            tags_list.append(t_str)
 
                     status = "MALICIOUS" if verdict in ["malicious", "threat"] or (score is not None and score >= 70) else (
                         "SUSPICIOUS" if verdict in ["suspicious"] or (score is not None and score >= 40) else "CLEAN"
@@ -588,7 +599,8 @@ class HybridAnalysisClient:
                         "malware_family": family,
                         "environment": env,
                         "av_detect_rate": av_detect,
-                        "mitre_attck": [t for t in mitre_tags if t][:8],
+                        "mitre_attck": mitre_tags[:8],
+                        "tags": tags_list[:12],
                         "start_time": top.get("analysis_start_time") or top.get("start_time") or top.get("created_at"),
                         "report_url": f"https://hybrid-analysis.com/sample/{file_hash}"
                     }
