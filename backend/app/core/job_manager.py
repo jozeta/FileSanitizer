@@ -793,7 +793,12 @@ class JobManager:
                             logger.debug(f"Preloaded checklist forensics note: {p_err}")
                         job.domain_info = preloaded_info
                     else:
-                        job.domain_info = DomainAnalyzer.analyze(target_str, deep=True)
+                        job.domain_info = DomainAnalyzer.analyze(
+                            target_str,
+                            deep=True,
+                            job_id=job.job_id,
+                            run_subfinder_in_background=True
+                        )
                 for rf in (job.domain_info or {}).get("risk_flags", []):
                     findings.append(Finding(
                         category="reputation",
@@ -1335,7 +1340,10 @@ class JobManager:
 
             for idx, url in enumerate(target_urls):  # Analyze up to 15 URLs
                 try:
-                    url_data = URLAnalyzer.analyze_url(url)
+                    url_data = URLAnalyzer.analyze_url(url, resolve_subdomains=False)
+                    if job.category == "domain" and hasattr(job, "domain_info") and job.domain_info:
+                        if job.domain_info.get("subfinder_dnsx"):
+                            url_data["subfinder_dnsx"] = job.domain_info.get("subfinder_dnsx")
                 except Exception as url_err:
                     logger.warning(f"URL analysis skipped for {url!r}: {url_err}")
                     url_data = {

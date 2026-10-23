@@ -284,6 +284,39 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
     setDomainInfo(initialDomainInfo);
   }, [initialDomainInfo]);
 
+  // Real-time background Subfinder + dnsx status polling
+  const isSubfinderRunning = domainInfo.subfinder_dnsx?.status === 'running' || domainInfo.attack_surface?.subfinder_status === 'running';
+
+  useEffect(() => {
+    if (!jobId || !isSubfinderRunning) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiClient.getSubfinderStatus(jobId);
+        if (res && res.subfinder_dnsx) {
+          const finished = res.subfinder_dnsx.status !== 'running';
+          setDomainInfo(prev => ({
+            ...prev,
+            subfinder_dnsx: res.subfinder_dnsx,
+            attack_surface: (res.attack_surface && Object.keys(res.attack_surface).length > 0)
+              ? res.attack_surface
+              : prev.attack_surface,
+            risk_flags: (res.risk_flags && res.risk_flags.length > 0)
+              ? res.risk_flags
+              : prev.risk_flags,
+          }));
+          if (finished) {
+            clearInterval(interval);
+          }
+        }
+      } catch (err) {
+        console.debug('Subfinder polling error:', err);
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [jobId, isSubfinderRunning]);
+
   // Handler for on-demand intelligence refresh
   const handleRefreshIntelligence = async (service: 'shodan' | 'threat_intel' | 'dorks' | 'all') => {
     if (!jobId || refreshingService) return;
@@ -1224,11 +1257,16 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
           >
             <Radio className="w-3.5 h-3.5" />
             <span>Subdomains &amp; Attack Surface ({surface?.total_discovered || 0})</span>
-            {(domainInfo.subfinder_dnsx || ((surface?.total_discovered || 0) > 0)) && (
+            {isSubfinderRunning ? (
+              <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-cyan-100 text-cyan-800 font-bold">
+                <RefreshCw className="w-2.5 h-2.5 text-cyan-600 animate-spin" />
+                <span>Running</span>
+              </span>
+            ) : (domainInfo.subfinder_dnsx || ((surface?.total_discovered || 0) > 0)) ? (
               <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-cyan-100 text-cyan-800 font-bold uppercase">
                 Subfinder
               </span>
-            )}
+            ) : null}
           </button>
         )}
 
@@ -1541,7 +1579,41 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
             )}
 
             {/* Subfinder & dnsx Subdomain Reconnaissance Overview Banner */}
-            {(domainInfo.subfinder_dnsx || ((surface?.total_discovered || 0) > 0)) && (
+            {isSubfinderRunning ? (
+              <div className="p-4 rounded-xl border border-cyan-300 bg-cyan-50/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-cyan-950">
+                      <RefreshCw className="w-4 h-4 text-cyan-600 animate-spin" />
+                      <span>Subdomain Reconnaissance (Subfinder &amp; dnsx) is Running...</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 border border-cyan-300">
+                      Background Process
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 font-mono">
+                    Pipeline: <code className="bg-white px-1.5 py-0.5 rounded border border-cyan-200 text-slate-800 font-bold">subfinder -silent -d {domainInfo.target} | dnsx -silent -a -resp</code>
+                  </p>
+                  <p className="text-xs text-cyan-900 leading-relaxed">
+                    Subfinder and dnsx are currently discovering subdomains and resolving active IPv4 A-records in the background without delaying your analysis. Results will automatically appear here once discovery completes.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-cyan-800 rounded-lg text-xs font-semibold border border-cyan-200 shadow-2xs">
+                    <RefreshCw className="w-3.5 h-3.5 text-cyan-600 animate-spin" />
+                    <span>Recon in progress...</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('surface')}
+                    className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-semibold shrink-0 shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>View Attack Surface</span>
+                    <ArrowRight className="w-3 h-3 text-cyan-200" />
+                  </button>
+                </div>
+              </div>
+            ) : (domainInfo.subfinder_dnsx || ((surface?.total_discovered || 0) > 0)) ? (
               <div className="p-4 rounded-xl border border-cyan-200 bg-cyan-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1575,7 +1647,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   <ArrowRight className="w-3 h-3 text-cyan-200" />
                 </button>
               </div>
-            )}
+            ) : null}
 
             {/* Quick Intelligence Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -3196,25 +3268,52 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
             </div>
 
             {/* Subfinder & dnsx Active Pipeline Banner */}
-            <div className="bg-cyan-50/80 border border-cyan-200 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className={`border rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
+              isSubfinderRunning 
+                ? 'bg-cyan-50 border-cyan-300 shadow-xs' 
+                : 'bg-cyan-50/80 border-cyan-200'
+            }`}>
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 bg-cyan-200/80 text-cyan-900 rounded-lg shrink-0">
-                  <Terminal className="w-4 h-4" />
+                  {isSubfinderRunning ? (
+                    <RefreshCw className="w-4 h-4 text-cyan-700 animate-spin" />
+                  ) : (
+                    <Terminal className="w-4 h-4" />
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-slate-900">ProjectDiscovery Subfinder + dnsx Active Pipeline</span>
-                    <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 uppercase">Active</span>
+                    {isSubfinderRunning ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 uppercase">
+                        <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                        Running in Background
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 uppercase">Active</span>
+                    )}
                   </div>
                   <p className="text-[11px] text-slate-600 font-mono mt-0.5">
                     Command: <code className="bg-white px-1.5 py-0.5 rounded border border-cyan-200 text-slate-800 font-semibold">subfinder -silent -d {domainInfo.target} | dnsx -silent -a -resp</code>
                   </p>
+                  {isSubfinderRunning && (
+                    <p className="text-[11px] text-cyan-800 mt-1 font-medium">
+                      Subfinder and dnsx are currently discovering subdomains in the background. Discovered subdomains and resolved IPv4 addresses will appear below automatically.
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0 font-mono text-[11px]">
-                <span className="px-2 py-1 bg-white rounded-lg border border-cyan-200 text-cyan-950 font-semibold">
-                  {surface?.subdomains?.filter(s => s.discovered_from === 'Subfinder + dnsx' || s.sources?.includes('Subfinder')).length || domainInfo.subfinder_dnsx?.total_discovered || 0} Subfinder Results
-                </span>
+                {isSubfinderRunning ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-cyan-300 text-cyan-950 font-semibold shadow-2xs">
+                    <RefreshCw className="w-3 h-3 text-cyan-600 animate-spin" />
+                    <span>Discovering hosts...</span>
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 bg-white rounded-lg border border-cyan-200 text-cyan-950 font-semibold">
+                    {surface?.subdomains?.filter(s => s.discovered_from === 'Subfinder + dnsx' || s.sources?.includes('Subfinder')).length || domainInfo.subfinder_dnsx?.total_discovered || 0} Subfinder Results
+                  </span>
+                )}
               </div>
             </div>
 
@@ -3490,6 +3589,14 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   ))}
                 </div>
               )
+            ) : isSubfinderRunning ? (
+              <div className="p-8 border border-dashed border-cyan-300 bg-cyan-50/40 rounded-xl text-center text-xs">
+                <RefreshCw className="w-8 h-8 text-cyan-600 animate-spin mx-auto mb-2" />
+                <p className="font-bold text-slate-800 text-sm">Discovering Subdomains with Subfinder &amp; dnsx...</p>
+                <p className="text-slate-600 mt-1 max-w-md mx-auto">
+                  Subdomain reconnaissance is actively querying datasets and resolving hostnames in the background. Discovered subdomains will appear here automatically in real time.
+                </p>
+              </div>
             ) : (
               <div className="p-8 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500">
                 <Radio className="w-8 h-8 text-slate-300 mx-auto mb-2" />

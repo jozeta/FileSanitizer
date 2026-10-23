@@ -198,13 +198,13 @@ class URLFileFetcher:
             if is_domain_target and "DNS resolution failed" in (ssrf_reason or ""):
                 report_bytes = cls._build_domain_report_html(domain_name, {}, f"<p>Domain does not resolve in DNS: {domain_name}</p>")
                 target_name = sanitize_filename(domain_name) if domain_name else "network_target"
-                reputation = URLAnalyzer.analyze_url(url_input)
+                reputation = URLAnalyzer.analyze_url(url_input, resolve_subdomains=False)
                 logger.info(f"Accepted non-resolving domain target '{target_name}' for background analysis pipeline")
                 return FetchResult(report_bytes, target_name, reputation, None, None, is_domain_target=True)
             raise URLFetcherException(f"Destination blocked by SSRF security policy: {ssrf_reason}", 400, {"ssrf_reason": ssrf_reason})
 
         # 2. URL Reputation & Watchlist Check (Recorded as findings; does NOT block analysis!)
-        reputation = URLAnalyzer.analyze_url(url_input)
+        reputation = URLAnalyzer.analyze_url(url_input, resolve_subdomains=False)
 
         # 3. Domain & IP Target Inspection Mode
         # If user submits a domain, IP, or web root rather than a downloadable file path:

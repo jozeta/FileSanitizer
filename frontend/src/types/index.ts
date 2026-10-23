@@ -249,6 +249,7 @@ export interface SubfinderDnsxSubdomain {
 }
 
 export interface SubfinderDnsxResult {
+  status?: 'running' | 'completed' | 'timeout' | 'failed' | string;
   executed: boolean;
   available?: boolean;
   command?: string;
@@ -2712,6 +2713,7 @@ export interface DomainIntelligence {
     active_count?: number;
     dormant_count?: number;
     explanation?: string;
+    subfinder_status?: string;
     subdomains?: Array<{
       subdomain: string;
       status: 'active' | 'unresolving' | string;

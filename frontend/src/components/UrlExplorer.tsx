@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ShieldCheck, AlertTriangle, Image as ImageIcon, Lock, Unlock, ArrowRight, ExternalLink, Link2, ZoomIn, X, Globe, ChevronDown, ChevronUp, Server } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Image as ImageIcon, Lock, Unlock, ArrowRight, ExternalLink, Link2, ZoomIn, X, Globe, ChevronDown, ChevronUp, Server, RefreshCw } from 'lucide-react';
 import { UrlItem, EnrichedIocItem } from '../types';
 import { InvestigateAssetButton } from './InvestigateAssetButton';
 import { NetworkIocEnrichmentPanel } from './NetworkIocEnrichmentPanel';
@@ -638,10 +638,39 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
               {/* Discovered Subdomains & Resolved IPs (Subfinder + dnsx) */}
               {(() => {
                 const subfinderData = item.subfinder_dnsx;
+                const isRunning = subfinderData?.status === 'running';
                 const subdomains: Array<{ subdomain: string; ips?: string[] }> = subfinderData?.subdomains?.map(s => ({
                   subdomain: s.subdomain,
                   ips: s.ips || []
                 })) || (item.subdomains || []).map(s => ({ subdomain: s, ips: [] }));
+
+                if (isRunning && subdomains.length === 0) {
+                  return (
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <div className="flex items-center justify-between p-3 rounded-2xl bg-cyan-50/60 border border-cyan-200/80 text-left">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 bg-cyan-100 text-cyan-800 rounded-lg">
+                            <RefreshCw className="w-4 h-4 animate-spin text-cyan-700" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-slate-900 font-sans">
+                                Subdomain Reconnaissance (Subfinder &amp; dnsx) is Running...
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 uppercase">
+                                Background Recon
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-cyan-900 font-sans mt-0.5">
+                              Discovering subdomains and resolving IP addresses in the background without delaying analysis.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
                 if (subdomains.length === 0) return null;
 
                 const isExpanded = !!expandedSubdomains[idx];

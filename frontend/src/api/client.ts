@@ -1044,6 +1044,33 @@ export const apiClient = {
     return res.json();
   },
 
+  async getSubfinderStatus(jobId: string): Promise<{
+    job_id: string;
+    subfinder_dnsx: any;
+    attack_surface: any;
+    risk_flags: any[];
+  }> {
+    const res = await fetch(`${API_BASE}/jobs/${encodeURIComponent(jobId)}/subfinder-status`);
+    if (!res.ok) throw new Error('Failed to fetch subfinder status');
+    return res.json();
+  },
+
+  async triggerSubfinder(jobId: string): Promise<{
+    success: boolean;
+    job_id: string;
+    subfinder_dnsx: any;
+  }> {
+    const res = await fetch(`${API_BASE}/jobs/${encodeURIComponent(jobId)}/trigger-subfinder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to trigger subfinder reconnaissance');
+    }
+    return res.json();
+  },
+
   // Format-Specific CDR & Sanitization Policies
   async getCdrPolicies(): Promise<{ success: boolean; policies: Record<string, any> }> {
     const res = await fetch(`${API_BASE}/settings/cdr-policies`);

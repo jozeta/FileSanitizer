@@ -466,6 +466,52 @@ def refresh_job_intelligence(job_id: str, payload: Optional[RefreshIntelligenceR
         "domain_info": dom_info
     }
 
+@router.get("/{job_id}/subfinder-status")
+def get_subfinder_status(job_id: str):
+    """
+    Polls the real-time background status of Subfinder & dnsx reconnaissance.
+    Returns status ('running', 'completed', 'timeout', 'failed'), discovered count,
+    and attack surface subdomains without requiring a heavy full-job download.
+    """
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    dom_info = getattr(job, "domain_info", {}) or {}
+    return {
+        "job_id": job_id,
+        "subfinder_dnsx": dom_info.get("subfinder_dnsx", {}),
+        "attack_surface": dom_info.get("attack_surface", {}),
+        "risk_flags": dom_info.get("risk_flags", []),
+    }
+
+@router.post("/{job_id}/trigger-subfinder")
+def trigger_subfinder_recon(job_id: str):
+    """
+    Triggers or re-triggers background Subfinder & dnsx reconnaissance for a domain job.
+    """
+    job = job_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    dom_info = getattr(job, "domain_info", {}) or {}
+    target = dom_info.get("target") or job.filename
+    from app.network.subfinder_dnsx import SubfinderDnsxScanner
+    clean_target = SubfinderDnsxScanner.clean_domain_target(target)
+    if not clean_target:
+        raise HTTPException(status_code=400, detail="Target is not a valid domain name.")
+
+    initial_state = SubfinderDnsxScanner.get_initial_running_state(clean_target)
+    dom_info["subfinder_dnsx"] = initial_state
+    if "attack_surface" in dom_info:
+        dom_info["attack_surface"]["subfinder_status"] = "running"
+    job_manager._save_job_to_disk(job)
+
+    SubfinderDnsxScanner.start_background_recon(job_id, clean_target)
+    return {
+        "success": True,
+        "job_id": job_id,
+        "subfinder_dnsx": initial_state
+    }
+
 @router.post("/{job_id}/enrich-iocs")
 def enrich_job_iocs(job_id: str, payload: EnrichIocsRequest):
     """

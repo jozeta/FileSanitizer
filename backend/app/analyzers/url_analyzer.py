@@ -106,7 +106,7 @@ class URLAnalyzer:
     """
 
     @classmethod
-    def analyze_url(cls, url: str, _depth: int = 0, include_deep_domain: bool = False) -> Dict[str, Any]:
+    def analyze_url(cls, url: str, _depth: int = 0, include_deep_domain: bool = False, resolve_subdomains: bool = True) -> Dict[str, Any]:
         """Deep analysis of a single URL."""
         raw_url = url.strip()
         normalized_url = raw_url
@@ -266,7 +266,7 @@ class URLAnalyzer:
                 logger.debug(f"Fast domain threat check skipped for {domain}: {e}")
 
         # 3c. Subfinder & dnsx Subdomain Enumeration
-        if domain and not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', domain) and ":" not in domain:
+        if resolve_subdomains and domain and not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', domain) and ":" not in domain:
             try:
                 from app.network.subfinder_dnsx import SubfinderDnsxScanner
                 subfinder_data = SubfinderDnsxScanner.discover_subdomains(domain)

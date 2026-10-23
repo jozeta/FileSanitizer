@@ -179,6 +179,7 @@ class SubfinderDnsxScanner:
 
         if not clean_domain:
             return {
+                "status": "failed",
                 "executed": False,
                 "available": cls.is_available(),
                 "command": cmd_display,
@@ -198,6 +199,7 @@ class SubfinderDnsxScanner:
                 "Skipping subfinder|dnsx discovery."
             )
             return {
+                "status": "failed",
                 "executed": False,
                 "available": False,
                 "command": cmd_display,
@@ -245,6 +247,7 @@ class SubfinderDnsxScanner:
                 all_ips.update(s.get("ips", []))
 
             return {
+                "status": "completed",
                 "executed": True,
                 "available": True,
                 "command": cmd_display,
@@ -266,6 +269,7 @@ class SubfinderDnsxScanner:
             except Exception:
                 pass
             return {
+                "status": "timeout",
                 "executed": True,
                 "available": True,
                 "command": cmd_display,
@@ -278,6 +282,7 @@ class SubfinderDnsxScanner:
         except Exception as e:
             logger.error(f"[SubfinderDnsxScanner] Execution error: {e}", exc_info=True)
             return {
+                "status": "failed",
                 "executed": False,
                 "available": True,
                 "command": cmd_display,
@@ -287,3 +292,108 @@ class SubfinderDnsxScanner:
                 "discovered_ips": [],
                 "error": str(e)
             }
+
+    @classmethod
+    def get_initial_running_state(cls, target: str) -> Dict[str, Any]:
+        """Returns the initial state when reconnaissance is executing in the background."""
+        clean = cls.clean_domain_target(target) or target
+        cmd_display = f"subfinder -silent -d {clean or '<domain>'} | dnsx -silent -a -resp"
+        return {
+            "status": "running",
+            "executed": True,
+            "available": cls.is_available(),
+            "command": cmd_display,
+            "target_domain": clean,
+            "total_discovered": 0,
+            "subdomains": [],
+            "discovered_ips": [],
+            "error": None
+        }
+
+    @classmethod
+    def start_background_recon(cls, job_id: str, target: str, timeout: int = 60) -> None:
+        """
+        Launches Subfinder & dnsx reconnaissance in an isolated background thread.
+        When finished, updates the job's domain_info, attack_surface, risk_flags, and entity_graph,
+        persisting the state so the polling frontend receives the completed results.
+        """
+        import threading
+        clean_target = cls.clean_domain_target(target)
+        if not clean_target or not job_id:
+            return
+
+        def _worker():
+            try:
+                logger.info(f"[SubfinderDnsxScanner] Background task started for job {job_id} ({clean_target})")
+                scan_res = cls.discover_subdomains(clean_target, timeout=timeout)
+
+                from app.core.job_manager import job_manager
+                job = job_manager.get_job(job_id)
+                if not job or not hasattr(job, "domain_info") or not job.domain_info:
+                    logger.debug(f"[SubfinderDnsxScanner] Job {job_id} or domain_info not found")
+                    return
+
+                job.domain_info["subfinder_dnsx"] = scan_res
+
+                # Update attack_surface with new subfinder subdomains
+                from app.network.subdomain_mapper import SubdomainMapper
+                existing_surface = job.domain_info.get("attack_surface") or {}
+
+                ct_subs = job.domain_info.get("tls_profile", {}).get("ct_logs", {}).get("discovered_subdomains", [])
+                tls_sans = (job.domain_info.get("tls_profile", {}).get("live_cert") or {}).get("sans", [])
+                dns_cnames = job.domain_info.get("advanced_dns", {}).get("records", {}).get("cname", [])
+                sibling_domains = existing_surface.get("sibling_domains", [])
+
+                updated_surface = SubdomainMapper.map_surface(
+                    clean_target,
+                    ct_subs,
+                    tls_sans,
+                    dns_cnames,
+                    sibling_domains,
+                    subfinder_results=scan_res.get("subdomains", [])
+                )
+                updated_surface["subfinder_status"] = scan_res.get("status", "completed")
+                job.domain_info["attack_surface"] = updated_surface
+
+                if scan_res.get("total_discovered", 0) > 0:
+                    has_flag = any(f.get("title") == "Subdomain Reconnaissance (Subfinder & dnsx)" for f in job.domain_info.get("risk_flags", []))
+                    if not has_flag:
+                        job.domain_info.setdefault("risk_flags", []).append({
+                            "severity": "low",
+                            "title": "Subdomain Reconnaissance (Subfinder & dnsx)",
+                            "description": f"Discovered {scan_res['total_discovered']} resolving subdomain(s) using Subfinder and dnsx reconnaissance."
+                        })
+
+                # Update matching URLs in job.urls
+                if hasattr(job, "urls") and job.urls:
+                    for u in job.urls:
+                        if isinstance(u, dict) and u.get("domain") == clean_target:
+                            u["subfinder_dnsx"] = scan_res
+                            u["subdomains"] = [s["subdomain"] for s in scan_res.get("subdomains", [])]
+
+                # Rebuild entity graph with newly discovered subdomains & IPs
+                try:
+                    from app.core.entity_graph_builder import EntityGraphBuilder
+                    job.entity_graph = EntityGraphBuilder.build(job)
+                except Exception as eg_err:
+                    logger.debug(f"Entity graph rebuild failed for {job_id}: {eg_err}")
+
+                job_manager._save_job_to_disk(job)
+
+                # Persist HTML report in workspace
+                ws = job_manager.get_workspace(job_id)
+                if ws:
+                    try:
+                        from app.network.url_fetcher import URLFileFetcher
+                        orig_path = ws.original_file_path(job.filename)
+                        report_html = URLFileFetcher._build_domain_report_html(clean_target, job.domain_info)
+                        orig_path.write_bytes(report_html)
+                    except Exception:
+                        pass
+
+                logger.info(f"[SubfinderDnsxScanner] Background task completed for job {job_id}: {scan_res.get('total_discovered', 0)} subdomains.")
+            except Exception as e:
+                logger.error(f"[SubfinderDnsxScanner] Background task error for job {job_id}: {e}", exc_info=True)
+
+        thread = threading.Thread(target=_worker, daemon=True, name=f"subfinder-{job_id}")
+        thread.start()
