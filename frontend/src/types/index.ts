@@ -2724,6 +2724,8 @@ export interface DomainIntelligence {
     }>;
   };
 
+  subfinder_dnsx?: SubfinderDnsxResult;
+
   active_recon?: {
     target?: string;
     authorized: boolean;
