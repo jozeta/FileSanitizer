@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DomainIntelligence, ShodanHost } from '../types';
 import { apiClient } from '../api/client';
 import { InvestigateAssetButton } from './InvestigateAssetButton';
@@ -507,74 +507,84 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
   const shodan = domainInfo.shodan;
   const dorkFindings = domainInfo.dork_findings;
 
-  // Filter subdomains for surface map with provenance & status awareness
-  const filteredSubdomains = (surface?.subdomains || []).filter(s => {
-    const q = subdomainSearch.toLowerCase();
-    const matchesSearch = !q ||
-      s.subdomain.toLowerCase().includes(q) ||
-      (s.ips || []).some(ip => ip.toLowerCase().includes(q)) ||
-      (s.discovered_from || '').toLowerCase().includes(q);
-    const matchesStatus = subdomainStatusFilter === 'all' || s.status === subdomainStatusFilter;
-    const matchesSource = subdomainSourceFilter === 'all' ||
-      (s.discovered_from && s.discovered_from.toLowerCase().includes(subdomainSourceFilter.toLowerCase())) ||
-      ((s.sources || []).some(src => src.toLowerCase().includes(subdomainSourceFilter.toLowerCase())));
-    return matchesSearch && matchesStatus && matchesSource;
-  });
+  // Filter subdomains for surface map with provenance & status awareness (memoized)
+  const filteredSubdomains = useMemo(() => {
+    return (surface?.subdomains || []).filter(s => {
+      const q = subdomainSearch.toLowerCase();
+      const matchesSearch = !q ||
+        s.subdomain.toLowerCase().includes(q) ||
+        (s.ips || []).some(ip => ip.toLowerCase().includes(q)) ||
+        (s.discovered_from || '').toLowerCase().includes(q);
+      const matchesStatus = subdomainStatusFilter === 'all' || s.status === subdomainStatusFilter;
+      const matchesSource = subdomainSourceFilter === 'all' ||
+        (s.discovered_from && s.discovered_from.toLowerCase().includes(subdomainSourceFilter.toLowerCase())) ||
+        ((s.sources || []).some(src => src.toLowerCase().includes(subdomainSourceFilter.toLowerCase())));
+      return matchesSearch && matchesStatus && matchesSource;
+    });
+  }, [surface?.subdomains, subdomainSearch, subdomainStatusFilter, subdomainSourceFilter]);
 
-  // Direct Affiliates Filtering (High-confidence cryptographic/ownership siblings)
-  const filteredDirectAffiliates = directAffiliates.filter(r => {
-    if (relationSearch && !r.domain.toLowerCase().includes(relationSearch.toLowerCase())) {
-      return false;
-    }
-    if (confidenceFilter !== 'all' && r.confidence !== confidenceFilter) {
-      return false;
-    }
-    if (relationFilter !== 'all' && !r.relationships.includes(relationFilter)) {
-      return false;
-    }
-    return true;
-  });
+  // Direct Affiliates Filtering (High-confidence cryptographic/ownership siblings) (memoized)
+  const filteredDirectAffiliates = useMemo(() => {
+    return directAffiliates.filter(r => {
+      if (relationSearch && !r.domain.toLowerCase().includes(relationSearch.toLowerCase())) {
+        return false;
+      }
+      if (confidenceFilter !== 'all' && r.confidence !== confidenceFilter) {
+        return false;
+      }
+      if (relationFilter !== 'all' && !r.relationships.includes(relationFilter)) {
+        return false;
+      }
+      return true;
+    });
+  }, [directAffiliates, relationSearch, confidenceFilter, relationFilter]);
 
-  // Shared Multi-Tenant Neighbors Filtering (Co-hosted on CDN/DDoS edge, public registrar NS)
-  const filteredSharedNeighbors = sharedNeighbors.filter(r => {
-    if (relationSearch && !r.domain.toLowerCase().includes(relationSearch.toLowerCase())) {
-      return false;
-    }
-    if (confidenceFilter !== 'all' && r.confidence !== confidenceFilter) {
-      return false;
-    }
-    if (relationFilter !== 'all' && !r.relationships.includes(relationFilter)) {
-      return false;
-    }
-    return true;
-  });
+  // Shared Multi-Tenant Neighbors Filtering (Co-hosted on CDN/DDoS edge, public registrar NS) (memoized)
+  const filteredSharedNeighbors = useMemo(() => {
+    return sharedNeighbors.filter(r => {
+      if (relationSearch && !r.domain.toLowerCase().includes(relationSearch.toLowerCase())) {
+        return false;
+      }
+      if (confidenceFilter !== 'all' && r.confidence !== confidenceFilter) {
+        return false;
+      }
+      if (relationFilter !== 'all' && !r.relationships.includes(relationFilter)) {
+        return false;
+      }
+      return true;
+    });
+  }, [sharedNeighbors, relationSearch, confidenceFilter, relationFilter]);
 
-  // All Relations Filtering
-  const filteredRelations = relatedDomains.filter(r => {
-    if (relationSearch && !r.domain.toLowerCase().includes(relationSearch.toLowerCase())) {
-      return false;
-    }
-    if (confidenceFilter !== 'all' && r.confidence !== confidenceFilter) {
-      return false;
-    }
-    if (relationFilter !== 'all' && !r.relationships.includes(relationFilter)) {
-      return false;
-    }
-    return true;
-  });
+  // All Relations Filtering (memoized)
+  const filteredRelations = useMemo(() => {
+    return relatedDomains.filter(r => {
+      if (relationSearch && !r.domain.toLowerCase().includes(relationSearch.toLowerCase())) {
+        return false;
+      }
+      if (confidenceFilter !== 'all' && r.confidence !== confidenceFilter) {
+        return false;
+      }
+      if (relationFilter !== 'all' && !r.relationships.includes(relationFilter)) {
+        return false;
+      }
+      return true;
+    });
+  }, [relatedDomains, relationSearch, confidenceFilter, relationFilter]);
 
-  // Filtered Cloud Takeover Signatures
-  const filteredSignatures = CLOUD_TAKEOVER_SIGNATURES.filter(sig => {
-    const q = signatureSearch.toLowerCase();
-    const matchesSearch = !q ||
-      sig.provider.toLowerCase().includes(q) ||
-      sig.serviceType.toLowerCase().includes(q) ||
-      sig.cnamePattern.toLowerCase().includes(q) ||
-      sig.fingerprint.toLowerCase().includes(q) ||
-      sig.unclaimedStatus.toLowerCase().includes(q);
-    const matchesProvider = signatureProviderFilter === 'all' || sig.provider === signatureProviderFilter;
-    return matchesSearch && matchesProvider;
-  });
+  // Filtered Cloud Takeover Signatures (memoized)
+  const filteredSignatures = useMemo(() => {
+    return CLOUD_TAKEOVER_SIGNATURES.filter(sig => {
+      const q = signatureSearch.toLowerCase();
+      const matchesSearch = !q ||
+        sig.provider.toLowerCase().includes(q) ||
+        sig.serviceType.toLowerCase().includes(q) ||
+        sig.cnamePattern.toLowerCase().includes(q) ||
+        sig.fingerprint.toLowerCase().includes(q) ||
+        sig.unclaimedStatus.toLowerCase().includes(q);
+      const matchesProvider = signatureProviderFilter === 'all' || sig.provider === signatureProviderFilter;
+      return matchesSearch && matchesProvider;
+    });
+  }, [signatureSearch, signatureProviderFilter]);
 
   const getScoreColor = (level: string = 'clean') => {
     switch (level.toLowerCase()) {

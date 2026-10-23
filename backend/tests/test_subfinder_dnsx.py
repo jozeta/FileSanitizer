@@ -274,7 +274,7 @@ def test_url_analyzer_subfinder_integration():
     with patch.object(SubfinderDnsxScanner, "discover_subdomains", return_value=mock_scan_res), \
          patch("socket.gethostbyname", return_value="192.0.2.100"):
 
-        url_res = URLAnalyzer.analyze_url("https://urltest.org/path/login")
+        url_res = URLAnalyzer.analyze_url("https://urltest.org/path/login", resolve_subdomains=True)
         assert "subfinder_dnsx" in url_res
         assert url_res["subfinder_dnsx"]["total_discovered"] == 2
         assert "cdn.urltest.org" in url_res["subdomains"]

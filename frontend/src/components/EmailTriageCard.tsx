@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Mail,
   EyeOff,
@@ -88,6 +88,14 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
   const [headerSearch, setHeaderSearch] = useState('');
   const [rawSearch, setRawSearch] = useState('');
   const [wrapRawLines, setWrapRawLines] = useState(true);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (actionNotice) {
+      const timer = setTimeout(() => setActionNotice(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionNotice]);
 
   const emailFindings = findings.filter(
     (f) =>
@@ -145,7 +153,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
         onSelectJob(res.job_id);
       }
     } catch (e: any) {
-      alert(`Failed to queue attachment: ${e.message}`);
+      setActionNotice(`Failed to queue attachment: ${e.message}`);
     } finally {
       setAnalyzingAttIndex(null);
     }
@@ -431,6 +439,18 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
 
   return (
     <div className="space-y-6">
+      {actionNotice && (
+        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs flex items-center justify-between animate-in fade-in duration-200 shadow-sm">
+          <span className="font-medium">{actionNotice}</span>
+          <button
+            onClick={() => setActionNotice(null)}
+            className="text-rose-500 hover:text-rose-700 font-bold ml-3 text-sm cursor-pointer"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* 1. EXECUTIVE EMAIL SECURITY VERDICT BANNER */}
       <div
         className={`p-6 rounded-3xl border shadow-sm transition-all ${

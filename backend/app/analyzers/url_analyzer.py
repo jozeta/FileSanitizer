@@ -106,7 +106,7 @@ class URLAnalyzer:
     """
 
     @classmethod
-    def analyze_url(cls, url: str, _depth: int = 0, include_deep_domain: bool = False, resolve_subdomains: bool = True) -> Dict[str, Any]:
+    def analyze_url(cls, url: str, _depth: int = 0, include_deep_domain: bool = False, resolve_subdomains: bool = False) -> Dict[str, Any]:
         """Deep analysis of a single URL."""
         raw_url = url.strip()
         normalized_url = raw_url

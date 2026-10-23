@@ -742,6 +742,37 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
     };
   }, [unique_users, unique_computers, unique_ips, rawTimelineList]);
 
+  // Memoized forensic entity searches
+  const filteredForensicUsers = useMemo(() => {
+    if (!entitiesSearch) return forensicEntities.users;
+    const q = entitiesSearch.toLowerCase();
+    return forensicEntities.users.filter((u) => u.username.toLowerCase().includes(q));
+  }, [forensicEntities.users, entitiesSearch]);
+
+  const filteredForensicComputers = useMemo(() => {
+    if (!entitiesSearch) return forensicEntities.computers;
+    const q = entitiesSearch.toLowerCase();
+    return forensicEntities.computers.filter((c) => c.hostname.toLowerCase().includes(q));
+  }, [forensicEntities.computers, entitiesSearch]);
+
+  const filteredForensicIps = useMemo(() => {
+    if (!entitiesSearch) return forensicEntities.ips;
+    const q = entitiesSearch.toLowerCase();
+    return forensicEntities.ips.filter((ip) => ip.ip.toLowerCase().includes(q));
+  }, [forensicEntities.ips, entitiesSearch]);
+
+  const filteredForensicShares = useMemo(() => {
+    if (!entitiesSearch) return forensicEntities.shares;
+    const q = entitiesSearch.toLowerCase();
+    return forensicEntities.shares.filter((s) => s.shareName.toLowerCase().includes(q));
+  }, [forensicEntities.shares, entitiesSearch]);
+
+  const filteredForensicProcesses = useMemo(() => {
+    if (!entitiesSearch) return forensicEntities.processes;
+    const q = entitiesSearch.toLowerCase();
+    return forensicEntities.processes.filter((p) => p.processName.toLowerCase().includes(q));
+  }, [forensicEntities.processes, entitiesSearch]);
+
   // Flattened threats list safely
   const allThreats = useMemo(() => {
     const list: EvtxThreatItem[] = [];
@@ -2600,8 +2631,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {forensicEntities.users
-                    .filter((u) => !entitiesSearch || u.username.toLowerCase().includes(entitiesSearch.toLowerCase()))
+                  {filteredForensicUsers
                     .map((user) => (
                       <div
                         key={user.username}
@@ -2696,8 +2726,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {forensicEntities.computers
-                    .filter((c) => !entitiesSearch || c.hostname.toLowerCase().includes(entitiesSearch.toLowerCase()))
+                  {filteredForensicComputers
                     .map((comp) => (
                       <div
                         key={comp.hostname}
@@ -2767,8 +2796,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {forensicEntities.ips
-                    .filter((ip) => !entitiesSearch || ip.ip.toLowerCase().includes(entitiesSearch.toLowerCase()))
+                  {filteredForensicIps
                     .map((ipItem) => (
                       <div
                         key={ipItem.ip}
@@ -2847,8 +2875,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {forensicEntities.shares
-                    .filter((s) => !entitiesSearch || s.shareName.toLowerCase().includes(entitiesSearch.toLowerCase()))
+                  {filteredForensicShares
                     .map((sItem) => (
                       <div
                         key={sItem.shareName}
@@ -2914,8 +2941,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {forensicEntities.processes
-                    .filter((p) => !entitiesSearch || p.processName.toLowerCase().includes(entitiesSearch.toLowerCase()))
+                  {filteredForensicProcesses
                     .map((pItem) => (
                       <div
                         key={pItem.processName}

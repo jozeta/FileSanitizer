@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Activity,
   Globe,
@@ -241,48 +241,61 @@ export const PcapTriageCard: React.FC<PcapTriageCardProps> = ({
     }
   };
 
-  // Filtering flows
-  const filteredFlows = (conversations || []).filter(fl => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      fl.id.toLowerCase().includes(q) ||
-      fl.src_ip.toLowerCase().includes(q) ||
-      fl.dst_ip.toLowerCase().includes(q) ||
-      fl.protocol.toLowerCase().includes(q) ||
-      String(fl.src_port).includes(q) ||
-      String(fl.dst_port).includes(q)
-    );
-  });
+  // Filtering flows (memoized)
+  const filteredFlows = useMemo(() => {
+    return (conversations || []).filter(fl => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        fl.id.toLowerCase().includes(q) ||
+        fl.src_ip.toLowerCase().includes(q) ||
+        fl.dst_ip.toLowerCase().includes(q) ||
+        fl.protocol.toLowerCase().includes(q) ||
+        String(fl.src_port).includes(q) ||
+        String(fl.dst_port).includes(q)
+      );
+    });
+  }, [conversations, searchQuery]);
 
-  // Filtering DNS
-  const filteredDns = (dns_queries || []).filter(d => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return d.domain.toLowerCase().includes(q) || (d.resolved_ips || []).some(ip => ip.includes(q));
-  });
+  // Filtering DNS (memoized)
+  const filteredDns = useMemo(() => {
+    return (dns_queries || []).filter(d => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return d.domain.toLowerCase().includes(q) || (d.resolved_ips || []).some(ip => ip.includes(q));
+    });
+  }, [dns_queries, searchQuery]);
 
-  // Filtering Endpoints
-  const filteredEndpoints = (top_endpoints || []).filter(ep => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return ep.ip.toLowerCase().includes(q) || (ep.country || '').toLowerCase().includes(q) || (ep.asn || '').toLowerCase().includes(q);
-  });
+  // Filtering Endpoints (memoized)
+  const filteredEndpoints = useMemo(() => {
+    return (top_endpoints || []).filter(ep => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return ep.ip.toLowerCase().includes(q) || (ep.country || '').toLowerCase().includes(q) || (ep.asn || '').toLowerCase().includes(q);
+    });
+  }, [top_endpoints, searchQuery]);
 
-  // Filtering Carved Files
-  const filteredCarvedFiles = (carved_files || []).filter(cf => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      cf.filename.toLowerCase().includes(q) ||
-      cf.mime_type.toLowerCase().includes(q) ||
-      cf.sha256.toLowerCase().includes(q) ||
-      (cf.source_protocol?.toLowerCase().includes(q) ?? false)
-    );
-  });
+  // Filtering Carved Files (memoized)
+  const filteredCarvedFiles = useMemo(() => {
+    return (carved_files || []).filter(cf => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        cf.filename.toLowerCase().includes(q) ||
+        cf.mime_type.toLowerCase().includes(q) ||
+        cf.sha256.toLowerCase().includes(q) ||
+        (cf.source_protocol?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [carved_files, searchQuery]);
 
-  const dangerousTransfers = (transferred_files || []).filter(f => f.is_dangerous);
-  const maliciousCarved = (carved_files || []).filter(f => f.is_dangerous);
+  const dangerousTransfers = useMemo(() => {
+    return (transferred_files || []).filter(f => f.is_dangerous);
+  }, [transferred_files]);
+
+  const maliciousCarved = useMemo(() => {
+    return (carved_files || []).filter(f => f.is_dangerous);
+  }, [carved_files]);
 
   // Protocol Color Formatter
   const getProtocolColor = (proto: string) => {

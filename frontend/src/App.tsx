@@ -2,18 +2,30 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Header, ViewTab } from './components/Header';
 import { FileUpload } from './components/FileUpload';
 import { AnalysisDashboard } from './components/AnalysisDashboard';
-import { RelationshipMappingView } from './components/RelationshipMappingView';
 import { WorkspaceTabBar } from './components/WorkspaceTabBar';
-import { HowItWorks } from './components/HowItWorks';
-import { SupportedFormats } from './components/SupportedFormats';
-import { SettingsView } from './components/SettingsView';
 import { DisclaimerModal } from './components/DisclaimerModal';
 import { UploadProgressModal } from './components/UploadProgressModal';
 import { DragDropOverlay } from './components/DragDropOverlay';
 import { NewVersionModal } from './components/NewVersionModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { DecoderView } from './components/DecoderView';
 import { SelectionDecoderPopup } from './components/SelectionDecoderPopup';
+
+// Lazy-loaded auxiliary views to minimize initial bundle size and boost page performance
+const RelationshipMappingView = React.lazy(() =>
+  import('./components/RelationshipMappingView').then((m) => ({ default: m.RelationshipMappingView }))
+);
+const SettingsView = React.lazy(() =>
+  import('./components/SettingsView').then((m) => ({ default: m.SettingsView }))
+);
+const DecoderView = React.lazy(() =>
+  import('./components/DecoderView').then((m) => ({ default: m.DecoderView }))
+);
+const HowItWorks = React.lazy(() =>
+  import('./components/HowItWorks').then((m) => ({ default: m.HowItWorks }))
+);
+const SupportedFormats = React.lazy(() =>
+  import('./components/SupportedFormats').then((m) => ({ default: m.SupportedFormats }))
+);
 import { AlertTriangle, Info } from 'lucide-react';
 import { apiClient, UpdateCheckResult } from './api/client';
 import { WorkspaceJob, JobDetail, IncidentCorrelationData } from './types';
@@ -105,7 +117,7 @@ export const App: React.FC = () => {
 
   const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number; percentage: number } | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
-  const [duplicateNotice, setDuplicateNotice] = useState<{ message: string; type: 'warning' | 'info' } | null>(null);
+  const [duplicateNotice, setDuplicateNotice] = useState<{ message: string; type: 'warning' | 'info' | 'error'; title?: string } | null>(null);
 
   // GitHub Version & Update Notification States
   const [newVersionInfo, setNewVersionInfo] = useState<UpdateCheckResult | null>(null);
@@ -307,10 +319,18 @@ export const App: React.FC = () => {
         setActiveTab(res.jobs[0].job_id);
         setCurrentView('sanitizer');
       } else {
-        alert('Server did not return a valid job.');
+        setDuplicateNotice({
+          title: 'Upload Failed',
+          message: 'Server did not return a valid job.',
+          type: 'error'
+        });
       }
     } catch (err: any) {
-      alert(err.message || 'File upload failed');
+      setDuplicateNotice({
+        title: 'Upload Failed',
+        message: err.message || 'File upload failed',
+        type: 'error'
+      });
     } finally {
       setIsUploading(false);
       setUploadProgress(null);
@@ -539,22 +559,28 @@ export const App: React.FC = () => {
         onOpenUpdateModal={() => setIsNewVersionModalOpen(true)}
       />
 
-      {/* Duplicate Prevention Notification Toast */}
+      {/* Notification Toast */}
       {duplicateNotice && (
         <div className="fixed top-20 right-6 z-50 max-w-md animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`p-4 rounded-2xl shadow-xl border flex items-start gap-3 ${
-            duplicateNotice.type === 'warning'
+            duplicateNotice.type === 'error'
+              ? 'bg-rose-50/95 border-rose-200 text-rose-900 backdrop-blur-sm'
+              : duplicateNotice.type === 'warning'
               ? 'bg-amber-50/95 border-amber-200 text-amber-900 backdrop-blur-sm'
               : 'bg-indigo-50/95 border-indigo-200 text-indigo-900 backdrop-blur-sm'
           }`}>
             <div className={`p-1.5 rounded-xl shrink-0 ${
+              duplicateNotice.type === 'error' ? 'bg-rose-100 text-rose-700' :
               duplicateNotice.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'
             }`}>
-              {duplicateNotice.type === 'warning' ? <AlertTriangle className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+              {duplicateNotice.type === 'error' || duplicateNotice.type === 'warning' ? <AlertTriangle className="w-5 h-5" /> : <Info className="w-5 h-5" />}
             </div>
             <div className="flex-1 text-xs">
               <strong className="block font-bold mb-0.5">
-                {duplicateNotice.type === 'warning' ? 'Duplicate File Detected' : 'Duplicate Files Skipped'}
+                {duplicateNotice.title || (
+                  duplicateNotice.type === 'error' ? 'Notification' :
+                  duplicateNotice.type === 'warning' ? 'Duplicate File Detected' : 'Duplicate Files Skipped'
+                )}
               </strong>
               <p className="leading-relaxed">{duplicateNotice.message}</p>
             </div>
@@ -582,56 +608,65 @@ export const App: React.FC = () => {
         )}
 
         <div className="flex-1">
-          {currentView === 'settings' ? (
-            <div className="max-w-[96rem] mx-auto px-4 py-8">
-              <SettingsView onBack={() => setCurrentView('sanitizer')} />
-            </div>
-          ) : currentView === 'decoder' ? (
-            <DecoderView
-              key={decoderResetKey}
-              initialInput={decoderInput}
-              onClearInitialInput={() => setDecoderInput('')}
-            />
-          ) : currentView === 'how-it-works' ? (
-            <HowItWorks 
-              onGoToSanitizer={() => setCurrentView('sanitizer')}
-              onGoToFormats={() => setCurrentView('supported-formats')}
-            />
-          ) : currentView === 'supported-formats' ? (
-            <SupportedFormats 
-              onGoToSanitizer={() => setCurrentView('sanitizer')}
-            />
-          ) : workspaceJobs.length > 0 && activeTab === 'relationship_mapping' ? (
-            <ErrorBoundary fallbackTitle="Relationship Mapping Error" onReset={handleReset}>
-              <RelationshipMappingView
-                jobs={workspaceJobs}
-                cachedData={cachedCorrelationRef.current}
-                onDataLoaded={(d) => {
-                  cachedCorrelationRef.current = d;
-                }}
-                onSelectJob={handleSelectJob}
+          <React.Suspense
+            fallback={
+              <div className="flex flex-col items-center justify-center p-20 text-slate-500 font-mono text-sm space-y-3">
+                <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-xs text-slate-500 font-medium">Loading workspace view...</p>
+              </div>
+            }
+          >
+            {currentView === 'settings' ? (
+              <div className="max-w-[96rem] mx-auto px-4 py-8">
+                <SettingsView onBack={() => setCurrentView('sanitizer')} />
+              </div>
+            ) : currentView === 'decoder' ? (
+              <DecoderView
+                key={decoderResetKey}
+                initialInput={decoderInput}
+                onClearInitialInput={() => setDecoderInput('')}
               />
-            </ErrorBoundary>
-          ) : workspaceJobs.length > 0 && activeTab ? (
-            <ErrorBoundary fallbackTitle="Analysis Dashboard Error" onReset={handleReset}>
-              <AnalysisDashboard
-                key={activeTab}
-                jobId={activeTab}
-                cachedJob={cachedJobsRef.current[activeTab]}
-                onBack={handleReset}
-                onSelectJob={handleSelectJob}
-                onJobUpdate={handleJobUpdate}
-                workspaceJobs={workspaceJobs}
+            ) : currentView === 'how-it-works' ? (
+              <HowItWorks 
+                onGoToSanitizer={() => setCurrentView('sanitizer')}
+                onGoToFormats={() => setCurrentView('supported-formats')}
               />
-            </ErrorBoundary>
-          ) : (
-            <FileUpload
-              onUpload={handleUpload}
-              onUrlFetchSuccess={handleUrlFetchSuccess}
-              isUploading={isUploading}
-              uploadProgress={uploadProgress}
-            />
-          )}
+            ) : currentView === 'supported-formats' ? (
+              <SupportedFormats 
+                onGoToSanitizer={() => setCurrentView('sanitizer')}
+              />
+            ) : workspaceJobs.length > 0 && activeTab === 'relationship_mapping' ? (
+              <ErrorBoundary fallbackTitle="Relationship Mapping Error" onReset={handleReset}>
+                <RelationshipMappingView
+                  jobs={workspaceJobs}
+                  cachedData={cachedCorrelationRef.current}
+                  onDataLoaded={(d) => {
+                    cachedCorrelationRef.current = d;
+                  }}
+                  onSelectJob={handleSelectJob}
+                />
+              </ErrorBoundary>
+            ) : workspaceJobs.length > 0 && activeTab ? (
+              <ErrorBoundary fallbackTitle="Analysis Dashboard Error" onReset={handleReset}>
+                <AnalysisDashboard
+                  key={activeTab}
+                  jobId={activeTab}
+                  cachedJob={cachedJobsRef.current[activeTab]}
+                  onBack={handleReset}
+                  onSelectJob={handleSelectJob}
+                  onJobUpdate={handleJobUpdate}
+                  workspaceJobs={workspaceJobs}
+                />
+              </ErrorBoundary>
+            ) : (
+              <FileUpload
+                onUpload={handleUpload}
+                onUrlFetchSuccess={handleUrlFetchSuccess}
+                isUploading={isUploading}
+                uploadProgress={uploadProgress}
+              />
+            )}
+          </React.Suspense>
         </div>
       </main>
 

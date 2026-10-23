@@ -1052,7 +1052,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     if (!token) return;
     const fmt = fileFormats.find(f => f.id === id);
     if (fmt?.isSystem) {
-      alert('System-created default file formats cannot be deleted, only disabled.');
+      showNotification('System-created default file formats cannot be deleted, only disabled.', 'error');
       return;
     }
     if (!window.confirm(`Are you sure you want to delete file format "${fmt?.name || id}"?`)) return;

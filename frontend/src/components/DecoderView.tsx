@@ -377,7 +377,9 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
   const handleSaveRecipeConfirm = (e: React.FormEvent) => {
     e.preventDefault();
     if (recipe.length < 2) {
-      alert('A recipe must contain 2 or more pipeline operations.');
+      setSaveToast('A recipe must contain 2 or more pipeline operations.');
+      setTimeout(() => setSaveToast(null), 3000);
+      setIsSaveModalOpen(false);
       return;
     }
     const trimmedName = newRecipeName.trim();
