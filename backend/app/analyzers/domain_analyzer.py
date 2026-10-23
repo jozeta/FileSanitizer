@@ -440,11 +440,29 @@ class DomainAnalyzer:
             })
 
         if not is_ip:
+            from app.network.subfinder_dnsx import SubfinderDnsxScanner
+            subfinder_res = SubfinderDnsxScanner.discover_subdomains(clean_target)
+            res["subfinder_dnsx"] = subfinder_res
+
             ct_subs = tls_data.get("ct_logs", {}).get("discovered_subdomains", [])
             tls_sans = (tls_data.get("live_cert") or {}).get("sans", [])
             dns_cnames = adv_dns.get("records", {}).get("cname", [])
-            surface_map = SubdomainMapper.map_surface(clean_target, ct_subs, tls_sans, dns_cnames, sibling_domains)
+            surface_map = SubdomainMapper.map_surface(
+                clean_target,
+                ct_subs,
+                tls_sans,
+                dns_cnames,
+                sibling_domains,
+                subfinder_results=subfinder_res.get("subdomains", [])
+            )
             res["attack_surface"] = surface_map
+
+            if subfinder_res.get("total_discovered", 0) > 0:
+                res["risk_flags"].append({
+                    "severity": "low",
+                    "title": "Subdomain Reconnaissance (Subfinder & dnsx)",
+                    "description": f"Discovered {subfinder_res['total_discovered']} resolving subdomain(s) using Subfinder and dnsx reconnaissance."
+                })
 
         res["active_recon"] = active_scan
         res["active_security_probes"] = active_probes

@@ -7,6 +7,8 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
 [![Nmap](https://img.shields.io/badge/Nmap-7.95+-darkblue.svg)](https://nmap.org/)
+[![Subfinder](https://img.shields.io/badge/Subfinder-2.17.0-blueviolet.svg)](https://github.com/projectdiscovery/subfinder)
+[![dnsx](https://img.shields.io/badge/dnsx-1.3.1-blueviolet.svg)](https://github.com/projectdiscovery/dnsx)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -153,7 +155,7 @@ SECURITY ANALYSIS
    │     ├── Web Archive (Wayback Machine) Calendar Integration & Delta Diffing
    │     ├── Related Infrastructure & Pivots (Smart separation of Direct Affiliates vs CDN/DDoS edge noise)
    │     ├── Email Security & Spoofability Audit (DMARC, DKIM, SPF enforcement)
-   │     ├── Subdomain Topology & Attack Surface (crt.sh, SANs, DNS brute-force)
+   │     ├── Subdomain Topology & Attack Surface (Subfinder, dnsx, crt.sh, SANs, DNS brute-force)
    │     └── Active Security Audit Probes (Sensitive files, WAF detection, CORS/HTTP methods, TLS cryptography)
    └── External Threat Intelligence (VirusTotal, Hybrid Analysis, ThreatFox, CIRCL, AbuseIPDB, IPinfo, MXToolbox, RDAP)
    ↓
@@ -199,7 +201,7 @@ CLEAN FILE READY FOR DOWNLOAD
 | **Android Applications (APK)** | APK, AAB, XAPK, DEX | Hybrid Androguard 4.x & pure-Python AXML engine, multi-DEX class extraction & bytecode analysis, **Dalvik/Smali Opcode Disassembler & High-Level Java Decompiler** with interactive class & method browser, embedded source code & framework bundle scanner (`.java`, `.kt`, React Native/JS `index.android.bundle`, shell scripts `.sh`, `.xml`, `.json`), native ELF library triage (`lib/**/*.so`) with JNI export mapping and Checksec mitigations (NX, PIE, Canary, RELRO), dangerous permissions matrix with MITRE Mobile ATT&CK correlation, IPC attack surface (Activities, Services, Receivers with `BOOT_COMPLETED`, Providers), 10-point automated security compliance audit (OWASP MASVS), X.509 code signing certificates (debug keystore detection), and integrated online threat intel (Koodous, VirusTotal, MalwareBazaar, Google Play Store, APKPure). | **Mobile Disarm & Dossier:** Neutralize dangerous permissions, defang C2 URLs, clear debuggable flag, purge secondary executables, or compile into static Vector PDF review dossier. |
 | **Java Files & Bytecode** | JAVA, CLASS, JAR, WAR | Java source code AST & static security heuristics (`Runtime.exec`, `ProcessBuilder`, `sun.misc.Unsafe`, dynamic reflection, JNDI lookups/Log4Shell, SQLi), compiled bytecode (`.class`) Constant Pool parsing and dangerous method reference resolution (Java 1.1 to Java 23), JAR manifest triage (`Main-Class`, `Premain-Class` Java Agent memory hooks, `all-permissions`), native library packaging, and Java RAT signatures (jRAT, Adwind, AlienSpy, AsyncRAT). | **Java Disarm & Dossier:** Disarm OS shell execution and reflection hooks, defang URLs, enforce non-executable file permissions (`0o644`), or compile into clean Vector PDF review report. |
 | **Scripts & Command Files** | PS1, VBS, VBA, SH, JS, PHP, CMD, BAT | Static AST & regex analysis: dynamic code execution (`IEX`, `eval`), download cradles (`DownloadString`, `curl | sh`), memory injection / AMSI bypass, Base64 block decoding with preview, LOLBin usage (`certutil`, `bitsadmin`, `mshta`), PHP webshell signatures, Shannon entropy | **Script Sanitizer:** Defang all URLs, disarm dynamic execution hooks (`IEX`, `eval`, `system`), append security disclosure banners, enforce non-executable permissions (`0o644`), or compile into read-only vector PDF review document. |
-| **Domain/IP & Infrastructure** | URL, Domain, IPv4, IPv6 | Non-blocking async threat platform: Live sandboxed Chromium webpage screenshot, full DNS resolution & Forward-Confirmed Reverse DNS (FCrDNS), BGP routing & ASN profiling, **Official Shodan Host & Port Intelligence API** (open ports, service banners, CPEs, CVE correlation), **Automated Sensitive Files & Google Dorks Discovery Engine** (automatic discovery of exposed .env, .sql, .log, and internal documents with 1-click "Wash & Sanitize in FileSanitizer" and 7 curated Google Dork presets), Nmap Active Service Reconnaissance (`nmap -sS -sV --version-light -T3 --open -Pn --reason -oA`), Active Security Probes (sensitive file exposure, WAF detection, CORS/HTTP methods), Web Archive (Wayback Machine) calendar integration & snapshot diffing, Smart Infrastructure Pivots (separating direct affiliates from CDN/DDoS edge noise), Typosquatting Radar, and Email Security (DMARC/DKIM/SPF). | **Network Defang, Ingestion & Report:** Defang active URLs and domain IOCs (`hxxp://`, `[.]`), 1-click wash & sanitize discovered sensitive files, export structured threat intelligence dossiers (JSON/PDF). |
+| **Domain/IP & Infrastructure** | URL, Domain, IPv4, IPv6 | Non-blocking async threat platform: Live sandboxed Chromium webpage screenshot, full DNS resolution & Forward-Confirmed Reverse DNS (FCrDNS), BGP routing & ASN profiling, **ProjectDiscovery Subfinder & dnsx Subdomain Pipeline** (`subfinder -silent -d <domain> | dnsx -silent -a -resp`), **Official Shodan Host & Port Intelligence API** (open ports, service banners, CPEs, CVE correlation), **Automated Sensitive Files & Google Dorks Discovery Engine** (automatic discovery of exposed .env, .sql, .log, and internal documents with 1-click "Wash & Sanitize in FileSanitizer" and 7 curated Google Dork presets), Nmap Active Service Reconnaissance (`nmap -sS -sV --version-light -T3 --open -Pn --reason -oA`), Active Security Probes (sensitive file exposure, WAF detection, CORS/HTTP methods), Web Archive (Wayback Machine) calendar integration & snapshot diffing, Smart Infrastructure Pivots (separating direct affiliates from CDN/DDoS edge noise), Typosquatting Radar, and Email Security (DMARC/DKIM/SPF). | **Network Defang, Ingestion & Report:** Defang active URLs and domain IOCs (`hxxp://`, `[.]`), 1-click wash & sanitize discovered sensitive files, export structured threat intelligence dossiers (JSON/PDF). |
 | **Plain Text & Data** | TXT, CSV, JSON, XML, YAML, Markdown | Character encoding analysis (UTF-8, UTF-16, BOM), CSV formula injection (DDE execution attacks) | **Text Sanitizer:** Strip BOM, sanitize DDE formula prefixes (`=`, `+`, `-`, `@`), strip control characters. |
 
 ---
@@ -218,8 +220,8 @@ The application runs as an isolated multi-container architecture defined in `doc
 | Service Container | Port / Binding | Role & Technology |
 | :--- | :--- | :--- |
 | `filesanitizer-frontend` | `80:80`, `8080:80` | Nginx reverse proxy serving the React 19 + TypeScript + Vite single-page application. |
-| `filesanitizer-api` | `8000:8000` | FastAPI Python 3.11 asynchronous API engine, forensic analyzers, Nmap 7.95+ active service scanner, and CDR pipelines (`cap_add: [SETUID, SETGID, NET_RAW, NET_ADMIN, AUDIT_WRITE]`). |
-| `filesanitizer-worker` | Internal network | Celery distributed worker executing asynchronous threat analysis, Nmap active reconnaissance, and heavy processing (`cap_add: [SETUID, SETGID, NET_RAW, NET_ADMIN, AUDIT_WRITE]`). |
+| `filesanitizer-api` | `8000:8000` | FastAPI Python 3.11 asynchronous API engine, forensic analyzers, ProjectDiscovery Subfinder (v2.17.0) & dnsx (v1.3.1), Nmap 7.95+ active service scanner, and CDR pipelines (`cap_add: [SETUID, SETGID, NET_RAW, NET_ADMIN, AUDIT_WRITE]`). |
+| `filesanitizer-worker` | Internal network | Celery distributed worker executing asynchronous threat analysis, Subfinder & dnsx subdomain reconnaissance, Nmap active reconnaissance, and heavy processing (`cap_add: [SETUID, SETGID, NET_RAW, NET_ADMIN, AUDIT_WRITE]`). |
 | `filesanitizer-redis` | `6379` (Internal) | Redis in-memory message broker, task queue, and intermediate cache. |
 | `filesanitizer-clamav` | `3310` (Internal) | ClamAV antivirus scanner daemon with automatic `freshclam` signature database updates. |
 | `filesanitizer-browser` | `3000` (Internal) | Isolated Playwright Node.js headless browser for sandboxed URL previews and screenshots. |
@@ -659,8 +661,26 @@ FileSanitizer removes the friction of manual search engine dorking by automating
 * **Curated Google Dorks Launchpad:** Includes 7 pre-calibrated Google Dork search presets tailored to the target domain (`site:<target> filetype:pdf`, `site:<target> (ext:env | ext:sql)`, `site:<target> inurl:admin`, etc.) with 1-click Google search launch and copyable query operators.
 
 ### Subdomain Topology & Attack Surface Mapping
-* **Passive & Active Discovery:** Discovers subdomains via Certificate Transparency (crt.sh), TLS Subject Alternative Names (SANs), DNS CNAME chains, and active resolution probes.
-* **Provenance Tracking:** Every subdomain card details its exact discovery source (`crt.sh`, `TLS SAN`, `DNS CNAME`, `Active Probe`) and live IP resolution.
+* **ProjectDiscovery Subfinder & dnsx Reconnaissance Pipeline:** Executes passive reconnaissance coupled with active multi-threaded DNS resolution:
+  ```bash
+  subfinder -silent -d <domain> | dnsx -silent -a -resp
+  ```
+  * Queries dozens of passive internet intelligence services (CT logs, DNS archives, search engines, and public datasets).
+  * Direct process piping into `dnsx` filters non-existent hosts and resolves live IPv4 A-records in real time with automated ANSI color sequence stripping and IP deduplication.
+  * Seamlessly integrated across both Domain Threat Intelligence and URL Explorer analysis pipelines.
+* **Multi-Source Attack Surface Aggregation:** Merges findings from Subfinder + dnsx, Certificate Transparency (crt.sh), TLS Subject Alternative Names (SANs), DNS CNAME chains, passive DNS siblings, and active probes into a unified attack surface map.
+* **Provenance & Technical Rationale Tracking:** Every subdomain card details its exact discovery source (`Subfinder + dnsx`, `crt.sh`, `Live TLS SAN`, `DNS CNAME Chain`, `Queried Target`) and technical status (Active vs. Unresolved/Dormant with specific decommissioning rationale).
+* **Hierarchical Entity Graph & Threat Graph Integration:**
+  * Discovered subdomains are automatically linked directly under the parent root domain with `SUBDOMAIN_OF` relationship edges.
+  * Resolved IPv4 addresses are nested as child nodes directly under their respective subdomains with `RESOLVES_TO` relationship edges.
+  * Subnet-aware IP clustering: IPv4 addresses are hierarchically linked according to their CIDR subnet structure, maintaining topological network clarity.
+* **Interactive Node Grouping & Box Containers:**
+  * Operators can multi-select two or more entities (domains, subdomains, IPs, files) and package them into an interactive container box.
+  * Dynamically resize, move, rename, and customize box colors; inner nodes automatically adjust spacing and reposition within the container boundary.
+  * Instant ungrouping functionality cleanly restores all nodes to their original layout states.
+* **URL Explorer Subdomain Deep-Dive:**
+  * Discovered URLs automatically trigger background Subfinder & dnsx analysis on destination hostnames.
+  * Displays a collapsible "Discovered Subdomains & Resolved IPs" accordion with live DNS A-records and one-click "Investigate" asset buttons to drill into child infrastructure.
 
 ### Email Security & Domain Spoofability Audit
 * **DMARC Enforcement Audit:** Analyzes DMARC records (`p=reject`, `p=quarantine`, `p=none`), subdomain policy inheritance (`sp`), percentage enforcement (`pct`), and forensic reporting endpoints (`rua`/`ruf`).

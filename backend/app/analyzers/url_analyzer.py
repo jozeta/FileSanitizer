@@ -163,7 +163,9 @@ class URLAnalyzer:
             "target_analysis": None,
             "tls_valid": (protocol == "https"),
             "certificate": None,
-            "screenshot_available": False
+            "screenshot_available": False,
+            "subdomains": [],
+            "subfinder_dnsx": None
         }
 
         # 1. Structural & Malware Heuristic Checks
@@ -262,6 +264,26 @@ class URLAnalyzer:
                         result["indicators"].append(f"Newly registered domain ({whois_age} days old)")
             except Exception as e:
                 logger.debug(f"Fast domain threat check skipped for {domain}: {e}")
+
+        # 3c. Subfinder & dnsx Subdomain Enumeration
+        if domain and not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', domain) and ":" not in domain:
+            try:
+                from app.network.subfinder_dnsx import SubfinderDnsxScanner
+                subfinder_data = SubfinderDnsxScanner.discover_subdomains(domain)
+                result["subfinder_dnsx"] = subfinder_data
+                result["subdomains"] = [s["subdomain"] for s in subfinder_data.get("subdomains", [])]
+                if subfinder_data.get("total_discovered", 0) > 0:
+                    result["indicators"].append(
+                        f"Subdomain Discovery: {subfinder_data['total_discovered']} active subdomain(s) resolved via Subfinder & dnsx"
+                    )
+                    if not result.get("resolved_ips"):
+                        all_ips = set()
+                        for s_item in subfinder_data.get("subdomains", []):
+                            all_ips.update(s_item.get("ips", []))
+                        if all_ips:
+                            result["resolved_ips"] = sorted(list(all_ips))
+            except Exception as e:
+                logger.debug(f"Subfinder/dnsx discovery skipped for URL domain {domain}: {e}")
 
         # 4. HTTP Status Verification & Deep Redirect Analysis (if allowed)
         if result["is_ssrf_safe"] and protocol in ["http", "https"]:

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ShieldCheck, AlertTriangle, Image as ImageIcon, Lock, Unlock, ArrowRight, ExternalLink, Link2, ZoomIn, X } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Image as ImageIcon, Lock, Unlock, ArrowRight, ExternalLink, Link2, ZoomIn, X, Globe, ChevronDown, ChevronUp, Server } from 'lucide-react';
 import { UrlItem, EnrichedIocItem } from '../types';
 import { InvestigateAssetButton } from './InvestigateAssetButton';
 import { NetworkIocEnrichmentPanel } from './NetworkIocEnrichmentPanel';
@@ -149,6 +149,14 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
   initialEnriched
 }) => {
   const [lightboxScreenshot, setLightboxScreenshot] = useState<{ url: string; domain: string } | null>(null);
+  const [expandedSubdomains, setExpandedSubdomains] = useState<Record<number, boolean>>({});
+
+  const toggleSubdomains = (index: number) => {
+    setExpandedSubdomains(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
 
   // Close lightbox modal on ESC key & lock body scroll
   useEffect(() => {
@@ -626,6 +634,114 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Discovered Subdomains & Resolved IPs (Subfinder + dnsx) */}
+              {(() => {
+                const subfinderData = item.subfinder_dnsx;
+                const subdomains: Array<{ subdomain: string; ips?: string[] }> = subfinderData?.subdomains?.map(s => ({
+                  subdomain: s.subdomain,
+                  ips: s.ips || []
+                })) || (item.subdomains || []).map(s => ({ subdomain: s, ips: [] }));
+                if (subdomains.length === 0) return null;
+
+                const isExpanded = !!expandedSubdomains[idx];
+                const totalIps = subfinderData?.discovered_ips?.length || Array.from(new Set(subdomains.flatMap(s => s.ips || []))).length;
+
+                return (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => toggleSubdomains(idx)}
+                      className="w-full flex items-center justify-between p-3 rounded-2xl bg-cyan-50/60 hover:bg-cyan-50 border border-cyan-200/80 transition-all text-left"
+                    >
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <div className="p-1.5 bg-cyan-100 text-cyan-800 rounded-lg">
+                          <Globe className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-slate-900 font-sans">
+                              Discovered Subdomains &amp; Resolved IPs
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 uppercase">
+                              Subfinder + dnsx
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-sans">
+                            {subdomains.length} {subdomains.length === 1 ? 'subdomain' : 'subdomains'} • {totalIps} resolved {totalIps === 1 ? 'IPv4 address' : 'IPv4 addresses'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-cyan-800 font-medium px-2 py-1 rounded-lg bg-white/80 border border-cyan-200/60 shadow-2xs">
+                        <span>{isExpanded ? 'Hide' : 'View Details'}</span>
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="mt-3 p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 flex-wrap gap-2">
+                          <span className="font-mono">
+                            Command pipeline: <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-800 font-bold">subfinder -silent -d {item.domain} | dnsx -silent -a -resp</code>
+                          </span>
+                          <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                            <Server className="w-3 h-3" /> Live DNS A-Records
+                          </span>
+                        </div>
+
+                        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                          <table className="min-w-full divide-y divide-slate-200 text-xs font-mono">
+                            <thead className="bg-slate-50">
+                              <tr>
+                                <th className="px-3 py-2 text-left font-semibold text-slate-600">Subdomain</th>
+                                <th className="px-3 py-2 text-left font-semibold text-slate-600">Resolved IPv4</th>
+                                <th className="px-3 py-2 text-right font-semibold text-slate-600">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {subdomains.map((sub, sIdx) => (
+                                <tr key={sIdx} className="hover:bg-slate-50/80 transition-colors">
+                                  <td className="px-3 py-2 text-slate-900 font-semibold break-all">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>
+                                      <span>{sub.subdomain}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    {sub.ips && sub.ips.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        {sub.ips.map((ip, ipIdx) => (
+                                          <span
+                                            key={ipIdx}
+                                            className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[11px] font-mono"
+                                          >
+                                            {ip}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-400 italic text-[11px]">Unresolved</span>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2 text-right">
+                                    <InvestigateAssetButton
+                                      ioc={sub.subdomain}
+                                      iocType="domain"
+                                      onNavigateToJob={onSelectJob}
+                                      label="Investigate"
+                                      compact={true}
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

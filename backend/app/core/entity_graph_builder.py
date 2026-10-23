@@ -259,7 +259,7 @@ class EntityGraphBuilder:
 
         # Attack Surface Active Subdomains (SUBDOMAIN_OF / Hierarchy)
         surface = dom_info.get("attack_surface") or {}
-        for sub_idx, sub_item in enumerate((surface.get("subdomains") or [])[:6]):
+        for sub_idx, sub_item in enumerate((surface.get("subdomains") or [])[:12]):
             s_name = sub_item.get("subdomain")
             if s_name and s_name != target and (sub_item.get("status") == "active" or sub_item.get("resolves")):
                 sub_node_id = f"di_sub_{sub_idx}"
@@ -277,6 +277,24 @@ class EntityGraphBuilder:
                     hierarchy_relation="subdomain",
                 )
                 _add_edge("di_target", sub_node_id, "SUBDOMAIN_OF", "parent_child", is_hierarchy=True)
+
+                # Link resolved IP addresses discovered for this subdomain
+                for ip_idx, s_ip in enumerate((sub_item.get("ips") or [])[:2]):
+                    sub_ip_id = f"di_sub_{sub_idx}_ip_{ip_idx}"
+                    _add_node(
+                        node_id=sub_ip_id,
+                        label=s_ip,
+                        n_type="ip",
+                        risk="clean",
+                        tier=4,
+                        details={"ip": s_ip, "subdomain": s_name},
+                        parent_id=sub_node_id,
+                        parent_label=s_name,
+                        parent_type="domain",
+                        is_child=True,
+                        hierarchy_relation="resolves_to",
+                    )
+                    _add_edge(sub_node_id, sub_ip_id, "RESOLVES_TO", "dns_a", is_hierarchy=True)
 
     @classmethod
     def _enrich_parent_child_hierarchies(cls, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]) -> None:

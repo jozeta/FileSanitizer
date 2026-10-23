@@ -237,6 +237,26 @@ export interface UrlItem {
   screenshot_available: boolean;
   screenshot_url?: string;
   vt_web_link?: string;
+  subdomains?: string[];
+  subfinder_dnsx?: SubfinderDnsxResult;
+}
+
+export interface SubfinderDnsxSubdomain {
+  subdomain: string;
+  domain?: string;
+  ips?: string[];
+  status?: string;
+}
+
+export interface SubfinderDnsxResult {
+  executed: boolean;
+  available?: boolean;
+  command?: string;
+  target_domain?: string;
+  total_discovered?: number;
+  subdomains?: SubfinderDnsxSubdomain[];
+  discovered_ips?: string[];
+  error?: string | null;
 }
 
 export interface ExternalConnectionPolicy {

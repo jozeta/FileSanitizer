@@ -3136,7 +3136,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   <span>Subdomain Attack Surface &amp; Topology</span>
                 </h4>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Discovered {surface?.total_discovered || 0} subdomains via Certificate Transparency (crt.sh), TLS SANs, DNS CNAMEs, and active probes.
+                  Discovered {surface?.total_discovered || 0} subdomains via Subfinder &amp; dnsx, Certificate Transparency (crt.sh), TLS SANs, DNS CNAMEs, and active probes.
                 </p>
               </div>
 
@@ -3229,6 +3229,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium focus:outline-hidden"
                 >
                   <option value="all">All Discovery Sources</option>
+                  <option value="Subfinder">Subfinder + dnsx</option>
                   <option value="Certificate Transparency">Certificate Transparency</option>
                   <option value="Live TLS SAN">Live TLS SANs</option>
                   <option value="DNS CNAME">DNS CNAME Chain</option>
@@ -3320,7 +3321,9 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           <td className="py-2.5 px-4">
                             <div className="flex items-center gap-1 flex-wrap">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-semibold border ${
-                                sub.discovered_from?.includes('Certificate')
+                                sub.discovered_from?.includes('Subfinder')
+                                  ? 'bg-cyan-50 border-cyan-300 text-cyan-800'
+                                  : sub.discovered_from?.includes('Certificate')
                                   ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
                                   : sub.discovered_from?.includes('SAN')
                                   ? 'bg-emerald-50 border-emerald-200 text-emerald-800'

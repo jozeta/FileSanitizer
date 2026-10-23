@@ -26,7 +26,8 @@ class SubdomainMapper:
         tls_sans: List[str],
         dns_cnames: List[str],
         sibling_domains: List[str],
-        additional_sources: Optional[Dict[str, List[str]]] = None
+        additional_sources: Optional[Dict[str, List[str]]] = None,
+        subfinder_results: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         Deduplicates subdomains and performs passive resolution to identify active vs dormant endpoints,
@@ -34,6 +35,7 @@ class SubdomainMapper:
         """
         clean_root = root_domain.strip().lower().rstrip(".")
         candidate_sources: Dict[str, Set[str]] = {}
+        known_resolved_ips: Dict[str, List[str]] = {}
 
         # Helper to sanitize and add with discovery source
         def _add_candidate(name: str, src: str):
@@ -49,29 +51,39 @@ class SubdomainMapper:
         # 1. Queried root domain
         _add_candidate(clean_root, "Queried Target")
 
-        # 2. Live TLS Certificate SANs
+        # 2. Subfinder & dnsx active reconnaissance
+        if subfinder_results:
+            for item in subfinder_results:
+                s_name = item.get("subdomain") or item.get("domain") or ""
+                s_clean = s_name.strip().lower().lstrip("*.").rstrip(".")
+                if s_clean:
+                    _add_candidate(s_clean, "Subfinder + dnsx")
+                    if item.get("ips"):
+                        known_resolved_ips[s_clean] = item["ips"]
+
+        # 3. Live TLS Certificate SANs
         for s in tls_sans:
             _add_candidate(s, "Live TLS SAN")
 
-        # 3. Certificate Transparency (crt.sh)
+        # 4. Certificate Transparency (crt.sh)
         for s in ct_subdomains:
             _add_candidate(s, "Certificate Transparency (crt.sh)")
 
-        # 4. DNS CNAME chains
+        # 5. DNS CNAME chains
         for s in dns_cnames:
             _add_candidate(s, "DNS CNAME Chain")
 
-        # 5. Passive DNS / Sibling lookup
+        # 6. Passive DNS / Sibling lookup
         for s in sibling_domains:
             _add_candidate(s, "Passive DNS / Sibling")
 
-        # 6. Additional external sources if provided
+        # 7. Additional external sources if provided
         if additional_sources:
             for src_label, subs in additional_sources.items():
                 for s in subs:
                     _add_candidate(s, src_label)
 
-        # 7. Standard common prefixes if discovery is sparse (< 8)
+        # 8. Standard common prefixes if discovery is sparse (< 8)
         if len(candidate_sources) < 8:
             common_prefixes = ["www", "mail", "api", "vpn", "admin", "remote", "autodiscover", "dev", "staging", "portal"]
             for pref in common_prefixes:
@@ -88,7 +100,9 @@ class SubdomainMapper:
             srcs = sorted(list(candidate_sources.get(sub, set())))
 
             # Derive primary provenance label for display
-            if "Queried Target" in srcs:
+            if "Subfinder + dnsx" in srcs:
+                primary_source = "Subfinder + dnsx"
+            elif "Queried Target" in srcs:
                 primary_source = "Queried Target"
             elif "Live TLS SAN" in srcs:
                 primary_source = "Live TLS SAN"
@@ -105,24 +119,29 @@ class SubdomainMapper:
             else:
                 primary_source = "Passive Discovery"
 
-            try:
-                # Fast standard socket lookup
-                addrs = socket.gethostbyname_ex(sub)[2]
-                if addrs:
-                    status = "active"
-                    ips = addrs[:4]
-            except Exception:
-                status = "unresolving"
-                if "Certificate Transparency (crt.sh)" in srcs:
-                    unresolving_reason = "Historical CT certificate log entry; DNS record decommissioned or internal-only split-horizon"
-                elif "Live TLS SAN" in srcs:
-                    unresolving_reason = "Listed on certificate SANs but has no active public A/AAAA DNS mapping"
-                elif "DNS Wordlist Probe" in srcs:
-                    unresolving_reason = "Wordlist candidate does not exist on public authoritative DNS (NXDOMAIN)"
-                elif "DNS CNAME Chain" in srcs:
-                    unresolving_reason = "Dangling CNAME alias points to non-existent or unallocated host"
-                else:
-                    unresolving_reason = "No public DNS A/AAAA records returned by resolver (NXDOMAIN)"
+            # Check if already resolved by dnsx
+            if sub in known_resolved_ips and known_resolved_ips[sub]:
+                status = "active"
+                ips = known_resolved_ips[sub][:4]
+            else:
+                try:
+                    # Fast standard socket lookup
+                    addrs = socket.gethostbyname_ex(sub)[2]
+                    if addrs:
+                        status = "active"
+                        ips = addrs[:4]
+                except Exception:
+                    status = "unresolving"
+                    if "Certificate Transparency (crt.sh)" in srcs:
+                        unresolving_reason = "Historical CT certificate log entry; DNS record decommissioned or internal-only split-horizon"
+                    elif "Live TLS SAN" in srcs:
+                        unresolving_reason = "Listed on certificate SANs but has no active public A/AAAA DNS mapping"
+                    elif "DNS Wordlist Probe" in srcs:
+                        unresolving_reason = "Wordlist candidate does not exist on public authoritative DNS (NXDOMAIN)"
+                    elif "DNS CNAME Chain" in srcs:
+                        unresolving_reason = "Dangling CNAME alias points to non-existent or unallocated host"
+                    else:
+                        unresolving_reason = "No public DNS A/AAAA records returned by resolver (NXDOMAIN)"
 
             return {
                 "subdomain": sub,

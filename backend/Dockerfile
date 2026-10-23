@@ -33,6 +33,25 @@ RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" && \
         chmod +x /usr/local/bin/checksec; \
     fi
 
+# Install ProjectDiscovery tools: subfinder and dnsx (multi-arch: amd64 / arm64)
+RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" && \
+    case "${ARCH}" in \
+        amd64|x86_64) PD_ARCH="amd64" ;; \
+        arm64|aarch64) PD_ARCH="arm64" ;; \
+        *) PD_ARCH="$(dpkg --print-architecture)" ;; \
+    esac && \
+    echo "Installing subfinder and dnsx for architecture: ${PD_ARCH}" && \
+    curl -fsSL "https://github.com/projectdiscovery/subfinder/releases/download/v2.17.0/subfinder_2.17.0_linux_${PD_ARCH}.zip" -o /tmp/subfinder.zip && \
+    python3 -m zipfile -e /tmp/subfinder.zip /tmp/subfinder_bin && \
+    mv /tmp/subfinder_bin/subfinder /usr/local/bin/subfinder && \
+    chmod +x /usr/local/bin/subfinder && \
+    rm -rf /tmp/subfinder* && \
+    curl -fsSL "https://github.com/projectdiscovery/dnsx/releases/download/v1.3.1/dnsx_1.3.1_linux_${PD_ARCH}.zip" -o /tmp/dnsx.zip && \
+    python3 -m zipfile -e /tmp/dnsx.zip /tmp/dnsx_bin && \
+    mv /tmp/dnsx_bin/dnsx /usr/local/bin/dnsx && \
+    chmod +x /usr/local/bin/dnsx && \
+    rm -rf /tmp/dnsx*
+
 # Create non-root user and configure network capabilities for Nmap reconnaissance
 RUN groupadd -g 1001 appgroup && \
     useradd -u 1001 -g appgroup -s /bin/bash -m appuser && \
