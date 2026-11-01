@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the API image (same as docker compose)
+        run: docker build -t filesanitizer-api ./backend
+      - name: Backend tests inside the image
+        # Run as root from the repo root: some tests write to /var/lib/clamav or read test-files/ and the Dockerfile.
+        run: |
+          docker run --rm --user root -v "$PWD:/src:ro" --entrypoint sh filesanitizer-api -c \
+            "cp -r /src /tmp/repo && cd /tmp/repo && python -m pytest -c backend/pytest.ini --rootdir backend -q -p no:cacheprovider backend/tests"
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Type-check and build
+        run: npm run build
