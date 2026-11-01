@@ -95,3 +95,11 @@ test-files/*.jar
 backend/ultimate_files/
 scratch/
 
+
+# --- Baseline: macOS, Claude Code and secrets ---
+.claude/settings.local.json
+.remember/
+.env.*
+!.env.example
+*.p12
+*.pfx
