@@ -1,0 +1,65 @@
+# Changelog
+
+All notable changes to FileSanitizer are listed here, newest first.
+
+Releases follow the project's git tags. Entries were reconstructed from the commit history.
+
+## [Unreleased]
+
+- Ignore macOS, Claude Code and secret files; add MIT license
+- Add CLAUDE.md with project guidance for Claude Code
+- Add CI workflow, Dependabot config, security policy
+
+## [2.7.0] - 2026-10-23
+
+- Initial commit of FileSanitizer platform
+- Add comprehensive security test files suite
+- feat: extract URLs from document body and metadata, add test files with embedded links
+- feat: add URL file fetcher with SSRF/watchlist checks, How It Works guide, and supported formats matrix
+- feat: enterprise multi-artifact security analysis, forensic timelines, correlation engine & modern UI
+- feat: add malicious-pdf test suite and Dockerfile from jonaslejon/malicious-pdf
+- feat(pdf): interactive Didier Stevens PDFiD token & stream inspector and full malicious PDF exploit suite detections
+- feat(analyzers): add deep CVE and malicious behavior detections across all supported formats
+- Organize test-files into demo_showcase and correlated_investigation suites
+- chore: remove duplicate unnumbered files in correlated_investigation folder
+- feat(correlation): intertwine all 7 attack investigation artifacts with shared hashes, telemetry, and IOCs
+- feat(forensics): elevate correlated investigation suite to ultra-realistic authenticity
+- feat(decompiler): enrich implant binary with authentic x86 instructions, CFG branches, loops, and call hierarchy
+- feat(cross-artifact): add interactive clickable cross-file navigation across all triage views and correlation mapping
+- Enrich EVTX telemetry, fix terminal replay playback, and enhance threat graph grouping, proximity, and multi-selection
+- fix(react): resolve minified error #310 by moving all hooks before conditional returns
+- feat(graph): upgrade All Entities filter toggle behavior and bring Threat Graph controls to Entity Graph
+- fix(graph): preserve true entity styling for shared nodes, add SHARED badge tag, and update Shared Only filter
+- Enrich archive relationships, member forensics, and cross-artifact Threat Graph correlation
+- Add Select Connected Nodes button to entity inspector in Threat Graph and Entity Graph
+- feat(graph,timeline): add 'Show empty nodes' filter and consecutive similar activities grouping
+- fix(graph): add showEmptyNodes to useMemo deps, guarantee empty nodes visibility and robust VT/CrowdStrike clean node extraction
+- feat(threat-graph): default to sample layout and far proximity, exclude files from select-connected, support cmd/ctrl/shift multi-selection toggle
+- feat(threat-graph): add file inclusion filtering and restore missing metadata node in entity graph
+- feat(threat-graph): select only visible connected nodes and deselect ttps, vulns, and artifacts by default
+- feat: enable sending embedded files to analysis as new workspace jobs and link already analyzed files
+- feat(settings): add function in settings to toggle Telemetry & Diagnostics tab with hidden by default
+- feat(domain-intel): add host discovery, passive exposure, IOC quick-enrichment, cross-platform build fix, and version tracking (v2.1.0)
+- feat(v2.2.2): parallelize domain intel, fix Windows CRLF auth, add rotating security slogans, and resilient web archive mirrors
+- perf(v2.2.3): optimize SSRF and threat watchlist checks with decoupled background pipelines
+- Switch active port scanning to Nmap with SYN stealth scans, service versioning, and bump version to v2.2.4
+- Update README.md with Nmap active reconnaissance, smart pivots, attack surface mapping, and bump version to v2.2.5
+- feat: extract and visualize emails, domains, watchlist keywords, ips, hostnames, usernames, and names in entity and threat graphs (v2.2.6)
+- feat: add operator node hide and solid circle highlight with color picker to entity and threat graphs (v2.2.7)
+- docs: update README with operator node visibility controls, dynamic slogans, and bump to v2.2.8
+- feat: Add Android APK & Java file forensic security analysis and CDR (v2.3.0)
+- feat(apk): add client filesize check, deep APK technical analysis, and forensic dashboard
+- feat(mobile-java): MobSF-inspired malicious API catalog, network security config audit, and deep JAR bytecode forensics
+- fix(apk): resolve anti-analysis evasion, multi-DEX bomb, ZIP corruptions, v2/v3 certs, and eliminate DAD decompilation hang
+- feat(apk): add live CTI, Play Store authenticity, packer detection, malware signatures, and keystore audit
+- fix(apk): resolve empty and lacking tabs across APK analysis forensics
+- feat(java): implement STRRAT case study forensics and 4-pillar JAR behavioral analysis
+- feat: forensic checklist suites, test file audit fixes, cloud provider signatures, and clean triage UI
+- feat(security): v2.4.2 security hardening, command injection fix, and auth isolation
+- feat: Shodan CTI integration and automated Google Dorks sensitive file engine (v2.5.0)
+- feat: interactive entity enclosure boxes, subnet hierarchy, and external CTI caching (v2.6.0)
+- feat: integrate Subfinder and dnsx reconnaissance pipeline, entity graph hierarchy, and URL explorer deep-dive
+- feat(ui): display Subfinder overview banner and highlight Attack Surface sub-tab
+- feat: run Subfinder and dnsx reconnaissance in background with live animation and polling
+- perf: optimize UI responsiveness, code-split triage bundles, and eliminate blocking alerts
+- chore(release): bump version to 2.7.0
