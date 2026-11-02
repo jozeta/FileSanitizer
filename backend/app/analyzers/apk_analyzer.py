@@ -46,15 +46,17 @@ def tolerant_zip_environment():
     orig_decode = zipfile.ZipInfo._decodeExtra
     orig_crc = zipfile.ZipExtFile._update_crc
 
-    def tolerant_decode(self):
+    # *args/**kwargs: these are private zipfile internals whose signatures change between
+    # Python versions (3.15 added a parameter to _decodeExtra), so pass everything through.
+    def tolerant_decode(self, *args, **kwargs):
         try:
-            orig_decode(self)
+            orig_decode(self, *args, **kwargs)
         except zipfile.BadZipFile as e:
             tampered_items.append((getattr(self, "filename", "unknown"), f"Malformed ZIP extra field: {e}"))
 
-    def tolerant_crc(self, newdata):
+    def tolerant_crc(self, *args, **kwargs):
         try:
-            orig_crc(self, newdata)
+            orig_crc(self, *args, **kwargs)
         except zipfile.BadZipFile as e:
             tampered_items.append((getattr(self, "name", "unknown"), f"Tampered CRC-32 checksum: {e}"))
 
