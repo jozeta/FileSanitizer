@@ -93,9 +93,9 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
     <div className="space-y-6 relative">
       {/* Re-Analysis Threat Intelligence Delta Highlight Banner */}
       {reanalysisIntelDiff && reanalysisIntelDiff.has_new_intelligence && (
-        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-rose-50 to-orange-50 border border-amber-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 sm:p-5 rounded-3xl bg-linear-to-r from-amber-50 via-rose-50 to-orange-50 border border-amber-300 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-xs shrink-0">
               ⚡
             </div>
             <div>
@@ -126,7 +126,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
       )}
 
       {/* Risk Overview Card */}
-      <div className={`rounded-3xl border ${colors.border} ${colors.bg} p-6 sm:p-8 shadow-sm transition-all`}>
+      <div className={`rounded-3xl border ${colors.border} ${colors.bg} p-6 sm:p-8 shadow-xs transition-all`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200/60">
           <div>
             <span className="text-xs font-mono uppercase tracking-wider text-slate-500 block mb-1">
@@ -210,7 +210,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
             {extractedCode && onViewCode && (
               <button
                 onClick={onViewCode}
-                className="bg-white/95 hover:bg-slate-900 hover:text-white text-slate-900 border border-slate-300 rounded-2xl p-2.5 px-4 flex items-center gap-2.5 shadow-sm transition-all cursor-pointer font-semibold text-xs"
+                className="bg-white/95 hover:bg-slate-900 hover:text-white text-slate-900 border border-slate-300 rounded-2xl p-2.5 px-4 flex items-center gap-2.5 shadow-xs transition-all cursor-pointer font-semibold text-xs"
               >
                 <Code className="w-4 h-4 text-cyan-600" />
                 <span>Inspect {extractedCode.type.toUpperCase()} Code</span>
@@ -287,7 +287,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
 
       {/* Threat Intelligence & VirusTotal Integration Card */}
       {virustotal && !disabledChecks?.includes('check_virustotal') && !disabledChecks?.includes('virustotal_enabled') && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
@@ -348,7 +348,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                         {virustotal.suggested_threat_label}
                       </span>
                       {virustotal.threat_category && (
-                        <span className="px-1.5 py-0.5 bg-rose-200 text-rose-800 rounded text-[10px] uppercase font-bold shrink-0">
+                        <span className="px-1.5 py-0.5 bg-rose-200 text-rose-800 rounded-sm text-[10px] uppercase font-bold shrink-0">
                           {virustotal.threat_category}
                         </span>
                       )}
@@ -438,7 +438,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
 
       {/* CrowdStrike Falcon Sandbox / Hybrid Analysis Integration Card */}
       {hybrid_analysis && !disabledChecks?.includes('check_crowdstrike') && !disabledChecks?.includes('crowdstrike_enabled') && !disabledChecks?.includes('hybrid_analysis_enabled') && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <span className="p-1.5 bg-orange-50 text-orange-600 rounded-lg text-base">
@@ -617,7 +617,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
           <div className={`grid grid-cols-1 ${visibleIntelCount > 1 ? 'md:grid-cols-2' : ''} gap-4`}>
             {/* Abuse.ch ThreatFox Card */}
             {showThreatFox && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
@@ -647,7 +647,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                   {threatfox && threatfox.status === 'MALICIOUS' ? (
                     <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
+                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded-sm text-[10px] font-extrabold uppercase tracking-wider">
                           ⚠️ Malware IOC Hit
                         </span>
                         <span className="font-bold text-rose-900 text-xs">
@@ -687,7 +687,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
 
             {/* MalwareBazaar (Abuse.ch) Card */}
             {showMalwareBazaar && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
@@ -717,7 +717,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                   {malwarebazaar && malwarebazaar.status === 'MALICIOUS' ? (
                     <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
+                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded-sm text-[10px] font-extrabold uppercase tracking-wider">
                           ⚠️ Malware Threat Hit
                         </span>
                         <span className="font-bold text-rose-900 text-xs">
@@ -737,7 +737,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                       {malwarebazaar.tags && malwarebazaar.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 pt-1">
                           {malwarebazaar.tags.map((t, idx) => (
-                            <span key={idx} className="px-1.5 py-0.5 bg-rose-200/60 text-rose-900 rounded text-[10px] font-mono">
+                            <span key={idx} className="px-1.5 py-0.5 bg-rose-200/60 text-rose-900 rounded-sm text-[10px] font-mono">
                               #{t}
                             </span>
                           ))}
@@ -766,7 +766,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
 
             {/* CIRCL Hashlookup (NIST NSRL) Card */}
             {showCircl && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
@@ -796,7 +796,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                   {circl && (circl.status === 'BENIGN_KNOWN' || circl.is_nsrl) ? (
                     <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
+                        <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-sm text-[10px] font-extrabold uppercase tracking-wider">
                           ✓ Verified Known Benign
                         </span>
                         <span className="font-bold text-emerald-900 text-xs truncate">
@@ -830,7 +830,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
 
             {/* AlienVault OTX (Open Threat Exchange) Pulse Card */}
             {showAlienVault && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
@@ -860,7 +860,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                   {alienvault_otx && alienvault_otx.pulse_count && alienvault_otx.pulse_count > 0 ? (
                     <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
+                        <span className="px-2 py-0.5 bg-rose-600 text-white rounded-sm text-[10px] font-extrabold uppercase tracking-wider">
                           ⚠️ {alienvault_otx.pulse_count} Threat Pulses
                         </span>
                         <span className="font-bold text-rose-900 text-xs truncate">
@@ -870,7 +870,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                       {alienvault_otx.tags && alienvault_otx.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 pt-1">
                           {alienvault_otx.tags.slice(0, 4).map((tag, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-mono">
+                            <span key={i} className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-sm text-[10px] font-mono">
                               #{tag}
                             </span>
                           ))}
@@ -897,7 +897,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
 
       {/* ClamAV Engine Details */}
       {clamav && !disabledChecks?.includes('check_clamav') && !disabledChecks?.includes('clamav_enabled') && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
           <h4 className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span>Antivirus Scanner Details</span>
@@ -936,10 +936,10 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
       )}
       {/* DLP Sensitive Data & Leaked Credentials Banner */}
       {dlpFindings.length > 0 && (
-        <div className="bg-amber-50/90 border border-amber-300 rounded-3xl p-6 shadow-sm space-y-3">
+        <div className="bg-amber-50/90 border border-amber-300 rounded-3xl p-6 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="p-2.5 bg-amber-600 text-white rounded-2xl shadow-sm text-base">🔑</span>
+              <span className="p-2.5 bg-amber-600 text-white rounded-2xl shadow-xs text-base">🔑</span>
               <div>
                 <h4 className="text-sm font-bold text-amber-950 flex items-center gap-2">
                   <span>Data Loss Prevention (DLP) Alert</span>
@@ -955,7 +955,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
             {dlpFindings.map((df, idx) => (
-              <div key={idx} className="p-3.5 bg-white border border-amber-200 rounded-2xl shadow-xs space-y-1.5">
+              <div key={idx} className="p-3.5 bg-white border border-amber-200 rounded-2xl shadow-2xs space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs text-slate-900">{df.title}</span>
                   <span className="text-[10px] font-mono px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md font-semibold">
@@ -980,7 +980,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
 
       {/* Detailed Findings Breakdown */}
       {displayFindings.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
           <h4 className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-4">
             Security Findings Catalog ({displayFindings.length})
           </h4>
@@ -1052,7 +1052,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                       {isCodeFinding && onViewCode && (
                         <button
                           onClick={onViewCode}
-                          className="px-2 py-0.5 bg-cyan-100 hover:bg-cyan-200 text-cyan-900 text-[11px] font-semibold rounded cursor-pointer transition-colors flex items-center gap-1"
+                          className="px-2 py-0.5 bg-cyan-100 hover:bg-cyan-200 text-cyan-900 text-[11px] font-semibold rounded-sm cursor-pointer transition-colors flex items-center gap-1"
                         >
                           <span>👁️</span>
                           View Code
@@ -1085,7 +1085,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                         <span>Detected Sensitive Data:</span>
                       </span>
                       {f.details?.detected_value && (
-                        <span className="font-mono bg-white px-2.5 py-0.5 rounded-lg border border-amber-300 text-rose-700 font-bold select-all break-all shadow-xs">
+                        <span className="font-mono bg-white px-2.5 py-0.5 rounded-lg border border-amber-300 text-rose-700 font-bold select-all break-all shadow-2xs">
                           {f.details.detected_value}
                         </span>
                       )}
@@ -1166,11 +1166,11 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                 <div className="flex items-center justify-between text-purple-700 font-mono text-[11px] mb-1">
                   <span className="font-bold text-slate-900">{m.ruleName}</span>
                   <div className="flex items-center gap-1.5">
-                    <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">
+                    <span className="px-1.5 py-0.5 rounded-sm bg-purple-50 text-purple-700 border border-purple-200 text-[10px]">
                       {m.identifier}
                     </span>
                     {m.severity && (
-                      <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
+                      <span className="px-1.5 py-0.5 rounded-sm bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold">
                         {m.severity}
                       </span>
                     )}
@@ -1272,7 +1272,7 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-slate-800">{item.factor}</span>
-                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-mono font-bold bg-slate-200 text-slate-700">
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-sm font-mono font-bold bg-slate-200 text-slate-700">
                           {item.category}
                         </span>
                       </div>

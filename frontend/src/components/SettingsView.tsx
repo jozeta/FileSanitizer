@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { WarningRule, YaraRule, ClamAVInfo, ExternalConnectionPolicy, StatisticsData } from '../types';
 import { apiClient } from '../api/client';
 import { formatBytes, formatTimestamp, setTimeDisplayConfig } from '../utils/formatters';
-import { Sparkles, Github, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sparkles, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { GithubIcon } from './icons/GithubIcon';
 import { NewVersionModal } from './NewVersionModal';
 import { APP_VERSION } from '../version';
 import {
@@ -1929,7 +1930,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     return (
       <div className="max-w-md mx-auto my-14 p-8 bg-white border border-slate-200 rounded-3xl shadow-xl animate-modal-fade">
         <div className="text-center mb-6">
-          <div className="inline-flex p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-3 border border-indigo-100 shadow-sm">
+          <div className="inline-flex p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-3 border border-indigo-100 shadow-xs">
             <span className="text-3xl">🔒</span>
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Administrator Sign In</h2>
@@ -1955,7 +1956,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
               required
               value={usernameInput}
               onChange={(e) => setUsernameInput(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
               placeholder="admin"
             />
           </div>
@@ -1969,7 +1970,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
               required
               value={passwordInput}
               onChange={(e) => setPasswordInput(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
               placeholder="••••••••"
             />
           </div>
@@ -2009,7 +2010,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           <div className="flex items-center justify-between gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 mt-2.5">
             <div className="text-left">
               <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <Github className="w-3.5 h-3.5 text-slate-700" />
+                <GithubIcon className="w-3.5 h-3.5 text-slate-700" />
                 Automatic Update Checks
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
@@ -2045,9 +2046,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
   return (
     <div className="max-w-[80rem] mx-auto space-y-6 animate-overlay-fade">
       {/* Top Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-3xl shadow-xs">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100 shadow-sm text-2xl">
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100 shadow-xs text-2xl">
             ⚙️
           </div>
           <div>
@@ -2082,7 +2083,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       {/* Notification Toast */}
       {statusMsg && (
         <div
-          className={`p-4 rounded-2xl text-sm flex items-center justify-between shadow-sm animate-modal-fade ${
+          className={`p-4 rounded-2xl text-sm flex items-center justify-between shadow-xs animate-modal-fade ${
             statusMsg.type === 'success'
               ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
               : 'bg-rose-50 border border-rose-200 text-rose-800'
@@ -2147,7 +2148,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
             }}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeTab === tab.id
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
+                ? 'bg-indigo-600 text-white shadow-xs shadow-indigo-600/20'
                 : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
             }`}
           >
@@ -2168,7 +2169,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       {/* TAB 1: Inspection Checks */}
       {activeTab === 'checks' && (
         !settingsData ? (
-          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-xs">
             <div className="inline-block animate-spin w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full mb-3" />
             <p className="text-sm font-semibold text-slate-800">Loading inspection checks configuration...</p>
             <button
@@ -2181,7 +2182,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
         ) : (
         <div className="space-y-6">
           {/* Analysis Dashboard & Telemetry Display Card */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -2210,7 +2211,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 <button
                   type="button"
                   onClick={() => handleToggleTelemetryDiagnostics(!showTelemetryDiagnostics)}
-                  className={`px-4 py-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2.5 cursor-pointer shadow-sm ${
+                  className={`px-4 py-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2.5 cursor-pointer shadow-xs ${
                     showTelemetryDiagnostics
                       ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700 shadow-indigo-600/20'
                       : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -2224,7 +2225,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           </div>
 
           {/* Global Scanners */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span>🌐</span> Global Scanner Engines
             </h2>
@@ -2245,7 +2246,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                     onClick={() => handleToggleCheck('global_checks', item.key, enabled)}
                     className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                       enabled
-                        ? 'bg-emerald-50/60 border-emerald-200 shadow-sm'
+                        ? 'bg-emerald-50/60 border-emerald-200 shadow-xs'
                         : 'bg-slate-50 border-slate-200 opacity-60'
                     }`}
                   >
@@ -2267,7 +2268,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           </div>
 
           {/* Format Specific Checks */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -2320,7 +2321,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 ].filter(g => g.items.length > 0);
 
                 return (
-                  <div key={category} className="border border-slate-200 bg-slate-50/50 rounded-2xl p-4 flex flex-col justify-between shadow-2xs hover:shadow-xs transition-shadow">
+                  <div key={category} className="border border-slate-200 bg-slate-50/50 rounded-2xl p-4 flex flex-col justify-between shadow-2xs hover:shadow-2xs transition-shadow">
                     <div>
                       {/* Card Header */}
                       <div className="pb-3 border-b border-slate-200 mb-3">
@@ -2386,7 +2387,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                                       type="checkbox"
                                       checked={Boolean(checkVal)}
                                       onChange={() => handleToggleCheck(category, checkKey, Boolean(checkVal))}
-                                      className="w-3.5 h-3.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                                      className="w-3.5 h-3.5 text-indigo-600 rounded-sm border-slate-300 focus:ring-indigo-500 cursor-pointer"
                                     />
                                   </label>
                                 );
@@ -2403,7 +2404,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           </div>
 
           {/* Windows Event Log (EVTX) Timeline Monitored Event IDs */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -2477,11 +2478,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => handleToggleEvtxTimelineId(evt.id)}
-                        className="mt-1 w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                        className="mt-1 w-4 h-4 text-indigo-600 rounded-sm border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded-sm border border-slate-200">
                             ID {evt.id}
                           </span>
                           <span className="text-xs font-semibold text-slate-800 truncate" title={evt.name}>
@@ -2527,7 +2528,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                     value={customEvtxIdInput}
                     onChange={(e) => setCustomEvtxIdInput(e.target.value)}
                     placeholder="e.g. 4738, 4634, 4673"
-                    className="w-44 px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                    className="w-44 px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                   />
                   <button
                     type="submit"
@@ -2582,7 +2583,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       {/* TAB: UI & Display Preferences */}
       {activeTab === 'ui_preferences' && (
         <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
               <div>
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -2622,7 +2623,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 <button
                   type="button"
                   onClick={() => handleToggleTelemetryDiagnostics(!showTelemetryDiagnostics)}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
+                  className={`px-5 py-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-2 cursor-pointer shadow-xs ${
                     showTelemetryDiagnostics
                       ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700 shadow-indigo-600/20'
                       : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -2640,7 +2641,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 <div className="space-y-1.5 max-w-2xl">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                      <Github className="w-3.5 h-3.5 text-slate-700" />
+                      <GithubIcon className="w-3.5 h-3.5 text-slate-700" />
                       Automatic GitHub Version &amp; Update Checks
                     </span>
                     <span
@@ -2664,7 +2665,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   <button
                     type="button"
                     onClick={() => handleToggleCheckForUpdates(!checkForUpdates)}
-                    className={`px-5 py-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
+                    className={`px-5 py-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-2 cursor-pointer shadow-xs ${
                       checkForUpdates
                         ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700 shadow-indigo-600/20'
                         : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
@@ -2747,7 +2748,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   setActiveTab('time');
                   fetchTimeSettings();
                 }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 shadow-sm"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 shadow-xs"
               >
                 Configure Time Settings →
               </button>
@@ -2759,7 +2760,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       {/* TAB 2: API Keys */}
       {activeTab === 'keys' && (
         !settingsData ? (
-          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-xs">
             <div className="inline-block animate-spin w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full mb-3" />
             <p className="text-sm font-semibold text-slate-800">Loading API keys configuration...</p>
             <button
@@ -2770,7 +2771,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
             </button>
           </div>
         ) : (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
           <div className="mb-6">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <span>🔑</span> Third-Party Threat Intelligence Keys
@@ -2803,7 +2804,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="virustotal_api_key"
                   defaultValue={settingsData.api_keys?.virustotal_api_key || ''}
                   placeholder="64-character VirusTotal API Key"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -2851,7 +2852,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="urlhaus_api_key"
                   defaultValue={settingsData.api_keys?.urlhaus_api_key || ''}
                   placeholder="Abuse.ch Auth-Key"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -2899,7 +2900,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="safe_browsing_api_key"
                   defaultValue={settingsData.api_keys?.safe_browsing_api_key || ''}
                   placeholder="Google Cloud Safe Browsing API Key"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -2947,7 +2948,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="abuseipdb_api_key"
                   defaultValue={settingsData.api_keys?.abuseipdb_api_key || ''}
                   placeholder="80-character AbuseIPDB API Key"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -2995,7 +2996,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="alienvault_otx_api_key"
                   defaultValue={settingsData.api_keys?.alienvault_otx_api_key || ''}
                   placeholder="AlienVault OTX API Key"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -3043,7 +3044,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="hybrid_analysis_api_key"
                   defaultValue={settingsData.api_keys?.hybrid_analysis_api_key || ''}
                   placeholder="Falcon Sandbox API Key"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -3091,7 +3092,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="mxtoolbox_api_key"
                   defaultValue={settingsData.api_keys?.mxtoolbox_api_key || ''}
                   placeholder="MXToolbox API Key / Token"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -3139,7 +3140,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="urlscan_api_key"
                   defaultValue={settingsData.api_keys?.urlscan_api_key || ''}
                   placeholder="urlscan.io API Key"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -3187,7 +3188,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="ipinfo_api_key"
                   defaultValue={settingsData.api_keys?.ipinfo_api_key || ''}
                   placeholder="IPinfo.io Token (Optional - Works without token up to daily limit)"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -3235,7 +3236,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   name="shodan_api_key"
                   defaultValue={settingsData.api_keys?.shodan_api_key || ''}
                   placeholder="32-character Shodan API Key"
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
                 <button
                   type="button"
@@ -3353,12 +3354,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 value={newExtInput}
                 onChange={(e) => setNewExtInput(e.target.value)}
                 placeholder="e.g. .apk, .bin, .dmg, .iso"
-                className="flex-1 bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                className="flex-1 bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               />
               <button
                 type="submit"
                 disabled={isAddingExt || !newExtInput.trim()}
-                className="px-4 py-2 bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
               >
                 {isAddingExt ? 'Adding...' : '+ Add Extension'}
               </button>
@@ -3371,7 +3372,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       {/* TAB 3: External Network Policies */}
       {activeTab === 'external' && (
         !externalPolicy ? (
-          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-xs">
             <div className="inline-block animate-spin w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full mb-3" />
             <p className="text-sm font-semibold text-slate-800">Loading external network policies...</p>
             <button
@@ -3383,7 +3384,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           </div>
         ) : (
         <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -3397,7 +3398,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
               {/* Master Switch */}
               <button
                 onClick={() => handleToggleExternal('allow_all_external', externalPolicy.allow_all_external)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
                   externalPolicy.allow_all_external
                     ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                     : 'bg-rose-600 text-white hover:bg-rose-700'
@@ -3461,7 +3462,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                       isAirgapped
                         ? 'bg-slate-50 border-slate-200 opacity-50 cursor-not-allowed'
                         : isEnabled
-                        ? 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300 cursor-pointer shadow-sm'
+                        ? 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300 cursor-pointer shadow-xs'
                         : 'bg-slate-50 border-slate-200 opacity-60 hover:opacity-80 cursor-pointer'
                     }`}
                   >
@@ -3490,7 +3491,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       {/* TAB 4: ClamAV Engine */}
       {activeTab === 'clamav' && (
         <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -3507,8 +3508,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   disabled={updateCheck.loading}
                   className={`px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all flex items-center gap-2 ${
                     updateCheck.loading
-                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700 shadow-sm animate-pulse'
-                      : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs'
+                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700 shadow-xs animate-pulse'
+                      : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-2xs'
                   }`}
                   title="Query official ClamAV mirror and DNS for newest definitions"
                 >
@@ -3531,7 +3532,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 <button
                   onClick={handleUpdateClamav}
                   disabled={isUpdatingClamav || clamavDownloadProgress.is_downloading}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2"
                 >
                   {isUpdatingClamav || clamavDownloadProgress.is_downloading ? (
                     <>
@@ -3553,7 +3554,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
             {/* Checking Status Banner (High Visibility) */}
             {updateCheck.loading && (
-              <div className="mb-6 p-4 bg-indigo-50/95 border border-indigo-200 rounded-2xl flex items-center justify-between gap-4 shadow-sm animate-pulse">
+              <div className="mb-6 p-4 bg-indigo-50/95 border border-indigo-200 rounded-2xl flex items-center justify-between gap-4 shadow-xs animate-pulse">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
                     <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
@@ -3578,10 +3579,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
             {/* ClamAV Download Progress Bar */}
             {(isUpdatingClamav || clamavDownloadProgress.is_downloading) && (
-              <div className="mb-6 p-5 bg-white border border-indigo-200 rounded-3xl shadow-sm space-y-4">
+              <div className="mb-6 p-5 bg-white border border-indigo-200 rounded-3xl shadow-xs space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 text-lg shadow-xs shrink-0">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 text-lg shadow-2xs shrink-0">
                       <svg className="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
@@ -3607,7 +3608,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 <div className="space-y-2">
                   <div className="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden border border-slate-200 p-0.5">
                     <div
-                      className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 h-full rounded-full transition-all duration-300 ease-out relative"
+                      className="bg-linear-to-r from-indigo-500 via-indigo-600 to-purple-600 h-full rounded-full transition-all duration-300 ease-out relative"
                       style={{ width: `${Math.max(5, Math.min(100, clamavDownloadProgress.percent || 5))}%` }}
                     >
                       <div className="absolute inset-0 bg-white/30 animate-pulse rounded-full" />
@@ -3705,7 +3706,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
             {/* Latest Online Definition Found Card */}
             {updateCheck.checked && (updateCheck.remote_version || updateCheck.latest_definition_summary) && (
-              <div className="mb-6 p-5 bg-white rounded-3xl border border-slate-200 shadow-sm">
+              <div className="mb-6 p-5 bg-white rounded-3xl border border-slate-200 shadow-xs">
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-100">
                   <div className="flex items-center gap-2.5">
                     <span className="text-xl">🌐</span>
@@ -3714,7 +3715,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         Latest Online Definition Found
                       </h4>
                       <p className="text-[10px] text-slate-500">
-                        Official Cisco Talos / ClamAV Global Mirror Network (<code className="text-slate-600 bg-slate-100 px-1 py-0.5 rounded font-mono">database.clamav.net</code>)
+                        Official Cisco Talos / ClamAV Global Mirror Network (<code className="text-slate-600 bg-slate-100 px-1 py-0.5 rounded-sm font-mono">database.clamav.net</code>)
                       </p>
                     </div>
                   </div>
@@ -3731,7 +3732,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                     <button
                       onClick={() => triggerBackgroundUpdateCheck(true)}
                       disabled={updateCheck.loading}
-                      className="px-3 py-1 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-medium border border-slate-200 shadow-xs transition-colors flex items-center gap-1"
+                      className="px-3 py-1 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-medium border border-slate-200 shadow-2xs transition-colors flex items-center gap-1"
                       title="Re-check mirror"
                     >
                       <span>🔄</span> Re-check
@@ -3779,7 +3780,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                       <button
                         onClick={handleUpdateClamav}
                         disabled={isUpdatingClamav || clamavDownloadProgress.is_downloading}
-                        className="mt-2 w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+                        className="mt-2 w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all"
                       >
                         Download Update Now →
                       </button>
@@ -3795,7 +3796,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
             {/* Background Update Notification Banner if update is available and not downloading */}
             {updateCheck.newer_available && !clamavDownloadProgress.is_downloading && (
-              <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
+              <div className="mb-6 p-4 bg-linear-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🔔</span>
                   <div>
@@ -3816,7 +3817,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   <button
                     onClick={handleUpdateClamav}
                     disabled={isUpdatingClamav}
-                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap"
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap"
                   >
                     ⚡ Download Latest Database Now
                   </button>
@@ -3849,7 +3850,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
               </p>
 
               {uploadProgress.active && (
-                <div className="mb-4 p-4 bg-white border border-slate-200 rounded-2xl text-slate-800 space-y-2 shadow-xs">
+                <div className="mb-4 p-4 bg-white border border-slate-200 rounded-2xl text-slate-800 space-y-2 shadow-2xs">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-800 flex items-center gap-2">
                       <svg className="animate-spin h-3.5 w-3.5 text-indigo-600" fill="none" viewBox="0 0 24 24">
@@ -3882,7 +3883,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 <button
                   type="submit"
                   disabled={!uploadDefFile || isUploadingDef}
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg shadow-sm"
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-semibold rounded-lg shadow-xs"
                 >
                   {isUploadingDef ? 'Installing...' : 'Install Definition File'}
                 </button>
@@ -4000,7 +4001,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         <tr key={def.name} className="hover:bg-slate-50/80">
                           <td className="py-2 px-4 font-mono font-medium text-slate-900">{def.name}</td>
                           <td className="py-2 px-4">
-                            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-bold">
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-sm text-[10px] font-bold">
                               {def.type}
                             </span>
                           </td>
@@ -4038,7 +4039,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
       {/* TAB 5: YARA Rules */}
       {activeTab === 'yara' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -4050,7 +4051,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
             </div>
             <button
               onClick={openNewYaraModal}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
             >
               <span>+</span> Create New YARA Rule
             </button>
@@ -4192,7 +4193,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
       {/* TAB 6: Keyword & RegEx Watchlist */}
       {activeTab === 'warninglist' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -4211,7 +4212,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
               </button>
               <button
                 onClick={openNewWarningModal}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
               >
                 <span>+</span> Add Keyword / Regex Rule
               </button>
@@ -4231,7 +4232,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         {rule.name}
                       </span>
                     )}
-                    <span className="font-mono text-xs bg-white px-2 py-0.5 border border-slate-300 rounded text-slate-800">
+                    <span className="font-mono text-xs bg-white px-2 py-0.5 border border-slate-300 rounded-sm text-slate-800">
                       {rule.pattern}
                     </span>
                     {rule.is_regex && (
@@ -4290,7 +4291,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
       {/* TAB 6.5: Supported File Formats & Forensic Hex Patterns */}
       {activeTab === 'hex_patterns' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -4305,7 +4306,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={openNewFormatModal}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <span>➕</span> Add New File Format
               </button>
@@ -4319,7 +4320,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
               placeholder="Search file formats, extensions, magic bytes, or patterns..."
               value={formatSearch}
               onChange={(e) => setFormatSearch(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
             />
           </div>
 
@@ -4360,7 +4361,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                     key={fmt.id}
                     className={`border rounded-2xl p-5 transition-all ${
                       fmt.enabled
-                        ? 'border-slate-200 bg-white hover:border-slate-300 shadow-xs'
+                        ? 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs'
                         : 'border-slate-200 bg-slate-50/70 opacity-75'
                     }`}
                   >
@@ -4487,7 +4488,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                                   />
                                   <span className="font-bold text-slate-800">{pat.name}</span>
                                   <span
-                                    className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                                    className="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wider"
                                     style={{
                                       backgroundColor: `${stConf.bg}20`,
                                       color: stConf.border,
@@ -4498,11 +4499,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                                   </span>
 
                                   {pat.type === 'struct_field' ? (
-                                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
+                                    <span className="font-mono text-[11px] px-2 py-0.5 rounded-sm bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
                                       STRUCT FIELD {pat.offset !== undefined ? `@0x${pat.offset.toString(16).toUpperCase()}` : ''} {pat.length ? `(${pat.length} B)` : ''}
                                     </span>
                                   ) : (
-                                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-800">
+                                    <span className="font-mono text-[11px] px-2 py-0.5 rounded-sm bg-white border border-slate-200 text-slate-800">
                                       {pat.pattern}
                                       {pat.offset !== undefined ? ` @0x${pat.offset.toString(16).toUpperCase()}` : ''}
                                     </span>
@@ -4511,16 +4512,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                                   {/* Built-in / Edited / Custom Badges */}
                                   {isBuiltin ? (
                                     isModified ? (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
                                         <span>✏️</span> Edited
                                       </span>
                                     ) : (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200/70 text-slate-600">
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-slate-200/70 text-slate-600">
                                         System Default
                                       </span>
                                     )
                                   ) : (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-purple-100 text-purple-800 border border-purple-200">
                                       Custom
                                     </span>
                                   )}
@@ -4537,7 +4538,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                                   <button
                                     type="button"
                                     onClick={() => openEditPatternModal(pat)}
-                                    className="px-2.5 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-[11px] font-medium transition-colors cursor-pointer"
+                                    className="px-2.5 py-0.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-sm text-[11px] font-medium transition-colors cursor-pointer"
                                   >
                                     ✏️ Edit
                                   </button>
@@ -4547,7 +4548,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                                     <button
                                       type="button"
                                       onClick={() => handleResetPattern(pat.id)}
-                                      className="px-2.5 py-0.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded text-[11px] font-medium transition-colors cursor-pointer"
+                                      className="px-2.5 py-0.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded-sm text-[11px] font-medium transition-colors cursor-pointer"
                                       title="Reset this pattern to its original system default"
                                     >
                                       ↺ Reset
@@ -4572,7 +4573,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                                     <button
                                       type="button"
                                       onClick={() => handleDeletePattern(pat.id)}
-                                      className="px-2.5 py-0.5 text-rose-600 hover:bg-rose-50 rounded text-[11px] font-medium transition-colors cursor-pointer"
+                                      className="px-2.5 py-0.5 text-rose-600 hover:bg-rose-50 rounded-sm text-[11px] font-medium transition-colors cursor-pointer"
                                     >
                                       Delete
                                     </button>
@@ -4594,7 +4595,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
       {/* TAB 7: Upload Statistics */}
       {activeTab === 'statistics' && (
         !statisticsData ? (
-          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-xs">
             <div className="inline-block animate-spin w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full mb-3" />
             <p className="text-sm font-semibold text-slate-800">Loading upload statistics & telemetry...</p>
             <button
@@ -4633,37 +4634,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           <div className="space-y-6">
             {/* Top Key Metric Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-6 gap-3.5">
-              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-sm">
+              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-xs">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Scans</div>
                 <div className="text-2xl font-extrabold text-slate-900 mt-1">{totalAnalyzed}</div>
                 <div className="text-[11px] text-indigo-600 mt-0.5 font-medium">All-time uploads</div>
               </div>
 
-              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-sm">
+              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-xs">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Data Ingested</div>
                 <div className="text-2xl font-extrabold text-slate-900 mt-1">{formatBytes(totalBytes)}</div>
                 <div className="text-[11px] text-slate-500 mt-0.5 font-medium">Avg {avgSize} / file</div>
               </div>
 
-              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-sm">
+              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-xs">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Clean Documents</div>
                 <div className="text-2xl font-extrabold text-emerald-600 mt-1">{cleanCount}</div>
                 <div className="text-[11px] text-emerald-600 mt-0.5 font-medium">{cleanRate}% safe rate</div>
               </div>
 
-              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-sm">
+              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-xs">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Threats Detected</div>
                 <div className="text-2xl font-extrabold text-rose-600 mt-1">{threatsCount}</div>
                 <div className="text-[11px] text-rose-500 mt-0.5 font-medium">{threatRate}% threat ratio</div>
               </div>
 
-              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-sm">
+              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-xs">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Malware Blocked</div>
                 <div className="text-2xl font-extrabold text-red-700 mt-1">{malwareCount}</div>
                 <div className="text-[11px] text-red-600 mt-0.5 font-medium">ClamAV / PE hits</div>
               </div>
 
-              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-sm">
+              <div className="bg-white border border-slate-200 p-4 rounded-3xl shadow-xs">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">CDR Sanitized</div>
                 <div className="text-2xl font-extrabold text-indigo-600 mt-1">{totalSanitized}</div>
                 <div className="text-[11px] text-indigo-600 mt-0.5 font-medium">Reconstructed clean</div>
@@ -4671,7 +4672,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
             </div>
 
             {/* 30-Day Daily Upload Activity Bar Chart */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
                 <div>
                   <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -4713,8 +4714,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         className={`w-full rounded-t-md transition-all duration-300 ${
                           item.count > 0
                             ? isToday
-                              ? 'bg-gradient-to-t from-indigo-700 to-indigo-500 shadow-sm'
-                              : 'bg-gradient-to-t from-indigo-500 to-blue-400 group-hover:from-indigo-600 group-hover:to-blue-500'
+                              ? 'bg-linear-to-t from-indigo-700 to-indigo-500 shadow-xs'
+                              : 'bg-linear-to-t from-indigo-500 to-blue-400 group-hover:from-indigo-600 group-hover:to-blue-500'
                             : 'bg-slate-200/80 group-hover:bg-slate-300'
                         }`}
                       />
@@ -4734,7 +4735,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
             {/* Detailed Analytics Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Threat Severity Distribution */}
-              <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
+              <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xs">
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
                   <span>🎯</span> Threat Severity Distribution
                 </h3>
@@ -4766,7 +4767,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
               </div>
 
               {/* Scans by File Format */}
-              <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
+              <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xs">
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
                   <span>📁</span> Scans by File Category
                 </h3>
@@ -4858,7 +4859,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
               {/* Findings Breakdown & CDR Output */}
               <div className="space-y-6">
                 {/* Findings */}
-                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
+                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xs">
                   <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
                     <span>🚨</span> Detected Security Indicators
                   </h3>
@@ -4875,7 +4876,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 </div>
 
                 {/* CDR Formats */}
-                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm">
+                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xs">
                   <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
                     <span>🛡️</span> Content Disarm & Reconstruction (CDR)
                   </h3>
@@ -4946,7 +4947,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
             placeholder="Search by filename, hash, verdict..."
             value={historySearch}
             onChange={e => setHistorySearch(e.target.value)}
-            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
 
           {/* Stats bar */}
@@ -5145,7 +5146,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                               title={h.findings_count > 0 ? "Click to lock popover open / Hover to inspect" : undefined}
                             >
                               {h.findings_count > 0 ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-xs bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-all shadow-xs">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-xs bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-all shadow-2xs">
                                   <span>⚠️</span>
                                   <span>{h.findings_count}</span>
                                 </span>
@@ -5171,7 +5172,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                               title={h.mitre_count > 0 ? "Click to lock popover open / Hover to inspect" : undefined}
                             >
                               {h.mitre_count > 0 ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-xs bg-purple-100 text-purple-900 border border-purple-300 hover:bg-purple-200 transition-all shadow-xs">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-xs bg-purple-100 text-purple-900 border border-purple-300 hover:bg-purple-200 transition-all shadow-2xs">
                                   <span>🎯</span>
                                   <span>{h.mitre_count}</span>
                                 </span>
@@ -5276,7 +5277,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         <button
                           type="button"
                           onClick={() => setActiveHistoryTooltip(null)}
-                          className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
+                          className="w-5 h-5 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
                           title="Close (ESC)"
                         >
                           ✕
@@ -5292,7 +5293,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                             <span>⚠️</span> Suggested Threat Label
                           </span>
                           {threatCategory && (
-                            <span className="text-[9px] uppercase font-bold font-mono px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-300">
+                            <span className="text-[9px] uppercase font-bold font-mono px-1.5 py-0.5 rounded-sm bg-rose-100 text-rose-800 border border-rose-300">
                               {threatCategory}
                             </span>
                           )}
@@ -5343,7 +5344,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                     {Array.isArray(vt.tags) && vt.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {vt.tags.slice(0, 5).map((t: string, idx: number) => (
-                          <span key={idx} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                          <span key={idx} className="text-[9px] font-mono px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-600 border border-slate-200">
                             #{t}
                           </span>
                         ))}
@@ -5419,7 +5420,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         <button
                           type="button"
                           onClick={() => setActiveHistoryTooltip(null)}
-                          className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
+                          className="w-5 h-5 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
                           title="Close (ESC)"
                         >
                           ✕
@@ -5512,7 +5513,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         <button
                           type="button"
                           onClick={() => setActiveHistoryTooltip(null)}
-                          className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
+                          className="w-5 h-5 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
                           title="Close (ESC)"
                         >
                           ✕
@@ -5541,11 +5542,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                             <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors">
                               <div className="flex items-center justify-between gap-2 mb-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className={`text-[9px] uppercase font-bold font-mono px-1.5 py-0.5 rounded border ${sevBadge}`}>
+                                  <span className={`text-[9px] uppercase font-bold font-mono px-1.5 py-0.5 rounded-sm border ${sevBadge}`}>
                                     {sev}
                                   </span>
                                   {f.category && (
-                                    <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200">
+                                    <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded-sm bg-white text-slate-500 border border-slate-200">
                                       {f.category}
                                     </span>
                                   )}
@@ -5616,7 +5617,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         <button
                           type="button"
                           onClick={() => setActiveHistoryTooltip(null)}
-                          className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
+                          className="w-5 h-5 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
                           title="Close (ESC)"
                         >
                           ✕
@@ -5638,11 +5639,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                           return (
                             <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-purple-300 transition-colors">
                               <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                                <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-sm bg-purple-50 text-purple-700 border border-purple-200">
                                   {m.id}
                                 </span>
                                 {m.tactic && (
-                                  <span className="text-[9px] uppercase font-bold font-mono px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200">
+                                  <span className="text-[9px] uppercase font-bold font-mono px-1.5 py-0.5 rounded-sm bg-white text-slate-500 border border-slate-200">
                                     {m.tactic}
                                   </span>
                                 )}
@@ -5724,7 +5725,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                         <button
                           type="button"
                           onClick={() => setActiveHistoryTooltip(null)}
-                          className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
+                          className="w-5 h-5 flex items-center justify-center rounded-sm text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs transition-colors"
                           title="Close (ESC)"
                         >
                           ✕
@@ -5764,7 +5765,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                                 <span className="text-xs font-bold text-slate-800">{dateStr}</span>
                                 <span className="text-[10px] font-mono text-slate-500">{timeStr}</span>
                                 {isCurrentScan && (
-                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700">
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-sm bg-indigo-100 text-indigo-700">
                                     Current
                                   </span>
                                 )}
@@ -5775,15 +5776,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                             </div>
 
                             <div className="grid grid-cols-3 gap-2 text-center font-mono text-[10px] mt-1 pt-1.5 border-t border-slate-100">
-                              <div className="bg-white p-1 rounded border border-slate-200">
+                              <div className="bg-white p-1 rounded-sm border border-slate-200">
                                 <span className="text-slate-400 block text-[9px]">VT Score</span>
                                 <span className="font-bold text-slate-800">{s.vt_ratio || s.vt_score || '—'}</span>
                               </div>
-                              <div className="bg-white p-1 rounded border border-slate-200">
+                              <div className="bg-white p-1 rounded-sm border border-slate-200">
                                 <span className="text-slate-400 block text-[9px]">ClamAV</span>
                                 <span className="font-bold text-slate-800">{s.clamav || '—'}</span>
                               </div>
-                              <div className="bg-white p-1 rounded border border-slate-200">
+                              <div className="bg-white p-1 rounded-sm border border-slate-200">
                                 <span className="text-slate-400 block text-[9px]">Findings</span>
                                 <span className="font-bold text-slate-800">{s.findings_count ?? (s.findings?.length || 0)}</span>
                               </div>
@@ -5814,7 +5815,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
       {/* TAB 8.5: Application Audit & System Debug Logs */}
       {activeTab === 'audit_logs' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
             <div>
@@ -5833,7 +5834,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 <select
                   value={auditLogLevel}
                   onChange={(e) => handleSetLogLevel(e.target.value)}
-                  className="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer"
+                  className="bg-transparent font-bold text-slate-800 focus:outline-hidden cursor-pointer"
                 >
                   <option value="DEBUG">DEBUG (All logs)</option>
                   <option value="INFO">INFO (Normal)</option>
@@ -5924,7 +5925,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                       isActive
-                        ? 'bg-slate-900 text-white shadow-sm'
+                        ? 'bg-slate-900 text-white shadow-xs'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
@@ -5951,7 +5952,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                   setAuditSearch(e.target.value);
                   fetchAuditLogs(undefined, e.target.value);
                 }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               />
               <span className="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
               {auditSearch && (
@@ -6026,13 +6027,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
                           {/* Level Badge */}
                           <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border shrink-0 ${badgeClass}`}
+                            className={`px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border shrink-0 ${badgeClass}`}
                           >
                             {log.level}
                           </span>
 
                           {/* Source Module:Line */}
-                          <span className="text-slate-500 text-[11px] bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                          <span className="text-slate-500 text-[11px] bg-slate-100 px-1.5 py-0.5 rounded-sm shrink-0">
                             {log.module || log.logger}:{log.line}
                           </span>
                         </div>
@@ -6042,7 +6043,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                           <button
                             type="button"
                             onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                            className="px-2 py-0.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold font-sans transition-colors cursor-pointer shrink-0"
+                            className="px-2 py-0.5 rounded-sm bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold font-sans transition-colors cursor-pointer shrink-0"
                           >
                             {isExpanded ? 'Hide Traceback ▲' : 'View Traceback ▼'}
                           </button>
@@ -6071,7 +6072,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 
       {/* TAB 9: API Integration Guide */}
       {activeTab === 'api_docs' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
           <div>
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <span>⚡</span> REST API Integration & Automation Guide
@@ -6164,12 +6165,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 <h3 className="text-xs font-bold text-indigo-800 uppercase tracking-wider">
                   🐍 Python Automation Script (End-to-End Analysis & CDR)
                 </h3>
-                <span className="text-[10px] font-mono bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">Python 3.8+ (requests)</span>
+                <span className="text-[10px] font-mono bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-sm">Python 3.8+ (requests)</span>
               </div>
               <p className="text-xs text-slate-600 mb-3">
                 Uploads a document, polls status until analysis finishes, evaluates the risk level, and triggers sanitization if threats are present:
               </p>
-              <pre className="p-4 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto leading-relaxed border border-slate-200 shadow-xs">
+              <pre className="p-4 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto leading-relaxed border border-slate-200 shadow-2xs">
 {`import time
 import requests
 
@@ -6237,12 +6238,12 @@ sanitize_document("contract.docx", "contract_clean.pdf")`}
                 <h3 className="text-xs font-bold text-indigo-800 uppercase tracking-wider">
                   🌐 JavaScript / Node.js (Fetch API)
                 </h3>
-                <span className="text-[10px] font-mono bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Node 18+ / Browser</span>
+                <span className="text-[10px] font-mono bg-amber-100 text-amber-800 px-2 py-0.5 rounded-sm">Node 18+ / Browser</span>
               </div>
               <p className="text-xs text-slate-600 mb-3">
                 Stateless async/await workflow using standard web <code className="font-mono text-slate-800">fetch</code> and <code className="font-mono text-slate-800">FormData</code>:
               </p>
-              <pre className="p-4 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto leading-relaxed border border-slate-200 shadow-xs">
+              <pre className="p-4 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto leading-relaxed border border-slate-200 shadow-2xs">
 {`async function analyzeAndCleanFile(fileBlob, filename) {
   const formData = new FormData();
   formData.append('files', fileBlob, filename);
@@ -6280,12 +6281,12 @@ sanitize_document("contract.docx", "contract_clean.pdf")`}
                 <h3 className="text-xs font-bold text-indigo-800 uppercase tracking-wider">
                   ⚙️ CI/CD Security Gate (GitHub Actions Pipeline)
                 </h3>
-                <span className="text-[10px] font-mono bg-purple-100 text-purple-800 px-2 py-0.5 rounded">GitHub Actions YAML</span>
+                <span className="text-[10px] font-mono bg-purple-100 text-purple-800 px-2 py-0.5 rounded-sm">GitHub Actions YAML</span>
               </div>
               <p className="text-xs text-slate-600 mb-3">
                 Automatically scans committed documents or artifacts in pull requests and fails the build if malicious active content is found:
               </p>
-              <pre className="p-4 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto leading-relaxed border border-slate-200 shadow-xs">
+              <pre className="p-4 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto leading-relaxed border border-slate-200 shadow-2xs">
 {`name: FileSanitizer Security Inspection
 
 on: [push, pull_request]
@@ -6329,14 +6330,14 @@ jobs:
               <div className="space-y-3 mt-3">
                 <div>
                   <span className="text-[11px] font-mono text-slate-700 font-bold block mb-1">Upload File:</span>
-                  <pre className="p-3 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto border border-slate-200 shadow-xs">
+                  <pre className="p-3 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto border border-slate-200 shadow-2xs">
 {`curl -X POST http://localhost:8000/api/files -F "files=@sample.pdf"`}
                   </pre>
                 </div>
 
                 <div>
                   <span className="text-[11px] font-mono text-slate-700 font-bold block mb-1">Trigger Disarm with Custom Options:</span>
-                  <pre className="p-3 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto border border-slate-200 shadow-xs">
+                  <pre className="p-3 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto border border-slate-200 shadow-2xs">
 {`curl -X POST http://localhost:8000/api/jobs/<JOB_ID>/sanitize \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -6358,7 +6359,7 @@ jobs:
 
       {/* TAB: Archive Auto-Unlocking Pipeline Dictionary */}
       {activeTab === 'archive_passwords' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -6391,7 +6392,7 @@ jobs:
             <p>
               When a password-protected archive is submitted, the ingestion pipeline sequentially tests candidate passwords from this dictionary.
               If decryption succeeds, the internal files are unpacked, scanned for malicious content, and sanitized transparently.
-              Common threat hunting passwords (e.g. <code className="bg-white px-1.5 py-0.5 rounded font-mono text-[11px]">infected</code>, <code className="bg-white px-1.5 py-0.5 rounded font-mono text-[11px]">malware</code>, <code className="bg-white px-1.5 py-0.5 rounded font-mono text-[11px]">password</code>) are active by default.
+              Common threat hunting passwords (e.g. <code className="bg-white px-1.5 py-0.5 rounded-sm font-mono text-[11px]">infected</code>, <code className="bg-white px-1.5 py-0.5 rounded-sm font-mono text-[11px]">malware</code>, <code className="bg-white px-1.5 py-0.5 rounded-sm font-mono text-[11px]">password</code>) are active by default.
             </p>
           </div>
 
@@ -6402,12 +6403,12 @@ jobs:
               value={newArchivePasswordInput}
               onChange={(e) => setNewArchivePasswordInput(e.target.value)}
               placeholder="Enter new candidate password (e.g. campaign_2026, rules, infected)..."
-              className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+              className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
             />
             <button
               type="submit"
               disabled={!newArchivePasswordInput.trim()}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-2xs transition-all cursor-pointer shrink-0"
             >
               + Add Password
             </button>
@@ -6459,7 +6460,7 @@ jobs:
 
       {/* TAB: Threat Intelligence & External API Cache Management */}
       {activeTab === 'cache' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -6495,7 +6496,7 @@ jobs:
           )}
 
           {/* External API Cache Policy & Lifetime Configuration */}
-          <div className="p-5 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border border-blue-200/80 rounded-2xl space-y-4">
+          <div className="p-5 bg-linear-to-r from-blue-50/50 to-indigo-50/50 border border-blue-200/80 rounded-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -6509,7 +6510,7 @@ jobs:
                 type="button"
                 onClick={handleSaveCachePolicy}
                 disabled={isSavingCachePolicy}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
               >
                 {isSavingCachePolicy ? 'Saving...' : '💾 Save Cache Policy'}
               </button>
@@ -6521,7 +6522,7 @@ jobs:
                 onClick={() => setCacheMode('use_cache')}
                 className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
                   cacheMode === 'use_cache'
-                    ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
+                    ? 'bg-white border-blue-500 shadow-xs ring-1 ring-blue-500'
                     : 'bg-white/60 border-slate-200 hover:bg-white'
                 }`}
               >
@@ -6548,7 +6549,7 @@ jobs:
                 onClick={() => setCacheMode('always_fetch')}
                 className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
                   cacheMode === 'always_fetch'
-                    ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-500'
+                    ? 'bg-white border-blue-500 shadow-xs ring-1 ring-blue-500'
                     : 'bg-white/60 border-slate-200 hover:bg-white'
                 }`}
               >
@@ -6587,12 +6588,12 @@ jobs:
                     max={365}
                     value={cacheMaxAgeValue}
                     onChange={(e) => setCacheMaxAgeValue(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-20 px-3 py-1.5 text-xs font-mono font-semibold bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                    className="w-20 px-3 py-1.5 text-xs font-mono font-semibold bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-center"
                   />
                   <select
                     value={cacheMaxAgeUnit}
                     onChange={(e) => setCacheMaxAgeUnit(e.target.value as any)}
-                    className="px-3 py-1.5 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    className="px-3 py-1.5 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
                     <option value="hours">Hour(s)</option>
                     <option value="days">Day(s)</option>
@@ -6759,7 +6760,7 @@ jobs:
 
       {/* TAB: Format-Specific CDR & Sanitization Policies */}
       {activeTab === 'cdr_policies' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -6836,7 +6837,7 @@ jobs:
                             type="checkbox"
                             checked={isEnabled}
                             onChange={(e) => handleToggleCdrFormat(fmtId, e.target.checked)}
-                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                            className="w-4 h-4 rounded-sm text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
                           />
                           <span className={`text-xs font-bold ${isEnabled ? 'text-emerald-700' : 'text-slate-500'}`}>
                             {isEnabled ? 'CDR Enabled' : 'CDR Disabled (Hidden in UI)'}
@@ -6872,12 +6873,12 @@ jobs:
                             ].map(opt => {
                               const isOptChecked = allowedOpts.includes(opt.key);
                               return (
-                                <label key={opt.key} className="flex items-center gap-1.5 p-1 hover:bg-white rounded transition-colors cursor-pointer">
+                                <label key={opt.key} className="flex items-center gap-1.5 p-1 hover:bg-white rounded-sm transition-colors cursor-pointer">
                                   <input
                                     type="checkbox"
                                     checked={isOptChecked}
                                     onChange={() => handleToggleCdrOption(fmtId, opt.key)}
-                                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                                    className="w-3.5 h-3.5 rounded-sm text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
                                   />
                                   <span className={isOptChecked ? 'text-slate-800 font-medium' : 'text-slate-400'}>
                                     {opt.label}
@@ -6907,7 +6908,7 @@ jobs:
                                     type="checkbox"
                                     checked={isFmtChecked}
                                     onChange={() => handleToggleCdrOutputFormat(fmtId, fmt.key)}
-                                    className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                                    className="w-3.5 h-3.5 rounded-sm text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
                                   />
                                   <span className={`font-mono font-medium ${isFmtChecked ? 'text-slate-800' : 'text-slate-400'}`}>
                                     {fmt.label}
@@ -6929,7 +6930,7 @@ jobs:
 
       {/* TAB: Windows Event Logs (EVTX) */}
       {activeTab === 'evtx' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-6">
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-slate-100 gap-4">
             <div>
@@ -7002,7 +7003,7 @@ jobs:
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => handleToggleCheck('evtx', engine.key, isChecked)}
-                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer shrink-0"
+                      className="w-4 h-4 rounded-sm text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer shrink-0"
                     />
                     <span className={`text-xs font-medium ${isChecked ? 'text-slate-800' : 'text-slate-400'}`}>
                       {engine.label}
@@ -7107,7 +7108,7 @@ jobs:
                         value={evtxSearch}
                         onChange={(e) => setEvtxSearch(e.target.value)}
                         placeholder="Search Event ID, name, desc..."
-                        className="w-full px-3 py-1 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                        className="w-full px-3 py-1 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-medium"
                       />
                       {evtxSearch && (
                         <button
@@ -7180,7 +7181,7 @@ jobs:
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => handleToggleEvtxTimelineId(evt.id)}
-                                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                                    className="w-4 h-4 text-indigo-600 rounded-sm border-slate-300 focus:ring-indigo-500 cursor-pointer"
                                   />
                                   <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
                                     ID {evt.id}
@@ -7277,7 +7278,7 @@ jobs:
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => handleToggleEvtxTimelineId(evt.id)}
-                                    className="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
+                                    className="w-4 h-4 text-purple-600 rounded-sm border-slate-300 focus:ring-purple-500 cursor-pointer"
                                   />
                                   <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
                                     ID {evt.id}
@@ -7399,7 +7400,7 @@ jobs:
                         <select
                           value={sev}
                           onChange={(e) => handleChangeEvtxSeverity(id, e.target.value)}
-                          className="text-[10px] font-bold uppercase bg-white border border-indigo-200 rounded px-1.5 py-0.5 cursor-pointer"
+                          className="text-[10px] font-bold uppercase bg-white border border-indigo-200 rounded-sm px-1.5 py-0.5 cursor-pointer"
                         >
                           <option value="critical">Critical</option>
                           <option value="high">High</option>
@@ -7427,7 +7428,7 @@ jobs:
 
       {/* TAB: Time & Localization Display Settings */}
       {activeTab === 'time' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
             <div>
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -7464,7 +7465,7 @@ jobs:
                   onClick={() => setTimeSettings((prev: any) => ({ ...prev, format: '24h' }))}
                   className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                     timeSettings.format === '24h'
-                      ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-500/20 shadow-xs'
+                      ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-500/20 shadow-2xs'
                       : 'bg-white border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -7482,7 +7483,7 @@ jobs:
                   onClick={() => setTimeSettings((prev: any) => ({ ...prev, format: '12h' }))}
                   className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                     timeSettings.format === '12h'
-                      ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-500/20 shadow-xs'
+                      ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-500/20 shadow-2xs'
                       : 'bg-white border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -7533,7 +7534,7 @@ jobs:
                   type="checkbox"
                   checked={timeSettings.show_timezone_suffix !== false}
                   onChange={(e) => setTimeSettings((prev: any) => ({ ...prev, show_timezone_suffix: e.target.checked }))}
-                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                  className="w-4 h-4 text-indigo-600 rounded-sm border-slate-300 focus:ring-indigo-500"
                 />
                 <div>
                   <span className="text-xs font-bold text-slate-900 block">Show Timezone Suffix</span>
@@ -7546,7 +7547,7 @@ jobs:
                   type="checkbox"
                   checked={Boolean(timeSettings.show_milliseconds)}
                   onChange={(e) => setTimeSettings((prev: any) => ({ ...prev, show_milliseconds: e.target.checked }))}
-                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                  className="w-4 h-4 text-indigo-600 rounded-sm border-slate-300 focus:ring-indigo-500"
                 />
                 <div>
                   <span className="text-xs font-bold text-slate-900 block">Include Milliseconds</span>
@@ -7560,7 +7561,7 @@ jobs:
               <button
                 type="submit"
                 disabled={isSavingTimeSettings}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
               >
                 {isSavingTimeSettings ? 'Saving...' : 'Save Time & Localization Settings'}
               </button>
@@ -7572,7 +7573,7 @@ jobs:
       {/* MODAL: YARA Rule Editor (Create & Edit) */}
       {showYaraModal && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
+          className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-9999 flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowYaraModal(false);
           }}
@@ -7618,7 +7619,7 @@ jobs:
                       value={yaraName}
                       onChange={(e) => setYaraName(e.target.value)}
                       placeholder="e.g. Detect Suspicious PowerShell Loader"
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     />
                   </div>
                   <div>
@@ -7626,7 +7627,7 @@ jobs:
                     <select
                       value={yaraFormat}
                       onChange={(e) => setYaraFormat(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     >
                       <option value="ALL">ALL Formats</option>
                       <option value="PDF">PDF Documents</option>
@@ -7647,7 +7648,7 @@ jobs:
                       value={yaraDesc}
                       onChange={(e) => setYaraDesc(e.target.value)}
                       placeholder="Summary of what this rule catches"
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     />
                   </div>
                   <div>
@@ -7655,7 +7656,7 @@ jobs:
                     <select
                       value={yaraSeverity}
                       onChange={(e) => setYaraSeverity(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     >
                       <option value="INFO">Informational</option>
                       <option value="LOW">Low Risk</option>
@@ -7686,7 +7687,7 @@ jobs:
                       setYaraText(e.target.value);
                       setYaraValidation(null);
                     }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed shadow-inner"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-800 font-mono focus:outline-hidden focus:ring-2 focus:ring-indigo-500 leading-relaxed shadow-inner"
                   />
                 </div>
 
@@ -7732,7 +7733,7 @@ jobs:
       {/* MODAL: Warninglist Rule Editor (Create & Edit) */}
       {showWarningModal && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
+          className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-9999 flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowWarningModal(false);
           }}
@@ -7779,7 +7780,7 @@ jobs:
                     value={warnName}
                     onChange={(e) => setWarnName(e.target.value)}
                     placeholder="e.g. Swedish Personnummer or Internal Account Key"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
 
@@ -7793,7 +7794,7 @@ jobs:
                     value={warnPattern}
                     onChange={(e) => setWarnPattern(e.target.value)}
                     placeholder={warnIsRegex ? 'e.g. \\b\\d{3}-\\d{2}-\\d{4}\\b' : 'e.g. confidential'}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
 
@@ -7803,7 +7804,7 @@ jobs:
                     id="modal_is_regex"
                     checked={warnIsRegex}
                     onChange={(e) => setWarnIsRegex(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                    className="w-4 h-4 text-indigo-600 rounded-sm border-slate-300 focus:ring-indigo-500"
                   />
                   <label htmlFor="modal_is_regex" className="text-xs font-medium text-slate-700 cursor-pointer">
                     Treat search pattern as a Regular Expression (RegEx)
@@ -7815,7 +7816,7 @@ jobs:
                   <select
                     value={warnSeverity}
                     onChange={(e) => setWarnSeverity(e.target.value as any)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   >
                     <option value="informational">Informational</option>
                     <option value="low">Low Risk</option>
@@ -7834,7 +7835,7 @@ jobs:
                     value={warnDesc}
                     onChange={(e) => setWarnDesc(e.target.value)}
                     placeholder="e.g. Detects Social Security Number patterns in document bodies"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -7863,7 +7864,7 @@ jobs:
       {/* MODAL: RegEx Guide & Examples */}
       {showRegexHelpModal && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
+          className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-9999 flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowRegexHelpModal(false);
           }}
@@ -8005,7 +8006,7 @@ jobs:
                           setShowRegexHelpModal(false);
                           setShowWarningModal(true);
                         }}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-xs whitespace-nowrap shadow-sm transition-all"
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-xs whitespace-nowrap shadow-xs transition-all"
                       >
                         Use Pattern →
                       </button>
@@ -8018,7 +8019,7 @@ jobs:
             {/* Pinned Modal Footer */}
             <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0 rounded-b-3xl">
               <span className="text-[11px] text-slate-500">
-                Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-600 font-mono text-[10px]">ESC</kbd> or click outside to dismiss
+                Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-sm text-slate-600 font-mono text-[10px]">ESC</kbd> or click outside to dismiss
               </span>
               <button
                 type="button"
@@ -8036,7 +8037,7 @@ jobs:
       {/* MODAL: Custom Hex Pattern Editor (Create & Edit) */}
       {showPatternModal && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
+          className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-9999 flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowPatternModal(false);
           }}
@@ -8091,7 +8092,7 @@ jobs:
                   placeholder="e.g. DOS Header Magic / ELF Section"
                   value={patternName}
                   onChange={(e) => setPatternName(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -8103,7 +8104,7 @@ jobs:
                   <select
                     value={patternStructureType}
                     onChange={(e) => setPatternStructureType(e.target.value as StructureType)}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="header">File Header / Magic</option>
                     <option value="section">Section / Table</option>
@@ -8121,7 +8122,7 @@ jobs:
                   <select
                     value={patternType}
                     onChange={(e) => setPatternType(e.target.value as any)}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="hex">Hex Byte Sequence</option>
                     <option value="string">String (UTF-8 / ASCII)</option>
@@ -8141,7 +8142,7 @@ jobs:
                     placeholder="e.g. 0x00, 0x3C, or 60"
                     value={patternOffset}
                     onChange={(e) => setPatternOffset(e.target.value)}
-                    className="w-full font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
@@ -8155,7 +8156,7 @@ jobs:
                     placeholder="e.g. 2, 4, 8, 16"
                     value={patternLength}
                     onChange={(e) => setPatternLength(e.target.value)}
-                    className="w-full font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -8177,7 +8178,7 @@ jobs:
                     }
                     value={patternVal}
                     onChange={(e) => setPatternVal(e.target.value)}
-                    className="w-full font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               )}
@@ -8218,7 +8219,7 @@ jobs:
                       type="button"
                       onClick={() => setPatternColor(p.c)}
                       className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
-                        patternColor.toLowerCase() === p.c.toLowerCase() ? 'border-slate-900 scale-110' : 'border-white shadow-xs'
+                        patternColor.toLowerCase() === p.c.toLowerCase() ? 'border-slate-900 scale-110' : 'border-white shadow-2xs'
                       }`}
                       style={{ backgroundColor: p.c }}
                       title={p.l}
@@ -8236,7 +8237,7 @@ jobs:
                   placeholder="Displayed in the hover card inside the Universal Raw & Hex Inspector..."
                   value={patternDesc}
                   onChange={(e) => setPatternDesc(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -8251,7 +8252,7 @@ jobs:
                 <button
                   type="submit"
                   disabled={isSavingPattern}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
                 >
                   {isSavingPattern ? 'Saving...' : editingPatternId ? 'Save Changes' : 'Create Pattern'}
                 </button>
@@ -8265,7 +8266,7 @@ jobs:
       {/* MODAL: File Format Definition Editor (Create & Edit) */}
       {showFormatModal && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
+          className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-9999 flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowFormatModal(false);
           }}
@@ -8310,7 +8311,7 @@ jobs:
                   placeholder="e.g. Apple Disk Image (DMG) or WebP Container"
                   value={formatName}
                   onChange={(e) => setFormatName(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -8340,7 +8341,7 @@ jobs:
                           const val = e.target.value;
                           setFormatExtensions((prev) => prev.map((item, i) => (i === idx ? val : item)));
                         }}
-                        className="flex-1 font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                       />
                       {formatExtensions.length > 1 && (
                         <button
@@ -8382,7 +8383,7 @@ jobs:
                           const val = e.target.value;
                           setFormatMagicSignatures((prev) => prev.map((item, i) => (i === idx ? val : item)));
                         }}
-                        className="flex-1 font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase"
+                        className="flex-1 font-mono px-3.5 py-2 border border-slate-300 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 uppercase"
                       />
                       {formatMagicSignatures.length > 1 && (
                         <button
@@ -8408,7 +8409,7 @@ jobs:
                   placeholder="Technical summary of this file specification..."
                   value={formatDesc}
                   onChange={(e) => setFormatDesc(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -8423,7 +8424,7 @@ jobs:
                 <button
                   type="submit"
                   disabled={isSavingFormat}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
                 >
                   {isSavingFormat ? 'Saving...' : editingFormatId ? 'Save Changes' : 'Create Format'}
                 </button>
@@ -8437,7 +8438,7 @@ jobs:
       {/* MODAL: Pattern Creation Guide & Help (with Examples) */}
       {showPatternHelpModal && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
+          className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-9999 flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowPatternHelpModal(false);
           }}
@@ -8614,7 +8615,7 @@ jobs:
                             style={{ backgroundColor: ex.color }}
                           />
                           <span className="font-bold text-slate-900">{ex.name}</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded">
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-sm">
                             {ex.type}
                           </span>
                         </div>
@@ -8636,7 +8637,7 @@ jobs:
                           setPatternDesc(ex.desc);
                           setShowPatternHelpModal(false);
                         }}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-xs whitespace-nowrap shadow-sm transition-all cursor-pointer shrink-0"
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-xs whitespace-nowrap shadow-xs transition-all cursor-pointer shrink-0"
                       >
                         Use Template →
                       </button>
@@ -8649,7 +8650,7 @@ jobs:
             {/* Footer */}
             <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
               <span className="text-[11px] text-slate-500">
-                Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-600 font-mono text-[10px]">ESC</kbd> or click outside to dismiss
+                Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-sm text-slate-600 font-mono text-[10px]">ESC</kbd> or click outside to dismiss
               </span>
               <button
                 type="button"

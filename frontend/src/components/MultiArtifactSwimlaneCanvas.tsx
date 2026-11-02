@@ -288,7 +288,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
   }, [selectedEventId, eventPositions]);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs space-y-5">
+    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-2xs space-y-5">
       {/* Header and Controls */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
@@ -321,7 +321,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
               placeholder="Search event, process, PID, hash..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-52"
+              className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-52"
             />
           </div>
 
@@ -330,7 +330,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
             onClick={() => setAnomaliesOnly(!anomaliesOnly)}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 border cursor-pointer ${
               anomaliesOnly
-                ? 'bg-rose-50 text-rose-700 border-rose-300 font-bold shadow-xs'
+                ? 'bg-rose-50 text-rose-700 border-rose-300 font-bold shadow-2xs'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -343,7 +343,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
             onClick={() => setShowCausalityVectors(!showCausalityVectors)}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 border cursor-pointer ${
               showCausalityVectors
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-xs'
+                ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-2xs'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -387,7 +387,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
           onClick={() => setSelectedPhase('all')}
           className={`px-3 py-1 rounded-xl text-xs font-semibold shrink-0 cursor-pointer border transition-colors ${
             selectedPhase === 'all'
-              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
           }`}
         >
@@ -403,7 +403,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
               onClick={() => setSelectedPhase(phase)}
               className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 cursor-pointer border transition-colors flex items-center gap-1.5 ${
                 isSelected
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
                   : `${cfg.bg} ${cfg.text} ${cfg.border} hover:opacity-90`
               }`}
             >
@@ -469,7 +469,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
-                  <span className="uppercase px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-700 font-sans font-semibold">
+                  <span className="uppercase px-1.5 py-0.5 rounded-sm bg-slate-200/70 text-slate-700 font-sans font-semibold">
                     {lane.artifact_type}
                   </span>
                   <span>•</span>
@@ -642,7 +642,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
 
                   {/* Main Event Card Node */}
                   <div
-                    className={`relative w-44 p-3 rounded-2xl border transition-all duration-150 select-none shadow-sm ${
+                    className={`relative w-44 p-3 rounded-2xl border transition-all duration-150 select-none shadow-xs ${
                       isSelected
                         ? 'ring-2 ring-indigo-600 border-indigo-600 bg-white shadow-lg scale-105 z-20'
                         : isHovered
@@ -658,7 +658,7 @@ export const MultiArtifactSwimlaneCanvas: React.FC<MultiArtifactSwimlaneCanvasPr
                         {phaseConfig.label}
                       </span>
                       {isAnomaly && (
-                        <span className="flex items-center gap-0.5 text-[9px] font-bold text-rose-700 bg-rose-100 border border-rose-300 px-1 py-0.5 rounded">
+                        <span className="flex items-center gap-0.5 text-[9px] font-bold text-rose-700 bg-rose-100 border border-rose-300 px-1 py-0.5 rounded-sm">
                           <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
                           <span>Anomaly</span>
                         </span>

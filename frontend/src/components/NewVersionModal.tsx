@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sparkles, ExternalLink, X, ArrowRight, BellOff, Github, Calendar, Tag } from 'lucide-react';
+import { Sparkles, ExternalLink, X, ArrowRight, BellOff, Calendar, Tag } from 'lucide-react';
+import { GithubIcon } from './icons/GithubIcon';
 import { UpdateCheckResult } from '../api/client';
 
 interface NewVersionModalProps {
@@ -44,7 +45,7 @@ export const NewVersionModal: React.FC<NewVersionModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
       <div 
         className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden transform transition-all"
         role="dialog"
@@ -52,7 +53,7 @@ export const NewVersionModal: React.FC<NewVersionModalProps> = ({
         aria-labelledby="modal-headline"
       >
         {/* Top Gradient Banner */}
-        <div className="h-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 w-full" />
+        <div className="h-2.5 bg-linear-to-r from-blue-600 via-indigo-600 to-emerald-500 w-full" />
 
         {/* Modal Close Button */}
         <button
@@ -67,7 +68,7 @@ export const NewVersionModal: React.FC<NewVersionModalProps> = ({
         <div className="p-6 sm:p-7 space-y-6">
           {/* Header Title with Icon */}
           <div className="flex items-start gap-4 pr-6">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-2xs">
               <Sparkles className="w-6 h-6 animate-pulse" />
             </div>
             <div>
@@ -130,7 +131,7 @@ export const NewVersionModal: React.FC<NewVersionModalProps> = ({
             {releaseNotes && (
               <div className="bg-white border border-slate-200 rounded-2xl p-3.5 max-h-40 overflow-y-auto text-xs text-slate-600 space-y-1 font-mono leading-relaxed shadow-inner">
                 {releaseNotes.split('\n').filter(Boolean).map((line, idx) => (
-                  <p key={idx} className="break-words">
+                  <p key={idx} className="wrap-break-word">
                     {line}
                   </p>
                 ))}
@@ -144,9 +145,9 @@ export const NewVersionModal: React.FC<NewVersionModalProps> = ({
               href={githubUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-all cursor-pointer group"
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-xs transition-all cursor-pointer group"
             >
-              <Github className="w-4 h-4" />
+              <GithubIcon className="w-4 h-4" />
               <span>View Release &amp; Changelog on GitHub</span>
               <ExternalLink className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
             </a>

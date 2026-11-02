@@ -81,9 +81,9 @@ export const ExtensionTriageCard: React.FC<ExtensionTriageCardProps> = ({ extens
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+    <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden mb-6">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-indigo-50/80 via-slate-50 to-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+      <div className="px-6 py-4 bg-linear-to-r from-indigo-50/80 via-slate-50 to-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-indigo-100/70 text-indigo-700 rounded-lg">
             <Puzzle className="w-6 h-6" />
@@ -93,14 +93,14 @@ export const ExtensionTriageCard: React.FC<ExtensionTriageCardProps> = ({ extens
               <h3 className="text-base font-semibold text-slate-800">
                 {name || 'Browser Extension Package'}
               </h3>
-              <span className="text-xs px-2 py-0.5 rounded font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="text-xs px-2 py-0.5 rounded-sm font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200">
                 v{version}
               </span>
-              <span className="text-xs px-2 py-0.5 rounded font-mono font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <span className="text-xs px-2 py-0.5 rounded-sm font-mono font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
                 Manifest V{manifest_version || 3}
               </span>
               {is_webstore_signed && (
-                <span className="inline-flex items-center text-xs px-2 py-0.5 rounded font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title={`Verified Store Package ID: ${verified_item_id || 'Present'}`}>
+                <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title={`Verified Store Package ID: ${verified_item_id || 'Present'}`}>
                   <BadgeCheck className="w-3.5 h-3.5 mr-1 text-emerald-600" />
                   Web Store Signed
                 </span>
@@ -139,7 +139,7 @@ export const ExtensionTriageCard: React.FC<ExtensionTriageCardProps> = ({ extens
 
       {/* Store Intelligence & Community Reputation */}
       {storeIntel && (
-        <div className="px-6 py-4 bg-gradient-to-r from-indigo-50/50 via-white to-blue-50/40 border-b border-slate-200">
+        <div className="px-6 py-4 bg-linear-to-r from-indigo-50/50 via-white to-blue-50/40 border-b border-slate-200">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
               <span className="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
@@ -341,7 +341,7 @@ export const ExtensionTriageCard: React.FC<ExtensionTriageCardProps> = ({ extens
                 <div className="divide-y divide-red-100">
                   {permissions.critical.map((p, i) => (
                     <div key={i} className="p-3 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
-                      <span className="font-mono font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 inline-block w-fit">
+                      <span className="font-mono font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-sm border border-red-200 inline-block w-fit">
                         {p.permission}
                       </span>
                       <span className="text-slate-600">{p.description}</span>
@@ -363,7 +363,7 @@ export const ExtensionTriageCard: React.FC<ExtensionTriageCardProps> = ({ extens
                 <div className="divide-y divide-amber-100">
                   {permissions.high.map((p, i) => (
                     <div key={i} className="p-3 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
-                      <span className="font-mono font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block w-fit">
+                      <span className="font-mono font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-sm border border-amber-200 inline-block w-fit">
                         {p.permission}
                       </span>
                       <span className="text-slate-600">{p.description}</span>
@@ -383,7 +383,7 @@ export const ExtensionTriageCard: React.FC<ExtensionTriageCardProps> = ({ extens
                 </div>
                 <div className="p-3 bg-white flex flex-wrap gap-2 text-xs">
                   {permissions.medium.concat(permissions.low).map((p, i) => (
-                    <span key={i} className="inline-flex items-center px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[11px]" title={p.description}>
+                    <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-sm bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[11px]" title={p.description}>
                       {p.permission}
                     </span>
                   ))}
@@ -508,7 +508,7 @@ export const ExtensionTriageCard: React.FC<ExtensionTriageCardProps> = ({ extens
                         <span className="font-semibold text-slate-800">
                           Injection Rule #{i + 1}
                         </span>
-                        <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">
+                        <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-sm font-mono">
                           run_at: {cs.run_at}
                         </span>
                       </div>
@@ -537,7 +537,7 @@ export const ExtensionTriageCard: React.FC<ExtensionTriageCardProps> = ({ extens
               <h4 className="font-bold text-slate-800 uppercase tracking-wider">
                 Raw Content Security Policy
               </h4>
-              <pre className="p-3 bg-white border border-slate-200 rounded font-mono text-[11px] text-slate-800 whitespace-pre-wrap break-all">
+              <pre className="p-3 bg-white border border-slate-200 rounded-sm font-mono text-[11px] text-slate-800 whitespace-pre-wrap break-all">
                 {csp.raw || "No custom CSP declared (default secure Chrome sandbox applies)"}
               </pre>
 

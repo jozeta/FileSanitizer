@@ -25,7 +25,7 @@ export const LnkCard: React.FC<LnkCardProps> = ({ lnkInfo, filename = 'shortcut.
 
   if (!lnkInfo) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <Terminal className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">No LNK forensic metadata available for this file.</p>
       </div>
@@ -61,7 +61,7 @@ export const LnkCard: React.FC<LnkCardProps> = ({ lnkInfo, filename = 'shortcut.
   );
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
       {/* Top Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-100 gap-4">
         <div className="flex items-start gap-4">

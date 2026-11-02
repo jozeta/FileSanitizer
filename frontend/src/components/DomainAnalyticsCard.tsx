@@ -191,7 +191,7 @@ const CacheStatusBadge: React.FC<CacheStatusBadgeProps> = ({
             </span>
             <span className="text-xs font-bold text-slate-900">{serviceName}</span>
             {isCached && cacheInfo?.age_human && (
-              <span className="text-xs font-semibold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded border border-amber-300">
+              <span className="text-xs font-semibold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-sm border border-amber-300">
                 Fetched {cacheInfo.age_human}
               </span>
             )}
@@ -615,11 +615,11 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+    <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden mb-6">
       {/* ----------------- TOP HERO HEADER ----------------- */}
-      <div className="px-6 py-5 bg-gradient-to-r from-blue-50/90 via-slate-50 to-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
+      <div className="px-6 py-5 bg-linear-to-r from-blue-50/90 via-slate-50 to-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center space-x-3.5">
-          <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
+          <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-2xs">
             <Globe className="w-6 h-6" />
           </div>
           <div>
@@ -744,7 +744,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
         }`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className={`p-2.5 rounded-xl shadow-xs ${
+              <div className={`p-2.5 rounded-xl shadow-2xs ${
                 checklistVerdict.verdict === 'Malicious'
                   ? 'bg-rose-600 text-white'
                   : checklistVerdict.verdict === 'Suspicious' || checklistVerdict.verdict === 'Vulnerable / Misconfigured'
@@ -826,7 +826,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                         Risk Score Aspect Breakdown
                       </span>
                     </div>
-                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                    <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-sm bg-slate-800 text-emerald-400 border border-slate-700">
                       {checklistVerdict.risk_score}/100 • {checklistVerdict.verdict}
                     </span>
                   </div>
@@ -978,7 +978,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {checklistVerdict.mitre_techniques.map((m, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-800 font-mono text-[11px]" title={m.name}>
+                      <span key={idx} className="px-2 py-0.5 rounded-sm bg-indigo-50 border border-indigo-200 text-indigo-800 font-mono text-[11px]" title={m.name}>
                         <strong>{m.id}</strong>: {m.name}
                       </span>
                     ))}
@@ -1455,7 +1455,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
             <button
               type="button"
               onClick={() => setRefreshFeedback(null)}
-              className="text-blue-500 hover:text-blue-800 text-xs font-bold px-2 py-0.5 rounded cursor-pointer"
+              className="text-blue-500 hover:text-blue-800 text-xs font-bold px-2 py-0.5 rounded-sm cursor-pointer"
             >
               ✕
             </button>
@@ -1468,7 +1468,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
             {/* Live Browser Capture */}
             {thumbnailUrl && (
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4">
-                <div className="w-full sm:w-56 h-36 rounded-lg overflow-hidden border border-slate-300 shadow-xs shrink-0 bg-white">
+                <div className="w-full sm:w-56 h-36 rounded-lg overflow-hidden border border-slate-300 shadow-2xs shrink-0 bg-white">
                   <img
                     src={thumbnailUrl}
                     alt={`Live preview for ${domainInfo.target}`}
@@ -1590,19 +1590,19 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
 
             {/* Subfinder & dnsx Subdomain Reconnaissance Overview Banner */}
             {isSubfinderRunning ? (
-              <div className="p-4 rounded-xl border border-cyan-300 bg-cyan-50/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+              <div className="p-4 rounded-xl border border-cyan-300 bg-cyan-50/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-cyan-950">
                       <RefreshCw className="w-4 h-4 text-cyan-600 animate-spin" />
                       <span>Subdomain Reconnaissance (Subfinder &amp; dnsx) is Running...</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 border border-cyan-300">
+                    <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 border border-cyan-300">
                       Background Process
                     </span>
                   </div>
                   <p className="text-xs text-slate-700 font-mono">
-                    Pipeline: <code className="bg-white px-1.5 py-0.5 rounded border border-cyan-200 text-slate-800 font-bold">subfinder -silent -d {domainInfo.target} | dnsx -silent -a -resp</code>
+                    Pipeline: <code className="bg-white px-1.5 py-0.5 rounded-sm border border-cyan-200 text-slate-800 font-bold">subfinder -silent -d {domainInfo.target} | dnsx -silent -a -resp</code>
                   </p>
                   <p className="text-xs text-cyan-900 leading-relaxed">
                     Subfinder and dnsx are currently discovering subdomains and resolving active IPv4 A-records in the background without delaying your analysis. Results will automatically appear here once discovery completes.
@@ -1616,7 +1616,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('surface')}
-                    className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-semibold shrink-0 shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-semibold shrink-0 shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     <span>View Attack Surface</span>
                     <ArrowRight className="w-3 h-3 text-cyan-200" />
@@ -1631,17 +1631,17 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       <Radio className="w-4 h-4 text-cyan-600" />
                       <span>Subdomain Reconnaissance (Subfinder &amp; dnsx)</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900">
+                    <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900">
                       {domainInfo.subfinder_dnsx?.total_discovered || surface?.total_discovered || 0} Subdomains Discovered
                     </span>
                     {surface?.active_count !== undefined && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                         {surface.active_count} Active Resolving
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-slate-700 font-mono">
-                    Pipeline: <code className="bg-white px-1.5 py-0.5 rounded border border-cyan-200 text-slate-800 font-bold">subfinder -silent -d {domainInfo.target} | dnsx -silent -a -resp</code>
+                    Pipeline: <code className="bg-white px-1.5 py-0.5 rounded-sm border border-cyan-200 text-slate-800 font-bold">subfinder -silent -d {domainInfo.target} | dnsx -silent -a -resp</code>
                   </p>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
                     Passive reconnaissance gathered across public datasets and resolved into active IPv4 A-records. Full topology and parent-child hierarchy available in Attack Surface and Entity Graph.
@@ -1650,7 +1650,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('surface')}
-                  className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-semibold shrink-0 shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-semibold shrink-0 shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   <Radio className="w-3.5 h-3.5" />
                   <span>Inspect Attack Surface ({surface?.total_discovered || 0})</span>
@@ -1693,7 +1693,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     <FileText className="w-3 h-3 text-blue-600" />
                     <span>Web Exposure</span>
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 font-mono">
+                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-blue-100 text-blue-800 font-mono">
                     {webExposure?.robots_txt?.sensitive_paths_flagged?.length || 0} Flags
                   </span>
                 </div>
@@ -1735,7 +1735,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     <GitCompare className="w-3 h-3 text-indigo-600" />
                     <span>Time Delta</span>
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 font-mono">
+                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-indigo-100 text-indigo-800 font-mono">
                     {snapshotDiff?.total_changes_detected || 0} Shifts
                   </span>
                 </div>
@@ -1781,7 +1781,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
         {activeTab === 'relations' && (
           <div className="space-y-5">
             {/* Pivots Execution & ASN Summary Banner */}
-            <div className="p-4 bg-gradient-to-r from-indigo-50/70 via-slate-50 to-white border border-indigo-100 rounded-xl space-y-3">
+            <div className="p-4 bg-linear-to-r from-indigo-50/70 via-slate-50 to-white border border-indigo-100 rounded-xl space-y-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1846,7 +1846,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     onClick={() => setRelationViewTab('direct')}
                     className={`px-3 py-1 rounded-md font-semibold transition-all flex items-center gap-1 ${
                       relationViewTab === 'direct'
-                        ? 'bg-white text-indigo-700 shadow-xs'
+                        ? 'bg-white text-indigo-700 shadow-2xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -1857,7 +1857,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     onClick={() => setRelationViewTab('shared')}
                     className={`px-3 py-1 rounded-md font-semibold transition-all flex items-center gap-1 ${
                       relationViewTab === 'shared'
-                        ? 'bg-white text-amber-800 shadow-xs'
+                        ? 'bg-white text-amber-800 shadow-2xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -1868,7 +1868,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     onClick={() => setRelationViewTab('all')}
                     className={`px-3 py-1 rounded-md font-semibold transition-all ${
                       relationViewTab === 'all'
-                        ? 'bg-white text-slate-900 shadow-xs'
+                        ? 'bg-white text-slate-900 shadow-2xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -1958,7 +1958,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                               {item.domain}
                             </span>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 flex items-center gap-1">
                                 <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-600" />
                                 <span>Direct Affiliate</span>
                               </span>
@@ -2083,7 +2083,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                 {(item.relationship_labels || item.relationships || []).map((label: string, lidx: number) => (
                                   <span
                                     key={lidx}
-                                    className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 text-[10px] rounded font-medium"
+                                    className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 text-[10px] rounded-sm font-medium"
                                   >
                                     {label}
                                   </span>
@@ -2152,7 +2152,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       {nsItem.associated_domains && nsItem.associated_domains.length > 0 && (
                         <div className="pt-1.5 border-t border-slate-100 flex flex-wrap gap-1.5 items-center">
                           {nsItem.associated_domains.slice(0, 4).map((dom, dIdx) => (
-                            <div key={dIdx} className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 text-[11px] font-mono">
+                            <div key={dIdx} className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-sm border border-slate-200 text-[11px] font-mono">
                               <span className="text-slate-700">{dom}</span>
                               <InvestigateAssetButton ioc={dom} iocType="domain" compact={true} onNavigateToJob={onNavigateToJob} />
                             </div>
@@ -2210,7 +2210,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       {mxItem.associated_domains && mxItem.associated_domains.length > 0 && (
                         <div className="pt-1.5 border-t border-slate-100 flex flex-wrap gap-1.5 items-center">
                           {mxItem.associated_domains.slice(0, 4).map((dom, dIdx) => (
-                            <div key={dIdx} className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 text-[11px] font-mono">
+                            <div key={dIdx} className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-sm border border-slate-200 text-[11px] font-mono">
                               <span className="text-slate-700">{dom}</span>
                               <InvestigateAssetButton ioc={dom} iocType="domain" compact={true} onNavigateToJob={onNavigateToJob} />
                             </div>
@@ -2251,7 +2251,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     <div key={idx} className="p-3 bg-white rounded-lg border border-slate-200 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-100 text-purple-800">
+                          <span className="px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-purple-100 text-purple-800">
                             {item.type}
                           </span>
                           <span className="font-mono text-xs font-bold text-slate-900">{item.identifier}</span>
@@ -2275,7 +2275,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       {item.associated_domains && item.associated_domains.length > 0 && (
                         <div className="pt-1.5 border-t border-slate-100 flex flex-wrap gap-1.5 items-center">
                           {item.associated_domains.map((dom, dIdx) => (
-                            <div key={dIdx} className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 text-[11px] font-mono">
+                            <div key={dIdx} className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-sm border border-slate-200 text-[11px] font-mono">
                               <span className="text-slate-700">{dom}</span>
                               <InvestigateAssetButton ioc={dom} iocType="domain" compact={true} onNavigateToJob={onNavigateToJob} />
                             </div>
@@ -2404,7 +2404,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                             <span>{copiedKey === 'dmarc' ? 'Copied' : 'Copy'}</span>
                           </button>
                         </div>
-                        <div className="p-2 bg-white rounded border border-slate-200 text-[10px] font-mono text-slate-700 break-all select-all">
+                        <div className="p-2 bg-white rounded-sm border border-slate-200 text-[10px] font-mono text-slate-700 break-all select-all">
                           {emailSec.dmarc.raw_record}
                         </div>
                       </div>
@@ -2423,10 +2423,10 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     {emailSec.dkim.selectors_found.length > 0 ? (
                       <div className="space-y-1.5 pt-1">
                         {emailSec.dkim.selectors_found.map((sel, idx) => (
-                          <div key={idx} className="p-2 bg-white rounded border border-slate-200 text-xs font-mono">
+                          <div key={idx} className="p-2 bg-white rounded-sm border border-slate-200 text-xs font-mono">
                             <span className="font-bold text-slate-800">{sel.selector}._domainkey</span>
                             {sel.key_size_bits && (
-                              <span className="ml-2 text-[10px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded">
+                              <span className="ml-2 text-[10px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded-sm">
                                 ~{sel.key_size_bits}-bit RSA
                               </span>
                             )}
@@ -2503,7 +2503,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           href={waybackHttpUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition shrink-0"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition shrink-0"
                         >
                           <span>Open Wayback Calendar</span>
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -2512,7 +2512,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           href={archiveTodayUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-medium rounded-lg shadow-xs transition shrink-0"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-medium rounded-lg shadow-2xs transition shrink-0"
                         >
                           <span>Archive.today</span>
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -2542,7 +2542,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           href={archiveTodayUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition shrink-0"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition shrink-0"
                           title="Independent active archive mirror"
                         >
                           <span>Search Archive.today</span>
@@ -2552,7 +2552,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           href={urlscanUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-lg shadow-sm transition shrink-0"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium rounded-lg shadow-xs transition shrink-0"
                           title="View historical security scans on urlscan.io"
                         >
                           <span>URLScan.io History</span>
@@ -2695,7 +2695,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           href={archiveTodayUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition"
                         >
                           <span>Search Archive.today (Working Mirror)</span>
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -2704,7 +2704,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           href={urlscanUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-2xs transition"
                         >
                           <span>URLScan.io History</span>
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -2974,7 +2974,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                         <span className="font-mono text-slate-800">Paste #{leak.id} ({leak.date || 'unknown date'})</span>
                         <div className="flex items-center gap-2">
                           {(leak.tags || []).map((t, tidx) => (
-                            <span key={tidx} className="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[10px] font-mono">
+                            <span key={tidx} className="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded-sm text-[10px] font-mono">
                               {t}
                             </span>
                           ))}
@@ -3013,7 +3013,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                 <button
                   onClick={handleTriggerActiveRecon}
                   disabled={isScanningPorts}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isScanningPorts ? (
                     <>
@@ -3056,12 +3056,12 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           <div>
                             <span className="font-bold font-mono">{exp.path}</span> — <span>{exp.title}</span>
                             {exp.content_preview && (
-                              <p className="mt-1 font-mono text-[11px] text-rose-800 bg-white/80 p-1.5 rounded border border-rose-200 truncate max-w-xl">
+                              <p className="mt-1 font-mono text-[11px] text-rose-800 bg-white/80 p-1.5 rounded-sm border border-rose-200 truncate max-w-xl">
                                 {exp.content_preview}
                               </p>
                             )}
                           </div>
-                          <span className="px-2 py-0.5 bg-rose-200 text-rose-900 rounded font-bold text-[10px] uppercase">
+                          <span className="px-2 py-0.5 bg-rose-200 text-rose-900 rounded-sm font-bold text-[10px] uppercase">
                             {exp.risk}
                           </span>
                         </div>
@@ -3157,7 +3157,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       {activeRecon.open_ports_count || activeRecon.services.length} Open
                     </span>
                     {activeRecon.scanner === 'nmap' && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-medium bg-purple-50 text-purple-700 border border-purple-200">
                         <Terminal className="w-3 h-3" />
                         Nmap -sS -sV
                       </span>
@@ -3165,7 +3165,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   </div>
                 </div>
 
-                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
                   <table className="w-full text-left text-xs font-mono">
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px]">
                       <tr>
@@ -3189,7 +3189,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                             </span>
                           </td>
                           <td className="py-2.5 px-4">
-                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 font-mono">
+                            <span className="px-1.5 py-0.5 rounded-sm text-[10px] bg-slate-100 text-slate-700 font-mono">
                               {svc.reason || 'syn-ack'}
                             </span>
                           </td>
@@ -3280,7 +3280,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
             {/* Subfinder & dnsx Active Pipeline Banner */}
             <div className={`border rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
               isSubfinderRunning 
-                ? 'bg-cyan-50 border-cyan-300 shadow-xs' 
+                ? 'bg-cyan-50 border-cyan-300 shadow-2xs' 
                 : 'bg-cyan-50/80 border-cyan-200'
             }`}>
               <div className="flex items-center gap-2.5">
@@ -3295,16 +3295,16 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-slate-900">ProjectDiscovery Subfinder + dnsx Active Pipeline</span>
                     {isSubfinderRunning ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 uppercase">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-sm text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 uppercase">
                         <RefreshCw className="w-2.5 h-2.5 animate-spin" />
                         Running in Background
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 uppercase">Active</span>
+                      <span className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono font-bold bg-cyan-200 text-cyan-900 uppercase">Active</span>
                     )}
                   </div>
                   <p className="text-[11px] text-slate-600 font-mono mt-0.5">
-                    Command: <code className="bg-white px-1.5 py-0.5 rounded border border-cyan-200 text-slate-800 font-semibold">subfinder -silent -d {domainInfo.target} | dnsx -silent -a -resp</code>
+                    Command: <code className="bg-white px-1.5 py-0.5 rounded-sm border border-cyan-200 text-slate-800 font-semibold">subfinder -silent -d {domainInfo.target} | dnsx -silent -a -resp</code>
                   </p>
                   {isSubfinderRunning && (
                     <p className="text-[11px] text-cyan-800 mt-1 font-medium">
@@ -3345,7 +3345,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
               {showUnresolvedExplanation && (
                 <div className="mt-3 pt-3 border-t border-slate-200 text-slate-600 space-y-2 leading-relaxed">
                   <p>
-                    In cyber threat intelligence and passive reconnaissance, subdomains are gathered from multiple historical and public datasets. An <strong>Unresolved (Dormant)</strong> status indicates that public DNS resolvers currently return <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-mono text-[11px] text-slate-800">NXDOMAIN</code> (no A or AAAA address) for that hostname.
+                    In cyber threat intelligence and passive reconnaissance, subdomains are gathered from multiple historical and public datasets. An <strong>Unresolved (Dormant)</strong> status indicates that public DNS resolvers currently return <code className="bg-white px-1.5 py-0.5 rounded-sm border border-slate-200 font-mono text-[11px] text-slate-800">NXDOMAIN</code> (no A or AAAA address) for that hostname.
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                     <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1">
@@ -3460,7 +3460,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                 {sub.subdomain}
                               </span>
                               {sub.is_root && (
-                                <span className="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded text-[10px] font-sans font-bold">
+                                <span className="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded-sm text-[10px] font-sans font-bold">
                                   Root Target
                                 </span>
                               )}
@@ -3520,7 +3520,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                             {sub.ips && sub.ips.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
                                 {sub.ips.slice(0, 2).map((ip, ipIdx) => (
-                                  <span key={ipIdx} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[11px] text-slate-800 shadow-2xs">
+                                  <span key={ipIdx} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-sm text-[11px] text-slate-800 shadow-2xs">
                                     {ip}
                                   </span>
                                 ))}
@@ -3580,7 +3580,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           }`}>
                             {sub.status === 'active' ? 'Active' : 'Unresolved'}
                           </span>
-                          <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-800 text-[10px] font-sans rounded">
+                          <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-800 text-[10px] font-sans rounded-sm">
                             {sub.discovered_from || 'Passive Discovery'}
                           </span>
                         </div>
@@ -3642,7 +3642,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           ? 'Self-Signed SSL/TLS Certificate'
                           : 'Valid & Active SSL/TLS Certificate'}
                       </h4>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-white/70 border border-current/20">
+                      <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono uppercase bg-white/70 border border-current/20">
                         Port {tls.port || 443} • {tls.live_cert.tls_version || 'TLS'}
                       </span>
                     </div>
@@ -3701,7 +3701,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     <div className="space-y-1.5">
                       <div>
                         <span className="text-slate-400 block text-[10px]">Negotiated Protocol</span>
-                        <span className="inline-block px-2 py-0.5 rounded font-bold bg-blue-100 text-blue-800 text-[11px]">
+                        <span className="inline-block px-2 py-0.5 rounded-sm font-bold bg-blue-100 text-blue-800 text-[11px]">
                           {tls.live_cert.tls_version || 'TLSv1.2/1.3'}
                         </span>
                       </div>
@@ -3742,7 +3742,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                             </button>
                           )}
                         </div>
-                        <p className="text-[10px] text-slate-700 bg-white p-1.5 rounded border border-slate-200 break-all select-all font-mono">
+                        <p className="text-[10px] text-slate-700 bg-white p-1.5 rounded-sm border border-slate-200 break-all select-all font-mono">
                           {tls.live_cert.sha256_fingerprint || 'N/A'}
                         </p>
                       </div>
@@ -3760,7 +3760,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                             </button>
                           )}
                         </div>
-                        <p className="text-[10px] text-slate-700 bg-white p-1.5 rounded border border-slate-200 truncate select-all font-mono">
+                        <p className="text-[10px] text-slate-700 bg-white p-1.5 rounded-sm border border-slate-200 truncate select-all font-mono">
                           {tls.live_cert.serial_number || 'N/A'}
                         </p>
                       </div>
@@ -3843,7 +3843,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                   <div className="flex items-center gap-1.5">
                                     <span>{c.name}</span>
                                     {c.active_negotiated && (
-                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                      <span className="px-1.5 py-0.2 rounded-sm text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
                                         Active
                                       </span>
                                     )}
@@ -3936,7 +3936,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     <div className={`p-4 rounded-xl border space-y-3 ${
                       tlsForensics.matches_target
                         ? 'bg-white border-emerald-200 shadow-2xs'
-                        : 'bg-rose-50/50 border-rose-200 shadow-xs'
+                        : 'bg-rose-50/50 border-rose-200 shadow-2xs'
                     }`}>
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
                         <div className="flex items-center gap-2">
@@ -4127,7 +4127,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   <Lock className="w-8 h-8 text-slate-300 mx-auto" />
                   <h5 className="text-sm font-bold text-slate-700">No Live TLS Certificate Captured on Port {tls?.port || 443}</h5>
                   <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                    A passive TLS handshake to <code className="font-mono bg-white px-1 py-0.5 rounded border border-slate-200">{domainInfo.target}:{tls?.port || 443}</code> did not complete. The host may only serve cleartext HTTP (port 80), run TLS on a non-standard port (e.g. 8443), or enforce strict client IP geofencing.
+                    A passive TLS handshake to <code className="font-mono bg-white px-1 py-0.5 rounded-sm border border-slate-200">{domainInfo.target}:{tls?.port || 443}</code> did not complete. The host may only serve cleartext HTTP (port 80), run TLS on a non-standard port (e.g. 8443), or enforce strict client IP geofencing.
                   </p>
                 </div>
 
@@ -4241,25 +4241,25 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       <span>DNS Architecture &amp; TTL Heuristics Audit</span>
                     </span>
                     {(dnsAudit.fast_flux_suspect || (dnsAudit as any).ttl_analysis?.fast_flux_suspect) && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse">
+                      <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse">
                         Fast-Flux Suspect
                       </span>
                     )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div className="p-2 bg-white rounded border border-slate-200">
+                    <div className="p-2 bg-white rounded-sm border border-slate-200">
                       <span className="text-[10px] uppercase font-bold text-slate-400">Low TTL / Fast Flux</span>
                       <p className={`font-bold mt-0.5 ${(dnsAudit.low_ttl_detected || (dnsAudit as any).ttl_analysis?.low_ttl_detected) ? 'text-amber-600' : 'text-slate-800'}`}>
                         {(dnsAudit.low_ttl_detected || (dnsAudit as any).ttl_analysis?.low_ttl_detected) ? `Low TTL (${dnsAudit.min_ttl ?? (dnsAudit as any).ttl_analysis?.min_ttl_seconds ?? 30}s)` : `Normal TTL (${dnsAudit.min_ttl ?? (dnsAudit as any).ttl_analysis?.min_ttl_seconds ?? 300}s)`}
                       </p>
                     </div>
-                    <div className="p-2 bg-white rounded border border-slate-200">
+                    <div className="p-2 bg-white rounded-sm border border-slate-200">
                       <span className="text-[10px] uppercase font-bold text-slate-400">Wildcard DNS</span>
                       <p className="font-bold text-slate-800 mt-0.5">
                         {(dnsAudit.has_wildcard_dns || (dnsAudit as any).wildcard_dns?.detected) ? `Enabled (${dnsAudit.wildcard_ip || (dnsAudit as any).wildcard_dns?.wildcard_target || 'Active'})` : 'Disabled'}
                       </p>
                     </div>
-                    <div className="p-2 bg-white rounded border border-slate-200">
+                    <div className="p-2 bg-white rounded-sm border border-slate-200">
                       <span className="text-[10px] uppercase font-bold text-slate-400">CNAME Chain Depth</span>
                       <p className="font-bold text-slate-800 mt-0.5">{(dnsAudit.cname_chain?.length ?? (advDns?.records?.cname?.length || 0))} Hops</p>
                     </div>
@@ -4322,7 +4322,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     <Terminal className="w-3.5 h-3.5 text-blue-600" />
                     <span>Active DNS Resolver Probe (dig)</span>
                   </h5>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200">
                     Live Verified Records
                   </span>
                 </div>
@@ -4519,7 +4519,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     {(advDns?.records?.a || dns.a || []).filter(ip => !dnsSearch || ip.toLowerCase().includes(dnsSearch.toLowerCase())).map((ip, i) => (
                       <div key={i} className="p-2 bg-white rounded-lg border border-slate-200 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-100 text-blue-800">A</span>
+                          <span className="px-1.5 py-0.2 rounded-sm text-[10px] font-bold bg-blue-100 text-blue-800">A</span>
                           <span className="font-bold text-slate-900">{ip}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -4537,7 +4537,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     {(advDns?.records?.aaaa || dns.aaaa || []).filter(ip6 => !dnsSearch || ip6.toLowerCase().includes(dnsSearch.toLowerCase())).map((ip6, i) => (
                       <div key={i} className="p-2 bg-white rounded-lg border border-slate-200 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-100 text-purple-800">AAAA</span>
+                          <span className="px-1.5 py-0.2 rounded-sm text-[10px] font-bold bg-purple-100 text-purple-800">AAAA</span>
                           <span className="font-bold text-slate-900 truncate max-w-[200px]" title={ip6}>{ip6}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -4579,7 +4579,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       return (
                         <div key={i} className="p-2 bg-white rounded-lg border border-slate-200 flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                            <span className="px-1.5 py-0.2 rounded-sm text-[10px] font-bold bg-amber-100 text-amber-800">
                               Prio {priority}
                             </span>
                             <span className="font-bold text-slate-900 truncate max-w-xs" title={host}>{host}</span>
@@ -4644,7 +4644,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       return (
                         <div key={i} className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1">
                           <div className="flex items-center justify-between">
-                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${badgeColor}`}>
+                            <span className={`px-1.5 py-0.2 rounded-sm text-[10px] font-bold ${badgeColor}`}>
                               {badgeLabel}
                             </span>
                             <button
@@ -4714,7 +4714,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       {advDns.records.caa.map((caa, idx) => (
                         <div key={idx} className="p-2 bg-white rounded-lg border border-slate-200 flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 uppercase">
+                            <span className="px-1.5 py-0.2 rounded-sm text-[10px] font-bold bg-indigo-100 text-indigo-800 uppercase">
                               {caa.tag}
                             </span>
                             <span className="text-slate-900 font-bold">{caa.value}</span>
@@ -4800,7 +4800,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                         <Terminal className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Active HTTP Probe &amp; Security Header Extraction (curl)</span>
                       </h5>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                         Live Verified
                       </span>
                     </div>
@@ -4825,7 +4825,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       {web.redirect_chain.map((hop, hidx) => (
                         <div key={hidx} className="p-3 flex items-center justify-between text-xs font-mono gap-3 hover:bg-slate-50/50">
                           <div className="flex items-center gap-2.5 truncate">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 shrink-0">
+                            <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-slate-100 text-slate-700 shrink-0">
                               Hop {hop.hop ?? hidx + 1}
                             </span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
@@ -5312,7 +5312,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       {shodan?.vulns && shodan.vulns.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {shodan.vulns.slice(0, 3).map((cve) => (
-                            <span key={cve} className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-rose-100 text-rose-800 font-bold">
+                            <span key={cve} className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono bg-rose-100 text-rose-800 font-bold">
                               {cve}
                             </span>
                           ))}
@@ -5411,7 +5411,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
         {activeTab === 'exposure' && (
           <div className="space-y-6">
             {/* Header Banner */}
-            <div className="p-4 bg-gradient-to-r from-amber-50/70 via-slate-50 to-white border border-amber-200 rounded-xl space-y-3">
+            <div className="p-4 bg-linear-to-r from-amber-50/70 via-slate-50 to-white border border-amber-200 rounded-xl space-y-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -5526,7 +5526,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     <div key={idx} className="p-3 bg-white rounded-lg border border-rose-200 text-xs space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-rose-950">{flag.title}</span>
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase bg-rose-100 text-rose-800">
+                        <span className="px-1.5 py-0.2 rounded-sm text-[10px] font-bold uppercase bg-rose-100 text-rose-800">
                           {flag.severity}
                         </span>
                       </div>
@@ -5575,9 +5575,9 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                         })
                         .filter(sens => !exposureSearch || sens.path.toLowerCase().includes(exposureSearch.toLowerCase()))
                         .map((sens, sIdx) => (
-                          <div key={sIdx} className="px-2 py-1 bg-white border border-amber-300 rounded text-xs font-mono flex items-center gap-2">
+                          <div key={sIdx} className="px-2 py-1 bg-white border border-amber-300 rounded-sm text-xs font-mono flex items-center gap-2">
                             <span className="font-bold text-amber-950">{sens.path}</span>
-                            <span className="px-1 py-0.2 bg-amber-100 text-amber-800 text-[10px] rounded uppercase font-semibold">
+                            <span className="px-1 py-0.2 bg-amber-100 text-amber-800 text-[10px] rounded-sm uppercase font-semibold">
                               {sens.category}
                             </span>
                           </div>
@@ -5803,7 +5803,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     <div key={idx} className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-2xs hover:border-slate-300 transition-colors">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-2.5">
-                          <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                          <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-sm border border-blue-200">
                             {vuln.cve}
                           </span>
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
@@ -5814,7 +5814,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                             {vuln.severity} (CVSS {vuln.cvss})
                           </span>
                           {vuln.cisa_kev && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-rose-600 text-white shadow-2xs">
+                            <span className="px-2 py-0.5 rounded-sm text-[10px] font-extrabold uppercase bg-rose-600 text-white shadow-2xs">
                               CISA KEV
                             </span>
                           )}
@@ -6015,17 +6015,17 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                             </div>
                           </td>
                           <td className="py-2.5 px-4">
-                            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] uppercase font-semibold">
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-sm text-[10px] uppercase font-semibold">
                               {item.technique}
                             </span>
                           </td>
                           <td className="py-2.5 px-4">
                             {item.resolves ? (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
                                 Live Threat (Resolving)
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-medium bg-slate-100 text-slate-500">
                                 Available / Unregistered
                               </span>
                             )}
@@ -6138,7 +6138,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                     <Terminal className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Active Python ipaddress Engine Verification</span>
                   </h5>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
                     Verified Attributes
                   </span>
                 </div>
@@ -6193,7 +6193,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   {normalisation.ssrf_mitigation_note || 'This indicator is classified as private or non-routable internal infrastructure. External threat intelligence queries and direct external socket connections are automatically restricted to mitigate Server-Side Request Forgery (SSRF) and data leakage.'}
                 </p>
                 {normalisation.special_use_category && (
-                  <span className="inline-block px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-amber-200/70 text-amber-900 border border-amber-300">
+                  <span className="inline-block px-2.5 py-0.5 rounded-sm text-xs font-mono font-semibold bg-amber-200/70 text-amber-900 border border-amber-300">
                     Category: {normalisation.special_use_category}
                   </span>
                 )}
@@ -6215,7 +6215,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       <ShieldAlert className="w-4 h-4 text-purple-700" />
                       <span>Unicode Homoglyph / Confusable Impersonation Analysis</span>
                     </h5>
-                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                    <span className="px-2 py-0.5 rounded-sm text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
                       IDNA Decoded
                     </span>
                   </div>
@@ -6324,7 +6324,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
 
                   {/* Candidates Table or Empty State */}
                   {takeoverCandidates.length > 0 ? (
-                    <div className="border border-rose-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                    <div className="border border-rose-200 rounded-xl overflow-hidden bg-white shadow-2xs">
                       <div className="p-4 bg-rose-50/60 border-b border-rose-200 flex items-center justify-between">
                         <div className="font-bold text-xs text-rose-900 uppercase tracking-wider flex items-center gap-1.5">
                           <AlertTriangle className="w-4 h-4 text-rose-600" />
@@ -6350,7 +6350,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                 <td className="py-3 px-4 font-mono font-bold text-slate-900">{c.subdomain || c.domain}</td>
                                 <td className="py-3 px-4 font-mono text-slate-600">{c.cname_target}</td>
                                 <td className="py-3 px-4">
-                                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                                  <span className="px-2 py-0.5 rounded-sm text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
                                     {c.service_provider || c.provider}
                                   </span>
                                 </td>
@@ -6382,7 +6382,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                   )}
 
                   {/* Audited Cloud Provider Takeover Signatures & Fingerprint Database */}
-                  <div className="border border-blue-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                  <div className="border border-blue-200 rounded-xl overflow-hidden bg-white shadow-2xs">
                     <div className="p-4 bg-blue-50/70 border-b border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-0.5">
                         <div className="font-bold text-xs text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
@@ -6430,14 +6430,14 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                             <tr key={sIdx} className="hover:bg-blue-50/30 transition-colors">
                               <td className="py-3 px-4 font-bold text-slate-900 whitespace-nowrap">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 text-blue-900 border border-blue-200">
+                                  <span className="px-2 py-0.5 rounded-sm text-[11px] font-bold bg-blue-100 text-blue-900 border border-blue-200">
                                     {sig.provider}
                                   </span>
                                 </div>
                                 <span className="text-[10px] text-slate-500 font-normal block mt-1">{sig.serviceType}</span>
                               </td>
                               <td className="py-3 px-4 font-mono text-[11px]">
-                                <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded-sm border border-slate-200">
                                   {sig.cnamePattern}
                                 </span>
                                 <span className="text-[10px] text-slate-400 block font-mono mt-1 truncate max-w-xs" title={sig.cnameRegex}>
@@ -6445,12 +6445,12 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                 </span>
                               </td>
                               <td className="py-3 px-4">
-                                <span className="px-2 py-1 rounded font-mono text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 inline-block">
+                                <span className="px-2 py-1 rounded-sm font-mono text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300 inline-block">
                                   &quot;{sig.fingerprint}&quot;
                                 </span>
                               </td>
                               <td className="py-3 px-4 font-mono text-[11px]">
-                                <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
+                                <span className="px-2 py-0.5 rounded-sm bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
                                   {sig.unclaimedStatus}
                                 </span>
                               </td>
@@ -6680,7 +6680,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                           value={dorkSearch}
                           onChange={(e) => setDorkSearch(e.target.value)}
                           placeholder="Search filename, URL, secret, or preview snippet..."
-                          className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                         />
                       </div>
 
@@ -6688,7 +6688,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       <select
                         value={dorkCategoryFilter}
                         onChange={(e) => setDorkCategoryFilter(e.target.value)}
-                        className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 font-medium cursor-pointer focus:outline-none"
+                        className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 font-medium cursor-pointer focus:outline-hidden"
                       >
                         <option value="all">All Categories ({artifacts.length})</option>
                         <option value="document">Documents ({counts.documents || 0})</option>
@@ -6756,7 +6756,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                               </span>
 
                               {/* Category Badge */}
-                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
                                 {art.category === 'database' ? (
                                   <Database className="w-3 h-3 text-purple-600" />
                                 ) : art.category === 'secret' ? (
@@ -6768,7 +6768,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                               </span>
 
                               {/* Source Badge */}
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-500 bg-slate-100">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono text-slate-500 bg-slate-100">
                                 {art.source}
                               </span>
 
@@ -6809,7 +6809,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                 type="button"
                                 onClick={() => handleWashArtifact(art.url)}
                                 disabled={ingestingUrl === art.url}
-                                className="px-3 py-1 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 shadow-2xs disabled:opacity-60"
+                                className="px-3 py-1 bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5 shadow-2xs disabled:opacity-60"
                                 title="Ingest this file into FileSanitizer for deep triage, malware scan, and CDR sanitization"
                               >
                                 {ingestingUrl === art.url ? (
@@ -6877,7 +6877,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                       >
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-sm border border-indigo-200">
                               {p.category}
                             </span>
                             <span className="text-[10px] font-mono text-slate-400">Google Search Operator</span>
@@ -7267,13 +7267,13 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-black font-mono text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                                    <span className="text-sm font-black font-mono text-slate-900 bg-slate-100 px-2 py-0.5 rounded-sm border border-slate-300">
                                       {h.ip}
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => copyToClipboard(h.ip, hostKey)}
-                                      className="p-1 text-slate-400 hover:text-slate-700 rounded transition-colors"
+                                      className="p-1 text-slate-400 hover:text-slate-700 rounded-sm transition-colors"
                                       title="Copy IP"
                                     >
                                       {copiedKey === hostKey ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -7305,7 +7305,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                       {h.hostnames.map((hn, hnIdx) => (
                                         <span
                                           key={hnIdx}
-                                          className="text-xs font-mono font-semibold px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-slate-700"
+                                          className="text-xs font-mono font-semibold px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-sm text-slate-700"
                                         >
                                           {hn}
                                         </span>
@@ -7316,7 +7316,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
 
                                 <div className="flex items-center gap-2 shrink-0">
                                   {h.asn && (
-                                    <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">
+                                    <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-sm">
                                       {h.asn}
                                     </span>
                                   )}
@@ -7345,7 +7345,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                         href={`https://www.cve.org/CVERecord?id=${cve}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 inline-flex items-center gap-1 transition-colors"
+                                        className="px-2 py-0.5 rounded-sm text-[11px] font-mono font-bold bg-rose-100 hover:bg-rose-200 text-rose-900 border border-rose-300 inline-flex items-center gap-1 transition-colors"
                                       >
                                         <span>{cve}</span>
                                         <ExternalLink className="w-2.5 h-2.5 opacity-60" />
@@ -7364,7 +7364,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                       <span>HTTP Web Service Telemetry</span>
                                     </span>
                                     {h.http.server && (
-                                      <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold">
+                                      <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded-sm border border-slate-200 text-slate-700 font-semibold">
                                         Server: {h.http.server}
                                       </span>
                                     )}
@@ -7381,7 +7381,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="text-[11px] text-slate-500 font-medium">Set-Cookies:</span>
                                       {h.http.cookies.map((ck, cidx) => (
-                                        <span key={cidx} className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-200">
+                                        <span key={cidx} className="font-mono text-[10px] px-1.5 py-0.2 rounded-sm bg-amber-100 text-amber-900 border border-amber-200">
                                           {ck}
                                         </span>
                                       ))}
@@ -7543,7 +7543,7 @@ export const DomainAnalyticsCard: React.FC<DomainAnalyticsCardProps> = ({
                                   {r.subdomain || r.sub || '@'}
                                 </td>
                                 <td className="py-2.5 px-4">
-                                  <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 font-bold border border-blue-200 text-[10px]">
+                                  <span className="px-1.5 py-0.5 rounded-sm bg-blue-50 text-blue-800 font-bold border border-blue-200 text-[10px]">
                                     {r.type}
                                   </span>
                                 </td>

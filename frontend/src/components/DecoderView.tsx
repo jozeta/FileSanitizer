@@ -458,7 +458,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
       )}
 
       {/* Top Banner / Header */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="p-2.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-700">
@@ -477,7 +477,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
       </div>
 
       {/* Quick Apply Bar for Saved Recipes and Research Presets */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-xs space-y-3">
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-600">
@@ -505,7 +505,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                   if (saved) handleApplySavedRecipe(saved);
                 }
               }}
-              className="w-full sm:w-80 px-3.5 py-2 text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer shadow-2xs hover:bg-slate-100/80"
+              className="w-full sm:w-80 px-3.5 py-2 text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer shadow-2xs hover:bg-slate-100/80"
             >
               <option value="" disabled>Choose Recipe or Preset to Apply...</option>
               {savedRecipes.length > 0 && (
@@ -561,16 +561,16 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                 <div
                   key={saved.id}
                   onClick={() => handleApplySavedRecipe(saved)}
-                  className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50/80 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold cursor-pointer transition-all shadow-2xs hover:shadow-xs whitespace-nowrap"
+                  className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50/80 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold cursor-pointer transition-all shadow-2xs hover:shadow-2xs whitespace-nowrap"
                   title={`${saved.name} (${saved.steps.length} ops)${saved.description ? `\n${saved.description}` : ''}`}
                 >
                   <span>{saved.name}</span>
-                  <span className="px-1.5 py-0.2 rounded bg-amber-200/80 text-amber-900 text-[10px] font-mono">
+                  <span className="px-1.5 py-0.2 rounded-sm bg-amber-200/80 text-amber-900 text-[10px] font-mono">
                     {saved.steps.length} ops
                   </span>
                   <button
                     onClick={(e) => handleDeleteSavedRecipe(saved.id, e)}
-                    className="p-0.5 rounded text-amber-400 hover:text-rose-600 transition-colors cursor-pointer"
+                    className="p-0.5 rounded-sm text-amber-400 hover:text-rose-600 transition-colors cursor-pointer"
                     title="Delete saved recipe"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -585,7 +585,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
       {/* Main 3-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Column 1: Operations Library (Grouped by Headlines) (3 cols) */}
-        <div className="lg:col-span-3 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
+        <div className="lg:col-span-3 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-2xs space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-indigo-600" />
@@ -604,7 +604,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search operations..."
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
 
@@ -698,7 +698,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
             handleDropAt(recipe.length, e);
             setDraggedStepIndex(null);
           }}
-          className={`lg:col-span-4 bg-white border rounded-3xl p-5 shadow-xs space-y-4 transition-all ${
+          className={`lg:col-span-4 bg-white border rounded-3xl p-5 shadow-2xs space-y-4 transition-all ${
             isDraggingOverPipeline
               ? 'border-indigo-400 bg-indigo-50/20 ring-2 ring-indigo-400/20'
               : 'border-slate-200/90'
@@ -754,7 +754,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                 }
               }}
               defaultValue=""
-              className="text-xs py-1 px-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium focus:outline-none cursor-pointer shadow-2xs"
+              className="text-xs py-1 px-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium focus:outline-hidden cursor-pointer shadow-2xs"
             >
               <option value="" disabled>
                 Load Preset Recipe...
@@ -773,7 +773,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                   type="checkbox"
                   checked={autoBake}
                   onChange={(e) => setAutoBake(e.target.checked)}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                  className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
                 />
                 <span>Auto-Bake</span>
               </label>
@@ -783,7 +783,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                 <button
                   onClick={() => bake(input, recipe)}
                   disabled={isBaking}
-                  className="flex items-center gap-1 px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs cursor-pointer active:scale-95 transition-all"
+                  className="flex items-center gap-1 px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-2xs cursor-pointer active:scale-95 transition-all"
                 >
                   <Play className="w-3 h-3 fill-current" />
                   <span>Bake</span>
@@ -835,7 +835,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                       {dropTargetIndex === idx && (
                         <div className="flex items-center gap-1.5 py-1 animate-pulse">
                           <div className="w-2 h-2 rounded-full bg-indigo-600 ring-2 ring-indigo-200" />
-                          <div className="h-1 flex-1 bg-indigo-500 rounded-full shadow-xs" />
+                          <div className="h-1 flex-1 bg-indigo-500 rounded-full shadow-2xs" />
                           <div className="w-2 h-2 rounded-full bg-indigo-600 ring-2 ring-indigo-200" />
                         </div>
                       )}
@@ -893,7 +893,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                         <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
                           <div className="flex items-center gap-2">
                             <div
-                              className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                              className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 p-0.5 rounded-sm"
                               title="Drag to reorder step anywhere in the pipeline"
                             >
                               <GripVertical className="w-3.5 h-3.5" />
@@ -905,7 +905,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                               {op.name}
                             </span>
                             {step.disabled && (
-                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-slate-200 text-slate-600">
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-sm bg-slate-200 text-slate-600">
                                 Bypassed
                               </span>
                             )}
@@ -916,7 +916,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                             <button
                               onClick={() => handleMoveStep(idx, 'up')}
                               disabled={idx === 0}
-                              className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                              className="p-1 rounded-sm text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
                               title="Move step up"
                             >
                               <ArrowUp className="w-3.5 h-3.5" />
@@ -924,21 +924,21 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                             <button
                               onClick={() => handleMoveStep(idx, 'down')}
                               disabled={idx === recipe.length - 1}
-                              className="p-1 rounded text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                              className="p-1 rounded-sm text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
                               title="Move step down"
                             >
                               <ArrowDown className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleToggleDisableStep(idx)}
-                              className="p-1 rounded text-slate-400 hover:text-indigo-600 cursor-pointer"
+                              className="p-1 rounded-sm text-slate-400 hover:text-indigo-600 cursor-pointer"
                               title={step.disabled ? 'Enable step' : 'Disable (bypass) step'}
                             >
                               {step.disabled ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                             </button>
                             <button
                               onClick={() => handleRemoveStep(idx)}
-                              className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                              className="p-1 rounded-sm text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
                               title="Remove step"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -959,7 +959,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                                       type="checkbox"
                                       checked={Boolean(val)}
                                       onChange={(e) => handleStepArgChange(idx, param.id, e.target.checked)}
-                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                      className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
                                     />
                                     <span className="text-[11px] font-medium text-slate-700">{param.name}</span>
                                   </label>
@@ -973,7 +973,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                                     <select
                                       value={val}
                                       onChange={(e) => handleStepArgChange(idx, param.id, e.target.value)}
-                                      className="text-xs py-1 px-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 font-medium focus:outline-none"
+                                      className="text-xs py-1 px-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 font-medium focus:outline-hidden"
                                     >
                                       {param.options?.map((opt) => (
                                         <option key={opt.value} value={opt.value}>
@@ -998,7 +998,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                                         param.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value
                                       )
                                     }
-                                    className="w-full px-2.5 py-1 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900"
+                                    className="w-full px-2.5 py-1 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 text-slate-900"
                                   />
                                 </div>
                               );
@@ -1035,7 +1035,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                   }}
                   className={`p-3 rounded-2xl border-2 border-dashed transition-all text-center text-xs font-semibold cursor-pointer select-none ${
                     dropTargetIndex === recipe.length
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm ring-2 ring-indigo-200'
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-xs ring-2 ring-indigo-200'
                       : 'border-slate-200 hover:border-slate-300 text-slate-400 bg-slate-50/50 hover:bg-slate-50'
                   }`}
                 >
@@ -1052,7 +1052,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
         {/* Column 3: Input & Output Panels (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           {/* Input Card */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-2xs space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-slate-900">Input</span>
@@ -1093,12 +1093,12 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
               onChange={(e) => setInput(e.target.value)}
               placeholder="Paste or type suspicious string, base64 payload, hex stream, or URL to decode..."
               rows={8}
-              className="w-full p-3 font-mono text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-y leading-relaxed"
+              className="w-full p-3 font-mono text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 resize-y leading-relaxed"
             />
           </div>
 
           {/* Output Card */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-2xs space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-slate-900">Output</span>
@@ -1157,7 +1157,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
               value={output}
               placeholder="Output of your recipe pipeline appears here..."
               rows={10}
-              className="w-full p-3 font-mono text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none resize-y leading-relaxed select-all"
+              className="w-full p-3 font-mono text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-hidden resize-y leading-relaxed select-all"
             />
           </div>
         </div>
@@ -1219,7 +1219,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                   value={newRecipeName}
                   onChange={(e) => setNewRecipeName(e.target.value)}
                   placeholder="e.g. Cobalt Strike Dropper Unpack"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
@@ -1232,7 +1232,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                   onChange={(e) => setNewRecipeDesc(e.target.value)}
                   placeholder="Notes on what payload or malware family this recipe unpacks..."
                   rows={2}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 resize-none"
                 />
               </div>
 
@@ -1246,7 +1246,7 @@ export const DecoderView: React.FC<DecoderViewProps> = ({ initialInput = '', onC
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs cursor-pointer transition-all"
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-2xs cursor-pointer transition-all"
                 >
                   Save Recipe
                 </button>

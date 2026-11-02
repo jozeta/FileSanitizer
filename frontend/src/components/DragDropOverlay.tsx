@@ -69,7 +69,7 @@ export const DragDropOverlay: React.FC<DragDropOverlayProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-[99999] bg-slate-900/50 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in select-none"
+      className="fixed inset-0 z-99999 bg-slate-900/50 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-fade-in select-none"
       onClick={onClose}
       onDragOver={(e) => {
         e.preventDefault();
@@ -114,7 +114,7 @@ export const DragDropOverlay: React.FC<DragDropOverlayProps> = ({
         </button>
 
         {/* Ambient Background Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-48 bg-gradient-to-b from-indigo-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-48 bg-linear-to-b from-indigo-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         {/* Modal Header */}
         <div className="text-center max-w-xl mx-auto mb-6 relative z-10 pointer-events-none">
@@ -179,15 +179,15 @@ export const DragDropOverlay: React.FC<DragDropOverlayProps> = ({
             }}
             className={`relative rounded-2xl p-6 transition-all duration-200 cursor-pointer flex flex-col justify-between text-left ${
               hoveredZone === 'clear'
-                ? 'border-2 border-amber-500 ring-4 ring-amber-300/40 shadow-[0_0_30px_rgba(245,158,11,0.28)] bg-gradient-to-b from-amber-50/90 via-amber-50/40 to-white scale-[1.015]'
+                ? 'border-2 border-amber-500 ring-4 ring-amber-300/40 shadow-[0_0_30px_rgba(245,158,11,0.28)] bg-linear-to-b from-amber-50/90 via-amber-50/40 to-white scale-[1.015]'
                 : hoveredZone === 'append'
                 ? 'border-2 border-dashed border-slate-200/90 bg-slate-50/40 opacity-60 scale-[0.99]'
-                : 'border-2 border-dashed border-amber-300/80 bg-gradient-to-b from-amber-50/30 to-white hover:border-amber-400 hover:bg-amber-50/50'
+                : 'border-2 border-dashed border-amber-300/80 bg-linear-to-b from-amber-50/30 to-white hover:border-amber-400 hover:bg-amber-50/50'
             }`}
           >
             {/* Header Badges */}
             <div className="flex items-center justify-between gap-2 mb-4 pointer-events-none">
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300/80 flex items-center gap-1.5 shadow-xs">
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300/80 flex items-center gap-1.5 shadow-2xs">
                 <RotateCcw className="w-3 h-3 text-amber-700" />
                 Clear & Replace
               </span>
@@ -298,15 +298,15 @@ export const DragDropOverlay: React.FC<DragDropOverlayProps> = ({
             }}
             className={`relative rounded-2xl p-6 transition-all duration-200 cursor-pointer flex flex-col justify-between text-left ${
               hoveredZone === 'append'
-                ? 'border-2 border-indigo-500 ring-4 ring-indigo-300/40 shadow-[0_0_30px_rgba(99,102,241,0.28)] bg-gradient-to-b from-indigo-50/90 via-indigo-50/40 to-white scale-[1.015]'
+                ? 'border-2 border-indigo-500 ring-4 ring-indigo-300/40 shadow-[0_0_30px_rgba(99,102,241,0.28)] bg-linear-to-b from-indigo-50/90 via-indigo-50/40 to-white scale-[1.015]'
                 : hoveredZone === 'clear'
                 ? 'border-2 border-dashed border-slate-200/90 bg-slate-50/40 opacity-60 scale-[0.99]'
-                : 'border-2 border-dashed border-indigo-300/80 bg-gradient-to-b from-indigo-50/30 to-white hover:border-indigo-400 hover:bg-indigo-50/50'
+                : 'border-2 border-dashed border-indigo-300/80 bg-linear-to-b from-indigo-50/30 to-white hover:border-indigo-400 hover:bg-indigo-50/50'
             }`}
           >
             {/* Header Badges */}
             <div className="flex items-center justify-between gap-2 mb-4 pointer-events-none">
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-900 border border-indigo-300/80 flex items-center gap-1.5 shadow-xs">
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-900 border border-indigo-300/80 flex items-center gap-1.5 shadow-2xs">
                 <PlusCircle className="w-3 h-3 text-indigo-700" />
                 Keep & Append
               </span>
@@ -392,7 +392,7 @@ export const DragDropOverlay: React.FC<DragDropOverlayProps> = ({
           </span>
           <div className="flex gap-1.5">
             {['.PDF', '.DOCX', '.EXE', '.ZIP', '.EML', '.PCAP', '.EVTX'].map(ext => (
-              <span key={ext} className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-semibold text-[10px]">
+              <span key={ext} className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-sm font-semibold text-[10px]">
                 {ext}
               </span>
             ))}

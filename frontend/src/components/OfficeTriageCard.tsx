@@ -154,7 +154,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
 
   if (!officeInfo) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <FileSpreadsheet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">No Office format triage metadata available for this file.</p>
       </div>
@@ -162,7 +162,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
       {/* Top Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-100 gap-4">
         <div className="flex items-start gap-4">
@@ -268,7 +268,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
 
       {/* Prominent Malware / Antivirus Detection Alert */}
       {malwareFindings.length > 0 && (
-        <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl flex items-start gap-3.5 text-xs text-rose-950 shadow-xs">
+        <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl flex items-start gap-3.5 text-xs text-rose-950 shadow-2xs">
           <div className="p-2 bg-rose-600 text-white rounded-xl shrink-0 mt-0.5 font-bold">
             <ShieldAlert className="w-5 h-5" />
           </div>
@@ -291,7 +291,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                     <strong className="text-rose-700">{mf.title}</strong>
                     {mf.description && <span className="text-slate-600 block text-[10px] font-sans">{mf.description}</span>}
                   </div>
-                  <span className="px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-bold uppercase shrink-0">
+                  <span className="px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded-sm text-[10px] font-bold uppercase shrink-0">
                     {mf.category}
                   </span>
                 </div>
@@ -471,7 +471,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
           ) : (
             <div className="space-y-4">
               {referencedJobsInOffice.length > 0 && (
-                <div className="p-4 bg-indigo-50/80 border border-indigo-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
+                <div className="p-4 bg-indigo-50/80 border border-indigo-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
                   <div className="flex items-center gap-2.5 text-indigo-950 font-bold">
                     <Zap className="w-4 h-4 text-indigo-600 shrink-0" />
                     <span>Referenced Dropper / C2 Artifacts in Workspace:</span>
@@ -528,7 +528,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                   {mraptor.matches && mraptor.matches.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {mraptor.matches.map((kw, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-mono font-semibold text-slate-700">
+                        <span key={i} className="px-2 py-0.5 bg-white border border-slate-200 rounded-sm text-[10px] font-mono font-semibold text-slate-700">
                           {kw}
                         </span>
                       ))}
@@ -549,7 +549,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                       onClick={() => setSelectedModuleIdx(idx)}
                       className={`w-full text-left p-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-between cursor-pointer ${
                         selectedModuleIdx === idx
-                          ? 'bg-white shadow-xs text-indigo-700 font-bold border border-indigo-200'
+                          ? 'bg-white shadow-2xs text-indigo-700 font-bold border border-indigo-200'
                           : 'text-slate-700 hover:bg-slate-100'
                       }`}
                     >
@@ -659,7 +659,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                       <span className="font-bold text-indigo-700 mr-2">{item.keyword}</span>
                       <span className="text-slate-600 font-sans">{item.description}</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-100 text-slate-600 shrink-0">
+                    <span className="px-2 py-0.5 rounded-sm text-[10px] uppercase font-bold bg-slate-100 text-slate-600 shrink-0">
                       {item.type}
                     </span>
                   </div>
@@ -840,11 +840,11 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                           <td className="px-3.5 py-2 text-slate-500">{s.index || idx + 1}</td>
                           <td className="px-3.5 py-2">
                             {isMacro ? (
-                              <span className="px-1.5 py-0.2 rounded font-bold text-[10px] bg-rose-600 text-white">
+                              <span className="px-1.5 py-0.2 rounded-sm font-bold text-[10px] bg-rose-600 text-white">
                                 M
                               </span>
                             ) : isSmallMacro ? (
-                              <span className="px-1.5 py-0.2 rounded font-bold text-[10px] bg-amber-500 text-white">
+                              <span className="px-1.5 py-0.2 rounded-sm font-bold text-[10px] bg-amber-500 text-white">
                                 m
                               </span>
                             ) : (
@@ -877,7 +877,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                   <ShieldAlert className="w-4 h-4 text-rose-700" />
                   <span>Embedded Payload Findings ({embeddedFindings.length})</span>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white">
+                <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-rose-600 text-white">
                   Payload Objects
                 </span>
               </div>
@@ -886,7 +886,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                   <div key={idx} className="p-3 bg-white rounded-xl border border-rose-200 shadow-2xs space-y-1">
                     <div className="flex items-center justify-between">
                       <strong className="text-rose-900 font-bold text-xs">{ef.title}</strong>
-                      <span className="px-2 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-800 uppercase">
+                      <span className="px-2 py-0.2 rounded-sm text-[10px] font-bold bg-rose-100 text-rose-800 uppercase">
                         {ef.severity}
                       </span>
                     </div>
@@ -1151,7 +1151,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                         </span>
                       )}
                     </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 font-sans shrink-0">
+                    <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-rose-100 text-rose-800 font-sans shrink-0">
                       Template Target
                     </span>
                   </div>
@@ -1181,7 +1181,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                     ) : (
                       <span className="text-slate-800 truncate mr-2">{u}</span>
                     )}
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 font-sans shrink-0">
+                    <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-slate-100 text-slate-600 font-sans shrink-0">
                       Relationship URL
                     </span>
                   </div>
@@ -1207,7 +1207,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                     Excel 'Very Hidden' Sheets Detected ({excelAnalysis.very_hidden_sheets.length})
                   </h4>
                   <p className="text-purple-800 leading-relaxed mt-0.5">
-                    This workbook contains worksheets with <code className="bg-purple-100 px-1.5 py-0.5 rounded text-purple-900 font-mono">state="veryHidden"</code> (<span className="font-semibold">xlSheetVeryHidden</span>). Unlike regular hidden sheets, very hidden sheets cannot be unhidden or viewed through Microsoft Excel's graphical interface. Attackers use very hidden sheets to conceal secondary stages, configuration strings, and staging payloads from users and defenders.
+                    This workbook contains worksheets with <code className="bg-purple-100 px-1.5 py-0.5 rounded-sm text-purple-900 font-mono">state="veryHidden"</code> (<span className="font-semibold">xlSheetVeryHidden</span>). Unlike regular hidden sheets, very hidden sheets cannot be unhidden or viewed through Microsoft Excel's graphical interface. Attackers use very hidden sheets to conceal secondary stages, configuration strings, and staging payloads from users and defenders.
                   </p>
                 </div>
               </div>
@@ -1267,7 +1267,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                     Power Query (M-Code) Outbound Web &amp; Exfiltration Primitives ({excelAnalysis.power_query_queries.length})
                   </h4>
                   <p className="text-rose-800 leading-relaxed mt-0.5">
-                    Excel Power Query formulas support native HTTP requests (<code className="font-mono bg-rose-100 px-1 py-0.5 rounded text-rose-900">Web.Contents()</code>, <code className="font-mono bg-rose-100 px-1 py-0.5 rounded text-rose-900">Web.Page()</code>). Threat actors abuse Power Query to bypass standard macro execution policies, exfiltrate data via HTTP headers/parameters, and stage payloads into worksheet cells without triggering VBA Antivirus alerts.
+                    Excel Power Query formulas support native HTTP requests (<code className="font-mono bg-rose-100 px-1 py-0.5 rounded-sm text-rose-900">Web.Contents()</code>, <code className="font-mono bg-rose-100 px-1 py-0.5 rounded-sm text-rose-900">Web.Page()</code>). Threat actors abuse Power Query to bypass standard macro execution policies, exfiltrate data via HTTP headers/parameters, and stage payloads into worksheet cells without triggering VBA Antivirus alerts.
                   </p>
                 </div>
               </div>
@@ -1277,7 +1277,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                   <div key={idx} className="p-3 bg-white rounded-xl border border-rose-200 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-mono font-semibold text-rose-900">{pq.source}</span>
-                      <span className="text-[10px] font-mono bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-bold">
+                      <span className="text-[10px] font-mono bg-rose-100 text-rose-800 px-2 py-0.5 rounded-sm font-bold">
                         {pq.matched_patterns?.join(', ') || 'Web.Contents'}
                       </span>
                     </div>
@@ -1343,7 +1343,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                     PowerPoint Mouse-Over Action Trap Detected ({powerpointAnalysis.hover_actions.length})
                   </h4>
                   <p className="text-rose-800 leading-relaxed mt-0.5">
-                    Slides in this presentation contain <code className="font-mono bg-rose-100 px-1 py-0.5 rounded text-rose-900">&lt;a:hlinkHover&gt;</code> action settings with <code className="font-mono bg-rose-100 px-1 py-0.5 rounded text-rose-900">action="ppaction://program"</code>. When viewed in presentation mode, merely hovering the cursor over the target element immediately triggers program execution (e.g. powershell.exe, cmd.exe) without requiring user click or VBA macro enablement.
+                    Slides in this presentation contain <code className="font-mono bg-rose-100 px-1 py-0.5 rounded-sm text-rose-900">&lt;a:hlinkHover&gt;</code> action settings with <code className="font-mono bg-rose-100 px-1 py-0.5 rounded-sm text-rose-900">action="ppaction://program"</code>. When viewed in presentation mode, merely hovering the cursor over the target element immediately triggers program execution (e.g. powershell.exe, cmd.exe) without requiring user click or VBA macro enablement.
                   </p>
                 </div>
               </div>
@@ -1353,7 +1353,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                   <div key={idx} className="p-3 bg-white rounded-xl border border-rose-200 space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-rose-900">{h.slide}</span>
-                      <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-mono text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded-sm bg-rose-100 text-rose-800 font-mono text-[10px] font-bold">
                         {h.action}
                       </span>
                     </div>
@@ -1421,7 +1421,7 @@ export const OfficeTriageCard: React.FC<OfficeTriageCardProps> = ({
                   Microsoft OneNote Packaging &amp; Mark-of-the-Web (MOTW) Evasion Forensics
                 </h4>
                 <p className="text-purple-900 leading-relaxed mt-0.5">
-                  OneNote packages (<code className="font-mono bg-purple-100 px-1 py-0.5 rounded text-purple-950">.one</code>) store embedded file attachments inside <span className="font-semibold">FileDataStoreObject</span> streams. When a user double-clicks an embedded attachment in OneNote, Windows may execute the payload without triggering the default Mark-of-the-Web (MOTW) or Microsoft Word/Excel macro runtime security policies.
+                  OneNote packages (<code className="font-mono bg-purple-100 px-1 py-0.5 rounded-sm text-purple-950">.one</code>) store embedded file attachments inside <span className="font-semibold">FileDataStoreObject</span> streams. When a user double-clicks an embedded attachment in OneNote, Windows may execute the payload without triggering the default Mark-of-the-Web (MOTW) or Microsoft Word/Excel macro runtime security policies.
                 </p>
               </div>
             </div>

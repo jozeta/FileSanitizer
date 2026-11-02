@@ -1804,7 +1804,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
   if (loading) {
     return (
-      <div className="max-w-[96rem] mx-auto px-4 py-16 text-center">
+      <div className="max-w-384 mx-auto px-4 py-16 text-center">
         <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto mb-4 text-indigo-600 animate-pulse">
           <Network className="w-8 h-8 animate-spin" style={{ animationDuration: '6s' }} />
         </div>
@@ -1818,7 +1818,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
   if (error || !data) {
     return (
-      <div className="max-w-[96rem] mx-auto px-4 py-16 text-center">
+      <div className="max-w-384 mx-auto px-4 py-16 text-center">
         <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-4 text-rose-600">
           <AlertTriangle className="w-8 h-8" />
         </div>
@@ -1826,7 +1826,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         <p className="text-sm text-slate-600 mb-4">{error || 'Could not correlate workspace samples.'}</p>
         <button
           onClick={() => fetchCorrelation()}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Retry Correlation</span>
@@ -1847,10 +1847,10 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
   } = data;
 
   return (
-    <div className="max-w-[96rem] mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-384 mx-auto px-4 py-6 space-y-6">
       
       {/* 1. TOP HEADER & EXECUTIVE SUMMARY BANNER */}
-      <div className="bg-white rounded-2xl p-6 text-slate-800 shadow-sm border border-slate-200">
+      <div className="bg-white rounded-2xl p-6 text-slate-800 shadow-xs border border-slate-200">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex items-center gap-2">
@@ -1910,9 +1910,9 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
       {/* Interactive Cross-Artifact Reference Chain Banner */}
       {Boolean(data.cross_file_references && data.cross_file_references.total_references > 0) && (
-        <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-200 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-linear-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-200 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
+            <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-2xs shrink-0 mt-0.5">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
@@ -1943,7 +1943,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           </div>
           <button
             onClick={() => setActiveSubView('cross_refs')}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold font-sans shadow-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer self-start md:self-center"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold font-sans shadow-2xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer self-start md:self-center"
           >
             <span>Inspect Linked Chain</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -1952,12 +1952,12 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       )}
 
       {/* 2. SUB-VIEW NAVIGATION TABS */}
-      <div className="bg-white rounded-xl border border-slate-200 p-1.5 shadow-sm flex items-center gap-1 overflow-x-auto">
+      <div className="bg-white rounded-xl border border-slate-200 p-1.5 shadow-xs flex items-center gap-1 overflow-x-auto">
         <button
           onClick={() => setActiveSubView('graph')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
             activeSubView === 'graph'
-              ? 'bg-indigo-600 text-white shadow-sm'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
@@ -1969,7 +1969,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           onClick={() => setActiveSubView('bindiff')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
             activeSubView === 'bindiff'
-              ? 'bg-indigo-600 text-white shadow-sm'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
@@ -1987,7 +1987,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
             onClick={() => setActiveSubView('evtx_fleet')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
               activeSubView === 'evtx_fleet'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -2010,7 +2010,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
             onClick={() => setActiveSubView('pcap_fleet')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeSubView === 'pcap_fleet'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -2032,7 +2032,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           onClick={() => setActiveSubView('timeline')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
             activeSubView === 'timeline'
-              ? 'bg-indigo-600 text-white shadow-sm'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
@@ -2058,7 +2058,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           onClick={() => setActiveSubView('hashes')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
             activeSubView === 'hashes'
-              ? 'bg-indigo-600 text-white shadow-sm'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
@@ -2070,7 +2070,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           onClick={() => setActiveSubView('infrastructure')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
             activeSubView === 'infrastructure'
-              ? 'bg-indigo-600 text-white shadow-sm'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
@@ -2082,7 +2082,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           onClick={() => setActiveSubView('mitre')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 ${
             activeSubView === 'mitre'
-              ? 'bg-indigo-600 text-white shadow-sm'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
@@ -2095,7 +2095,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
             onClick={() => setActiveSubView('cross_refs')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeSubView === 'cross_refs'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white shadow-xs'
                 : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60'
             }`}
           >
@@ -2118,7 +2118,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
       {/* VIEW A: THREAT GRAPH */}
       {activeSubView === 'graph' && (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative min-h-[690px] flex flex-col transition-all">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden relative min-h-[690px] flex flex-col transition-all">
           {/* Graph Controls Toolbar */}
           <div className="p-4 bg-slate-50/80 border-b border-slate-200/80 flex flex-col gap-3 z-10">
             {/* Row 0: Analyzed Files Inclusion Filter */}
@@ -2272,7 +2272,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     id="threat-graph-layout-select"
                     value={layoutMode}
                     onChange={(e) => setLayoutMode(e.target.value as any)}
-                    className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+                    className="bg-transparent font-medium text-slate-800 text-xs focus:outline-hidden cursor-pointer pr-1"
                   >
                     <option value="sample">Group by Analyzed File (Artifact Hubs)</option>
                     <option value="category">Group by Entity Type</option>
@@ -2291,7 +2291,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     id="threat-graph-sort-select"
                     value={sortMode}
                     onChange={(e) => setSortMode(e.target.value as any)}
-                    className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+                    className="bg-transparent font-medium text-slate-800 text-xs focus:outline-hidden cursor-pointer pr-1"
                   >
                     <option value="connectivity">Connectivity (Degree)</option>
                     <option value="threat_severity">Threat Severity & Risk</option>
@@ -2310,7 +2310,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     id="threat-graph-proximity-select"
                     value={nodeProximity}
                     onChange={(e) => setNodeProximity(e.target.value as any)}
-                    className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+                    className="bg-transparent font-medium text-slate-800 text-xs focus:outline-hidden cursor-pointer pr-1"
                   >
                     <option value="close">Close (0.65x)</option>
                     <option value="middle">Middle (1.0x)</option>
@@ -2367,7 +2367,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     id="threat-graph-show-empty-nodes"
                     checked={showEmptyNodes}
                     onChange={(e) => setShowEmptyNodes(e.target.checked)}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                    className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
                   />
                   <span>Show empty nodes</span>
                   {emptyNodesCount > 0 && (
@@ -2394,7 +2394,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     id="threat-graph-merge-similar"
                     checked={mergeSimilarNodes}
                     onChange={(e) => setMergeSimilarNodes(e.target.checked)}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                    className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
                   />
                   <Layers className="w-3.5 h-3.5" />
                   <span>Group Similar Nodes</span>
@@ -2878,7 +2878,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         fill={styling.fill}
                         stroke={styling.stroke}
                         strokeWidth={node.groupedCount && node.groupedCount > 1 ? 4 : 2}
-                        className="transition-transform group-hover:scale-110 shadow-xs"
+                        className="transition-transform group-hover:scale-110 shadow-2xs"
                       />
 
                       {/* Inner Node Text / Icon Abbreviation */}
@@ -3017,11 +3017,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-600 font-bold">
                       Entity Inspector
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold border ${getNodeStyling(selectedNode).badge}`}>
+                    <span className={`px-2 py-0.5 rounded-sm text-[9px] font-mono uppercase font-bold border ${getNodeStyling(selectedNode).badge}`}>
                       {selectedNode.type}
                     </span>
                     {selectedNode.is_shared && (
-                      <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-sm text-[9px] font-mono uppercase font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
                         <Link2 className="w-3 h-3" />
                         <span>SHARED</span>
                       </span>
@@ -3056,7 +3056,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       </div>
                       <button
                         onClick={() => handleCopy(selectedNode.full_label || selectedNode.label, 'label')}
-                        className="p-1 rounded text-slate-400 hover:text-indigo-600 shrink-0"
+                        className="p-1 rounded-sm text-slate-400 hover:text-indigo-600 shrink-0"
                         title="Copy to clipboard"
                       >
                         {copiedKey === 'label' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -3091,7 +3091,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           type="checkbox"
                           checked={hiddenNodeIds.has(selectedNode.id)}
                           onChange={(e) => handleToggleHideNode(selectedNode.id, e.target.checked)}
-                          className="w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                          className="w-4 h-4 rounded-sm text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
                         />
                         <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                           <EyeOff className="w-3.5 h-3.5 text-slate-500" />
@@ -3105,7 +3105,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           type="checkbox"
                           checked={Boolean(highlightedNodes[selectedNode.id])}
                           onChange={(e) => handleToggleHighlightNode(selectedNode.id, e.target.checked)}
-                          className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                          className="w-4 h-4 rounded-sm text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
                         />
                         <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -3127,7 +3127,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         <select
                           value={highlightedNodes[selectedNode.id] || DEFAULT_HIGHLIGHT_COLOR}
                           onChange={(e) => handleChangeHighlightColor(selectedNode.id, e.target.value)}
-                          className="text-xs py-1 px-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
+                          className="text-xs py-1 px-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
                         >
                           {HIGHLIGHT_COLOR_OPTIONS.map((c) => (
                             <option key={c.value} value={c.value}>
@@ -3195,7 +3195,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                               <span>{copiedKey === 'hash_val' ? 'Copied' : 'Copy'}</span>
                             </button>
                           </div>
-                          <div className="p-2 rounded bg-white border border-slate-200 text-[10px] font-mono break-all text-slate-800 font-semibold select-all">
+                          <div className="p-2 rounded-sm bg-white border border-slate-200 text-[10px] font-mono break-all text-slate-800 font-semibold select-all">
                             {selectedNode.details.hash_value}
                           </div>
                         </div>
@@ -3226,7 +3226,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           </div>
                           <div className="flex justify-between">
                             <span className="text-slate-500">Threat Level:</span>
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800 uppercase">Critical</span>
+                            <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-bold bg-rose-100 text-rose-800 uppercase">Critical</span>
                           </div>
                         </div>
                       )}
@@ -3357,7 +3357,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   {selectedNode.type === 'file' && selectedNode.details?.job_id && (
                     <button
                       onClick={() => onSelectJob(selectedNode.details.job_id)}
-                      className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors mt-4 shadow-sm cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors mt-4 shadow-xs cursor-pointer"
                     >
                       <span>Open File Analysis Tab</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -3374,7 +3374,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       {selectedNode.details?.job_id && (
                         <button
                           onClick={() => onSelectJob(selectedNode.details.job_id)}
-                          className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
+                          className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer"
                         >
                           <Server className="w-3.5 h-3.5" />
                           <span>Open Host Event Log Tab</span>
@@ -3399,7 +3399,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       {activeSubView === 'evtx_fleet' && (
         <div className="space-y-6">
           {!evtx_fleet_forensics || !evtx_fleet_forensics.available ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">
+            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center shadow-xs">
               <Server className="w-12 h-12 text-slate-400 mx-auto mb-3" />
               <h4 className="text-sm font-bold text-slate-800 mb-1">Fleet Telemetry Unavailable</h4>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
@@ -3410,7 +3410,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           ) : (
             <>
               {/* Executive Fleet Security Health Banner */}
-              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
@@ -3515,7 +3515,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     onClick={() => setEvtxFleetTab('unified')}
                     className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                       evtxFleetTab === 'unified'
-                        ? 'bg-white text-indigo-700 shadow-xs font-bold ring-1 ring-slate-200/60'
+                        ? 'bg-white text-indigo-700 shadow-2xs font-bold ring-1 ring-slate-200/60'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -3535,7 +3535,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     onClick={() => setEvtxFleetTab('analytics')}
                     className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                       evtxFleetTab === 'analytics'
-                        ? 'bg-white text-indigo-700 shadow-xs font-bold ring-1 ring-slate-200/60'
+                        ? 'bg-white text-indigo-700 shadow-2xs font-bold ring-1 ring-slate-200/60'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -3567,7 +3567,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
               ) : (
                 <div className="space-y-6">
                   {/* 1. Cross-Host Lateral Movement Chains */}
-                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+                  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -3597,7 +3597,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         {/* Chain Header */}
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-indigo-100 text-indigo-800">
+                            <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold uppercase bg-indigo-100 text-indigo-800">
                               {chain.mitre_id}
                             </span>
                             <span className="text-xs font-bold text-slate-800">{chain.technique}</span>
@@ -3623,7 +3623,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                             <span>{chain.source_host}</span>
                           </div>
                           <div className="flex items-center gap-1 text-slate-400">
-                            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-sm bg-indigo-50 text-indigo-700 border border-indigo-200">
                               {chain.protocol}
                             </span>
                             <ArrowRight className="w-4 h-4 text-indigo-600" />
@@ -3651,7 +3651,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                                   <span className="text-[10px] font-mono font-bold text-indigo-600">
                                     Stage {stage.step}
                                   </span>
-                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-slate-100 text-slate-600">
+                                  <span className="px-1.5 py-0.2 rounded-sm text-[9px] font-mono bg-slate-100 text-slate-600">
                                     Event {stage.event_id}
                                   </span>
                                 </div>
@@ -3668,7 +3668,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
               </div>
 
               {/* 2. Multi-Host Telemetry Comparison Matrix */}
-              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -3727,7 +3727,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                               {host.unique_users.slice(0, 3).map((u, uIdx) => (
                                 <span
                                   key={uIdx}
-                                  className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-slate-100 text-slate-700"
+                                  className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono bg-slate-100 text-slate-700"
                                 >
                                   {u}
                                 </span>
@@ -3745,7 +3745,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                                 host.unique_ips.slice(0, 2).map((ip, ipIdx) => (
                                   <span
                                     key={ipIdx}
-                                    className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-indigo-50 text-indigo-700"
+                                    className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono bg-indigo-50 text-indigo-700"
                                   >
                                     {ip}
                                   </span>
@@ -3757,11 +3757,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           </td>
                           <td className="p-3 text-center">
                             {host.has_log_cleared ? (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-100 text-rose-800">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-rose-100 text-rose-800">
                                 CLEARED (1102)
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700">
                                 Normal
                               </span>
                             )}
@@ -3769,7 +3769,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           <td className="p-3 text-center">
                             <button
                               onClick={() => onSelectJob(host.job_id)}
-                              className="px-2.5 py-1 rounded text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors inline-flex items-center gap-1"
+                              className="px-2.5 py-1 rounded-sm text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors inline-flex items-center gap-1"
                             >
                               <span>Inspect Tab</span>
                               <ExternalLink className="w-3 h-3" />
@@ -3784,7 +3784,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
               {/* 3. Fleet Password Spray & Distributed Brute-Force Matrix */}
               {evtx_fleet_forensics.password_spray_analysis && (
-                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -3812,7 +3812,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-rose-900">{camp.pattern}</span>
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-rose-200 text-rose-900 uppercase">
+                              <span className="px-1.5 py-0.2 rounded-sm text-[9px] font-mono font-bold bg-rose-200 text-rose-900 uppercase">
                                 {camp.threat_level}
                               </span>
                             </div>
@@ -3854,7 +3854,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                                   {userEntry.hosts_targeted.map((h, hIdx) => (
                                     <span
                                       key={hIdx}
-                                      className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-slate-100 text-slate-700"
+                                      className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono bg-slate-100 text-slate-700"
                                     >
                                       {h}
                                     </span>
@@ -3866,7 +3866,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                                   {userEntry.source_ips.map((ip, ipIdx) => (
                                     <span
                                       key={ipIdx}
-                                      className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-indigo-50 text-indigo-700"
+                                      className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono bg-indigo-50 text-indigo-700"
                                     >
                                       {ip}
                                     </span>
@@ -3875,11 +3875,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                               </td>
                               <td className="p-3 text-center">
                                 {userEntry.is_spray_target ? (
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-100 text-rose-800">
+                                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-rose-100 text-rose-800">
                                     SPRAY TARGET
                                   </span>
                                 ) : (
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 text-slate-600">
+                                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-semibold bg-slate-100 text-slate-600">
                                     Isolated Failure
                                   </span>
                                 )}
@@ -3899,7 +3899,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
               {/* 4. Cross-Host Process & LOLBin Divergence */}
               {evtx_fleet_forensics.lolbin_divergence && evtx_fleet_forensics.lolbin_divergence.length > 0 && (
-                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -3932,7 +3932,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           <tr key={pIdx} className="hover:bg-slate-50/80 transition-colors">
                             <td className="p-3 font-mono font-bold text-slate-800">{proc.host}</td>
                             <td className="p-3">
-                              <span className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              <span className="px-1.5 py-0.5 rounded-sm text-[11px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
                                 {proc.process_name}
                               </span>
                             </td>
@@ -3957,7 +3957,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                             <td className="p-3 font-mono text-slate-500 text-[11px]">{proc.parent_process}</td>
                             <td className="p-3 font-mono text-slate-700 text-[11px]">{proc.user}</td>
                             <td className="p-3">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
                                 {proc.mitre_id}
                               </span>
                             </td>
@@ -3972,7 +3972,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
               {/* 5. Anti-Forensics & Privilege Escalation Alerts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Left: Anti-Forensics (Log Clear Events) */}
-                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-3">
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-rose-700 flex items-center gap-1.5">
                       <ShieldAlert className="w-4 h-4 text-rose-600" />
@@ -4014,7 +4014,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                 </div>
 
                 {/* Right: Privilege Escalation & Admin Role Changes */}
-                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-3">
+                <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
                       <Key className="w-4 h-4 text-amber-600" />
@@ -4068,7 +4068,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       {activeSubView === 'pcap_fleet' && data.pcap_fleet_intelligence && (
         <div className="space-y-6">
           {/* Header Banner */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5">
@@ -4110,7 +4110,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
           {/* Sensor Captures Matrix */}
           {data.pcap_fleet_intelligence.captures_summary && data.pcap_fleet_intelligence.captures_summary.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                 <Server className="w-4 h-4 text-indigo-600" />
                 Network Capture Sensor Matrix
@@ -4145,7 +4145,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         <td className="p-3">
                           <div className="flex flex-wrap gap-1">
                             {cap.protocols?.slice(0, 4).map((p, pIdx) => (
-                              <span key={pIdx} className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              <span key={pIdx} className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-200">
                                 {p}
                               </span>
                             ))}
@@ -4174,7 +4174,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         <td className="p-3 text-center">
                           <button
                             onClick={() => onSelectJob(cap.job_id)}
-                            className="px-2.5 py-1 rounded text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1 rounded-sm text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
                           >
                             <span>Inspect</span>
                             <ExternalLink className="w-3 h-3" />
@@ -4190,7 +4190,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
           {/* Cross-Capture IP Bridge & Overlap */}
           {data.pcap_fleet_intelligence.cross_capture_ips && data.pcap_fleet_intelligence.cross_capture_ips.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                   <Globe className="w-4 h-4 text-indigo-600" />
@@ -4228,7 +4228,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         <td className="p-3">
                           <div className="flex flex-wrap gap-1">
                             {ipObj.seen_in_captures.map((fname, fIdx) => (
-                              <span key={fIdx} className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              <span key={fIdx} className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-200">
                                 {fname}
                               </span>
                             ))}
@@ -4247,7 +4247,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
           {/* Cross-Capture Lateral Movement Network Traffic */}
           {data.pcap_fleet_intelligence.lateral_network_flows && data.pcap_fleet_intelligence.lateral_network_flows.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                   <Repeat className="w-4 h-4 text-indigo-600" />
@@ -4280,7 +4280,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           {lat.dst_ip}
                         </td>
                         <td className="p-3">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
                             {lat.service} (Port {lat.port})
                           </span>
                         </td>
@@ -4300,7 +4300,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
           {/* Shared Overheard Credentials */}
           {data.pcap_fleet_intelligence.shared_credentials && data.pcap_fleet_intelligence.shared_credentials.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                   <Key className="w-4 h-4 text-amber-600" />
@@ -4328,7 +4328,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         <td className="p-3">
                           <div className="flex flex-wrap gap-1">
                             {cred.protocols.map((p, pIdx) => (
-                              <span key={pIdx} className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-amber-50 text-amber-800 border border-amber-200">
+                              <span key={pIdx} className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono bg-amber-50 text-amber-800 border border-amber-200">
                                 {p}
                               </span>
                             ))}
@@ -4337,7 +4337,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                         <td className="p-3">
                           <div className="flex flex-wrap gap-1">
                             {cred.seen_in_captures.map((fname, fIdx) => (
-                              <span key={fIdx} className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              <span key={fIdx} className="px-1.5 py-0.2 rounded-sm text-[10px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-200">
                                 {fname}
                               </span>
                             ))}
@@ -4356,7 +4356,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
           {/* Active Beaconing Flows */}
           {data.pcap_fleet_intelligence.all_beaconing && data.pcap_fleet_intelligence.all_beaconing.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                   <Activity className="w-4 h-4 text-rose-600" />
@@ -4408,7 +4408,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
         <div className="space-y-6">
           {/* Staging Progression Cards */}
           {timeline_comparison.staging_sequence && timeline_comparison.staging_sequence.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
               <h4 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-1.5">
                 <Activity className="w-4 h-4 text-indigo-600" />
                 Detected Multi-Stage Attack Progression
@@ -4428,7 +4428,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           )}
 
           {/* Timeline Table or Multi-Host Swimlane View */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 flex-wrap gap-3">
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
@@ -4446,7 +4446,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       onClick={() => setTimelineViewMode('table')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all font-semibold cursor-pointer ${
                         timelineViewMode === 'table'
-                          ? 'bg-white text-slate-900 shadow-sm'
+                          ? 'bg-white text-slate-900 shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -4457,7 +4457,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       onClick={() => setTimelineViewMode('swimlanes')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all font-semibold cursor-pointer ${
                         timelineViewMode === 'swimlanes'
-                          ? 'bg-indigo-600 text-white shadow-sm'
+                          ? 'bg-indigo-600 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -4479,7 +4479,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                 {timelineViewMode === 'table' && (
                   <button
                     onClick={handleExportTimeline}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-sm transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-xs transition-colors cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5 text-slate-500" />
                     <span>Export CSV</span>
@@ -4511,7 +4511,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     value={timelineSearch}
                     onChange={(e) => setTimelineSearch(e.target.value)}
                     placeholder="Search events, descriptions, computers, users..."
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
                   />
                   {timelineSearch && (
                     <button
@@ -4528,7 +4528,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   <select
                     value={selectedTimelineFile}
                     onChange={(e) => setSelectedTimelineFile(e.target.value)}
-                    className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-mono focus:outline-none cursor-pointer"
+                    className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-mono focus:outline-hidden cursor-pointer"
                   >
                     <option value="all">All Files ({uniqueTimelineFiles.length})</option>
                     {uniqueTimelineFiles.map((fn, idx) => (
@@ -4542,7 +4542,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   <select
                     value={selectedTimelineHost}
                     onChange={(e) => setSelectedTimelineHost(e.target.value)}
-                    className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-mono focus:outline-none cursor-pointer"
+                    className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-mono focus:outline-hidden cursor-pointer"
                   >
                     <option value="all">All Hosts ({uniqueTimelineHosts.length})</option>
                     {uniqueTimelineHosts.map((h, idx) => (
@@ -4557,7 +4557,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     type="checkbox"
                     checked={anomaliesOnly}
                     onChange={(e) => setAnomaliesOnly(e.target.checked)}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                   />
                   <span>Anomalies Only</span>
                   {timeline_comparison.anomalies_count > 0 && (
@@ -4582,7 +4582,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     id="rel-timeline-group-similar"
                     checked={groupSimilarTimelineActivities}
                     onChange={(e) => setGroupSimilarTimelineActivities(e.target.checked)}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                    className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
                   />
                   <Layers className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Group similar activities</span>
@@ -4644,13 +4644,13 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                               </button>
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-700">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-mono bg-slate-100 text-slate-700">
                                 <Server className="w-2.5 h-2.5 text-slate-500" />
                                 <span className="truncate max-w-[110px]">{ev.computer || '-'}</span>
                               </span>
                             </td>
                             <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                              <span className="px-1.5 py-0.5 rounded-sm text-[10px] font-mono font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">
                                 {ev.staging_phase}
                               </span>
                             </td>
@@ -4666,7 +4666,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                             </td>
                             <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
                               {ev.user && ev.user !== '-' ? (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-50 text-amber-800">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-mono bg-amber-50 text-amber-800">
                                   <User className="w-2.5 h-2.5" />
                                   <span>{ev.user}</span>
                                 </span>
@@ -4709,12 +4709,12 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               <div className="flex items-center gap-1">
                                 {ev.is_anomaly && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                  <span className="px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
                                     ANOMALY
                                   </span>
                                 )}
                                 {ev.is_timestomp && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                  <span className="px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                                     TIMESTOMP
                                   </span>
                                 )}
@@ -4742,7 +4742,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                               </td>
                               <td className="py-1.5 px-3 whitespace-nowrap">
                                 {subEv.is_anomaly && (
-                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-rose-100 text-rose-800">
+                                  <span className="px-1 py-0.2 rounded-sm text-[9px] font-bold bg-rose-100 text-rose-800">
                                     ANOMALY
                                   </span>
                                 )}
@@ -4766,7 +4766,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       {activeSubView === 'hashes' && (
         <div className="space-y-6">
           {/* Cryptographic Hash Comparison Table */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-100 bg-slate-50">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
                 Multi-Sample Cryptographic Hash Matrix
@@ -4838,7 +4838,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
           {/* Pairwise Hash Similarity Matrix */}
           {hash_comparison.pairwise_matrix && hash_comparison.pairwise_matrix.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3">
                 Pairwise Structural & Hash Similarity Matrix
               </h4>
@@ -4889,10 +4889,10 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     </div>
 
                     <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-slate-600">
-                      <span className={`px-1.5 py-0.2 rounded border ${p.imphash_match ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                      <span className={`px-1.5 py-0.2 rounded-sm border ${p.imphash_match ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
                         Imphash: {p.imphash_match ? 'MATCH' : 'DIFF'}
                       </span>
-                      <span className={`px-1.5 py-0.2 rounded border ${p.rich_header_match ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                      <span className={`px-1.5 py-0.2 rounded-sm border ${p.rich_header_match ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
                         Rich Header: {p.rich_header_match ? 'MATCH' : 'DIFF'}
                       </span>
                     </div>
@@ -4948,7 +4948,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
       {activeSubView === 'infrastructure' && (
         <div className="space-y-6">
           {/* IP Addresses Intelligence Table */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
@@ -4986,11 +4986,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       </td>
                       <td className="py-2.5 px-3">
                         {item.is_shared ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
                             SHARED C2 ({item.occurrences})
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
                             Unique
                           </span>
                         )}
@@ -5001,7 +5001,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                             <button
                               key={fIdx}
                               onClick={() => onSelectJob(f.job_id)}
-                              className="px-1.5 py-0.2 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 text-[10px] font-mono transition-colors"
+                              className="px-1.5 py-0.2 rounded-sm bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 text-[10px] font-mono transition-colors"
                             >
                               {f.filename}
                             </button>
@@ -5018,7 +5018,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
           {/* Domains & User Accounts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Domains */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="p-3.5 border-b border-slate-100 bg-slate-50">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
                   Identified Domains ({ioc_comparison.domains.length})
@@ -5029,7 +5029,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                   <div key={idx} className="p-3 flex items-center justify-between hover:bg-slate-50">
                     <span className="font-bold text-slate-800 truncate max-w-xs">{d.domain}</span>
                     {d.is_shared ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 shrink-0">
+                      <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 shrink-0">
                         SHARED DOMAIN
                       </span>
                     ) : (
@@ -5041,7 +5041,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
             </div>
 
             {/* Usernames & Authors */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="p-3.5 border-b border-slate-100 bg-slate-50">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
                   User Accounts & Document Authors ({ioc_comparison.usernames.length})
@@ -5055,7 +5055,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                       <span className="font-bold text-slate-800">{u.username}</span>
                     </div>
                     {u.is_shared ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                      <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
                         SHARED ACCOUNT
                       </span>
                     ) : (
@@ -5071,7 +5071,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
       {/* VIEW F: CAMPAIGN MITRE ATT&CK MATRIX */}
       {activeSubView === 'mitre' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 space-y-6">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
@@ -5095,11 +5095,11 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
                 <div className="space-y-2">
                   {tac.techniques.map((tech, tIdx) => (
-                    <div key={tIdx} className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-xs space-y-1">
+                    <div key={tIdx} className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-mono font-bold text-slate-500">{tech.technique_id}</span>
                         {tech.is_shared && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-800">
+                          <span className="px-1.5 py-0.2 rounded-sm text-[9px] font-bold bg-purple-100 text-purple-800">
                             SHARED
                           </span>
                         )}
@@ -5112,7 +5112,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                           <button
                             key={fIdx}
                             onClick={() => onSelectJob(f.job_id)}
-                            className="text-[9px] font-mono bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                            className="text-[9px] font-mono bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 px-1.5 py-0.5 rounded-sm cursor-pointer transition-colors"
                             title={`Jump to ${f.filename}`}
                           >
                             {f.filename}
@@ -5130,7 +5130,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
 
       {/* VIEW G: CROSS-ARTIFACT LINKED EVIDENCE & INCIDENT CHAIN */}
       {activeSubView === 'cross_refs' && data.cross_file_references && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -5192,7 +5192,7 @@ export const RelationshipMappingView: React.FC<RelationshipMappingViewProps> = (
                     </td>
 
                     <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                      <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
                         {ref.reference_type.replace(/_/g, ' ')}
                       </span>
                     </td>

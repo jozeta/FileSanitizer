@@ -72,7 +72,7 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
   const activeResult = customResult || deobfuscation;
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm mb-6 space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs mb-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-100 gap-4">
         <div className="flex items-start gap-4">
@@ -143,7 +143,7 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
                     <Globe className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                     <span className="font-semibold text-slate-800">Hidden URLs:</span>
                     {xor.extracted_urls.map((u, i) => (
-                      <span key={i} className="font-mono bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 truncate max-w-xs">
+                      <span key={i} className="font-mono bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-sm border border-indigo-100 truncate max-w-xs">
                         {u}
                       </span>
                     ))}
@@ -203,7 +203,7 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
                     <Globe className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                     <span className="font-semibold text-slate-800">Secondary URLs:</span>
                     {b64.extracted_urls.map((u, i) => (
-                      <span key={i} className="font-mono bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 truncate max-w-xs">
+                      <span key={i} className="font-mono bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-sm border border-indigo-100 truncate max-w-xs">
                         {u}
                       </span>
                     ))}
@@ -232,7 +232,7 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Paste obfuscated base64, hex stream, or XOR encrypted script text here..."
-            className="w-full h-28 p-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 font-mono text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-y"
+            className="w-full h-28 p-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 font-mono text-xs focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-y"
           />
           {/* Decoder Quick Actions Toolbar */}
           <div className="space-y-1.5 pt-1">
@@ -258,7 +258,7 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
                   disabled={isLoading || !inputText.trim()}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer disabled:opacity-40 ${
                     activeOp === btn.id
-                      ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-xs'
+                      ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-2xs'
                       : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
                   }`}
                 >
@@ -292,7 +292,7 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
               {operationResult.candidates ? (
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {operationResult.candidates.slice(0, 10).map((c: any, i: number) => (
-                    <div key={i} className="p-2 bg-white rounded border border-slate-200 font-mono text-xs flex justify-between gap-2">
+                    <div key={i} className="p-2 bg-white rounded-sm border border-slate-200 font-mono text-xs flex justify-between gap-2">
                       <span className="font-bold text-amber-800 shrink-0">Shift +{c.shift}:</span>
                       <span className="text-slate-800 break-all flex-1">{c.text}</span>
                       <span className="text-slate-400 text-[10px] shrink-0 font-sans">Score: {c.score}</span>
@@ -322,7 +322,7 @@ export const DeobfuscatorCard: React.FC<DeobfuscatorCardProps> = ({
             <button
               onClick={handleRunDeobfuscation}
               disabled={isLoading || !inputText.trim()}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white transition-all shadow-sm cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
               <Play className="w-3.5 h-3.5" />
               <span>{isLoading ? 'Decoding...' : 'Run Automated Scanner'}</span>

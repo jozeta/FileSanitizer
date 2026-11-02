@@ -46,7 +46,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
 
   if (!scriptTriage) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <Terminal className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">No script triage metadata available for this file.</p>
       </div>
@@ -97,7 +97,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
   );
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
       {/* Top Banner / Script Overview */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-100 gap-4">
         <div className="flex items-start gap-4">
@@ -167,7 +167,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
           onClick={() => setActiveTab('patterns')}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeTab === 'patterns'
-              ? 'bg-indigo-600 text-white shadow-xs'
+              ? 'bg-indigo-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -179,7 +179,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
           onClick={() => setActiveTab('apis')}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeTab === 'apis'
-              ? 'bg-indigo-600 text-white shadow-xs'
+              ? 'bg-indigo-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -191,7 +191,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
           onClick={() => setActiveTab('lines')}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeTab === 'lines'
-              ? 'bg-indigo-600 text-white shadow-xs'
+              ? 'bg-indigo-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -203,7 +203,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
           onClick={() => setActiveTab('base64')}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeTab === 'base64'
-              ? 'bg-indigo-600 text-white shadow-xs'
+              ? 'bg-indigo-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -216,7 +216,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
             onClick={() => setActiveTab('lolbins')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'lolbins'
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-indigo-600 text-white shadow-2xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -230,7 +230,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
             onClick={() => setActiveTab('urls')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'urls'
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-indigo-600 text-white shadow-2xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -244,7 +244,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
             onClick={() => setActiveTab('code')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'code'
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-indigo-600 text-white shadow-2xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -258,7 +258,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
             onClick={() => setActiveTab('hta')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'hta'
-                ? 'bg-purple-600 text-white shadow-xs font-bold'
+                ? 'bg-purple-600 text-white shadow-2xs font-bold'
                 : 'text-purple-700 bg-purple-50 hover:bg-purple-100'
             }`}
           >
@@ -271,7 +271,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
           onClick={() => setActiveTab('anti_analysis')}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
             activeTab === 'anti_analysis'
-              ? 'bg-rose-600 text-white shadow-xs font-bold'
+              ? 'bg-rose-600 text-white shadow-2xs font-bold'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -303,7 +303,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
                     <span className="font-semibold text-xs text-slate-900">
                       {pat.name}
                     </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold uppercase ${getSeverityBadge(pat.severity)}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-sm font-mono font-semibold uppercase ${getSeverityBadge(pat.severity)}`}>
                       {pat.severity}
                     </span>
                   </div>
@@ -352,7 +352,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
                       <p className="text-slate-600 text-[11px]">{api.description}</p>
                       <div className="flex items-center gap-2 pt-0.5 font-mono text-[11px]">
                         <span className="text-slate-400">Match:</span>
-                        <code className="text-indigo-600 bg-indigo-50/70 px-1.5 py-0.5 rounded border border-indigo-200 font-bold">
+                        <code className="text-indigo-600 bg-indigo-50/70 px-1.5 py-0.5 rounded-sm border border-indigo-200 font-bold">
                           {workspaceJobs && workspaceJobs.length > 0 ? (
                             <ReferencedText text={api.matched_sample} workspaceJobs={workspaceJobs} onSelectJob={onSelectJob} />
                           ) : (
@@ -383,7 +383,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
               placeholder="Filter by pattern, line number, or snippet..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 placeholder-slate-400 w-full max-w-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 placeholder-slate-400 w-full max-w-sm focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
             />
             <span className="text-xs text-slate-400 font-mono">
               Showing {filteredMatchedLines.length} of {matched_lines.length}
@@ -404,7 +404,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
                   </span>
                   <div className="flex-1 overflow-x-auto">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold uppercase ${getSeverityBadge(ml.severity)}`}>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-sm font-semibold uppercase ${getSeverityBadge(ml.severity)}`}>
                         {ml.severity}
                       </span>
                       <span className="text-[11px] text-indigo-600 font-medium">
@@ -443,13 +443,13 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-900 flex items-center gap-2">
                       <span>Base64 Block #{idx + 1}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono border border-indigo-200">
+                      <span className="text-[10px] px-2 py-0.5 rounded-sm bg-indigo-50 text-indigo-700 font-mono border border-indigo-200">
                         {block.length} bytes encoded
                       </span>
                     </span>
                     <button
                       onClick={() => copyToClipboard(block.decoded_preview, idx)}
-                      className="text-xs px-2.5 py-1 rounded bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      className="text-xs px-2.5 py-1 rounded-sm bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                     >
                       {copiedIndex === idx ? (
                         <>
@@ -539,7 +539,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
                       {u}
                     </span>
                   )}
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium shrink-0">
+                  <span className="text-[10px] px-2 py-0.5 rounded-sm bg-slate-100 text-slate-600 font-medium shrink-0">
                     Defanged
                   </span>
                 </div>
@@ -570,7 +570,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
             </div>
           )}
 
-          <div className="relative border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+          <div className="relative border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
             {/* Code Header Bar */}
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-slate-50 text-xs">
               <div className="flex items-center gap-2">
@@ -808,7 +808,7 @@ export const ScriptTriageCard: React.FC<ScriptTriageCardProps> = ({
                 <div className="space-y-1.5">
                   {hta.script_blocks.inline_handlers.map((h: any, i: number) => (
                     <div key={i} className="p-2 bg-white rounded-xl border border-slate-200 text-xs font-mono flex items-start gap-2">
-                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-bold shrink-0">
+                      <span className="px-2 py-0.5 rounded-sm bg-amber-50 text-amber-800 border border-amber-200 font-bold shrink-0">
                         {h.event}
                       </span>
                       <span className="text-slate-700 break-all">{h.handler}</span>

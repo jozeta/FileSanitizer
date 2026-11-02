@@ -31,7 +31,7 @@ export const SimilarityClusterCard: React.FC<SimilarityClusterCardProps> = ({
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
       {/* Header */}
       <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-2.5">

@@ -1129,7 +1129,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   // Unconditional render check for empty graph data
   if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center text-slate-500 shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center text-slate-500 shadow-xs">
         <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 mx-auto mb-3 shadow-inner">
           <Network className="w-7 h-7" />
         </div>
@@ -1142,7 +1142,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden flex flex-col transition-all">
+    <div className="bg-white border border-slate-200 rounded-3xl shadow-2xs overflow-hidden flex flex-col transition-all">
       {/* Header & Main Info */}
       <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -1230,7 +1230,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                 id="entity-graph-layout-select"
                 value={layoutMode}
                 onChange={(e) => setLayoutMode(e.target.value as any)}
-                className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+                className="bg-transparent font-medium text-slate-800 text-xs focus:outline-hidden cursor-pointer pr-1"
               >
                 <option value="radial">Radial Orbit</option>
                 <option value="category">Group by Entity Type</option>
@@ -1247,7 +1247,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                 id="entity-graph-sort-select"
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value as any)}
-                className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+                className="bg-transparent font-medium text-slate-800 text-xs focus:outline-hidden cursor-pointer pr-1"
               >
                 <option value="connectivity">Connectivity (Degree)</option>
                 <option value="threat_severity">Threat Severity & Risk</option>
@@ -1265,7 +1265,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                 id="entity-graph-proximity-select"
                 value={nodeProximity}
                 onChange={(e) => setNodeProximity(e.target.value as any)}
-                className="bg-transparent font-medium text-slate-800 text-xs focus:outline-none cursor-pointer pr-1"
+                className="bg-transparent font-medium text-slate-800 text-xs focus:outline-hidden cursor-pointer pr-1"
               >
                 <option value="close">Close (0.65x)</option>
                 <option value="middle">Middle (1.0x)</option>
@@ -1322,7 +1322,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                 id="entity-graph-show-empty-nodes"
                 checked={showEmptyNodes}
                 onChange={(e) => setShowEmptyNodes(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
               />
               <span>Show empty nodes</span>
               {emptyNodesCount > 0 && (
@@ -1349,7 +1349,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                 id="entity-graph-merge-similar"
                 checked={mergeSimilarNodes}
                 onChange={(e) => setMergeSimilarNodes(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
+                className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
               />
               <Layers className="w-3.5 h-3.5" />
               <span>Group Similar Nodes</span>
@@ -1965,7 +1965,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                     type="checkbox"
                     checked={hiddenNodeIds.has(selectedNode.id)}
                     onChange={(e) => handleToggleHideNode(selectedNode.id, e.target.checked)}
-                    className="w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
+                    className="w-4 h-4 rounded-sm text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer"
                   />
                   <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                     <EyeOff className="w-3.5 h-3.5 text-slate-500" />
@@ -1979,7 +1979,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                     type="checkbox"
                     checked={Boolean(highlightedNodes[selectedNode.id])}
                     onChange={(e) => handleToggleHighlightNode(selectedNode.id, e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                    className="w-4 h-4 rounded-sm text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
                   />
                   <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -2001,7 +2001,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   <select
                     value={highlightedNodes[selectedNode.id] || DEFAULT_HIGHLIGHT_COLOR}
                     onChange={(e) => handleChangeHighlightColor(selectedNode.id, e.target.value)}
-                    className="text-xs py-1 px-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
+                    className="text-xs py-1 px-2.5 rounded-lg bg-white border border-slate-300 text-slate-800 font-medium focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
                   >
                     {HIGHLIGHT_COLOR_OPTIONS.map((c) => (
                       <option key={c.value} value={c.value}>
@@ -2123,7 +2123,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
               {selectedNode.type === 'similar_sample' && selectedNode.details?.job_id && onSelectJob && (
                 <button
                   onClick={() => onSelectJob(selectedNode.details!.job_id)}
-                  className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>Inspect Sample</span>
@@ -2135,7 +2135,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   href={selectedNode.details.permalink}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 text-center cursor-pointer shadow-xs"
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 text-center cursor-pointer shadow-2xs"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>Open Threat Intel Portal</span>
@@ -2147,7 +2147,7 @@ export const EntityGraphCard: React.FC<EntityGraphCardProps> = ({ graphData, onS
                   href={selectedNode.details.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 text-center cursor-pointer shadow-xs"
+                  className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 text-center cursor-pointer shadow-2xs"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>MITRE ATT&CK Matrix ↗</span>

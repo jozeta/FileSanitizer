@@ -21,7 +21,7 @@ export const MetadataViewer: React.FC<MetadataViewerProps> = ({ metadata }) => {
 
   if (!metadata || metadata.total_fields === 0) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center text-slate-500 shadow-sm">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center text-slate-500 shadow-xs">
         <p className="text-sm">No metadata fields were found in this file.</p>
       </div>
     );
@@ -112,7 +112,7 @@ export const MetadataViewer: React.FC<MetadataViewerProps> = ({ metadata }) => {
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm relative">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs relative">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h3 className="text-base font-bold text-slate-900 tracking-tight">
@@ -133,14 +133,14 @@ export const MetadataViewer: React.FC<MetadataViewerProps> = ({ metadata }) => {
 
       {/* Forensic Timeline & Author Anomaly Banner */}
       {metadata.forensic_anomalies && metadata.forensic_anomalies.length > 0 && (
-        <div className="mb-5 p-4 rounded-2xl bg-rose-50/80 border border-rose-200 shadow-xs space-y-2.5">
+        <div className="mb-5 p-4 rounded-2xl bg-rose-50/80 border border-rose-200 shadow-2xs space-y-2.5">
           <div className="flex items-center gap-2">
             <span className="p-1.5 bg-rose-100 text-rose-700 rounded-lg text-sm">⏱️</span>
             <div className="flex items-center gap-2">
               <span className="font-bold text-rose-900 text-xs">
                 Forensic Metadata & Timestomping Anomalies Detected ({metadata.forensic_anomalies.length})
               </span>
-              <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-extrabold uppercase tracking-wider">
+              <span className="px-2 py-0.5 bg-rose-600 text-white rounded-sm text-[10px] font-extrabold uppercase tracking-wider">
                 Investigate
               </span>
             </div>
@@ -158,9 +158,9 @@ export const MetadataViewer: React.FC<MetadataViewerProps> = ({ metadata }) => {
 
       {/* GPS Geolocation Banner (if GPS is present) */}
       {gpsCoordsField && (
-        <div className="mb-5 p-4 rounded-2xl bg-blue-50/80 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div className="mb-5 p-4 rounded-2xl bg-blue-50/80 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-blue-600 text-white shrink-0 shadow-sm">
+            <div className="p-2.5 rounded-xl bg-blue-600 text-white shrink-0 shadow-xs">
               <MapPin className="w-4 h-4" />
             </div>
             <div>
@@ -196,7 +196,7 @@ export const MetadataViewer: React.FC<MetadataViewerProps> = ({ metadata }) => {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                 isActive
-                  ? 'bg-slate-900 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
               }`}
             >
@@ -318,7 +318,7 @@ export const MetadataViewer: React.FC<MetadataViewerProps> = ({ metadata }) => {
             <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-600 font-bold flex items-center gap-1.5">
               <span>🌐</span> Detected URL in Metadata
             </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-slate-100 text-slate-600 border border-slate-200">
               Inspection
             </span>
           </div>

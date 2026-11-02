@@ -173,7 +173,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
 
   if (!apkInfo) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <Smartphone className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">No Android APK / Dalvik DEX analysis data available for this file.</p>
       </div>
@@ -543,7 +543,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
       {/* Header Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-100 gap-4">
         <div className="flex items-start gap-4">
@@ -661,7 +661,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
           onClick={() => setActiveTab('overview')}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
             activeTab === 'overview'
-              ? 'bg-slate-900 text-white shadow-sm'
+              ? 'bg-slate-900 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
@@ -674,7 +674,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('archive_sec')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'archive_sec'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -703,7 +703,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('dependencies')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'dependencies'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -720,7 +720,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('secrets_ctf')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'secrets_ctf'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -734,7 +734,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('decompiler')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'decompiler'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -748,7 +748,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('embedded_sources')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'embedded_sources'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -762,7 +762,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('native_so')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'native_so'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -776,7 +776,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('permissions')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'permissions'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -790,7 +790,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('components')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'components'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -804,7 +804,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('dex')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'dex'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -818,7 +818,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('strings')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'strings'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -832,7 +832,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('certificate')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'certificate'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -846,7 +846,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('manifest')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'manifest'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -860,7 +860,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             onClick={() => setActiveTab('mitre')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
               activeTab === 'mitre'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -923,7 +923,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
 
           {/* Online Threat Intelligence & External Hashes */}
           {online_intel && (
-            <div className="p-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl shadow-sm space-y-4">
+            <div className="p-5 bg-linear-to-br from-slate-900 to-slate-800 text-white rounded-2xl shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-3">
                 <div className="flex items-center gap-2">
                   <Globe className="w-5 h-5 text-emerald-400" />
@@ -993,7 +993,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                       </span>
                     </div>
                     {online_intel.feeds?.virustotal?.detections > 0 && (
-                      <span className="font-mono text-[11px] bg-rose-900/80 px-2 py-0.5 rounded text-rose-200 border border-rose-700/60">
+                      <span className="font-mono text-[11px] bg-rose-900/80 px-2 py-0.5 rounded-sm text-rose-200 border border-rose-700/60">
                         VT: {online_intel.feeds?.virustotal?.detections}/{online_intel.feeds?.virustotal?.total} Engines
                       </span>
                     )}
@@ -1012,7 +1012,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     <div className="text-[11px] flex flex-wrap items-center gap-1 pt-0.5">
                       <span className="opacity-80 font-semibold">Threat Tags:</span>
                       {online_intel.threat_tags.slice(0, 8).map((tag, tIdx) => (
-                        <span key={tIdx} className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono border border-slate-700">
+                        <span key={tIdx} className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded-sm text-[10px] font-mono border border-slate-700">
                           #{tag}
                         </span>
                       ))}
@@ -1159,7 +1159,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                 {packer_info.matched_markers && packer_info.matched_markers.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {packer_info.matched_markers.map((m, mIdx) => (
-                      <span key={mIdx} className="px-2 py-0.5 bg-amber-200/80 text-amber-900 rounded font-mono text-[10px]">
+                      <span key={mIdx} className="px-2 py-0.5 bg-amber-200/80 text-amber-900 rounded-sm font-mono text-[10px]">
                         {m}
                       </span>
                     ))}
@@ -1183,7 +1183,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   <div key={sIdx} className="p-3 bg-white rounded-xl border border-rose-100 shadow-2xs space-y-1">
                     <div className="flex items-center justify-between gap-1">
                       <span className="text-xs font-bold text-slate-800">{sig.title}</span>
-                      <span className="px-2 py-0.5 bg-rose-100 text-rose-700 font-mono text-[10px] font-bold rounded uppercase">
+                      <span className="px-2 py-0.5 bg-rose-100 text-rose-700 font-mono text-[10px] font-bold rounded-sm uppercase">
                         {sig.severity}
                       </span>
                     </div>
@@ -1197,7 +1197,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
 
           {/* Network Security Configuration Audit */}
           {apkInfo.network_security_config?.found && (
-            <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
+            <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
@@ -1294,7 +1294,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                           {style.icon}
                           <span className="text-xs font-bold text-slate-900">{item.title}</span>
                         </div>
-                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${style.badge}`}>
+                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-sm border ${style.badge}`}>
                           {item.status}
                         </span>
                       </div>
@@ -1415,7 +1415,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {sensitive_permission_combos.map((combo, idx) => (
-                  <div key={idx} className="p-3.5 bg-white rounded-xl border border-rose-200/80 shadow-xs space-y-1.5">
+                  <div key={idx} className="p-3.5 bg-white rounded-xl border border-rose-200/80 shadow-2xs space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <strong className="text-xs font-bold text-rose-900">{combo.title}</strong>
                       <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
@@ -1427,7 +1427,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     <p className="text-[11px] text-slate-600 leading-relaxed">{combo.description}</p>
                     <div className="flex flex-wrap gap-1 pt-1 font-mono text-[10px]">
                       {combo.permissions.map((p, pIdx) => (
-                        <span key={pIdx} className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200">
+                        <span key={pIdx} className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded-sm border border-slate-200">
                           {p.split('.').pop()}
                         </span>
                       ))}
@@ -1468,12 +1468,12 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                           {dl.scheme}://{dl.host || '*'}{dl.path_prefix || dl.path_pattern || ''}
                         </span>
                         {dl.is_custom_scheme && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded font-sans font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-sm font-sans font-bold bg-amber-50 text-amber-700 border border-amber-200">
                             Custom Scheme
                           </span>
                         )}
                         {dl.exported && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded font-sans font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-sm font-sans font-bold bg-rose-50 text-rose-700 border border-rose-200">
                             Exported
                           </span>
                         )}
@@ -1483,7 +1483,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                       </span>
                     </div>
                     {dl.is_custom_scheme && dl.exported && (
-                      <span className="text-[10px] font-sans text-amber-700 bg-amber-50/70 p-1.5 rounded border border-amber-200 max-w-xs">
+                      <span className="text-[10px] font-sans text-amber-700 bg-amber-50/70 p-1.5 rounded-sm border border-amber-200 max-w-xs">
                         Subject to scheme hijacking and malicious parameter injection.
                       </span>
                     )}
@@ -1510,7 +1510,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             </div>
 
             {/* Toggle Mode: Java Decompiler vs Smali Disassembly */}
-            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm shrink-0">
+            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-xs shrink-0">
               <button
                 onClick={() => setDecompilerMode('java')}
                 className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
@@ -1548,7 +1548,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                       setSelectedClassIndex(0);
                     }}
                     placeholder="Search classes..."
-                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                   />
                 </div>
 
@@ -1564,7 +1564,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                         }}
                         className={`w-full text-left p-2.5 rounded-xl text-xs transition-all border ${
                           isSelected
-                            ? 'bg-white border-slate-300 shadow-sm text-slate-900 font-semibold'
+                            ? 'bg-white border-slate-300 shadow-xs text-slate-900 font-semibold'
                             : 'border-transparent hover:bg-white/60 text-slate-600'
                         }`}
                       >
@@ -1572,7 +1572,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                           <span className="font-mono text-xs truncate font-bold text-slate-800">
                             {cls.name.split('/').pop() || cls.name}
                           </span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-100 rounded text-slate-500 shrink-0">
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-100 rounded-sm text-slate-500 shrink-0">
                             {cls.methods_count} m
                           </span>
                         </div>
@@ -1602,7 +1602,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                             {selectedClass.name}
                           </span>
                           {selectedClass.access_flags && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded">
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded-sm">
                               {selectedClass.access_flags}
                             </span>
                           )}
@@ -1689,7 +1689,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                               {selectedClass.methods[selectedMethodIndex].instructions &&
                               selectedClass.methods[selectedMethodIndex].instructions!.length > 0 ? (
                                 selectedClass.methods[selectedMethodIndex].instructions!.map((ins, iIdx) => (
-                                  <div key={iIdx} className="flex items-start gap-3 hover:bg-slate-900/60 px-1 rounded">
+                                  <div key={iIdx} className="flex items-start gap-3 hover:bg-slate-900/60 px-1 rounded-sm">
                                     <span className="text-slate-600 text-[10px] w-6 shrink-0 select-none text-right">
                                       {iIdx + 1}
                                     </span>
@@ -1752,7 +1752,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     setSelectedSourceIndex(0);
                   }}
                   placeholder="Search files..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
@@ -1772,7 +1772,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                       onClick={() => setSelectedSourceIndex(idx)}
                       className={`w-full text-left p-2.5 rounded-xl text-xs transition-all border ${
                         isSelected
-                          ? 'bg-white border-slate-300 shadow-sm text-slate-900 font-semibold'
+                          ? 'bg-white border-slate-300 shadow-xs text-slate-900 font-semibold'
                           : 'border-transparent hover:bg-white/60 text-slate-600'
                       }`}
                     >
@@ -1780,7 +1780,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                         <span className="font-mono text-xs truncate font-bold text-slate-800">
                           {file.filename.split('/').pop() || file.filename}
                         </span>
-                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded ${dangerColor}`}>
+                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-sm ${dangerColor}`}>
                           {file.danger_level}
                         </span>
                       </div>
@@ -1807,7 +1807,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                         <span className="font-mono text-indigo-300 font-bold text-sm">
                           {selectedSource.filename}
                         </span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 rounded uppercase">
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 rounded-sm uppercase">
                           {selectedSource.file_type}
                         </span>
                       </div>
@@ -1963,7 +1963,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {so.suspicious_calls.map((call, cIdx) => (
-                          <span key={cIdx} className="text-[10px] font-mono px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded">
+                          <span key={cIdx} className="text-[10px] font-mono px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-sm">
                             {call}
                           </span>
                         ))}
@@ -2019,7 +2019,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   value={permSearch}
                   onChange={e => setPermSearch(e.target.value)}
                   placeholder="Search permission string, title, or threat..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
@@ -2036,7 +2036,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     onClick={() => setPermTypeFilter(typeTab.id as any)}
                     className={`text-xs px-2.5 py-1 rounded-lg capitalize transition-all cursor-pointer ${
                       permTypeFilter === typeTab.id
-                        ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                        ? 'bg-slate-900 text-white font-semibold shadow-2xs'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
@@ -2128,7 +2128,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             <div
               onClick={() => setComponentTypeFilter('activities')}
               className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
-                componentTypeFilter === 'activities' ? 'bg-sky-50 border-sky-300 shadow-xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
+                componentTypeFilter === 'activities' ? 'bg-sky-50 border-sky-300 shadow-2xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
               }`}
             >
               <span className="text-[10px] uppercase text-slate-400 block font-sans">Activities</span>
@@ -2138,7 +2138,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             <div
               onClick={() => setComponentTypeFilter('services')}
               className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
-                componentTypeFilter === 'services' ? 'bg-indigo-50 border-indigo-300 shadow-xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
+                componentTypeFilter === 'services' ? 'bg-indigo-50 border-indigo-300 shadow-2xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
               }`}
             >
               <span className="text-[10px] uppercase text-slate-400 block font-sans">Services</span>
@@ -2148,7 +2148,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             <div
               onClick={() => setComponentTypeFilter('receivers')}
               className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
-                componentTypeFilter === 'receivers' ? 'bg-purple-50 border-purple-300 shadow-xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
+                componentTypeFilter === 'receivers' ? 'bg-purple-50 border-purple-300 shadow-2xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
               }`}
             >
               <span className="text-[10px] uppercase text-slate-400 block font-sans">Receivers</span>
@@ -2158,7 +2158,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
             <div
               onClick={() => setComponentTypeFilter('providers')}
               className={`p-3 rounded-xl border text-center cursor-pointer transition-all ${
-                componentTypeFilter === 'providers' ? 'bg-emerald-50 border-emerald-300 shadow-xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
+                componentTypeFilter === 'providers' ? 'bg-emerald-50 border-emerald-300 shadow-2xs' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'
               }`}
             >
               <span className="text-[10px] uppercase text-slate-400 block font-sans">Content Providers</span>
@@ -2191,7 +2191,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   value={componentSearch}
                   onChange={e => setComponentSearch(e.target.value)}
                   placeholder="Filter components by name, action, or authority..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
@@ -2202,7 +2202,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     type="checkbox"
                     checked={componentExportedOnly}
                     onChange={e => setComponentExportedOnly(e.target.checked)}
-                    className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                    className="rounded-sm border-slate-300 text-slate-900 focus:ring-slate-900"
                   />
                   <span>Exported Only ({totalExported})</span>
                 </label>
@@ -2223,7 +2223,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   onClick={() => setComponentTypeFilter(cat.id as any)}
                   className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
                     componentTypeFilter === cat.id
-                      ? 'bg-slate-900 text-white font-semibold shadow-sm'
+                      ? 'bg-slate-900 text-white font-semibold shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -2248,7 +2248,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                 return (
                   <div
                     key={idx}
-                    className="p-4 bg-white hover:bg-slate-50/80 transition-all rounded-2xl border border-slate-200 space-y-2.5 shadow-xs"
+                    className="p-4 bg-white hover:bg-slate-50/80 transition-all rounded-2xl border border-slate-200 space-y-2.5 shadow-2xs"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -2346,7 +2346,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                                     <div className="flex flex-wrap items-center gap-1 font-mono text-[10px]">
                                       <span className="text-slate-400 font-sans">Actions:</span>
                                       {actions.map((act, aIdx) => (
-                                        <span key={aIdx} className="px-1.5 py-0.2 bg-white border border-slate-200 rounded text-slate-800">
+                                        <span key={aIdx} className="px-1.5 py-0.2 bg-white border border-slate-200 rounded-sm text-slate-800">
                                           {act}
                                         </span>
                                       ))}
@@ -2356,7 +2356,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                                     <div className="flex flex-wrap items-center gap-1 font-mono text-[10px]">
                                       <span className="text-slate-400 font-sans">Categories:</span>
                                       {categories.map((cat, cIdx) => (
-                                        <span key={cIdx} className="px-1.5 py-0.2 bg-white border border-slate-200 rounded text-slate-600">
+                                        <span key={cIdx} className="px-1.5 py-0.2 bg-white border border-slate-200 rounded-sm text-slate-600">
                                           {cat}
                                         </span>
                                       ))}
@@ -2432,7 +2432,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   value={apiSearch}
                   onChange={e => setApiSearch(e.target.value)}
                   placeholder="Search APIs, CWE, OWASP, threats..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
@@ -2445,7 +2445,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     onClick={() => setSelectedApiSeverity(sev)}
                     className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg capitalize transition-all cursor-pointer ${
                       selectedApiSeverity === sev
-                        ? 'bg-slate-900 text-white shadow-sm'
+                        ? 'bg-slate-900 text-white shadow-xs'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                     }`}
                   >
@@ -2481,7 +2481,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     onClick={() => setSelectedApiCategory(cat.id)}
                     className={`px-2.5 py-1 text-[11px] rounded-lg font-medium transition-all cursor-pointer ${
                       selectedApiCategory === cat.id
-                        ? 'bg-indigo-600 text-white shadow-sm font-semibold'
+                        ? 'bg-indigo-600 text-white shadow-xs font-semibold'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                     }`}
                   >
@@ -2504,7 +2504,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   return (
                     <div
                       key={idx}
-                      className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all space-y-3"
+                      className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs hover:border-slate-300 transition-all space-y-3"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="space-y-1">
@@ -2650,7 +2650,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                 value={stringSearch}
                 onChange={e => setStringSearch(e.target.value)}
                 placeholder="Filter strings..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-slate-900"
               />
             </div>
           </div>
@@ -2672,7 +2672,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                 onClick={() => setSelectedStringCategory(cat.id as any)}
                 className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all ${
                   selectedStringCategory === cat.id
-                    ? 'bg-slate-900 text-white font-semibold shadow-sm'
+                    ? 'bg-slate-900 text-white font-semibold shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -2696,7 +2696,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                       className="p-3 bg-white rounded-xl border border-rose-200 flex items-center justify-between text-xs font-mono"
                     >
                       <div className="truncate mr-2">
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded mr-2 uppercase">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded-sm mr-2 uppercase">
                           {sec.type}
                         </span>
                         <span className="text-slate-800">{sec.value}</span>
@@ -2765,7 +2765,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
               }
 
               return items.map((str, sIdx) => (
-                <div key={sIdx} className="flex items-center justify-between hover:bg-slate-800/80 px-2 py-1 rounded">
+                <div key={sIdx} className="flex items-center justify-between hover:bg-slate-800/80 px-2 py-1 rounded-sm">
                   <span className="truncate mr-2">{str}</span>
                   <button
                     onClick={() => handleCopy(str.replace(/^\[.*?\]\s*/, ''), `str_${sIdx}`)}
@@ -2806,7 +2806,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   onClick={() => setSelectedCertIndex(idx)}
                   className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
                     selectedCertIndex === idx
-                      ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                      ? 'bg-slate-900 text-white font-semibold shadow-2xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -2942,14 +2942,14 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   value={manifestSearch}
                   onChange={e => setManifestSearch(e.target.value)}
                   placeholder="Find in manifest..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                 />
               </div>
               {manifestSearch.trim() && (
                 <button
                   onClick={() => setManifestFilterOnly(!manifestFilterOnly)}
                   className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    manifestFilterOnly ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                    manifestFilterOnly ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                   }`}
                   title={manifestFilterOnly ? 'Show all lines' : 'Show only matching lines'}
                 >
@@ -3026,7 +3026,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                 className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between"
               >
                 <div>
-                  <span className="font-mono text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                  <span className="font-mono text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-sm border border-purple-200">
                     {tech.id}
                   </span>
                   <div className="text-xs font-bold text-slate-800 mt-1">{tech.name}</div>
@@ -3240,10 +3240,10 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-bold text-slate-900 break-all">{item.filename}</span>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-sans text-[10px]">
+                        <span className="px-2 py-0.5 rounded-sm bg-slate-100 text-slate-600 font-sans text-[10px]">
                           Declared: {item.declared_ext}
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-sans text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-sm bg-rose-100 text-rose-800 font-sans text-[10px] font-bold">
                           Actual: {item.actual_type}
                         </span>
                       </div>
@@ -3298,7 +3298,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                       <tr key={idx} className="hover:bg-slate-50/70">
                         <td className="py-2.5 px-4 font-bold text-slate-800">{dex.name}</td>
                         <td className="py-2.5 px-3">
-                          <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded font-bold text-[11px]">
+                          <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-sm font-bold text-[11px]">
                             {dex.dex_version}
                           </span>
                         </td>
@@ -3311,11 +3311,11 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                         </td>
                         <td className="py-2.5 px-4">
                           {dex.is_stub ? (
-                            <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-sans text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-sm bg-rose-50 text-rose-700 font-sans text-[10px] font-bold">
                               Parser Bomb Stub
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-sans text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-sm bg-emerald-50 text-emerald-700 font-sans text-[10px] font-bold">
                               Valid Bytecode
                             </span>
                           )}
@@ -3358,7 +3358,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     <span className="font-bold text-purple-700 break-all">{na.filename}</span>
                     <div className="flex items-center gap-2 font-sans">
                       <span className="text-slate-500 text-xs font-mono">{formatBytes(na.size)}</span>
-                      <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-bold">
+                      <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-sm text-[10px] font-bold">
                         {na.type}
                       </span>
                     </div>
@@ -3409,7 +3409,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
               <button
                 onClick={handleDownloadSbom}
                 disabled={!cyclonedx_sbom}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Export JSON</span>
@@ -3431,7 +3431,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                     <div key={idx} className="bg-white border border-rose-200 rounded-xl p-3.5 space-y-1.5">
                       <div className="flex items-center justify-between">
                         <strong className="text-xs font-bold text-slate-900">{dep.name}</strong>
-                        <span className="text-[10px] px-2 py-0.5 bg-rose-600 text-white rounded font-bold uppercase">
+                        <span className="text-[10px] px-2 py-0.5 bg-rose-600 text-white rounded-sm font-bold uppercase">
                           Vulnerable
                         </span>
                       </div>
@@ -3456,7 +3456,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                   value={depSearch}
                   onChange={(e) => setDepSearch(e.target.value)}
                   placeholder="Filter detected SDKs & dependencies..."
-                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -3479,7 +3479,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                             <div className="flex items-center gap-2">
                               <Package className="w-4 h-4 text-indigo-600 shrink-0" />
                               <strong className="text-slate-900 text-xs">{dep.name}</strong>
-                              <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-sans font-bold">
+                              <span className="px-2 py-0.5 rounded-sm bg-indigo-50 text-indigo-700 text-[10px] font-sans font-bold">
                                 {dep.category}
                               </span>
                             </div>
@@ -3487,7 +3487,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                             <span className="text-[10px] text-slate-400 font-mono block">PURL: {dep.purl}</span>
                           </div>
                           <div className="text-right">
-                            <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-700 text-[11px] font-bold">
+                            <span className="px-2 py-0.5 bg-slate-100 rounded-sm text-slate-700 text-[11px] font-bold">
                               {dep.group}:{dep.artifact}
                             </span>
                           </div>
@@ -3539,13 +3539,13 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
               value={secretSearch}
               onChange={(e) => setSecretSearch(e.target.value)}
               placeholder="Filter captured CTF flags or credentials..."
-              className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-500"
             />
           </div>
 
           {/* Captured CTF Flags Banner */}
           {secrets_and_ctf.ctf_flags && secrets_and_ctf.ctf_flags.length > 0 && (
-            <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-sm space-y-4">
+            <div className="bg-linear-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-purple-700/50">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 bg-purple-500/20 rounded-xl">
@@ -3575,7 +3575,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                         <span className="font-mono font-bold text-sm text-yellow-300 break-all select-all">
                           {flagItem.flag}
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-purple-800/60 text-purple-200 font-sans">
+                        <span className="text-[10px] px-2 py-0.5 rounded-sm bg-purple-800/60 text-purple-200 font-sans">
                           {flagItem.type}
                         </span>
                       </div>
@@ -3632,7 +3632,7 @@ export const ApkAnalysisCard: React.FC<ApkAnalysisCardProps> = ({
                           {sec.severity}
                         </span>
                       </div>
-                      <div className="text-rose-700 font-bold break-all select-all text-xs bg-rose-50/60 p-1.5 rounded border border-rose-100">
+                      <div className="text-rose-700 font-bold break-all select-all text-xs bg-rose-50/60 p-1.5 rounded-sm border border-rose-100">
                         {sec.value}
                       </div>
                       <span className="text-[10px] text-slate-400 font-sans block">

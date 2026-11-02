@@ -71,7 +71,7 @@ export const AnalyzingSplashscreen: React.FC<AnalyzingSplashscreenProps> = ({
   const displayedProgress = Math.min(100, Math.max(0, isNaN(rawProgress) ? 0 : rawProgress));
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 sm:p-12 text-center max-w-3xl mx-auto my-8 relative overflow-hidden animate-modal-fade">
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-8 sm:p-12 text-center max-w-3xl mx-auto my-8 relative overflow-hidden animate-modal-fade">
       {/* Background ambient radar glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -83,7 +83,7 @@ export const AnalyzingSplashscreen: React.FC<AnalyzingSplashscreenProps> = ({
         <div className="absolute inset-4 rounded-full border border-dashed border-indigo-600/30 animate-spin" style={{ animationDuration: '10s' }} />
         
         {/* Center Scanner Core */}
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 shadow-lg shadow-indigo-500/30 flex items-center justify-center text-white relative z-10">
+        <div className="w-16 h-16 rounded-2xl bg-linear-to-tr from-indigo-600 to-blue-600 shadow-lg shadow-indigo-500/30 flex items-center justify-center text-white relative z-10">
           <Shield className="w-8 h-8 animate-pulse" />
         </div>
       </div>
@@ -107,7 +107,7 @@ export const AnalyzingSplashscreen: React.FC<AnalyzingSplashscreenProps> = ({
         </div>
         <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-200">
           <div
-            className="bg-gradient-to-r from-indigo-600 to-blue-600 h-1.5 rounded-full transition-all duration-300 shadow-xs"
+            className="bg-linear-to-r from-indigo-600 to-blue-600 h-1.5 rounded-full transition-all duration-300 shadow-2xs"
             style={{ width: `${displayedProgress}%` }}
           />
         </div>
@@ -131,7 +131,7 @@ export const AnalyzingSplashscreen: React.FC<AnalyzingSplashscreenProps> = ({
                 isDone
                   ? 'text-slate-800 font-medium'
                   : isCurrent
-                  ? 'text-indigo-700 font-bold bg-white px-2.5 py-1.5 rounded-xl border border-indigo-200 shadow-xs'
+                  ? 'text-indigo-700 font-bold bg-white px-2.5 py-1.5 rounded-xl border border-indigo-200 shadow-2xs'
                   : 'text-slate-400 opacity-50'
               }`}
             >

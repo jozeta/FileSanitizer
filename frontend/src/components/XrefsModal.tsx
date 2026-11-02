@@ -151,7 +151,7 @@ export const XrefsModal: React.FC<XrefsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
       <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 rounded-t-xl">
@@ -162,7 +162,7 @@ export const XrefsModal: React.FC<XrefsModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-slate-900 text-base">Cross-References (XREFs) Explorer</h3>
-                <span className="px-2 py-0.5 text-xs font-mono font-medium bg-blue-50 text-blue-800 border border-blue-200 rounded">
+                <span className="px-2 py-0.5 text-xs font-mono font-medium bg-blue-50 text-blue-800 border border-blue-200 rounded-sm">
                   {isGlobalView ? `All References (${globalAllEntries.length})` : currentSymbol}
                 </span>
               </div>
@@ -180,7 +180,7 @@ export const XrefsModal: React.FC<XrefsModalProps> = ({
               <button
                 onClick={handleBack}
                 disabled={historyIndex <= 0}
-                className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none text-slate-600"
+                className="p-1 rounded-sm hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none text-slate-600"
                 title="Previous symbol"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -191,7 +191,7 @@ export const XrefsModal: React.FC<XrefsModalProps> = ({
               <button
                 onClick={handleForward}
                 disabled={historyIndex >= history.length - 1}
-                className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none text-slate-600"
+                className="p-1 rounded-sm hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none text-slate-600"
                 title="Next symbol"
               >
                 <ArrowRight className="w-4 h-4" />
@@ -225,7 +225,7 @@ export const XrefsModal: React.FC<XrefsModalProps> = ({
             <select
               value={isGlobalView ? 'ALL' : currentSymbol}
               onChange={(e) => navigateToSymbol(e.target.value)}
-              className="bg-white border border-slate-300 rounded px-2 py-0.5 text-[11px] font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-xs truncate cursor-pointer"
+              className="bg-white border border-slate-300 rounded-sm px-2 py-0.5 text-[11px] font-mono text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 max-w-xs truncate cursor-pointer"
             >
               <option value="ALL">All Targets ({globalAllEntries.length} refs)</option>
               {allAvailableTargets.map((t) => (
@@ -326,7 +326,7 @@ export const XrefsModal: React.FC<XrefsModalProps> = ({
               placeholder="Filter by caller, address, instruction..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="w-full pl-8 pr-3 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
+              className="w-full pl-8 pr-3 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 focus:bg-white"
             />
           </div>
         </div>
@@ -423,7 +423,7 @@ export const XrefsModal: React.FC<XrefsModalProps> = ({
                             if (onJumpToAddress) onJumpToAddress(entry.from_address);
                             onClose();
                           }}
-                          className="px-2 py-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-100/60 rounded flex items-center gap-1 ml-auto transition-colors"
+                          className="px-2 py-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-100/60 rounded-sm flex items-center gap-1 ml-auto transition-colors"
                         >
                           Jump <ExternalLink className="w-3 h-3" />
                         </button>

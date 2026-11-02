@@ -34,7 +34,7 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ level, size = 'md' }) => {
   };
 
   return (
-    <span className={`inline-flex items-center rounded-full uppercase tracking-wider ${sizeClasses[size]} ${colors.badgeBg} ${colors.badgeText} shadow-sm`}>
+    <span className={`inline-flex items-center rounded-full uppercase tracking-wider ${sizeClasses[size]} ${colors.badgeBg} ${colors.badgeText} shadow-xs`}>
       {getIcon()}
       <span>{level}</span>
     </span>

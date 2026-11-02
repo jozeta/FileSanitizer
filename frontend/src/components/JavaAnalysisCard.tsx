@@ -47,7 +47,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
 
   if (!javaInfo) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <Coffee className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">No Java source or bytecode analysis data available for this file.</p>
       </div>
@@ -99,7 +99,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
       {/* Top Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-100 gap-4">
         <div className="flex items-start gap-4">
@@ -179,7 +179,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
           onClick={() => setActiveTab('overview')}
           className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all ${
             activeTab === 'overview'
-              ? 'bg-slate-900 text-white shadow-sm'
+              ? 'bg-slate-900 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
@@ -191,7 +191,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
           onClick={() => setActiveTab('behavioral')}
           className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
             activeTab === 'behavioral'
-              ? 'bg-rose-600 text-white shadow-sm'
+              ? 'bg-rose-600 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
@@ -204,7 +204,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
             onClick={() => setActiveTab('apis')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all ${
               activeTab === 'apis'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -218,7 +218,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
             onClick={() => setActiveTab('code')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all ${
               activeTab === 'code'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -232,7 +232,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
             onClick={() => setActiveTab('binaries')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all ${
               activeTab === 'binaries'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -246,7 +246,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
             onClick={() => setActiveTab('rat')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all ${
               activeTab === 'rat'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -363,7 +363,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
 
           {/* Behavioral Forensics Quick Triage (4 Pillars) */}
           {javaInfo.behavioral_analysis && (
-            <div className="p-5 bg-gradient-to-br from-slate-50 to-slate-100/60 rounded-3xl border border-slate-200 space-y-4">
+            <div className="p-5 bg-linear-to-br from-slate-50 to-slate-100/60 rounded-3xl border border-slate-200 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -376,7 +376,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
                 </div>
                 <button
                   onClick={() => setActiveTab('behavioral')}
-                  className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 transition-colors shadow-sm cursor-pointer"
+                  className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 transition-colors shadow-xs cursor-pointer"
                 >
                   View Deep Forensics &amp; STRRAT Report →
                 </button>
@@ -593,7 +593,7 @@ export const JavaAnalysisCard: React.FC<JavaAnalysisCardProps> = ({
             {embedded_binaries.map((bin, i) => (
               <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs font-mono">
                 <span className="text-rose-700 font-semibold">{bin}</span>
-                <span className="text-[10px] px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-bold">
+                <span className="text-[10px] px-2 py-0.5 bg-rose-100 text-rose-800 rounded-sm font-bold">
                   NATIVE PAYLOAD
                 </span>
               </div>

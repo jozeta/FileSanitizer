@@ -13,7 +13,7 @@ export const AttackNavigatorCard: React.FC<AttackNavigatorCardProps> = ({ mitreA
 
   if (!mitreAttack || mitreAttack.length === 0) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <ShieldAlert className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">No MITRE ATT&CK techniques mapped for this file.</p>
       </div>
@@ -58,7 +58,7 @@ export const AttackNavigatorCard: React.FC<AttackNavigatorCardProps> = ({ mitreA
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm mb-6 space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs mb-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-100 gap-4">
         <div className="flex items-start gap-4">
@@ -89,7 +89,7 @@ export const AttackNavigatorCard: React.FC<AttackNavigatorCardProps> = ({ mitreA
               <a
                 href={`/api/jobs/${jobId}/attack-navigator`}
                 download
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors whitespace-nowrap shadow-xs"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors whitespace-nowrap shadow-2xs"
                 title="Download official MITRE ATT&CK Navigator v4.5 JSON layer for this job"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -98,7 +98,7 @@ export const AttackNavigatorCard: React.FC<AttackNavigatorCardProps> = ({ mitreA
               <a
                 href={`/api/jobs/${jobId}/stix-export`}
                 download
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors whitespace-nowrap shadow-xs"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors whitespace-nowrap shadow-2xs"
                 title="Export OASIS STIX 2.1 Incident Response & Threat Bundle"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -113,7 +113,7 @@ export const AttackNavigatorCard: React.FC<AttackNavigatorCardProps> = ({ mitreA
               placeholder="Search technique or evidence..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-full transition-all"
+              className="text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-full transition-all"
             />
           </div>
         </div>
@@ -125,7 +125,7 @@ export const AttackNavigatorCard: React.FC<AttackNavigatorCardProps> = ({ mitreA
           onClick={() => setSelectedTactic('ALL')}
           className={`text-xs px-3.5 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-all cursor-pointer ${
             selectedTactic === 'ALL'
-              ? 'bg-slate-900 text-white shadow-xs'
+              ? 'bg-slate-900 text-white shadow-2xs'
               : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-slate-200/60'
           }`}
         >
@@ -137,7 +137,7 @@ export const AttackNavigatorCard: React.FC<AttackNavigatorCardProps> = ({ mitreA
             onClick={() => setSelectedTactic(tac)}
             className={`text-xs px-3.5 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-all cursor-pointer ${
               selectedTactic === tac
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-indigo-600 text-white shadow-2xs'
                 : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-slate-200/60'
             }`}
           >
@@ -151,7 +151,7 @@ export const AttackNavigatorCard: React.FC<AttackNavigatorCardProps> = ({ mitreA
         {filteredItems.map((item, idx) => (
           <div
             key={`${item.technique_id}-${idx}`}
-            className="p-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50/50 hover:border-indigo-300 transition-all shadow-2xs hover:shadow-sm flex flex-col justify-between space-y-3"
+            className="p-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50/50 hover:border-indigo-300 transition-all shadow-2xs hover:shadow-xs flex flex-col justify-between space-y-3"
           >
             <div>
               <div className="flex items-start justify-between gap-2 mb-2">

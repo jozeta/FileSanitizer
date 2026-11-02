@@ -243,7 +243,7 @@ export const NetworkIocEnrichmentPanel: React.FC<NetworkIocEnrichmentPanelProps>
                       </td>
 
                       <td className="py-2.5 px-3">
-                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] uppercase font-semibold">
+                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded-sm text-[10px] uppercase font-semibold">
                           {item.type}
                         </span>
                       </td>
@@ -256,7 +256,7 @@ export const NetworkIocEnrichmentPanel: React.FC<NetworkIocEnrichmentPanelProps>
                               {item.as_org || ''}
                             </span>
                             {item.country && (
-                              <span className="ml-1.5 px-1 py-0.2 rounded text-[10px] bg-slate-100 text-slate-600 font-sans">
+                              <span className="ml-1.5 px-1 py-0.2 rounded-sm text-[10px] bg-slate-100 text-slate-600 font-sans">
                                 {item.country}
                               </span>
                             )}
@@ -270,11 +270,11 @@ export const NetworkIocEnrichmentPanel: React.FC<NetworkIocEnrichmentPanelProps>
                         {item.fcrdns ? (
                           <div className="flex items-center gap-1.5">
                             {fcrdnsValid ? (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
                                 FCrDNS Valid
                               </span>
                             ) : fcrdnsMismatch ? (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                              <span className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">
                                 FCrDNS Diverged
                               </span>
                             ) : (

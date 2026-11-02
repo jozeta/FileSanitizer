@@ -179,7 +179,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
 
   if (urls.length === 0) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center text-slate-500 shadow-sm">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center text-slate-500 shadow-xs">
         <p className="text-sm">No external URLs or hyperlinks discovered in this file.</p>
       </div>
     );
@@ -306,7 +306,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
           return (
             <div
               key={idx}
-              className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm hover:border-slate-300 transition-all"
+              className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs hover:border-slate-300 transition-all"
             >
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-5">
                 <div className="flex-1 min-w-0">
@@ -360,20 +360,20 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
                       <div className="text-xs space-y-1">
                         <div className="font-bold text-rose-900 flex items-center gap-2 flex-wrap">
                           <span>⚠️ Punycode / Homograph Impersonation Attack</span>
-                          <span className="px-2 py-0.5 bg-rose-200 text-rose-900 rounded font-mono text-[10px] uppercase font-bold">
+                          <span className="px-2 py-0.5 bg-rose-200 text-rose-900 rounded-sm font-mono text-[10px] uppercase font-bold">
                             High Evasion Risk
                           </span>
                         </div>
                         <div className="text-rose-800 font-mono text-xs leading-relaxed space-y-1">
                           <div>
                             <span className="text-slate-500">Encoded ASCII Domain:</span>{' '}
-                            <span className="font-bold text-slate-900 bg-white px-1.5 py-0.5 rounded border border-rose-200/80">
+                            <span className="font-bold text-slate-900 bg-white px-1.5 py-0.5 rounded-sm border border-rose-200/80">
                               {item.domain}
                             </span>
                           </div>
                           <div>
                             <span className="text-slate-500">Visual User Appearance:</span>{' '}
-                            <span className="font-bold text-rose-700 bg-white px-2 py-0.5 rounded border border-rose-300 text-sm tracking-wide">
+                            <span className="font-bold text-rose-700 bg-white px-2 py-0.5 rounded-sm border border-rose-300 text-sm tracking-wide">
                               {getVisualAppearance(item)}
                             </span>
                           </div>
@@ -383,7 +383,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
                               return (
                                 <div>
                                   <span className="text-slate-500">Target Spoofed Brand (Latin):</span>{' '}
-                                  <span className="font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-300">
+                                  <span className="font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded-sm border border-emerald-300">
                                     {target}
                                   </span>
                                 </div>
@@ -412,7 +412,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
                         href={item.vt_web_link || `https://www.virustotal.com/gui/search/${encodeURIComponent(item.url)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] font-sans font-medium text-indigo-600 hover:text-indigo-800 shrink-0 bg-white px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 shadow-sm transition-colors"
+                        className="inline-flex items-center gap-1 text-[11px] font-sans font-medium text-indigo-600 hover:text-indigo-800 shrink-0 bg-white px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 shadow-xs transition-colors"
                       >
                         <ExternalLink className="w-3 h-3" />
                         <span>Lookup on VirusTotal</span>
@@ -602,7 +602,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
                     </div>
                     <div
                       onClick={() => setLightboxScreenshot({ url: item.screenshot_url!, domain: item.domain || item.url })}
-                      className="border border-slate-200 hover:border-indigo-400 rounded-2xl overflow-hidden shadow-xs hover:shadow-md bg-slate-100 aspect-video relative group cursor-pointer transition-all"
+                      className="border border-slate-200 hover:border-indigo-400 rounded-2xl overflow-hidden shadow-2xs hover:shadow-md bg-slate-100 aspect-video relative group cursor-pointer transition-all"
                     >
                       <img
                         src={item.screenshot_url}
@@ -623,7 +623,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
                       <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
                       <span>Website Preview</span>
                     </div>
-                    <div className="border border-slate-200 rounded-2xl bg-slate-100/80 aspect-video flex flex-col items-center justify-center p-3 text-center shadow-xs">
+                    <div className="border border-slate-200 rounded-2xl bg-slate-100/80 aspect-video flex flex-col items-center justify-center p-3 text-center shadow-2xs">
                       <div className="w-8 h-8 rounded-full bg-slate-200/90 flex items-center justify-center mb-1.5 text-slate-400">
                         <ImageIcon className="w-4 h-4" />
                       </div>
@@ -711,7 +711,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
                       <div className="mt-3 p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                         <div className="flex items-center justify-between text-[11px] text-slate-500 flex-wrap gap-2">
                           <span className="font-mono">
-                            Command pipeline: <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-800 font-bold">subfinder -silent -d {item.domain} | dnsx -silent -a -resp</code>
+                            Command pipeline: <code className="bg-white px-1.5 py-0.5 rounded-sm border border-slate-200 text-slate-800 font-bold">subfinder -silent -d {item.domain} | dnsx -silent -a -resp</code>
                           </span>
                           <span className="text-emerald-700 font-semibold flex items-center gap-1">
                             <Server className="w-3 h-3" /> Live DNS A-Records
@@ -742,7 +742,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
                                         {sub.ips.map((ip, ipIdx) => (
                                           <span
                                             key={ipIdx}
-                                            className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-[11px] font-mono"
+                                            className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-sm text-[11px] font-mono"
                                           >
                                             {ip}
                                           </span>
@@ -782,7 +782,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
           onClick={(e) => {
             if (e.target === e.currentTarget) setLightboxScreenshot(null);
           }}
-          className="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
+          className="fixed inset-0 bg-slate-900/75 backdrop-blur-xs z-9999 flex items-center justify-center p-4 sm:p-6 animate-overlay-fade"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -815,7 +815,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
 
             {/* Modal Body / Image */}
             <div className="p-6 bg-slate-50 flex-1 overflow-y-auto flex items-center justify-center min-h-[300px]">
-              <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs bg-white max-h-[70vh] flex items-center justify-center">
+              <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs bg-white max-h-[70vh] flex items-center justify-center">
                 <img
                   src={lightboxScreenshot.url}
                   alt={`Screenshot of ${lightboxScreenshot.domain}`}
@@ -827,7 +827,7 @@ export const UrlExplorer: React.FC<UrlExplorerProps> = ({
             {/* Modal Footer */}
             <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0 rounded-b-3xl">
               <span className="text-[11px] text-slate-500">
-                Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-600 font-mono text-[10px]">ESC</kbd> or click outside to dismiss
+                Press <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-sm text-slate-600 font-mono text-[10px]">ESC</kbd> or click outside to dismiss
               </span>
               <button
                 type="button"

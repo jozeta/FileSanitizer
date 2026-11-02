@@ -21,7 +21,7 @@ interface CdrDiffInspectorProps {
 export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onRunSanitization, onDownload }) => {
   if (!cdrDiff) {
     return (
-      <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center shadow-2xs">
         <div className="w-14 h-14 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-indigo-600">
           <Layers className="w-7 h-7" />
         </div>
@@ -34,7 +34,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
             <button
               type="button"
               onClick={onRunSanitization}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all inline-flex items-center gap-2 cursor-pointer"
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-2xs transition-all inline-flex items-center gap-2 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
               <span>Configure & Run CDR Sanitization</span>
@@ -51,7 +51,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
     <div className="space-y-6">
       {/* Pre-Download Inspection Banner */}
       {onDownload && (
-        <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="p-4 bg-linear-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
               ✓
@@ -66,7 +66,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
           <button
             type="button"
             onClick={onDownload}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer shrink-0"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-colors flex items-center gap-2 cursor-pointer shrink-0"
           >
             <Download className="w-4 h-4" />
             <span>Download Clean File</span>
@@ -77,7 +77,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
       {/* High-Impact Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Bytes Reduced */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Size Reduction</span>
             <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold font-mono">
@@ -96,7 +96,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
         </div>
 
         {/* Entropy Delta */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Entropy Delta</span>
             <Activity className="w-4 h-4 text-indigo-500" />
@@ -113,7 +113,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
         </div>
 
         {/* Threats Neutralized */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Threats Disarmed</span>
             <ZapOff className="w-4 h-4 text-rose-500" />
@@ -130,7 +130,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
         </div>
 
         {/* Structural Modifications */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Pruned Structural Nodes</span>
             <Layers className="w-4 h-4 text-sky-500" />
@@ -148,7 +148,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
       </div>
 
       {/* Side-by-Side Comparison Matrix */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
         <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileCheck2 className="w-4 h-4 text-emerald-600" />
@@ -222,7 +222,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
 
       {/* Structural Modifications Ledger */}
       {structural_modifications && structural_modifications.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
           <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Trash2 className="w-4 h-4 text-rose-600" />
@@ -261,7 +261,7 @@ export const CdrDiffInspector: React.FC<CdrDiffInspectorProps> = ({ cdrDiff, onR
 
       {/* Sanitizer Execution Actions Log */}
       {actions_taken && actions_taken.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs">
           <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>CDR Engine Actions Completed ({actions_taken.length})</span>

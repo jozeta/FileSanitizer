@@ -158,7 +158,7 @@ export const GroupedNodesInspectorCard: React.FC<GroupedNodesInspectorCardProps>
             placeholder="Filter member indicators & metadata..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-2.5 py-1 text-[11px] bg-white border border-indigo-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full pl-8 pr-2.5 py-1 text-[11px] bg-white border border-indigo-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
           />
         </div>
       )}
@@ -218,7 +218,7 @@ export const GroupedNodesInspectorCard: React.FC<GroupedNodesInspectorCardProps>
                       e.stopPropagation();
                       onCopy(fullLabel, `group_mem_${mId}`);
                     }}
-                    className="p-1 rounded text-slate-400 hover:text-indigo-600 shrink-0 cursor-pointer"
+                    className="p-1 rounded-sm text-slate-400 hover:text-indigo-600 shrink-0 cursor-pointer"
                     title="Copy full indicator"
                   >
                     {copiedKey === `group_mem_${mId}` ? (
@@ -501,7 +501,7 @@ export const HierarchyInspectorCard: React.FC<HierarchyInspectorCardProps> = ({
                     <button
                       type="button"
                       onClick={() => onCopy(childLabel, `child_copy_${child.id}`)}
-                      className="p-1 rounded text-slate-400 hover:text-emerald-700 cursor-pointer"
+                      className="p-1 rounded-sm text-slate-400 hover:text-emerald-700 cursor-pointer"
                       title="Copy indicator"
                     >
                       {copiedKey === `child_copy_${child.id}` ? (

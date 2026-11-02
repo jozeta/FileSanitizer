@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-white rounded-3xl border border-rose-200 p-8 shadow-sm my-4">
+        <div className="bg-white rounded-3xl border border-rose-200 p-8 shadow-xs my-4">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-rose-100 text-rose-600 rounded-2xl shrink-0">
               <AlertOctagon className="w-6 h-6" />
@@ -65,7 +65,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="flex items-center gap-3">
                 <button
                   onClick={this.handleReset}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-sm"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Retry View</span>

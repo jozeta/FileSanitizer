@@ -78,21 +78,21 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="border-b border-slate-200 bg-white/90 backdrop-blur-md sticky top-0 z-40">
-      <div className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-384 mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Logo and Brand */}
         <div className="flex items-center gap-3 text-left shrink-0">
           <button 
             type="button"
             onClick={() => onNavigate('sanitizer')} 
-            className="flex items-center gap-3 text-left focus:outline-none group cursor-pointer"
+            className="flex items-center gap-3 text-left focus:outline-hidden group cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm group-hover:bg-blue-600 transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs group-hover:bg-blue-600 transition-colors">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-lg text-slate-900 tracking-tight">FileSanitizer</span>
-                <span className="text-[11px] font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">v{APP_VERSION} CDR</span>
+                <span className="text-[11px] font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded-sm border border-slate-200">v{APP_VERSION} CDR</span>
               </div>
               <p className="text-xs text-slate-500 font-normal hidden sm:block">{slogan}</p>
             </div>
@@ -117,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => onNavigate('sanitizer')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               currentView === 'sanitizer'
-                ? 'bg-white text-slate-900 shadow-xs'
+                ? 'bg-white text-slate-900 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -129,7 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => onNavigate('decoder')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               currentView === 'decoder'
-                ? 'bg-white text-slate-900 shadow-xs'
+                ? 'bg-white text-slate-900 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -141,7 +141,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => onNavigate('how-it-works')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               currentView === 'how-it-works'
-                ? 'bg-white text-slate-900 shadow-xs'
+                ? 'bg-white text-slate-900 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -153,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => onNavigate('supported-formats')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               currentView === 'supported-formats'
-                ? 'bg-white text-slate-900 shadow-xs'
+                ? 'bg-white text-slate-900 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -166,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => onNavigate('settings')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               currentView === 'settings'
-                ? 'bg-white text-slate-900 shadow-xs'
+                ? 'bg-white text-slate-900 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >

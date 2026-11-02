@@ -402,7 +402,7 @@ const CFGMinimap: React.FC<MinimapProps> = ({
       <svg
         width={mapW}
         height={mapH}
-        className="cursor-crosshair mt-1 bg-slate-50 rounded border border-slate-200"
+        className="cursor-crosshair mt-1 bg-slate-50 rounded-sm border border-slate-200"
         onClick={handleClick}
       >
         {nodes.map((node) => {
@@ -653,17 +653,17 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
       className="flex flex-col h-[700px] bg-slate-50/60 rounded-xl border border-slate-200 overflow-hidden relative select-none"
     >
       {/* Canvas Top Bar */}
-      <div className="px-4 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between z-10 shadow-xs">
+      <div className="px-4 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between z-10 shadow-2xs">
         <div className="flex items-center gap-2">
           <span className={`w-2.5 h-2.5 rounded-full ${badgeColor === 'indigo' ? 'bg-indigo-600' : 'bg-purple-600'}`} />
           <span className="text-xs font-bold font-mono text-slate-900 truncate max-w-[280px]">
             {sampleTitle}: {sampleFilename}
           </span>
-          <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+          <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-sm border border-slate-200">
             {blocks.length} blocks • {edges.length} edges
           </span>
           {!isLayoutLocked && (
-            <span className="text-[10px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+            <span className="text-[10px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-sm font-bold flex items-center gap-1">
               <GripHorizontal className="w-3 h-3 text-amber-600" />
               Dragging Enabled
             </span>
@@ -673,7 +673,7 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
           {Object.keys(customPositions).length > 0 && (
             <button
               onClick={() => setCustomPositions({})}
-              className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors flex items-center gap-1 shadow-2xs"
+              className="px-2 py-0.5 rounded-sm text-[10px] font-mono text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors flex items-center gap-1 shadow-2xs"
               title="Reset dragged positions in this canvas"
             >
               <RotateCcw className="w-2.5 h-2.5" />
@@ -682,7 +682,7 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
           )}
           <button
             onClick={() => setPan({ x: 40, y: 30 })}
-            className="p-1 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="p-1 rounded-sm text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
             title="Reset Pan"
           >
             <RotateCcw className="w-3 h-3" />
@@ -788,7 +788,7 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
                   />
                   {isTrue && (
                     <foreignObject x={edgeRes.labelX - 52} y={edgeRes.labelY - 13} width="104" height="26">
-                      <div className="bg-emerald-100 text-emerald-900 border border-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
+                      <div className="bg-emerald-100 text-emerald-900 border border-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                         <span>True (Taken)</span>
                       </div>
@@ -796,7 +796,7 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
                   )}
                   {isFalse && (
                     <foreignObject x={edgeRes.labelX - 40} y={edgeRes.labelY - 13} width="80" height="26">
-                      <div className="bg-rose-100 text-rose-900 border border-rose-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
+                      <div className="bg-rose-100 text-rose-900 border border-rose-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
                         <span>False</span>
                       </div>
@@ -804,7 +804,7 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
                   )}
                   {isJmp && (
                     <foreignObject x={edgeRes.labelX - 38} y={edgeRes.labelY - 13} width="76" height="26">
-                      <div className="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
+                      <div className="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
                         <span>Jump</span>
                       </div>
@@ -812,7 +812,7 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
                   )}
                   {isLoop && (
                     <foreignObject x={edgeRes.labelX - 43} y={edgeRes.labelY - 13} width="86" height="26">
-                      <div className="bg-purple-100 text-purple-900 border border-purple-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap flex items-center justify-center gap-1 leading-tight select-none">
+                      <div className="bg-purple-100 text-purple-900 border border-purple-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap flex items-center justify-center gap-1 leading-tight select-none">
                         <Repeat className="w-2.5 h-2.5 text-purple-600 shrink-0" />
                         <span>LOOP</span>
                       </div>
@@ -888,7 +888,7 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
                 onMouseEnter={() => onHoverBlock(block.id)}
                 onMouseLeave={() => onHoverBlock(null)}
                 onClick={() => onSelectBlock(block.id)}
-                className={`block-card-interactive bg-white rounded-lg border shadow-xs transition-shadow duration-150 overflow-hidden ${cardBorder} ${
+                className={`block-card-interactive bg-white rounded-lg border shadow-2xs transition-shadow duration-150 overflow-hidden ${cardBorder} ${
                   isHovered || isSelected ? 'ring-2 ring-indigo-500 shadow-md scale-[1.01]' : ''
                 } ${isBeingDragged ? 'ring-2 ring-amber-500 shadow-xl opacity-95 z-30' : 'z-10'}`}
               >
@@ -910,7 +910,7 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
                       ({block.start_addr})
                     </span>
                   </div>
-                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border shrink-0 ${badgeClass}`}>
+                  <span className={`px-1.5 py-0.2 rounded-sm text-[9px] font-bold border shrink-0 ${badgeClass}`}>
                     {matchLabel}
                   </span>
                 </div>
@@ -919,17 +919,17 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
                 {(block.has_loop_exit || block.is_loop_target || block.is_conditional) && (
                   <div className="px-2 py-0.5 bg-slate-50 border-b border-slate-100 flex items-center gap-1 flex-wrap">
                     {block.is_loop_target && (
-                      <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.2 rounded-sm text-[8px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-0.5">
                         <Repeat className="w-2.5 h-2.5" /> Loop Target
                       </span>
                     )}
                     {block.has_loop_exit && (
-                      <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.2 rounded-sm text-[8px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-0.5">
                         <Repeat className="w-2.5 h-2.5" /> Loop Exit
                       </span>
                     )}
                     {block.is_conditional && (
-                      <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.2 rounded-sm text-[8px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-0.5">
                         <Split className="w-2.5 h-2.5" /> If / Branch
                       </span>
                     )}
@@ -949,13 +949,13 @@ const CFG2DCanvas: React.FC<CFG2DCanvasProps> = ({
 
                     if (isChangedInst) {
                       rowBg = 'bg-amber-100/90 text-amber-950 font-semibold border-l-2 border-amber-500 pl-1.5';
-                      statusBadge = <span className="text-[8px] font-mono px-1 py-0.2 bg-amber-200 text-amber-900 rounded font-bold">MOD</span>;
+                      statusBadge = <span className="text-[8px] font-mono px-1 py-0.2 bg-amber-200 text-amber-900 rounded-sm font-bold">MOD</span>;
                     } else if (isNewInst) {
                       rowBg = 'bg-rose-100/90 text-rose-950 font-semibold border-l-2 border-rose-500 pl-1.5';
-                      statusBadge = <span className="text-[8px] font-mono px-1 py-0.2 bg-rose-200 text-rose-900 rounded font-bold">NEW</span>;
+                      statusBadge = <span className="text-[8px] font-mono px-1 py-0.2 bg-rose-200 text-rose-900 rounded-sm font-bold">NEW</span>;
                     } else if (isRemovedInst) {
                       rowBg = 'bg-rose-50 text-rose-800 line-through border-l-2 border-rose-400 pl-1.5';
-                      statusBadge = <span className="text-[8px] font-mono px-1 py-0.2 bg-rose-200 text-rose-800 rounded font-bold">DEL</span>;
+                      statusBadge = <span className="text-[8px] font-mono px-1 py-0.2 bg-rose-200 text-rose-800 rounded-sm font-bold">DEL</span>;
                     }
 
                     return (
@@ -1238,7 +1238,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
 
   if (!bindiff || !bindiff.available || !bindiff.pairs || bindiff.pairs.length === 0 || !activePair || !flowGraph) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-2xl mx-auto my-6 shadow-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center max-w-2xl mx-auto my-6 shadow-xs">
         <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto mb-4 text-indigo-600">
           <GitCompare className="w-8 h-8" />
         </div>
@@ -1289,14 +1289,14 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
     <div className="space-y-6">
       {/* Pair Selector if multiple binary pairs exist */}
       {bindiff.pairs.length > 1 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between shadow-2xs">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-mono">
             Comparing Binary Pair ({selectedPairIndex + 1} of {bindiff.pairs.length})
           </div>
           <select
             value={selectedPairIndex}
             onChange={(e) => setSelectedPairIndex(Number(e.target.value))}
-            className="text-xs font-mono bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+            className="text-xs font-mono bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-800"
           >
             {bindiff.pairs.map((p, idx) => (
               <option key={idx} value={idx}>
@@ -1308,7 +1308,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
       )}
 
       {/* Top Banner: Binary Comparison Overview Card (Clean Light Theme) */}
-      <div className="bg-white rounded-2xl p-6 text-slate-800 shadow-sm border border-slate-200">
+      <div className="bg-white rounded-2xl p-6 text-slate-800 shadow-xs border border-slate-200">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           
           {/* Left: Binary A & Binary B Identity */}
@@ -1387,7 +1387,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                 Rich Header: {metrics.rich_header_matched ? 'Identical Toolchain' : 'Unique Toolchains'}
               </span>
 
-              <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium flex items-center gap-1.5 border bg-indigo-50 text-indigo-700 border-indigo-200">
+              <span className="px-2 py-0.5 rounded-sm text-[11px] font-mono font-medium flex items-center gap-1.5 border bg-indigo-50 text-indigo-700 border-indigo-200">
                 <Network className="w-3 h-3 text-indigo-600" />
                 CFG Similarity: {flowGraph.cfg_similarity}%
               </span>
@@ -1542,7 +1542,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
       {/* 1. FLOW GRAPH (CFG DIFF) VISUALIZER (zynamics BinDiff Style)               */}
       {/* ========================================================================= */}
       {subTab === 'flow_graph' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden space-y-0">
           
           {/* Top Control Bar & Match Legend */}
           <div className="p-4 bg-slate-50/90 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
@@ -1558,19 +1558,19 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
 
               {/* Match Pills */}
               <div className="flex items-center gap-1.5 ml-2">
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-sm text-[11px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   {flowGraph.matched_blocks_count} Matched
                 </span>
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-sm text-[11px] font-mono font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
                   {flowGraph.changed_blocks_count} Changed
                 </span>
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-sm text-[11px] font-mono font-semibold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-rose-500" />
                   {flowGraph.unique_a_blocks_count} Sample A Only
                 </span>
-                <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-sm text-[11px] font-mono font-semibold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-purple-500" />
                   {flowGraph.unique_b_blocks_count} Sample B Only
                 </span>
@@ -1585,7 +1585,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                   onClick={() => setCfgViewMode('graph_canvas')}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all ${
                     cfgViewMode === 'graph_canvas'
-                      ? 'bg-indigo-600 text-white shadow-xs font-semibold'
+                      ? 'bg-indigo-600 text-white shadow-2xs font-semibold'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                   title="2D Node Graph Flow Canvas with Loops and Branches"
@@ -1597,7 +1597,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                   onClick={() => setCfgViewMode('block_columns')}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all ${
                     cfgViewMode === 'block_columns'
-                      ? 'bg-indigo-600 text-white shadow-xs font-semibold'
+                      ? 'bg-indigo-600 text-white shadow-2xs font-semibold'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                   title="Symmetric Dual-Pane Disassembly Block Columns"
@@ -1696,13 +1696,13 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
               {/* Jump Legend */}
               <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 hidden xl:flex">
                 <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-1 bg-emerald-500 rounded" /> True (Green)
+                  <span className="w-2.5 h-1 bg-emerald-500 rounded-sm" /> True (Green)
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-1 bg-rose-500 rounded" /> False (Red)
+                  <span className="w-2.5 h-1 bg-rose-500 rounded-sm" /> False (Red)
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-1 bg-indigo-500 rounded" /> Jump (Blue)
+                  <span className="w-2.5 h-1 bg-indigo-500 rounded-sm" /> Jump (Blue)
                 </span>
                 <span className="flex items-center gap-1">
                   <Repeat className="w-2.5 h-2.5 text-purple-600" /> Loop (Purple)
@@ -1717,7 +1717,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                       type="checkbox"
                       checked={isLayoutLocked}
                       onChange={(e) => setIsLayoutLocked(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                      className="w-3.5 h-3.5 rounded-sm text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer"
                     />
                     <span className="flex items-center gap-1">
                       {isLayoutLocked ? (
@@ -1731,7 +1731,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
 
                   {!isLayoutLocked && (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                      <span className="text-[10px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-sm font-bold flex items-center gap-1">
                         <GripHorizontal className="w-3 h-3 text-amber-600" />
                         Free Dragging Active
                       </span>
@@ -1752,14 +1752,14 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setGraphZoom((z) => Math.min(1.8, z + 0.1))}
-                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-xs"
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-2xs"
                   title="Zoom In"
                 >
                   <ZoomIn className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setGraphZoom((z) => Math.max(0.4, z - 0.1))}
-                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-xs"
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-2xs"
                   title="Zoom Out"
                 >
                   <ZoomOut className="w-3.5 h-3.5" />
@@ -1772,7 +1772,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                     setSelectedBlockId(null);
                     setHoveredBlockId(null);
                   }}
-                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-xs"
+                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 shadow-2xs"
                   title="Reset Zoom, Pan & Selection"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -1966,7 +1966,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                       onMouseEnter={() => setHoveredBlockId(block.id)}
                       onMouseLeave={() => setHoveredBlockId(null)}
                       onClick={() => setSelectedBlockId(block.id)}
-                      className={`bg-white rounded-xl border shadow-sm transition-all duration-150 cursor-pointer overflow-hidden ${cardBorder} ${
+                      className={`bg-white rounded-xl border shadow-xs transition-all duration-150 cursor-pointer overflow-hidden ${cardBorder} ${
                         isHovered || isSelected ? 'ring-2 ring-indigo-500 shadow-md scale-[1.01]' : ''
                       }`}
                     >
@@ -1979,7 +1979,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}`}>
+                          <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold border ${badgeClass}`}>
                             {isMatched ? 'MATCHED' : isChanged ? `MODIFIED (${block.similarity}%)` : 'SAMPLE A ONLY'}
                           </span>
                           {block.matched_block_id && (
@@ -1992,7 +1992,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                                   setSelectedBlockId(block.matched_block_id!);
                                 }
                               }}
-                              className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-white/80 transition-colors"
+                              className="p-1 rounded-sm text-slate-400 hover:text-indigo-600 hover:bg-white/80 transition-colors"
                               title="Jump to matching block in Sample B"
                             >
                               <Link2 className="w-3.5 h-3.5" />
@@ -2067,7 +2067,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                                     setSelectedBlockId(e.target);
                                   }
                                 }}
-                                className={`px-2 py-0.5 rounded border flex items-center gap-1 font-semibold transition-colors cursor-pointer ${edgePill}`}
+                                className={`px-2 py-0.5 rounded-sm border flex items-center gap-1 font-semibold transition-colors cursor-pointer ${edgePill}`}
                                 title={`Jump to ${targetLabel}`}
                               >
                                 <CornerDownRight className="w-2.5 h-2.5" />
@@ -2142,7 +2142,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                       onMouseEnter={() => setHoveredBlockId(block.id)}
                       onMouseLeave={() => setHoveredBlockId(null)}
                       onClick={() => setSelectedBlockId(block.id)}
-                      className={`bg-white rounded-xl border shadow-sm transition-all duration-150 cursor-pointer overflow-hidden ${cardBorder} ${
+                      className={`bg-white rounded-xl border shadow-xs transition-all duration-150 cursor-pointer overflow-hidden ${cardBorder} ${
                         isHovered || isSelected ? 'ring-2 ring-indigo-500 shadow-md scale-[1.01]' : ''
                       }`}
                     >
@@ -2155,7 +2155,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}`}>
+                          <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold border ${badgeClass}`}>
                             {isMatched ? 'MATCHED' : isChanged ? `MODIFIED (${block.similarity}%)` : 'SAMPLE B ONLY'}
                           </span>
                           {block.matched_block_id && (
@@ -2168,7 +2168,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                                   setSelectedBlockId(block.matched_block_id!);
                                 }
                               }}
-                              className="p-1 rounded text-slate-400 hover:text-purple-600 hover:bg-white/80 transition-colors"
+                              className="p-1 rounded-sm text-slate-400 hover:text-purple-600 hover:bg-white/80 transition-colors"
                               title="Jump to matching block in Sample A"
                             >
                               <Link2 className="w-3.5 h-3.5" />
@@ -2243,7 +2243,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                                     setSelectedBlockId(e.target);
                                   }
                                 }}
-                                className={`px-2 py-0.5 rounded border flex items-center gap-1 font-semibold transition-colors cursor-pointer ${edgePill}`}
+                                className={`px-2 py-0.5 rounded-sm border flex items-center gap-1 font-semibold transition-colors cursor-pointer ${edgePill}`}
                                 title={`Jump to ${targetLabel}`}
                               >
                                 <CornerDownRight className="w-2.5 h-2.5" />
@@ -2269,7 +2269,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
       {/* 2. LINEAR DISASSEMBLY DIFF (Light Theme)                                 */}
       {/* ========================================================================= */}
       {subTab === 'disassembly' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-slate-800">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden text-slate-800">
           <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 font-mono">
@@ -2360,7 +2360,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
       {/* 3. SECTIONS TABLE DIFF                                                    */}
       {/* ========================================================================= */}
       {subTab === 'sections' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
@@ -2398,7 +2398,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                   return (
                     <tr key={idx} className="hover:bg-slate-50 transition-colors">
                       <td className="py-2.5 px-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${statusBadge}`}>
+                        <span className={`px-2 py-0.5 rounded-sm text-[10px] font-semibold border ${statusBadge}`}>
                           {s.status}
                         </span>
                       </td>
@@ -2455,7 +2455,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
       {subTab === 'imports' && (
         <div className="space-y-4">
           {/* Controls Bar: Search & Filter Tabs */}
-          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs flex flex-col sm:flex-row gap-3 items-center justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setImportFilter('all')}
@@ -2516,14 +2516,14 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                 value={importSearch}
                 onChange={(e) => setImportSearch(e.target.value)}
                 placeholder="Search APIs or DLLs..."
-                className="w-full pl-8 pr-3 py-1 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                className="w-full pl-8 pr-3 py-1 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
               />
             </div>
           </div>
 
           {/* Common / Matched APIs Section */}
           {(importFilter === 'all' || importFilter === 'matched' || importFilter === 'suspicious') && filteredMatched.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="px-4 py-2.5 bg-emerald-50/70 border-b border-emerald-100 flex items-center justify-between">
                 <span className="text-xs font-bold font-mono text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -2544,7 +2544,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                     <div className="flex items-center justify-between">
                       <span className="font-mono font-bold text-slate-900">{imp.name || imp.api}</span>
                       {imp.is_suspicious && (
-                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-rose-100 text-rose-700 font-bold">
+                        <span className="text-[9px] font-mono px-1 py-0.2 rounded-sm bg-rose-100 text-rose-700 font-bold">
                           SUSPICIOUS
                         </span>
                       )}
@@ -2561,7 +2561,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
 
           {/* Unique to Sample A APIs */}
           {(importFilter === 'all' || importFilter === 'unique_a' || importFilter === 'suspicious') && filteredUniqueA.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="px-4 py-2.5 bg-indigo-50/70 border-b border-indigo-100 flex items-center justify-between">
                 <span className="text-xs font-bold font-mono text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
@@ -2582,7 +2582,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                     <div className="flex items-center justify-between">
                       <span className="font-mono font-bold text-slate-900">{imp.name || imp.api}</span>
                       {imp.is_suspicious && (
-                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-rose-100 text-rose-700 font-bold">
+                        <span className="text-[9px] font-mono px-1 py-0.2 rounded-sm bg-rose-100 text-rose-700 font-bold">
                           SUSPICIOUS
                         </span>
                       )}
@@ -2599,7 +2599,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
 
           {/* Unique to Sample B APIs */}
           {(importFilter === 'all' || importFilter === 'unique_b' || importFilter === 'suspicious') && filteredUniqueB.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="px-4 py-2.5 bg-purple-50/70 border-b border-purple-100 flex items-center justify-between">
                 <span className="text-xs font-bold font-mono text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
@@ -2620,7 +2620,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
                     <div className="flex items-center justify-between">
                       <span className="font-mono font-bold text-slate-900">{imp.name || imp.api}</span>
                       {imp.is_suspicious && (
-                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-rose-100 text-rose-700 font-bold">
+                        <span className="text-[9px] font-mono px-1 py-0.2 rounded-sm bg-rose-100 text-rose-700 font-bold">
                           SUSPICIOUS
                         </span>
                       )}
@@ -2641,7 +2641,7 @@ export const BinDiffViewer: React.FC<BinDiffViewerProps> = ({ bindiff }) => {
       {/* 5. COMPILER & RICH HEADER TOOLCHAIN                                       */}
       {/* ========================================================================= */}
       {subTab === 'rich_header' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">

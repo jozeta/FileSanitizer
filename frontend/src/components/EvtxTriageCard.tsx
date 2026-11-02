@@ -1007,7 +1007,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
   if (!evtxInfo) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">
+      <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-xs">
         <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-4" />
         <h3 className="text-base font-bold text-slate-800">Processing Windows Event Log Data</h3>
         <p className="text-xs text-slate-500 font-mono mt-1">Extracting security events, timelines, and threat vectors...</p>
@@ -1019,7 +1019,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
     <div className="space-y-6">
       {/* Executive EVTX Security Verdict Banner */}
       {evtxInfo.evtx_verdict && (
-        <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+        <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 sm:p-7 shadow-2xs space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div
@@ -1096,7 +1096,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 <div className="pt-2 flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">MITRE ATT&amp;CK:</span>
                   {evtxInfo.evtx_verdict.mitre_attack_techniques.map((t, idx) => (
-                    <span key={idx} className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[10px] font-semibold">
+                    <span key={idx} className="px-2 py-0.5 rounded-sm bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[10px] font-semibold">
                       {t}
                     </span>
                   ))}
@@ -1129,7 +1129,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
       )}
 
       {/* Top Banner & Core Metrics */}
-      <div className="p-6 bg-white text-slate-900 rounded-3xl shadow-sm border border-slate-200">
+      <div className="p-6 bg-white text-slate-900 rounded-3xl shadow-xs border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -1271,7 +1271,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
       </div>
 
       {/* Sensitive Event IDs Quick-Filter Strip */}
-      <div className="p-4 bg-white border border-slate-200 rounded-3xl shadow-xs">
+      <div className="p-4 bg-white border border-slate-200 rounded-3xl shadow-2xs">
         <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-2.5">
           High-Value &amp; Sensitive Security Event IDs:
         </span>
@@ -1287,7 +1287,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 }}
                 className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
+                    ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
                     : count > 0
                     ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
                     : 'bg-slate-50/50 text-slate-400 border-slate-100'
@@ -1315,7 +1315,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-2xs">
         <div className="flex border-b border-slate-200 gap-2 mb-6 overflow-x-auto">
           <button
             onClick={() => setActiveTab('timeline')}
@@ -1909,7 +1909,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                       setTimeDisplayConfig(updated);
                       setTimeConfig(updated);
                     }}
-                    className="bg-transparent text-[11px] font-mono text-slate-700 focus:outline-none cursor-pointer"
+                    className="bg-transparent text-[11px] font-mono text-slate-700 focus:outline-hidden cursor-pointer"
                   >
                     <option value="UTC">UTC</option>
                     <option value="LOCAL">Local Time</option>
@@ -1929,7 +1929,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                     type="checkbox"
                     checked={groupSimilar}
                     onChange={(e) => setGroupSimilar(e.target.checked)}
-                    className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                    className="rounded-sm text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
                   />
                   <Layers className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Group similar activities</span>
@@ -1991,7 +1991,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 <button
                   type="button"
                   onClick={() => setTimelineMode('all')}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
                 >
                   Show All {rawTimelineList.length} Records in Timeline
                 </button>
@@ -2178,7 +2178,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                                     {tokens.map((tok: string) => (
                                       <span
                                         key={tok}
-                                        className="px-1.5 py-0.5 bg-rose-100 text-rose-800 font-mono font-bold rounded"
+                                        className="px-1.5 py-0.5 bg-rose-100 text-rose-800 font-mono font-bold rounded-sm"
                                       >
                                         {tok}
                                       </span>
@@ -2347,13 +2347,13 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                           {/* Basic Metadata Badges */}
                           <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono text-slate-500 pt-1">
                             {ev.computer && (
-                              <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded">
+                              <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-sm">
                                 <Monitor className="w-3 h-3 text-slate-400" />
                                 <span>{ev.computer}</span>
                               </span>
                             )}
                             {ev.user && (
-                              <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded">
+                              <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-sm">
                                 <User className="w-3 h-3 text-slate-400" />
                                 <span>{ev.user}</span>
                               </span>
@@ -2375,7 +2375,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                                     onClick={() =>
                                       copyToClipboard(JSON.stringify(ev.details, null, 2), `ev-${idx}`)
                                     }
-                                    className="p-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded text-slate-700 text-[10px] flex items-center gap-1 cursor-pointer shadow-2xs"
+                                    className="p-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-sm text-slate-700 text-[10px] flex items-center gap-1 cursor-pointer shadow-2xs"
                                   >
                                     {copiedId === `ev-${idx}` ? (
                                       <Check className="w-3 h-3 text-emerald-600" />
@@ -2608,7 +2608,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 value={entitiesSearch}
                 onChange={(e) => setEntitiesSearch(e.target.value)}
                 placeholder="Filter entities, users, hosts, IPs..."
-                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium"
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-1 focus:ring-amber-500 font-medium"
               />
               {entitiesSearch && (
                 <button
@@ -2648,7 +2648,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                             </span>
                             <div className="flex items-center gap-1">
                               {user.isPrivileged && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-rose-100 text-rose-800 border border-rose-200">
+                                <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-bold uppercase bg-rose-100 text-rose-800 border border-rose-200">
                                   Privileged
                                 </span>
                               )}
@@ -2764,7 +2764,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                         </div>
 
                         <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getSeverityBadge(comp.highestSeverity)}`}>
+                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${getSeverityBadge(comp.highestSeverity)}`}>
                             {comp.highestSeverity}
                           </span>
 
@@ -2843,7 +2843,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                         </div>
 
                         <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getSeverityBadge(ipItem.highestSeverity)}`}>
+                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${getSeverityBadge(ipItem.highestSeverity)}`}>
                             {ipItem.highestSeverity}
                           </span>
 
@@ -2956,7 +2956,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                             </span>
                             <div className="flex items-center gap-1">
                               {pItem.isLolbin && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-100 text-amber-900 border border-amber-200">
+                                <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-bold uppercase bg-amber-100 text-amber-900 border border-amber-200">
                                   LOLBin
                                 </span>
                               )}
@@ -2987,7 +2987,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
                             {pItem.decodedCommands.size > 0 && (
                               <div className="pt-1">
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-100 text-emerald-800">
+                                <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-bold uppercase bg-emerald-100 text-emerald-800">
                                   🔓 Decoded Base64 Payload Available
                                 </span>
                               </div>
@@ -3495,7 +3495,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                           ? 'bg-rose-50/50 border-rose-200'
                           : isHigh
                           ? 'bg-amber-50/40 border-amber-200'
-                          : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                          : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
                       }`}>
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                           <div className="space-y-1">
@@ -3509,7 +3509,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                                 {item.timestamp ? formatTimestamp(item.timestamp, timeConfig) : 'Unknown Time'}
                               </span>
                               {item.event_ids && item.event_ids.length > 0 && (
-                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-sm bg-slate-100 text-slate-600">
                                   EID {item.event_ids.join(', ')}
                                 </span>
                               )}
@@ -3561,17 +3561,17 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
         {activeTab === 'usb' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Total Hardware Events</span>
                 <p className="text-2xl font-black text-slate-900 mt-1">{usbHistoryList.length}</p>
               </div>
-              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Unique Storage Devices</span>
                 <p className="text-2xl font-black text-indigo-600 mt-1">
                   {new Set(usbHistoryList.map(u => u.serial_number || u.device_name)).size}
                 </p>
               </div>
-              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Mounted Devices</span>
                 <p className="text-2xl font-black text-emerald-600 mt-1">
                   {usbHistoryList.filter(u => u.status === 'Mounted').length}
@@ -3580,7 +3580,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             </div>
 
             {usbHistoryList.length > 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
@@ -3655,7 +3655,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                     onClick={() => setFileAuditCategoryFilter(cat)}
                     className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       fileAuditCategoryFilter === cat
-                        ? 'bg-indigo-600 text-white shadow-xs'
+                        ? 'bg-indigo-600 text-white shadow-2xs'
                         : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
@@ -3676,7 +3676,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             </div>
 
             {filteredFileAccessAudit.length > 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
@@ -3706,7 +3706,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                             <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                               <span>{rec.filename || rec.file_path}</span>
                               {rec.is_admin_share && (
-                                <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-bold text-[9px]">
+                                <span className="px-1.5 py-0.2 rounded-sm bg-rose-100 text-rose-700 font-bold text-[9px]">
                                   ADMIN SHARE
                                 </span>
                               )}
@@ -3738,7 +3738,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                                   computer: rec.computer,
                                   timestamp: rec.timestamp
                                 })}
-                                className="px-2 py-1 text-[11px] font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                                className="px-2 py-1 text-[11px] font-semibold rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                               >
                                 Correlate
                               </button>
@@ -3774,17 +3774,17 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Total Print Jobs</span>
                 <p className="text-2xl font-black text-slate-900 mt-1">{printAuditList.length}</p>
               </div>
-              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Total Pages Printed</span>
                 <p className="text-2xl font-black text-indigo-600 mt-1">
                   {printAuditList.reduce((acc, p) => acc + (p.pages || 0), 0)}
                 </p>
               </div>
-              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Flagged Sensitive Prints</span>
                 <p className="text-2xl font-black text-rose-600 mt-1">
                   {printAuditList.filter(p => p.is_sensitive || p.is_bulk_print).length}
@@ -3793,7 +3793,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             </div>
 
             {printAuditList.length > 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
@@ -3814,12 +3814,12 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                             <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                               <span>{item.document_name}</span>
                               {item.is_sensitive && (
-                                <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-bold text-[9px]">
+                                <span className="px-1.5 py-0.2 rounded-sm bg-rose-100 text-rose-700 font-bold text-[9px]">
                                   SENSITIVE
                                 </span>
                               )}
                               {item.is_bulk_print && (
-                                <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-700 font-bold text-[9px]">
+                                <span className="px-1.5 py-0.2 rounded-sm bg-amber-100 text-amber-700 font-bold text-[9px]">
                                   BULK PRINT
                                 </span>
                               )}
@@ -3854,17 +3854,17 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
         {activeTab === 'rdp' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Total RDP Events</span>
                 <p className="text-2xl font-black text-slate-900 mt-1">{rdpSessionsList.length}</p>
               </div>
-              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Unique Remote Clients</span>
                 <p className="text-2xl font-black text-indigo-600 mt-1">
                   {new Set(rdpSessionsList.map(r => r.client_ip)).size}
                 </p>
               </div>
-              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Target Accounts</span>
                 <p className="text-2xl font-black text-emerald-600 mt-1">
                   {new Set(rdpSessionsList.map(r => r.user)).size}
@@ -3873,7 +3873,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             </div>
 
             {rdpSessionsList.length > 0 ? (
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
@@ -3953,10 +3953,10 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             {deobfuscatedCommandsList.length > 0 ? (
               <div className="space-y-4">
                 {deobfuscatedCommandsList.map((cmd, idx) => (
-                  <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                  <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold uppercase font-mono">
+                        <span className="px-2 py-0.5 rounded-sm bg-rose-100 text-rose-800 text-[10px] font-bold uppercase font-mono">
                           Obfuscated Command
                         </span>
                         <span className="text-xs font-semibold text-slate-700 font-mono">{cmd.process}</span>
@@ -3969,7 +3969,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                       </div>
                       <div className="flex items-center gap-2">
                         {cmd.obfuscation_types?.map((t, tidx) => (
-                          <span key={tidx} className="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-semibold">
+                          <span key={tidx} className="px-2 py-0.5 rounded-sm bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-semibold">
                             {t}
                           </span>
                         ))}
@@ -4031,7 +4031,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                           {cmd.steps.map((st: any, sidx: number) => {
                             const label = typeof st === 'string' ? st : `${st.type || `Stage ${st.step || sidx + 1}`}: ${st.output ? String(st.output).slice(0, 40) + '...' : ''}`;
                             return (
-                              <span key={sidx} className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px]" title={typeof st === 'object' && st.output ? String(st.output) : undefined}>
+                              <span key={sidx} className="px-2 py-0.5 rounded-sm bg-slate-100 text-slate-700 text-[10px]" title={typeof st === 'object' && st.output ? String(st.output) : undefined}>
                                 {label}
                               </span>
                             );
@@ -4071,7 +4071,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             {evtxInfo.sigma_alerts && evtxInfo.sigma_alerts.length > 0 ? (
               <div className="space-y-4">
                 {evtxInfo.sigma_alerts.map((alert, idx) => (
-                  <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                  <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
@@ -4089,7 +4089,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                         <span className="text-[10px] font-mono text-slate-400">({alert.rule_id})</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-mono font-bold">
+                        <span className="px-2 py-0.5 rounded-sm bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-mono font-bold">
                           MITRE {alert.mitre_technique}
                         </span>
                         <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold font-mono">
@@ -4109,7 +4109,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                           {alert.sample_events.map((se, seIdx) => (
                             <div key={seIdx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.2 rounded-sm bg-indigo-100 text-indigo-800 text-[10px] font-bold">
                                   Event {se.event_id}
                                 </span>
                                 <span className="text-slate-500 text-[11px]">{se.timestamp ? formatTimestamp(se.timestamp, timeConfig) : 'N/A'}</span>
@@ -4187,7 +4187,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
             {/* Record ID Continuity & Timeline Gaps */}
             {evtxInfo.capture_integrity?.continuity && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Activity className="w-4 h-4 text-indigo-600" />
                   <span>Record ID Sequence Continuity &amp; Timestamp Gaps</span>
@@ -4200,7 +4200,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                           <span>Record ID Gap: Missing {g.missing_count} events (from ID {g.from_record_id} to {g.to_record_id})</span>
                         </div>
-                        <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-800 text-[10px] font-bold uppercase font-mono">
+                        <span className="px-2 py-0.5 rounded-sm bg-amber-200 text-amber-800 text-[10px] font-bold uppercase font-mono">
                           {g.severity}
                         </span>
                       </div>
@@ -4228,7 +4228,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
             {/* Standard Channels Inventory Table */}
             {evtxInfo.coverage_audit && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <Layers className="w-4 h-4 text-indigo-600" />
@@ -4335,7 +4335,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
             {/* Logon Types Breakdown */}
             {evtxInfo.auth_forensics && Object.keys(evtxInfo.auth_forensics.logon_types_breakdown).length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Key className="w-4 h-4 text-indigo-600" />
                   <span>Logon Types Breakdown (Event ID 4624)</span>
@@ -4360,7 +4360,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             {evtxInfo.auth_forensics && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Password Spraying */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                   <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <Crosshair className="w-4 h-4 text-rose-600" />
                     <span>Password Spraying Sources</span>
@@ -4371,7 +4371,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                         <div key={idx} className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="font-bold">Source IP: {ps.source_ip}</span>
-                            <span className="px-2 py-0.5 rounded bg-rose-200 text-rose-800 text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-sm bg-rose-200 text-rose-800 text-[10px] font-bold">
                               {ps.targeted_accounts_count} accounts targeted
                             </span>
                           </div>
@@ -4387,7 +4387,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 </div>
 
                 {/* Brute Force to Success */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                   <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <Lock className="w-4 h-4 text-amber-600" />
                     <span>Brute Force Followed by Success</span>
@@ -4398,7 +4398,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                         <div key={idx} className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="font-bold">Account: {bf.target_account}</span>
-                            <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-800 text-[10px] font-bold">
+                            <span className="px-2 py-0.5 rounded-sm bg-amber-200 text-amber-800 text-[10px] font-bold">
                               {bf.failure_count} failures before success
                             </span>
                           </div>
@@ -4418,7 +4418,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
             {/* Kerberoasting Candidates Table */}
             {evtxInfo.auth_forensics && evtxInfo.auth_forensics.kerberos_forensics.kerberoasting_candidates.length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Key className="w-4 h-4 text-rose-600" />
                   <span>Potential Kerberoasting Service Ticket Requests (RC4-HMAC 0x17)</span>
@@ -4456,7 +4456,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
         {activeTab === 'account_privilege' && (
           <div className="space-y-6">
             {/* Sensitive Group Additions */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
               <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <User className="w-4 h-4 text-rose-600" />
                 <span>Sensitive Security Group Additions (Event 4728, 4732, 4756)</span>
@@ -4501,7 +4501,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
 
             {/* Users Created & Password Resets */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <User className="w-4 h-4 text-indigo-600" />
                   <span>User Accounts Created (4720)</span>
@@ -4525,7 +4525,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 )}
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Lock className="w-4 h-4 text-amber-600" />
                   <span>Password Reset Attempts (4724)</span>
@@ -4568,14 +4568,14 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
             {evtxInfo.lateral_chains && evtxInfo.lateral_chains.length > 0 ? (
               <div className="space-y-4">
                 {evtxInfo.lateral_chains.map((chain, idx) => (
-                  <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                  <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                       <div>
                         <span className="text-xs font-bold text-slate-500 uppercase font-mono tracking-wider">Target Endpoint:</span>
                         <h4 className="text-base font-bold font-mono text-slate-900">{chain.target_host}</h4>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold uppercase font-mono">
+                        <span className="px-2 py-0.5 rounded-sm bg-rose-100 text-rose-800 text-[10px] font-bold uppercase font-mono">
                           {chain.severity}
                         </span>
                         <span className="text-xs font-mono text-slate-500">Source: {chain.source_ip} ({chain.sample_actor})</span>
@@ -4630,7 +4630,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                 {Object.entries(evtxInfo.offline_tools_guide).map(([k, item]) => {
                   if (!item) return null;
                   return (
-                    <div key={k} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                    <div key={k} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="text-sm font-bold text-slate-900">{item.title}</h4>
@@ -4756,7 +4756,7 @@ export const EvtxTriageCard: React.FC<EvtxTriageCardProps> = ({
                             onNavigateToPcap(pcapJob.job_id || pcapJob.jobId, targetIp);
                           }
                         }}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 cursor-pointer shadow-sm"
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 cursor-pointer shadow-xs"
                       >
                         <ExternalLink className="w-4 h-4" />
                         <span>Open Matching Flows in PCAP Viewer</span>

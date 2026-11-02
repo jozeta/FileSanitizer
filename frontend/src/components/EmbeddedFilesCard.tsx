@@ -120,7 +120,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
 
   if (!embeddedFiles || embeddedFiles.length === 0) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <Layers className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <h4 className="text-sm font-bold text-slate-800">No Embedded Files Discovered</h4>
         <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
@@ -133,7 +133,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
         <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-purple-50 text-purple-600 rounded-2xl border border-purple-100 text-lg">
@@ -189,7 +189,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by file name, origin stream, MIME type, or SHA-256..."
-              className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono shadow-xs"
+              className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-purple-500 font-mono shadow-2xs"
             />
           </div>
 
@@ -198,7 +198,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
               onClick={() => setFilterType('all')}
               className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                 filterType === 'all'
-                  ? 'bg-white text-slate-900 shadow-sm'
+                  ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -208,7 +208,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
               onClick={() => setFilterType('dangerous')}
               className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                 filterType === 'dangerous'
-                  ? 'bg-white text-rose-700 shadow-sm font-bold'
+                  ? 'bg-white text-rose-700 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -218,7 +218,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
               onClick={() => setFilterType('safe')}
               className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                 filterType === 'safe'
-                  ? 'bg-white text-emerald-700 shadow-sm'
+                  ? 'bg-white text-emerald-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -245,7 +245,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
           return (
             <div
               key={file.id}
-              className={`bg-white rounded-2xl border p-5 transition-all shadow-xs ${
+              className={`bg-white rounded-2xl border p-5 transition-all shadow-2xs ${
                 file.is_dangerous
                   ? 'border-rose-300 bg-rose-50/20'
                   : 'border-slate-200 hover:border-slate-300'
@@ -317,7 +317,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
 
                     {/* Hashes */}
                     <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] font-mono text-slate-500">
-                      <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                      <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-sm border border-slate-200">
                         <span className="text-slate-400">SHA-256:</span>
                         <span className="text-slate-800 font-semibold">{truncateHash(file.sha256, 10)}</span>
                         <button
@@ -331,7 +331,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
                       </div>
 
                       {file.md5 && (
-                        <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                        <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-sm border border-slate-200">
                           <span className="text-slate-400">MD5:</span>
                           <span className="text-slate-800">{truncateHash(file.md5, 8)}</span>
                           <button
@@ -354,7 +354,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
                   <a
                     href={apiClient.getEmbeddedFileDownloadUrl(jobId, file.id)}
                     download={file.name}
-                    className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
                     title={`Download extracted file payload '${file.name}'`}
                   >
                     <Download className="w-3.5 h-3.5 text-slate-500" />
@@ -366,7 +366,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectJob && onSelectJob(targetJobId)}
-                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                       title={`Go to already analysed file '${targetJobName}' in current workspace`}
                     >
                       <ExternalLink className="w-3.5 h-3.5 shrink-0" />
@@ -377,7 +377,7 @@ export const EmbeddedFilesCard: React.FC<EmbeddedFilesCardProps> = ({
                       type="button"
                       onClick={() => handleAnalyze(file)}
                       disabled={isAnalyzing}
-                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                       title="Send this extracted embedded file to analysis as a new job"
                     >
                       {isAnalyzing ? (

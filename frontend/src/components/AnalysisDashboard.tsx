@@ -572,7 +572,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
 
   if (!job) {
     return (
-      <div className="max-w-[96rem] mx-auto py-20 px-4 text-center">
+      <div className="max-w-384 mx-auto py-20 px-4 text-center">
         <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
         <p className="text-sm text-slate-600 font-mono">Loading job workspace...</p>
       </div>
@@ -639,7 +639,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
   const formatTabConfig = getFormatTabConfig(formatSections, job);
 
   return (
-    <div className="max-w-[96rem] mx-auto py-8 px-4 sm:px-6">
+    <div className="max-w-384 mx-auto py-8 px-4 sm:px-6">
       {/* Back Button */}
       <button
         onClick={() => {
@@ -659,10 +659,10 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
         <div className="fixed top-20 right-6 z-50 max-w-md animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`p-4 rounded-2xl shadow-xl border flex items-start gap-3 ${
             dashboardNotice.type === 'error'
-              ? 'bg-rose-50/95 border-rose-200 text-rose-900 backdrop-blur-sm'
+              ? 'bg-rose-50/95 border-rose-200 text-rose-900 backdrop-blur-xs'
               : dashboardNotice.type === 'warning'
-              ? 'bg-amber-50/95 border-amber-200 text-amber-900 backdrop-blur-sm'
-              : 'bg-indigo-50/95 border-indigo-200 text-indigo-900 backdrop-blur-sm'
+              ? 'bg-amber-50/95 border-amber-200 text-amber-900 backdrop-blur-xs'
+              : 'bg-indigo-50/95 border-indigo-200 text-indigo-900 backdrop-blur-xs'
           }`}>
             <div className={`p-1.5 rounded-xl shrink-0 ${
               dashboardNotice.type === 'error' ? 'bg-rose-100 text-rose-700' :
@@ -705,13 +705,13 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
       ) : (
         <>
           {/* Top File Summary Header */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-sm mb-6">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-xs mb-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-4 min-w-0">
                 {job.thumbnail_available && job.thumbnail_url && (
                   <div
                     onClick={() => setShowThumbnailModal(true)}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-slate-200 hover:border-indigo-400 shadow-sm shrink-0 bg-slate-50 cursor-pointer group relative transition-all"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-slate-200 hover:border-indigo-400 shadow-xs shrink-0 bg-slate-50 cursor-pointer group relative transition-all"
                     title="Click to enlarge preview"
                   >
                     <img
@@ -850,7 +850,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
 
           {/* Password-Protected File Locked Banner */}
           {job.is_password_protected && !job.is_unlocked && (
-            <div className="mb-6 p-5 bg-amber-50/90 border border-amber-300 rounded-3xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="mb-6 p-5 bg-amber-50/90 border border-amber-300 rounded-3xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-start gap-3.5">
                 <div className="p-2.5 bg-amber-100 text-amber-800 rounded-2xl shrink-0 text-xl border border-amber-200">
                   <Lock className="w-5 h-5 text-amber-700" />
@@ -885,12 +885,12 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                   placeholder="Enter archive / file password..."
                   value={unlockPassword}
                   onChange={(e) => setUnlockPassword(e.target.value)}
-                  className="bg-white border border-amber-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono shadow-inner"
+                  className="bg-white border border-amber-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono shadow-inner"
                 />
                 <button
                   type="submit"
                   disabled={isUnlocking || !unlockPassword}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   {isUnlocking ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Unlock className="w-3.5 h-3.5" />}
                   <span>{isUnlocking ? 'Decrypting...' : 'Unlock & Re-analyze'}</span>
@@ -910,7 +910,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                     : 'Document Successfully Decrypted'}
                 </span>
                 {job.unlock_password && (
-                  <span className="text-emerald-700 font-mono bg-emerald-100/70 px-2 py-0.5 rounded border border-emerald-200">
+                  <span className="text-emerald-700 font-mono bg-emerald-100/70 px-2 py-0.5 rounded-sm border border-emerald-200">
                     Password: {job.unlock_password}
                   </span>
                 )}
@@ -921,10 +921,10 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
 
       {/* Extension Mismatch / Spoofing Re-analysis Banner */}
       {mismatchFinding && (
-        <div className="mb-6 p-5 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-300 rounded-3xl shadow-sm text-slate-900">
+        <div className="mb-6 p-5 bg-linear-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-300 rounded-3xl shadow-xs text-slate-900">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
-              <div className="p-2.5 bg-amber-500 text-white rounded-2xl shadow-xs shrink-0 font-bold text-lg">
+              <div className="p-2.5 bg-amber-500 text-white rounded-2xl shadow-2xs shrink-0 font-bold text-lg">
                 ⚠️
               </div>
               <div>
@@ -957,7 +957,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                   type="button"
                   disabled={isReanalyzing}
                   onClick={() => mismatchFinding.details?.suggested_extension && handleReanalyze(mismatchFinding.details.suggested_extension)}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isReanalyzing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                   <span>Re-analyze as {mismatchFinding.details?.suggested_extension}</span>
@@ -976,7 +976,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                   type="button"
                   disabled={isReanalyzing || !customExt.trim()}
                   onClick={() => handleReanalyze(customExt.trim())}
-                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
                 >
                   Override Ext
                 </button>
@@ -1023,7 +1023,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
           onClick={() => setActiveTab('security')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
             activeTab === 'security'
-              ? 'bg-slate-900 text-white shadow-sm'
+              ? 'bg-slate-900 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -1041,7 +1041,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
             onClick={() => setActiveTab('metadata')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'metadata'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -1054,7 +1054,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
           onClick={() => setActiveTab('urls')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
             activeTab === 'urls'
-              ? 'bg-slate-900 text-white shadow-sm'
+              ? 'bg-slate-900 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -1076,7 +1076,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 isFormatActive
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100'
               }`}
             >
@@ -1096,7 +1096,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
             onClick={() => setActiveTab('timeline')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'timeline'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
             }`}
           >
@@ -1110,7 +1110,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
             onClick={() => setActiveTab('entropy')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'entropy'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
             }`}
           >
@@ -1129,7 +1129,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
             onClick={() => setActiveTab('graph')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'graph'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
             }`}
           >
@@ -1149,7 +1149,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
             onClick={() => setActiveTab('diagnostics')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'diagnostics'
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
             }`}
           >
@@ -1171,7 +1171,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
             onClick={() => setActiveTab('sanitize')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'sanitize'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-blue-700 bg-blue-50 hover:bg-blue-100'
             }`}
           >
@@ -1236,7 +1236,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
                       }}
                       className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                         isSecActive
-                          ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80 font-bold'
+                          ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80 font-bold'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                       }`}
                     >
@@ -1651,7 +1651,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
       {showThumbnailModal && job.thumbnail_url && (
         <div
           onClick={() => setShowThumbnailModal(false)}
-          className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-overlay-fade"
+          className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-overlay-fade"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1679,7 +1679,7 @@ export const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ jobId, cac
               <img
                 src={job.thumbnail_url}
                 alt={`Preview of ${job.filename}`}
-                className="w-full h-auto object-contain max-h-[68vh] rounded-xl shadow-xs"
+                className="w-full h-auto object-contain max-h-[68vh] rounded-xl shadow-2xs"
               />
             </div>
 
