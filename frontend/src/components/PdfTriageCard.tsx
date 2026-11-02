@@ -550,7 +550,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
 
   if (!pdfInfo) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">No PDF triage metadata available for this file.</p>
       </div>
@@ -558,7 +558,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
       {/* Top Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-100 gap-4">
         <div className="flex items-start gap-4">
@@ -795,7 +795,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                   </div>
 
                   {obfCount > 0 && (
-                    <div className="text-[10px] font-mono text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 mt-1">
+                    <div className="text-[10px] font-mono text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-sm border border-purple-200 mt-1">
                       ⚠️ {obfCount} hex-obfuscated (#xx)
                     </div>
                   )}
@@ -924,7 +924,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                 value={internalsSearch}
                 onChange={e => setInternalsSearch(e.target.value)}
                 placeholder="Search XRef, type, filter..."
-                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
               />
               {internalsSearch && (
                 <button
@@ -970,18 +970,18 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                       }`}
                     >
                       <td className="px-3.5 py-2 text-slate-600 font-bold">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
+                        <span className="px-2 py-0.5 rounded-sm bg-slate-100 text-slate-800 border border-slate-200">
                           #{obj.xref}
                         </span>
                       </td>
                       <td className="px-3.5 py-2 text-slate-800 font-semibold">{obj.type || 'Object'}</td>
                       <td className="px-3.5 py-2">
                         {obj.is_stream ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
                             Stream
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                             Dictionary
                           </span>
                         )}
@@ -1010,7 +1010,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                       </td>
                       <td className="px-3.5 py-2">
                         {obj.is_suspicious ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white animate-pulse">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-rose-600 text-white animate-pulse">
                             ⚠️ {obj.suspicious_reason}
                           </span>
                         ) : (
@@ -1070,7 +1070,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     </div>
                     <p className="text-slate-600 text-[11px] leading-relaxed">{apiItem.description}</p>
                     {apiItem.mitre && (
-                      <span className="inline-block text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                      <span className="inline-block text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-sm">
                         MITRE {apiItem.mitre}
                       </span>
                     )}
@@ -1115,7 +1115,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     onClick={() => setSelectedStreamIdx(idx)}
                     className={`w-full text-left p-2.5 rounded-xl text-xs font-mono transition-all flex items-center justify-between cursor-pointer ${
                       selectedStreamIdx === idx
-                        ? 'bg-white shadow-xs text-rose-700 font-bold border border-rose-200'
+                        ? 'bg-white shadow-2xs text-rose-700 font-bold border border-rose-200'
                         : 'text-slate-700 hover:bg-slate-100'
                     }`}
                   >
@@ -1347,7 +1347,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                           {dl.destination_uri}
                         </td>
                         <td className="px-3.5 py-2 text-center">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-rose-600 text-white">
                             Spoofed Link
                           </span>
                         </td>
@@ -1385,7 +1385,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                       <tr key={`white-${idx}`} className="hover:bg-indigo-50/30">
                         <td className="px-3.5 py-2 font-bold text-slate-700">p.{s.page}</td>
                         <td className="px-3.5 py-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
                             White-on-White
                           </span>
                         </td>
@@ -1398,7 +1398,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                       <tr key={`tiny-${idx}`} className="hover:bg-indigo-50/30">
                         <td className="px-3.5 py-2 font-bold text-slate-700">p.{s.page}</td>
                         <td className="px-3.5 py-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                             Sub-Pixel Font
                           </span>
                         </td>
@@ -1411,7 +1411,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                       <tr key={`off-${idx}`} className="hover:bg-indigo-50/30">
                         <td className="px-3.5 py-2 font-bold text-slate-700">p.{s.page}</td>
                         <td className="px-3.5 py-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
                             Off-Page Bounds
                           </span>
                         </td>
@@ -1488,10 +1488,10 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                   <span>Trailing Overlay Data Past Final %%EOF Marker</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white uppercase">
+                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-rose-600 text-white uppercase">
                     {structure_forensics.overlay_threat} Threat
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-900 text-white">
+                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-slate-900 text-white">
                     Entropy: {structure_forensics.overlay_entropy?.toFixed(2)} / 8.0
                   </span>
                 </div>
@@ -1546,11 +1546,11 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                         <td className="px-3.5 py-2 text-slate-500">[{sig.byte_range.join(', ')}]</td>
                         <td className="px-3.5 py-2 text-center">
                           {sig.has_shadow_attack ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white animate-pulse">
+                            <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-rose-600 text-white animate-pulse">
                               ⚠️ Shadow Attack ({sig.shadow_bytes_count} modified bytes)
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-emerald-100 text-emerald-800">
                               ✓ Range Valid
                             </span>
                           )}
@@ -1569,7 +1569,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
       {activeSubTab === 'embedded' && (
         <div className="space-y-4">
           {/* Header Banner */}
-          <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-sm">
+          <div className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs">
             <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 gap-3">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 text-lg">
@@ -1580,7 +1580,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     PDF Embedded Files &amp; Payload Attachments ({effectiveEmbeddedFiles.length})
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Extracted from PDF catalog <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700">/EmbeddedFiles</code>, <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700">/Names</code> tree, and annotation streams.
+                    Extracted from PDF catalog <code className="bg-slate-100 px-1 py-0.5 rounded-sm font-mono text-slate-700">/EmbeddedFiles</code>, <code className="bg-slate-100 px-1 py-0.5 rounded-sm font-mono text-slate-700">/Names</code> tree, and annotation streams.
                   </p>
                 </div>
               </div>
@@ -1631,7 +1631,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     value={embeddedSearch}
                     onChange={(e) => setEmbeddedSearch(e.target.value)}
                     placeholder="Search embedded files by filename, hash, or stream..."
-                    className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-mono"
                   />
                   {embeddedSearch && (
                     <button
@@ -1648,7 +1648,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     onClick={() => setEmbeddedFilter('all')}
                     className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                       embeddedFilter === 'all'
-                        ? 'bg-white text-slate-900 shadow-sm'
+                        ? 'bg-white text-slate-900 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -1658,7 +1658,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     onClick={() => setEmbeddedFilter('dangerous')}
                     className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                       embeddedFilter === 'dangerous'
-                        ? 'bg-white text-rose-700 shadow-sm font-bold'
+                        ? 'bg-white text-rose-700 shadow-xs font-bold'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -1668,7 +1668,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     onClick={() => setEmbeddedFilter('safe')}
                     className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                       embeddedFilter === 'safe'
-                        ? 'bg-white text-emerald-700 shadow-sm'
+                        ? 'bg-white text-emerald-700 shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -1681,7 +1681,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
 
           {/* Empty State */}
           {effectiveEmbeddedFiles.length === 0 ? (
-            <div className="p-10 bg-white border border-slate-200 rounded-3xl text-center shadow-xs">
+            <div className="p-10 bg-white border border-slate-200 rounded-3xl text-center shadow-2xs">
               <Layers className="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <h4 className="text-sm font-bold text-slate-800">No Embedded Files Discovered</h4>
               <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
@@ -1707,7 +1707,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                 return (
                   <div
                     key={file.id}
-                    className={`bg-white rounded-2xl border p-4.5 transition-all shadow-2xs hover:shadow-sm ${
+                    className={`bg-white rounded-2xl border p-4.5 transition-all shadow-2xs hover:shadow-xs ${
                       file.is_dangerous
                         ? 'border-rose-200 hover:border-rose-300'
                         : 'border-slate-200 hover:border-slate-300'
@@ -1819,7 +1819,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => onSelectJob && onSelectJob(targetJobId)}
-                              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs hover:shadow-2xs transition-all cursor-pointer"
                               title={`Go to already analysed file '${targetJobName}' in current workspace`}
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
@@ -1838,7 +1838,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                           <button
                             onClick={() => handleAnalyzeEmbedded(file)}
                             disabled={isAnalyzing}
-                            className="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                            className="px-3.5 py-2 bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs hover:shadow-2xs transition-all cursor-pointer disabled:opacity-50"
                             title="Queue this embedded file for independent sandbox, static, and dynamic analysis"
                           >
                             {isAnalyzing ? (
@@ -2038,7 +2038,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     <span>Hex-Encoded Token Evasion Detected ({selectedToken.obfuscated_samples.length} patterns)</span>
                   </div>
                   <p className="text-purple-800 leading-relaxed">
-                    Attackers insert hex escape sequences (e.g. <code className="bg-purple-100 px-1 py-0.5 rounded text-purple-950 font-mono">#4a</code> for 'J') to evade basic string and AV scanners while maintaining full PDF syntax validity:
+                    Attackers insert hex escape sequences (e.g. <code className="bg-purple-100 px-1 py-0.5 rounded-sm text-purple-950 font-mono">#4a</code> for 'J') to evade basic string and AV scanners while maintaining full PDF syntax validity:
                   </p>
                   <div className="flex flex-wrap gap-2 pt-1">
                     {selectedToken.obfuscated_samples.map((s, i) => (
@@ -2064,7 +2064,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     value={tokenSearchQuery}
                     onChange={e => setTokenSearchQuery(e.target.value)}
                     placeholder="Search occurrence snippet, xref, value..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                   />
                   {tokenSearchQuery && (
                     <button
@@ -2087,19 +2087,19 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     {/* Occurrence Header */}
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded font-mono font-bold bg-slate-200 text-slate-800 text-[11px]">
+                        <span className="px-2 py-0.5 rounded-sm font-mono font-bold bg-slate-200 text-slate-800 text-[11px]">
                           Item #{idx + 1}
                         </span>
                         {occ.xref !== undefined && occ.xref !== null && (
-                          <span className="px-2 py-0.5 rounded font-mono font-bold bg-blue-100 text-blue-800 text-[11px] border border-blue-200">
+                          <span className="px-2 py-0.5 rounded-sm font-mono font-bold bg-blue-100 text-blue-800 text-[11px] border border-blue-200">
                             XRef #{occ.xref}
                           </span>
                         )}
                         <span className="font-mono text-slate-700 font-semibold">
-                          Raw: <code className="text-slate-900 bg-white px-1.5 py-0.5 rounded border border-slate-200">{occ.raw_token || occ.token}</code>
+                          Raw: <code className="text-slate-900 bg-white px-1.5 py-0.5 rounded-sm border border-slate-200">{occ.raw_token || occ.token}</code>
                         </span>
                         {occ.is_obfuscated && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
                             Hex Obfuscated
                           </span>
                         )}
@@ -2332,7 +2332,7 @@ export const PdfTriageCard: React.FC<PdfTriageCardProps> = ({
                     value={streamTextSearch}
                     onChange={e => setStreamTextSearch(e.target.value)}
                     placeholder="Search in stream text..."
-                    className="w-full pl-8 pr-3 py-1 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full pl-8 pr-3 py-1 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                   />
                   {streamTextSearch && (
                     <button

@@ -131,7 +131,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
       }
       const lower = part.toLowerCase();
       if (vbaSuspicious.has(lower)) {
-        return <span key={i} className="text-rose-700 font-bold underline bg-rose-50 px-0.5 rounded border border-rose-200">{part}</span>;
+        return <span key={i} className="text-rose-700 font-bold underline bg-rose-50 px-0.5 rounded-sm border border-rose-200">{part}</span>;
       }
       if (vbaKeywords.has(lower)) {
         return <span key={i} className="text-indigo-600 font-semibold">{part}</span>;
@@ -159,7 +159,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
       }
       const lower = part.toLowerCase();
       if (jsSuspicious.has(lower)) {
-        return <span key={i} className="text-rose-700 font-bold underline bg-rose-50 px-0.5 rounded border border-rose-200">{part}</span>;
+        return <span key={i} className="text-rose-700 font-bold underline bg-rose-50 px-0.5 rounded-sm border border-rose-200">{part}</span>;
       }
       if (jsKeywords.has(lower)) {
         return <span key={i} className="text-indigo-600 font-semibold">{part}</span>;
@@ -169,7 +169,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 animate-overlay-fade">
+    <div className="fixed inset-0 z-9999 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-overlay-fade">
       <div className="relative w-full max-w-5xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-modal-fade">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-100 bg-white flex flex-wrap items-center justify-between gap-4">
@@ -184,7 +184,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
                     ? 'Extracted VBA Macro Source Code'
                     : 'Extracted JavaScript Source Code'}
                 </h3>
-                <span className="px-2 py-0.5 text-xs font-semibold rounded uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-sm uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
                   {safeCode.type.toUpperCase()}
                 </span>
               </div>
@@ -197,13 +197,13 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-xl border border-slate-200 flex items-center gap-1.5 transition-all shadow-xs"
+              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-xl border border-slate-200 flex items-center gap-1.5 transition-all shadow-2xs"
             >
               {copied ? '✓ Copied' : '📋 Copy Code'}
             </button>
             <button
               onClick={handleDownload}
-              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-xl border border-slate-200 flex items-center gap-1.5 transition-all shadow-xs"
+              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-xl border border-slate-200 flex items-center gap-1.5 transition-all shadow-2xs"
             >
               ⬇ Download
             </button>
@@ -230,7 +230,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
               placeholder="Search keywords, URLs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-slate-800 placeholder-slate-400 w-56 focus:outline-none focus:border-indigo-500"
+              className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-slate-800 placeholder-slate-400 w-56 focus:outline-hidden focus:border-indigo-500"
             />
             {searchQuery && (
               <button
@@ -250,7 +250,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
               onClick={() => setSelectedModuleIndex(-1)}
               className={`px-3 py-2 font-medium rounded-t-lg transition-colors border-b-2 flex items-center gap-1.5 ${
                 selectedModuleIndex === -1
-                  ? 'bg-white text-indigo-600 border-indigo-600 shadow-xs'
+                  ? 'bg-white text-indigo-600 border-indigo-600 shadow-2xs'
                   : 'text-slate-500 hover:text-slate-800 border-transparent'
               }`}
             >
@@ -264,7 +264,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
                 onClick={() => setSelectedModuleIndex(idx)}
                 className={`px-3 py-2 font-medium rounded-t-lg transition-colors border-b-2 flex items-center gap-1.5 whitespace-nowrap ${
                   selectedModuleIndex === idx
-                    ? 'bg-white text-indigo-600 border-indigo-600 shadow-xs'
+                    ? 'bg-white text-indigo-600 border-indigo-600 shadow-2xs'
                     : 'text-slate-500 hover:text-slate-800 border-transparent'
                 }`}
               >
@@ -277,7 +277,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
 
         {/* Code Content Container */}
         <div className="flex-1 p-4 overflow-y-auto bg-slate-50/50">
-          <div className="rounded-2xl bg-white border border-slate-200 py-3 shadow-xs">
+          <div className="rounded-2xl bg-white border border-slate-200 py-3 shadow-2xs">
             {currentCode.trim() ? (
               renderHighlightedCode(currentCode)
             ) : (

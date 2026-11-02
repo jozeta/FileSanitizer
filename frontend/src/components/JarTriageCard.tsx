@@ -115,7 +115,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
 
   if (!jarInfo) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <Coffee className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">
           No Java Archive (JAR) triage metadata available for this file.
@@ -333,7 +333,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
       {/* Top Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-slate-100 gap-4">
         <div className="flex items-start gap-4">
@@ -499,7 +499,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
             onClick={() => setActiveSubTab('forensics')}
             className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeSubTab === 'forensics'
-                ? 'bg-rose-600 text-white shadow-sm'
+                ? 'bg-rose-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -736,7 +736,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
 
             <div className="flex items-center gap-2 font-mono text-xs">
               <span className="text-slate-500 font-sans">Total Issues:</span>
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 font-bold text-slate-800 shadow-sm">
+              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 font-bold text-slate-800 shadow-xs">
                 {archive_security.issues_count}
               </span>
             </div>
@@ -831,7 +831,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                   <div key={idx} className="p-3 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-50">
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-slate-800 break-all">{item.filename}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-sans">
+                      <span className="text-[10px] px-2 py-0.5 rounded-sm bg-slate-100 text-slate-600 font-sans">
                         Extension: {item.declared_extension}
                       </span>
                     </div>
@@ -840,7 +840,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                         Actual: {item.actual_type}
                       </span>
                       <span className="text-slate-400 text-xs font-mono">{formatBytes(item.file_size)}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-rose-100 text-rose-800 border border-rose-300">
+                      <span className="text-[10px] px-2 py-0.5 rounded-sm font-bold uppercase bg-rose-100 text-rose-800 border border-rose-300">
                         {item.threat_level}
                       </span>
                     </div>
@@ -861,7 +861,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 {archive_security.duplicate_entries.entries.map((d, idx) => (
                   <div key={idx} className="py-1 text-slate-800 flex items-center justify-between">
                     <span>{d}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-sans font-semibold">
+                    <span className="text-[10px] px-2 py-0.5 rounded-sm bg-amber-100 text-amber-800 font-sans font-semibold">
                       Duplicate Path
                     </span>
                   </div>
@@ -883,7 +883,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                     <span className="font-bold text-slate-800 break-all">{na.filename}</span>
                     <div className="flex items-center gap-3 font-sans">
                       <span className="text-slate-500 font-mono text-xs">{formatBytes(na.size)}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-mono font-bold">
+                      <span className="text-[10px] px-2 py-0.5 rounded-sm bg-purple-100 text-purple-800 font-mono font-bold">
                         {na.type}
                       </span>
                     </div>
@@ -934,7 +934,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
               <button
                 onClick={handleDownloadSbom}
                 disabled={!cyclonedx_sbom}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Export JSON</span>
@@ -951,12 +951,12 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {cve_advisories.map((cve, idx) => (
-                  <div key={idx} className="bg-white border border-rose-200 rounded-xl p-4 shadow-sm space-y-2">
+                  <div key={idx} className="bg-white border border-rose-200 rounded-xl p-4 shadow-xs space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold font-mono text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded border border-rose-200">
+                      <span className="text-xs font-bold font-mono text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-sm border border-rose-200">
                         {cve.cve}
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase bg-rose-600 text-white">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm font-mono uppercase bg-rose-600 text-white">
                         CVSS {cve.cvss} • {cve.severity}
                       </span>
                     </div>
@@ -997,7 +997,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                           </div>
                         </div>
                         <div className="flex items-center gap-3 font-sans">
-                          <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-800">
+                          <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-0.5 rounded-sm text-slate-800">
                             v{dep.version}
                           </span>
                           <span className="text-[10px] text-slate-400 font-mono truncate max-w-[200px]">
@@ -1028,7 +1028,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                           </div>
                         </div>
                         <div className="flex items-center gap-2 font-sans">
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 uppercase font-bold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-sm bg-purple-50 text-purple-700 border border-purple-200 uppercase font-bold">
                             {lib.category}
                           </span>
                           <span className="text-xs text-slate-500 font-mono">
@@ -1055,7 +1055,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                   </div>
                   <div className="flex items-center gap-1.5 font-mono">
                     {cyclonedx_sbom.multi_release.versions.map((ver, idx) => (
-                      <span key={idx} className="px-2.5 py-1 rounded bg-white text-indigo-800 font-bold border border-indigo-200 text-xs">
+                      <span key={idx} className="px-2.5 py-1 rounded-sm bg-white text-indigo-800 font-bold border border-indigo-200 text-xs">
                         Java {ver}+
                       </span>
                     ))}
@@ -1096,7 +1096,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                   setClassSearch(e.target.value);
                   setSelectedClassIndex(0);
                 }}
-                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             <div className="text-xs text-slate-500 font-mono">
@@ -1134,7 +1134,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                             {cls.class_name || cls.class_file}
                           </span>
                           {cls.is_entry && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-sans font-bold bg-indigo-600 text-white shrink-0">
+                            <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-sans font-bold bg-indigo-600 text-white shrink-0">
                               ENTRY
                             </span>
                           )}
@@ -1161,7 +1161,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                           {activeClass.class_file}
                         </span>
                         {activeClass.is_entry && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/30 text-indigo-300 border border-indigo-500/40">
+                          <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-indigo-500/30 text-indigo-300 border border-indigo-500/40">
                             Main-Class Entry
                           </span>
                         )}
@@ -1185,7 +1185,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                         {activeClass.methods?.map((m, mIdx) => (
                           <span
                             key={mIdx}
-                            className="px-2 py-0.5 rounded bg-slate-700/70 text-slate-300 border border-slate-600/50"
+                            className="px-2 py-0.5 rounded-sm bg-slate-700/70 text-slate-300 border border-slate-600/50"
                             title={m.signature || m.name}
                           >
                             fn {m.name}()
@@ -1194,7 +1194,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                         {activeClass.fields?.map((f, fIdx) => (
                           <span
                             key={`f-${fIdx}`}
-                            className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700"
+                            className="px-2 py-0.5 rounded-sm bg-slate-800 text-slate-400 border border-slate-700"
                             title={f.formatted || f.name}
                           >
                             field {f.name}
@@ -1208,7 +1208,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                       {(activeClass.decompiled_source || '// Empty decompilation')
                         .split('\n')
                         .map((line, i) => (
-                          <div key={i} className="flex hover:bg-slate-800/50 rounded px-1">
+                          <div key={i} className="flex hover:bg-slate-800/50 rounded-sm px-1">
                             <span className="w-10 select-none text-slate-500 text-right pr-4 shrink-0">
                               {i + 1}
                             </span>
@@ -1272,7 +1272,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 placeholder="Search APIs..."
                 value={apiSearch}
                 onChange={(e) => setApiSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-500"
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-rose-500"
               />
             </div>
           </div>
@@ -1394,7 +1394,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 value={stringSearch}
                 onChange={(e) => setStringSearch(e.target.value)}
                 placeholder="Search extracted strings..."
-                className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -1404,7 +1404,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 onClick={() => setStringCategory('all')}
                 className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                   stringCategory === 'all'
-                    ? 'bg-white text-slate-900 shadow-sm'
+                    ? 'bg-white text-slate-900 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1414,7 +1414,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 onClick={() => setStringCategory('network')}
                 className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                   stringCategory === 'network'
-                    ? 'bg-white text-indigo-700 shadow-sm'
+                    ? 'bg-white text-indigo-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1424,7 +1424,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 onClick={() => setStringCategory('commands')}
                 className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                   stringCategory === 'commands'
-                    ? 'bg-white text-rose-700 shadow-sm'
+                    ? 'bg-white text-rose-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1434,7 +1434,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 onClick={() => setStringCategory('file_paths')}
                 className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                   stringCategory === 'file_paths'
-                    ? 'bg-white text-blue-700 shadow-sm'
+                    ? 'bg-white text-blue-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1444,7 +1444,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 onClick={() => setStringCategory('registry')}
                 className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                   stringCategory === 'registry'
-                    ? 'bg-white text-purple-700 shadow-sm'
+                    ? 'bg-white text-purple-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -1465,7 +1465,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
               max="1000"
               value={minStrLength}
               onChange={(e) => setMinStrLength(e.target.value)}
-              className="w-16 px-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-16 px-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 font-mono focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
             />
             <span className="text-slate-500 font-mono text-[11px]">
               Showing {activeStringsList.length} matching strings
@@ -1500,7 +1500,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                   </div>
                   <button
                     onClick={() => handleCopyString(str, idx)}
-                    className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors opacity-0 group-hover:opacity-100 shrink-0 cursor-pointer"
+                    className="p-1 rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors opacity-0 group-hover:opacity-100 shrink-0 cursor-pointer"
                     title="Copy string"
                   >
                     {copiedStringIdx === idx ? (
@@ -1529,7 +1529,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                   <Flag className="w-5 h-5 text-purple-600" />
                   <span>Captured CTF Flags ({secrets_and_ctf.ctf_flags.length})</span>
                 </div>
-                <span className="text-[10px] uppercase font-bold font-mono px-2 py-0.5 rounded bg-purple-600 text-white">
+                <span className="text-[10px] uppercase font-bold font-mono px-2 py-0.5 rounded-sm bg-purple-600 text-white">
                   CTF Solved
                 </span>
               </div>
@@ -1538,7 +1538,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 {secrets_and_ctf.ctf_flags.map((flagItem, idx) => (
                   <div key={idx} className="p-3.5 flex flex-wrap items-center justify-between gap-3 hover:bg-purple-50/40">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-sans font-semibold">
+                      <span className="text-xs px-2 py-0.5 rounded-sm bg-purple-100 text-purple-800 font-sans font-semibold">
                         {flagItem.format}
                       </span>
                       <span className="font-bold text-purple-900 select-all break-all">{flagItem.flag}</span>
@@ -1583,7 +1583,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                       <div className="flex items-center gap-2">
                         <Key className="w-4 h-4 text-slate-500" />
                         <span className="font-bold text-slate-900 font-sans">{sec.type}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${getSeverityBadge(sec.severity)}`}>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-sm font-bold uppercase ${getSeverityBadge(sec.severity)}`}>
                           {sec.severity}
                         </span>
                       </div>
@@ -1633,13 +1633,13 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                         <span className="font-bold text-slate-900 font-sans">
                           Base64 Payload #{idx + 1}
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-bold font-sans">
+                        <span className="text-[10px] px-2 py-0.5 rounded-sm bg-purple-100 text-purple-800 font-bold font-sans">
                           {block.threat || 'Decoded Payload'}
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-mono">
+                        <span className="text-[10px] px-2 py-0.5 rounded-sm bg-slate-200 text-slate-700 font-mono">
                           {block.length} bytes encoded
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono">
+                        <span className="text-[10px] px-2 py-0.5 rounded-sm bg-indigo-50 text-indigo-700 font-mono">
                           {block.encoding}
                         </span>
                       </div>
@@ -1679,7 +1679,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                         {block.iocs.map((ioc, iocIdx) => (
                           <span
                             key={iocIdx}
-                            className="px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200 font-mono text-[11px]"
+                            className="px-2 py-0.5 rounded-sm bg-rose-50 text-rose-800 border border-rose-200 font-mono text-[11px]"
                           >
                             {ioc}
                           </span>
@@ -1721,7 +1721,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                 detected_commands.map((cmd, i) => (
                   <div key={i} className="py-2.5 flex items-center justify-between gap-3">
                     <span className="text-rose-700 font-bold break-all">{cmd}</span>
-                    <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-sans text-[10px] font-bold shrink-0">
+                    <span className="px-2 py-0.5 rounded-sm bg-rose-50 text-rose-700 border border-rose-200 font-sans text-[10px] font-bold shrink-0">
                       Shell Command
                     </span>
                   </div>
@@ -1747,7 +1747,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <strong className="text-slate-900 font-bold font-sans">{item.name}</strong>
-                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-sans text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-sm bg-amber-100 text-amber-800 font-sans text-[10px] font-bold">
                           {item.category}
                         </span>
                       </div>
@@ -1996,7 +1996,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-slate-800 break-all">{res.name}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-sans">
+                      <span className="text-[10px] px-2 py-0.5 rounded-sm bg-slate-100 text-slate-600 font-sans">
                         {res.type}
                       </span>
                     </div>
@@ -2026,7 +2026,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                       className="p-3 flex items-center justify-between gap-3 hover:bg-slate-50"
                     >
                       <span className="text-purple-700 font-bold">{b}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 font-sans">
+                      <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-purple-100 text-purple-800 font-sans">
                         Native Dropper
                       </span>
                     </div>
@@ -2057,7 +2057,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                   <div className="flex items-center gap-2 font-sans shrink-0">
                     <button
                       onClick={() => handleCopyUrl(url, idx)}
-                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-sm text-xs flex items-center gap-1 transition-colors cursor-pointer"
                     >
                       {copiedUrlIdx === idx ? (
                         <Check className="w-3 h-3 text-emerald-600" />
@@ -2070,7 +2070,7 @@ export const JarTriageCard: React.FC<JarTriageCardProps> = ({
                       href={`https://www.virustotal.com/gui/search/${encodeURIComponent(url)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded text-xs flex items-center gap-1 transition-colors font-semibold"
+                      className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-sm text-xs flex items-center gap-1 transition-colors font-semibold"
                     >
                       <ExternalLink className="w-3 h-3" />
                       <span>VT</span>

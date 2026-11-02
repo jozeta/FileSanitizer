@@ -67,11 +67,11 @@ export const AppleScriptTriageCard: React.FC<AppleScriptTriageCardProps> = ({ ap
   const activeCapabilityCategories = Object.entries(capabilities).filter(([_, v]) => Array.isArray(v) && v.length > 0);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+    <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden mb-6">
       {/* Header */}
-      <div className="px-6 py-5 bg-gradient-to-r from-sky-50/90 via-indigo-50/40 to-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
+      <div className="px-6 py-5 bg-linear-to-r from-sky-50/90 via-indigo-50/40 to-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center space-x-3.5">
-          <div className="p-2.5 bg-sky-600 text-white rounded-xl shadow-xs">
+          <div className="p-2.5 bg-sky-600 text-white rounded-xl shadow-2xs">
             <Terminal className="w-6 h-6" />
           </div>
           <div>
@@ -98,7 +98,7 @@ export const AppleScriptTriageCard: React.FC<AppleScriptTriageCardProps> = ({ ap
             <span className="text-[11px] text-slate-500 font-medium block">Risk Score</span>
             <span className="text-base font-extrabold text-slate-900 font-mono">{risk_score}/100</span>
           </div>
-          <span className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-xs ${
+          <span className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-2xs ${
             risk_level === 'CRITICAL' ? 'bg-red-100 text-red-800 border-red-300' :
             risk_level === 'HIGH RISK' ? 'bg-orange-100 text-orange-800 border-orange-300' :
             risk_level === 'MEDIUM RISK' ? 'bg-amber-100 text-amber-800 border-amber-300' :
@@ -226,7 +226,7 @@ export const AppleScriptTriageCard: React.FC<AppleScriptTriageCardProps> = ({ ap
                       </div>
                       <div className="space-y-1 pt-1">
                         {items.slice(0, 3).map((it: any, idx: number) => (
-                          <div key={idx} className="text-[11px] text-slate-600 font-mono bg-white p-1.5 rounded border border-slate-200/80 truncate">
+                          <div key={idx} className="text-[11px] text-slate-600 font-mono bg-white p-1.5 rounded-sm border border-slate-200/80 truncate">
                             {it.snippet || it.title}
                           </div>
                         ))}
@@ -265,7 +265,7 @@ export const AppleScriptTriageCard: React.FC<AppleScriptTriageCardProps> = ({ ap
                           )}
                         </div>
                         {f.mitre && (
-                          <span className="font-mono text-[10px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200 shadow-2xs">
+                          <span className="font-mono text-[10px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-sm border border-indigo-200 shadow-2xs">
                             MITRE {f.mitre}
                           </span>
                         )}
@@ -352,13 +352,13 @@ export const AppleScriptTriageCard: React.FC<AppleScriptTriageCardProps> = ({ ap
           <div className="space-y-4">
             <div className="text-xs text-slate-600">
               AppleScript leverages AppleEvents to automate and compromise other applications on macOS.
-              Below are all targets referenced via <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-700 font-mono">tell application &quot;...&quot;</code>:
+              Below are all targets referenced via <code className="bg-slate-100 px-1 py-0.5 rounded-sm text-indigo-700 font-mono">tell application &quot;...&quot;</code>:
             </div>
 
             {targeted_applications && targeted_applications.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {targeted_applications.map((app, idx) => (
-                  <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-all shadow-xs space-y-2">
+                  <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-all shadow-2xs space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-indigo-50 text-indigo-700 rounded-lg">
@@ -455,11 +455,11 @@ export const AppleScriptTriageCard: React.FC<AppleScriptTriageCardProps> = ({ ap
                         <span className="font-bold text-rose-900 text-xs">
                           {d.is_phishing ? 'Spoofed Authentication Dialog' : 'User Prompt'}
                         </span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white border border-rose-200 text-rose-800 font-bold">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-white border border-rose-200 text-rose-800 font-bold">
                           {d.has_hidden_answer ? 'HIDDEN ANSWER (PASSWORD)' : 'CLEARTEXT'}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-800 italic bg-white p-2 rounded border border-rose-100">
+                      <p className="text-xs text-slate-800 italic bg-white p-2 rounded-sm border border-rose-100">
                         &quot;{d.prompt}&quot;
                       </p>
                       {d.buttons && d.buttons.length > 0 && (
@@ -512,7 +512,7 @@ export const AppleScriptTriageCard: React.FC<AppleScriptTriageCardProps> = ({ ap
                 </h4>
                 <div className="flex flex-wrap gap-1.5 font-mono text-xs">
                   {iocs.file_paths.map((p, i) => (
-                    <span key={i} className="bg-slate-100 text-slate-800 px-2 py-1 rounded border border-slate-200">
+                    <span key={i} className="bg-slate-100 text-slate-800 px-2 py-1 rounded-sm border border-slate-200">
                       {p}
                     </span>
                   ))}

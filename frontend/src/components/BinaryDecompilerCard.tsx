@@ -642,7 +642,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
   return (
     <div className="space-y-4">
       {/* Header & Controls Toolbar */}
-      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
             <FileCode className="w-5 h-5" />
@@ -651,25 +651,25 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className="text-sm font-bold text-slate-900 font-mono flex items-center gap-1.5">
                 <span>Function:</span>
-                <span className={isRenamed(decomp.function_name) ? 'text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200' : ''}>
+                <span className={isRenamed(decomp.function_name) ? 'text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-sm border border-indigo-200' : ''}>
                   {activeFunctionName}
                 </span>
                 <span className="text-slate-400 font-normal">({decomp.address})</span>
                 <button
                   type="button"
                   onClick={() => handleOpenRename(activeFunctionName, 'function')}
-                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer"
                   title="Rename this function"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                 </button>
               </h4>
               {isRenamed(decomp.function_name) && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                <span className="px-1.5 py-0.5 rounded-sm text-[9px] font-mono font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200">
                   Renamed from {decomp.function_name}
                 </span>
               )}
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
                 Confidence: {decomp.confidence}%
               </span>
             </div>
@@ -687,7 +687,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
               onClick={() => setViewMode('decompiler')}
               className={`px-3 py-1 rounded-lg transition-colors flex items-center gap-1.5 ${
                 viewMode === 'decompiler'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -698,7 +698,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
               onClick={() => setViewMode('side_by_side')}
               className={`px-3 py-1 rounded-lg transition-colors flex items-center gap-1.5 ${
                 viewMode === 'side_by_side'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -709,7 +709,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
               onClick={() => setViewMode('assembly')}
               className={`px-3 py-1 rounded-lg transition-colors flex items-center gap-1.5 ${
                 viewMode === 'assembly'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -720,7 +720,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
               onClick={() => setViewMode('call_graph')}
               className={`px-3 py-1 rounded-lg transition-colors flex items-center gap-1.5 ${
                 viewMode === 'call_graph'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -731,7 +731,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
               onClick={() => setViewMode('api_hashing')}
               className={`px-3 py-1 rounded-lg transition-colors flex items-center gap-1.5 ${
                 viewMode === 'api_hashing'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -747,7 +747,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
               onClick={() => setViewMode('flow_canvas')}
               className={`px-3 py-1 rounded-lg transition-colors flex items-center gap-1.5 ${
                 viewMode === 'flow_canvas'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -865,7 +865,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
 
       {/* Main Code View Panels */}
       {viewMode === 'decompiler' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col font-mono text-xs">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col font-mono text-xs">
           {/* Top Search / Filter */}
           <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
             <span className="text-[11px] font-semibold text-slate-600 font-sans">
@@ -887,7 +887,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto p-4 bg-slate-50/40">
             <div className="space-y-0.5 min-w-[700px]">
               {lines.map((line, idx) => (
-                <div key={idx} className="flex items-start hover:bg-slate-100/70 rounded px-1 transition-colors">
+                <div key={idx} className="flex items-start hover:bg-slate-100/70 rounded-sm px-1 transition-colors">
                   <span className="w-10 shrink-0 text-slate-400 text-right pr-4 select-none font-mono text-[11px]">
                     {idx + 1}
                   </span>
@@ -1007,7 +1007,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Left: Disassembly */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col font-mono text-xs select-none">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col font-mono text-xs select-none">
               <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-semibold text-slate-700 font-sans">
@@ -1073,12 +1073,12 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
                           <td className="py-1.5 px-3 text-slate-800 flex items-center justify-between gap-2">
                             <span className="truncate">{inst.op_str}</span>
                             {isPrimary && (
-                              <span className="px-1.5 py-0.2 rounded bg-indigo-200 text-indigo-900 text-[9px] font-bold font-sans shrink-0">
+                              <span className="px-1.5 py-0.2 rounded-sm bg-indigo-200 text-indigo-900 text-[9px] font-bold font-sans shrink-0">
                                 Selected
                               </span>
                             )}
                             {isMapped && (
-                              <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold font-sans shrink-0">
+                              <span className="px-1.5 py-0.2 rounded-sm bg-emerald-100 text-emerald-800 text-[9px] font-bold font-sans shrink-0">
                                 ↔ Mapped
                               </span>
                             )}
@@ -1092,7 +1092,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
             </div>
 
             {/* Right: Decompiler */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col font-mono text-xs select-none">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col font-mono text-xs select-none">
               <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-semibold text-slate-700 font-sans">
@@ -1152,12 +1152,12 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
                         <div className="flex-1 leading-relaxed font-mono whitespace-pre text-[11px] overflow-hidden text-ellipsis flex items-center justify-between">
                           <div>{renderHighlightedLine(line, lineNum)}</div>
                           {isPrimary && (
-                            <span className="ml-2 px-1.5 py-0.2 rounded bg-indigo-200 text-indigo-900 text-[9px] font-bold font-sans shrink-0">
+                            <span className="ml-2 px-1.5 py-0.2 rounded-sm bg-indigo-200 text-indigo-900 text-[9px] font-bold font-sans shrink-0">
                               Selected
                             </span>
                           )}
                           {isMapped && (
-                            <span className="ml-2 px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold font-sans shrink-0">
+                            <span className="ml-2 px-1.5 py-0.2 rounded-sm bg-emerald-100 text-emerald-800 text-[9px] font-bold font-sans shrink-0">
                               ↔ Mapped
                             </span>
                           )}
@@ -1174,7 +1174,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
 
       {/* Assembly Only View */}
       {viewMode === 'assembly' && (
-        <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white font-mono text-xs shadow-sm">
+        <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white font-mono text-xs shadow-xs">
           <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
             <table className="w-full text-left text-slate-800">
               <thead className="bg-slate-100 text-slate-500 text-[11px] uppercase sticky top-0 border-b border-slate-200">
@@ -1200,7 +1200,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
                         {opXCount > 0 && (
                           <button
                             onClick={() => handleOpenXrefs(opTarget)}
-                            className="px-1.5 py-0.2 rounded text-[10px] bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                            className="px-1.5 py-0.2 rounded-sm text-[10px] bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
                             title={`Inspect XREFs for ${opTarget}`}
                           >
                             XREF ({opXCount})
@@ -1211,7 +1211,7 @@ export const BinaryDecompilerCard: React.FC<BinaryDecompilerCardProps> = ({
                         {xCount > 0 && (
                           <button
                             onClick={() => handleOpenXrefs(inst.address)}
-                            className="px-1.5 py-0.2 rounded text-[10px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+                            className="px-1.5 py-0.2 rounded-sm text-[10px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
                             title={`View ${xCount} cross-references pointing to ${inst.address}`}
                           >
                             {xCount}

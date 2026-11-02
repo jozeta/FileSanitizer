@@ -98,8 +98,8 @@ export const WorkspaceTabBar: React.FC<WorkspaceTabBarProps> = ({
   const isMultiFile = jobs.length >= 2;
 
   return (
-    <div className="bg-white border-b border-slate-200 text-slate-700 sticky top-0 z-30 shadow-xs">
-      <div className="max-w-[96rem] mx-auto px-4 flex items-center justify-between gap-3 overflow-x-auto py-1.5 scrollbar-thin scrollbar-thumb-slate-300">
+    <div className="bg-white border-b border-slate-200 text-slate-700 sticky top-0 z-30 shadow-2xs">
+      <div className="max-w-384 mx-auto px-4 flex items-center justify-between gap-3 overflow-x-auto py-1.5 scrollbar-thin scrollbar-thumb-slate-300">
         
         {/* Left Side: File Tabs & Relationship Mapping Tab */}
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -120,7 +120,7 @@ export const WorkspaceTabBar: React.FC<WorkspaceTabBarProps> = ({
                 title={job.filename}
                 className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-150 select-none max-w-[200px] border ${
                   isActive
-                    ? 'bg-white text-slate-900 border-indigo-500 shadow-xs font-semibold ring-1 ring-indigo-500/20'
+                    ? 'bg-white text-slate-900 border-indigo-500 shadow-2xs font-semibold ring-1 ring-indigo-500/20'
                     : 'bg-slate-50/80 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-slate-200/90'
                 }`}
               >
@@ -129,7 +129,7 @@ export const WorkspaceTabBar: React.FC<WorkspaceTabBarProps> = ({
                 <span className="truncate">{job.filename}</span>
 
                 {/* Risk Dot */}
-                <span className={`w-2 h-2 rounded-full shrink-0 shadow-xs ${dotColor}`} />
+                <span className={`w-2 h-2 rounded-full shrink-0 shadow-2xs ${dotColor}`} />
 
                 {/* Close Tab Button */}
                 <button
@@ -138,7 +138,7 @@ export const WorkspaceTabBar: React.FC<WorkspaceTabBarProps> = ({
                     e.stopPropagation();
                     onCloseJob(job.jobId);
                   }}
-                  className="opacity-0 group-hover:opacity-100 hover:bg-slate-200 p-0.5 rounded text-slate-400 hover:text-slate-700 transition-opacity ml-1"
+                  className="opacity-0 group-hover:opacity-100 hover:bg-slate-200 p-0.5 rounded-sm text-slate-400 hover:text-slate-700 transition-opacity ml-1"
                   title="Remove from workspace"
                 >
                   <X className="w-3 h-3" />
@@ -154,7 +154,7 @@ export const WorkspaceTabBar: React.FC<WorkspaceTabBarProps> = ({
               onClick={() => onSelectTab('relationship_mapping')}
               className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-150 select-none border shrink-0 ${
                 activeTab === 'relationship_mapping'
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm font-semibold'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs font-semibold'
                   : 'bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100/80 hover:text-indigo-900 border-indigo-200/80'
               }`}
             >
@@ -185,7 +185,7 @@ export const WorkspaceTabBar: React.FC<WorkspaceTabBarProps> = ({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 shadow-xs hover:border-slate-400 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 shadow-2xs hover:border-slate-400 transition-colors disabled:opacity-50"
             title="Add another file to this investigation"
           >
             {isUploading ? (

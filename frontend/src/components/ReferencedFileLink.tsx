@@ -46,7 +46,7 @@ export const ReferencedFileLink: React.FC<ReferencedFileLinkProps> = ({
     <button
       onClick={handleClick}
       title={detail || `Navigate to ${targetFilename}`}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-all cursor-pointer shadow-xs group ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-all cursor-pointer shadow-2xs group ${className}`}
     >
       <FileCode className="w-3.5 h-3.5 opacity-80" />
       <span className="truncate max-w-[200px]">{label ? `${label}: ${targetFilename}` : targetFilename}</span>
@@ -100,7 +100,7 @@ export const ReferencedText: React.FC<ReferencedTextProps> = ({
               }
             }}
             title={`Referenced artifact: ${token.job.filename} (Click to open analysis)`}
-            className="inline-flex items-center gap-0.5 mx-0.5 px-1.5 py-0.2 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-800 hover:text-indigo-950 font-bold font-mono text-[11px] border border-indigo-300 transition-colors cursor-pointer underline decoration-indigo-400 underline-offset-2"
+            className="inline-flex items-center gap-0.5 mx-0.5 px-1.5 py-0.2 rounded-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-800 hover:text-indigo-950 font-bold font-mono text-[11px] border border-indigo-300 transition-colors cursor-pointer underline decoration-indigo-400 underline-offset-2"
           >
             <span>{token.text}</span>
             <ExternalLink className="w-2.5 h-2.5 opacity-70" />

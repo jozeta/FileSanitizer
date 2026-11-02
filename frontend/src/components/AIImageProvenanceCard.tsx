@@ -39,9 +39,9 @@ export const AIImageProvenanceCard: React.FC<AIImageProvenanceCardProps> = ({ pr
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+    <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden mb-6">
       {/* Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-purple-50/80 via-slate-50 to-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+      <div className="px-6 py-4 bg-linear-to-r from-purple-50/80 via-slate-50 to-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-purple-100/70 text-purple-700 rounded-lg">
             <Sparkles className="w-6 h-6" />
@@ -52,7 +52,7 @@ export const AIImageProvenanceCard: React.FC<AIImageProvenanceCardProps> = ({ pr
                 AI Image Verification &amp; Provenance
               </h3>
               {c2pa?.detected && (
-                <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                <span className="text-[10px] px-2 py-0.5 rounded-sm font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200">
                   C2PA Provenance
                 </span>
               )}
@@ -228,7 +228,7 @@ export const AIImageProvenanceCard: React.FC<AIImageProvenanceCardProps> = ({ pr
             {prompt_metadata.prompt && (
               <div>
                 <span className="font-semibold text-slate-700 block mb-1">Prompt:</span>
-                <p className="bg-white p-2.5 rounded border border-purple-200 text-slate-800 font-mono text-[11px] whitespace-pre-wrap">
+                <p className="bg-white p-2.5 rounded-sm border border-purple-200 text-slate-800 font-mono text-[11px] whitespace-pre-wrap">
                   {prompt_metadata.prompt}
                 </p>
               </div>
@@ -237,7 +237,7 @@ export const AIImageProvenanceCard: React.FC<AIImageProvenanceCardProps> = ({ pr
             {prompt_metadata.negative_prompt && (
               <div>
                 <span className="font-semibold text-slate-700 block mb-1">Negative Prompt:</span>
-                <p className="bg-white p-2.5 rounded border border-purple-200 text-slate-700 font-mono text-[11px] whitespace-pre-wrap">
+                <p className="bg-white p-2.5 rounded-sm border border-purple-200 text-slate-700 font-mono text-[11px] whitespace-pre-wrap">
                   {prompt_metadata.negative_prompt}
                 </p>
               </div>
@@ -248,7 +248,7 @@ export const AIImageProvenanceCard: React.FC<AIImageProvenanceCardProps> = ({ pr
                 <span className="font-semibold text-slate-700 block mb-1.5">Model Parameters:</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {Object.entries(prompt_metadata.parameters).map(([key, val]) => (
-                    <div key={key} className="bg-white p-2 rounded border border-purple-200">
+                    <div key={key} className="bg-white p-2 rounded-sm border border-purple-200">
                       <span className="text-[10px] text-slate-400 font-semibold block uppercase">{key}</span>
                       <span className="font-mono font-bold text-purple-950">{val}</span>
                     </div>

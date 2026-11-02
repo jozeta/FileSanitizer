@@ -71,7 +71,7 @@ export const JobDiagnosticsCard: React.FC<JobDiagnosticsCardProps> = ({
     <div className="space-y-6">
       {/* Overview Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50/50 border border-indigo-200/80 rounded-2xl shadow-2xs">
+        <div className="p-4 bg-linear-to-br from-indigo-50 to-blue-50/50 border border-indigo-200/80 rounded-2xl shadow-2xs">
           <div className="flex items-center gap-2 text-indigo-600 mb-1.5">
             <Clock className="w-4 h-4" />
             <span className="text-[10px] uppercase font-bold tracking-wider">Total Pipeline Time</span>
@@ -82,7 +82,7 @@ export const JobDiagnosticsCard: React.FC<JobDiagnosticsCardProps> = ({
           </span>
         </div>
 
-        <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200/80 rounded-2xl shadow-2xs">
+        <div className="p-4 bg-linear-to-br from-emerald-50 to-teal-50/50 border border-emerald-200/80 rounded-2xl shadow-2xs">
           <div className="flex items-center gap-2 text-emerald-600 mb-1.5">
             <ShieldCheck className="w-4 h-4" />
             <span className="text-[10px] uppercase font-bold tracking-wider">Security Checks</span>
@@ -95,7 +95,7 @@ export const JobDiagnosticsCard: React.FC<JobDiagnosticsCardProps> = ({
           </span>
         </div>
 
-        <div className="p-4 bg-gradient-to-br from-cyan-50 to-sky-50/50 border border-cyan-200/80 rounded-2xl shadow-2xs">
+        <div className="p-4 bg-linear-to-br from-cyan-50 to-sky-50/50 border border-cyan-200/80 rounded-2xl shadow-2xs">
           <div className="flex items-center gap-2 text-cyan-600 mb-1.5">
             <Globe className="w-4 h-4" />
             <span className="text-[10px] uppercase font-bold tracking-wider">External Lookups</span>
@@ -108,7 +108,7 @@ export const JobDiagnosticsCard: React.FC<JobDiagnosticsCardProps> = ({
           </span>
         </div>
 
-        <div className="p-4 bg-gradient-to-br from-purple-50 to-violet-50/50 border border-purple-200/80 rounded-2xl shadow-2xs">
+        <div className="p-4 bg-linear-to-br from-purple-50 to-violet-50/50 border border-purple-200/80 rounded-2xl shadow-2xs">
           <div className="flex items-center gap-2 text-purple-600 mb-1.5">
             <Cpu className="w-4 h-4" />
             <span className="text-[10px] uppercase font-bold tracking-wider">Target Payload</span>
@@ -123,7 +123,7 @@ export const JobDiagnosticsCard: React.FC<JobDiagnosticsCardProps> = ({
       </div>
 
       {/* Main Tabbed Container */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-2xs">
         {/* Navigation Sub-Tabs */}
         <div className="flex border-b border-slate-200 gap-2 mb-6 overflow-x-auto">
           <button
@@ -235,7 +235,7 @@ export const JobDiagnosticsCard: React.FC<JobDiagnosticsCardProps> = ({
 
                       <div className="flex items-center gap-3 font-mono text-xs">
                         <span className="text-slate-400 text-[11px]">{pct.toFixed(1)}%</span>
-                        <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">
+                        <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded-sm border border-slate-200">
                           {st.duration_ms.toFixed(1)} ms
                         </span>
                       </div>
@@ -300,7 +300,7 @@ export const JobDiagnosticsCard: React.FC<JobDiagnosticsCardProps> = ({
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span className="font-medium text-slate-800">{chk}</span>
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-mono">
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-sm border border-emerald-200 font-mono">
                     PASS
                   </span>
                 </div>

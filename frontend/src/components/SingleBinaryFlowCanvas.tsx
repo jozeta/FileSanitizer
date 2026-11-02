@@ -481,7 +481,7 @@ const CFGMinimap: React.FC<MinimapProps> = ({
       <svg
         width={mapW}
         height={mapH}
-        className="cursor-crosshair mt-1 bg-slate-50 rounded border border-slate-200"
+        className="cursor-crosshair mt-1 bg-slate-50 rounded-sm border border-slate-200"
         onClick={handleClick}
       >
         {nodes.map((node) => {
@@ -785,29 +785,29 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
   return (
     <div
       ref={containerRef}
-      className="flex flex-col h-full bg-slate-50/60 rounded-xl border border-slate-200 overflow-hidden relative select-none shadow-sm"
+      className="flex flex-col h-full bg-slate-50/60 rounded-xl border border-slate-200 overflow-hidden relative select-none shadow-xs"
     >
       {/* Canvas Top Bar */}
-      <div className="px-4 py-2.5 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 z-10 shadow-xs">
+      <div className="px-4 py-2.5 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 z-10 shadow-2xs">
         {/* Left Side: Binary Title & Counts */}
         <div className="flex items-center gap-2.5">
-          <div className="p-1 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 shrink-0">
+          <div className="p-1 rounded-sm bg-indigo-50 border border-indigo-200 text-indigo-700 shrink-0">
             <Network className="w-3.5 h-3.5" />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold font-mono text-slate-900 truncate max-w-[240px]">
               {binaryName}
             </span>
-            <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+            <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-sm border border-slate-200">
               {blocks.length} blocks • {edges.length} edges
             </span>
             {blocks[0] && (
-              <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold hidden sm:inline">
+              <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-sm border border-emerald-200 font-semibold hidden sm:inline">
                 Entry: {getRenamed(blocks[0].label)} ({blocks[0].start_addr})
               </span>
             )}
             {!isLayoutLocked && (
-              <span className="text-[10px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+              <span className="text-[10px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-sm font-bold flex items-center gap-1">
                 <GripHorizontal className="w-3 h-3 text-amber-600" />
                 Free Dragging Active
               </span>
@@ -818,13 +818,13 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
         {/* Center: Jump Legend */}
         <div className="hidden xl:flex items-center gap-2.5 text-[10px] font-mono text-slate-500">
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-1.5 bg-emerald-500 rounded-sm" /> True (Green)
+            <span className="w-2.5 h-1.5 bg-emerald-500 rounded-xs" /> True (Green)
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-1.5 bg-rose-500 rounded-sm" /> False (Red)
+            <span className="w-2.5 h-1.5 bg-rose-500 rounded-xs" /> False (Red)
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-1.5 bg-indigo-500 rounded-sm" /> Jump (Blue)
+            <span className="w-2.5 h-1.5 bg-indigo-500 rounded-xs" /> Jump (Blue)
           </span>
           <span className="flex items-center gap-1">
             <Repeat className="w-2.5 h-2.5 text-purple-600" /> Loop (Purple)
@@ -841,7 +841,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
               placeholder="Search CFG..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-7 py-1 text-xs bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 w-32 sm:w-44 transition-colors font-mono"
+              className="pl-8 pr-7 py-1 text-xs bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-indigo-500 w-32 sm:w-44 transition-colors font-mono"
             />
             {searchQuery && (
               <button
@@ -853,7 +853,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
             )}
           </div>
           {searchQuery && searchMatchCount > 0 && (
-            <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded font-bold">
+            <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-sm font-bold">
               {searchMatchCount} hits
             </span>
           )}
@@ -901,7 +901,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
           <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs">
             <button
               onClick={() => setZoom((z) => Math.min(2.5, z + 0.15))}
-              className="p-1 hover:bg-slate-100 rounded text-slate-600"
+              className="p-1 hover:bg-slate-100 rounded-sm text-slate-600"
               title="Zoom In"
             >
               <ZoomIn className="w-3.5 h-3.5" />
@@ -911,7 +911,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
             </span>
             <button
               onClick={() => setZoom((z) => Math.max(0.35, z - 0.15))}
-              className="p-1 hover:bg-slate-100 rounded text-slate-600"
+              className="p-1 hover:bg-slate-100 rounded-sm text-slate-600"
               title="Zoom Out"
             >
               <ZoomOut className="w-3.5 h-3.5" />
@@ -1046,7 +1046,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
                   />
                   {isTrue && (
                     <foreignObject x={edgeRes.labelX - 52} y={edgeRes.labelY - 13} width="104" height="26">
-                      <div className="bg-emerald-100 text-emerald-900 border border-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
+                      <div className="bg-emerald-100 text-emerald-900 border border-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                         <span>True (Taken)</span>
                       </div>
@@ -1054,7 +1054,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
                   )}
                   {isFalse && (
                     <foreignObject x={edgeRes.labelX - 40} y={edgeRes.labelY - 13} width="80" height="26">
-                      <div className="bg-rose-100 text-rose-900 border border-rose-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
+                      <div className="bg-rose-100 text-rose-900 border border-rose-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
                         <span>False</span>
                       </div>
@@ -1062,7 +1062,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
                   )}
                   {isJmp && (
                     <foreignObject x={edgeRes.labelX - 38} y={edgeRes.labelY - 13} width="76" height="26">
-                      <div className="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
+                      <div className="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap flex items-center justify-center gap-1.5 leading-tight select-none">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
                         <span>Jump</span>
                       </div>
@@ -1070,7 +1070,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
                   )}
                   {isLoop && (
                     <foreignObject x={edgeRes.labelX - 43} y={edgeRes.labelY - 13} width="86" height="26">
-                      <div className="bg-purple-100 text-purple-900 border border-purple-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap flex items-center justify-center gap-1 leading-tight select-none">
+                      <div className="bg-purple-100 text-purple-900 border border-purple-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap flex items-center justify-center gap-1 leading-tight select-none">
                         <Repeat className="w-2.5 h-2.5 text-purple-600 shrink-0" />
                         <span>LOOP</span>
                       </div>
@@ -1163,7 +1163,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
                 onMouseEnter={() => setHoveredBlockId(block.id)}
                 onMouseLeave={() => setHoveredBlockId(null)}
                 onClick={() => setSelectedBlockId(block.id)}
-                className={`block-card-interactive bg-white rounded-lg border shadow-xs transition-shadow duration-150 overflow-hidden ${cardBorder} ${
+                className={`block-card-interactive bg-white rounded-lg border shadow-2xs transition-shadow duration-150 overflow-hidden ${cardBorder} ${
                   isSelected ? 'ring-2 ring-indigo-500 shadow-md scale-[1.01]' : isHovered ? 'ring-1 ring-indigo-400' : ''
                 } ${isBeingDragged ? 'ring-2 ring-amber-500 shadow-xl opacity-95 z-30' : 'z-10'} ${
                   isSearchMatch ? 'ring-2 ring-yellow-400' : ''
@@ -1182,7 +1182,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
                       ({block.start_addr})
                     </span>
                   </div>
-                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border shrink-0 ${badgeClass}`}>
+                  <span className={`px-1.5 py-0.2 rounded-sm text-[9px] font-bold border shrink-0 ${badgeClass}`}>
                     {roleLabel}
                   </span>
                 </div>
@@ -1191,17 +1191,17 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
                 {(block.has_loop_exit || block.is_loop_target || block.is_conditional) && (
                   <div className="px-2 py-0.5 bg-slate-50 border-b border-slate-100 flex items-center gap-1 flex-wrap">
                     {block.is_loop_target && (
-                      <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.2 rounded-sm text-[8px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-0.5">
                         <Repeat className="w-2.5 h-2.5" /> Loop Target
                       </span>
                     )}
                     {block.has_loop_exit && (
-                      <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.2 rounded-sm text-[8px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-0.5">
                         <Repeat className="w-2.5 h-2.5" /> Loop Exit
                       </span>
                     )}
                     {block.is_conditional && (
-                      <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.2 rounded-sm text-[8px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-0.5">
                         <Split className="w-2.5 h-2.5" /> If / Branch
                       </span>
                     )}
@@ -1303,7 +1303,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
 
       {/* Selected Block Inspection Footer Bar */}
       {selectedNode && (
-        <div className="px-4 py-2 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs z-10 shadow-xs">
+        <div className="px-4 py-2 bg-white border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs z-10 shadow-2xs">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 font-mono">
               <span className="font-bold text-slate-900">{getRenamed(selectedNode.block.label)}</span>
@@ -1322,7 +1322,7 @@ export const SingleBinaryFlowCanvas: React.FC<SingleBinaryFlowCanvasProps> = ({
                   <button
                     key={iIdx}
                     onClick={() => jumpToBlock(ie.source)}
-                    className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold"
+                    className="px-1.5 py-0.5 rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold"
                     title={`Jump to predecessor ${ie.source}`}
                   >
                     {getRenamed(ie.source)}

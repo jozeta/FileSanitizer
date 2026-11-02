@@ -10,7 +10,7 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
       <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative">
         <button
           onClick={onClose}
@@ -51,7 +51,7 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ isOpen, onClos
         <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors cursor-pointer"
+            className="px-6 py-2.5 bg-slate-900 hover:bg-blue-600 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
           >
             I Understand
           </button>

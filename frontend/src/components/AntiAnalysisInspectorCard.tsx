@@ -73,7 +73,7 @@ export const AntiAnalysisInspectorCard: React.FC<AntiAnalysisInspectorCardProps>
 
   if (!hasEvasion) {
     return (
-      <div className="p-6 bg-white border border-slate-200 rounded-3xl shadow-sm">
+      <div className="p-6 bg-white border border-slate-200 rounded-3xl shadow-xs">
         <div className="flex items-center gap-3 text-emerald-800">
           <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl">
             <ShieldCheck className="w-5 h-5 text-emerald-600" />
@@ -90,7 +90,7 @@ export const AntiAnalysisInspectorCard: React.FC<AntiAnalysisInspectorCardProps>
   }
 
   return (
-    <div className="p-6 bg-white border border-slate-200 rounded-3xl shadow-sm space-y-6">
+    <div className="p-6 bg-white border border-slate-200 rounded-3xl shadow-xs space-y-6">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-rose-50/70 border border-rose-200 rounded-2xl">
         <div className="flex items-start gap-3">
@@ -140,7 +140,7 @@ export const AntiAnalysisInspectorCard: React.FC<AntiAnalysisInspectorCardProps>
             onClick={() => setSelectedCategory('all')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 border ${
               selectedCategory === 'all'
-                ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
                 : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
             }`}
           >
@@ -155,7 +155,7 @@ export const AntiAnalysisInspectorCard: React.FC<AntiAnalysisInspectorCardProps>
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 border ${
                   isSelected
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
                     : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
                 }`}
               >
@@ -177,7 +177,7 @@ export const AntiAnalysisInspectorCard: React.FC<AntiAnalysisInspectorCardProps>
             placeholder="Search anti-analysis techniques..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:bg-white"
           />
         </div>
       </div>
@@ -229,7 +229,7 @@ export const AntiAnalysisInspectorCard: React.FC<AntiAnalysisInspectorCardProps>
                           href={`https://attack.mitre.org/techniques/${tech.mitre_id.replace(/\./g, '/')}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded text-[10px] font-mono font-bold border border-indigo-200 transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-sm text-[10px] font-mono font-bold border border-indigo-200 transition-colors"
                           title={`View MITRE ATT&CK technique ${tech.mitre_id}`}
                         >
                           <span>{tech.mitre_id}</span>
@@ -240,7 +240,7 @@ export const AntiAnalysisInspectorCard: React.FC<AntiAnalysisInspectorCardProps>
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${getSeverityBadge(tech.severity)}`}>
+                      <span className={`px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold uppercase border ${getSeverityBadge(tech.severity)}`}>
                         {tech.severity || 'high'}
                       </span>
                     </td>

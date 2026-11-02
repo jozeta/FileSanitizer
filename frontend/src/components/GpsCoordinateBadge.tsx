@@ -145,7 +145,7 @@ export const GpsCoordinateBadge: React.FC<GpsCoordinateBadgeProps> = ({
         className={`group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none ${
           isOpen
             ? 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-300'
-            : 'bg-blue-50/80 hover:bg-blue-100 text-blue-800 border-blue-200/80 hover:border-blue-300 shadow-xs'
+            : 'bg-blue-50/80 hover:bg-blue-100 text-blue-800 border-blue-200/80 hover:border-blue-300 shadow-2xs'
         }`}
       >
         <MapPin
@@ -199,7 +199,7 @@ export const GpsCoordinateBadge: React.FC<GpsCoordinateBadgeProps> = ({
                 <Navigation className="w-4 h-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-slate-900 leading-snug break-words">
+                <div className="text-sm font-bold text-slate-900 leading-snug wrap-break-word">
                   {resolvedTitle}
                 </div>
                 <div className="text-xs text-slate-500 font-mono mt-0.5">

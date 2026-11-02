@@ -659,7 +659,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
 
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
       {/* Top Header & View Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-3">
@@ -700,7 +700,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
               onClick={() => setViewMode('hex')}
               className={`px-3 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'hex'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -712,7 +712,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
               onClick={() => setViewMode('bytes')}
               className={`px-3 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'bytes'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -724,7 +724,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
               onClick={() => setViewMode('text')}
               className={`px-3 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all ${
                 viewMode === 'text'
-                  ? 'bg-white text-indigo-700 shadow-xs'
+                  ? 'bg-white text-indigo-700 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -742,7 +742,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
                 userOverrodeFormat.current = true;
                 setSelectedFormat(e.target.value);
               }}
-              className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-2xs"
+              className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-2xs"
             >
               {fileFormats.map((fmt) => (
                 <option key={fmt.id} value={fmt.id}>
@@ -812,7 +812,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
                               {pat.name}
                             </span>
                           </div>
-                          <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 shrink-0">
+                          <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-sm bg-slate-700 text-slate-300 shrink-0">
                             {pat.structure_type || pat.type}
                           </span>
                         </div>
@@ -853,7 +853,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
               placeholder={searchMode === 'hex' ? 'Search hex bytes (e.g., 4D 5A or 7F 45)...' : 'Search strings in page...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+              className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 font-mono"
             />
           </div>
           <div className="inline-flex rounded-xl bg-slate-200/80 p-0.5 border border-slate-200 text-[11px]">
@@ -890,7 +890,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
               placeholder="0x0000"
               value={jumpInput}
               onChange={(e) => setJumpInput(e.target.value)}
-              className="w-20 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500 text-center"
+              className="w-20 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-900 font-mono focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-center"
             />
             <button
               type="submit"
@@ -1192,7 +1192,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
                         }}
                         className={`inline-block w-6 text-center rounded px-0.5 cursor-pointer select-none transition-colors ${
                           isSelected
-                            ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 shadow-xs z-1'
+                            ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 shadow-2xs z-1'
                             : isHovered
                             ? 'ring-2 ring-indigo-500 text-indigo-950 font-bold z-1'
                             : byteVal === 0
@@ -1263,7 +1263,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
                         }}
                         className={`inline-block w-6 text-center rounded px-0.5 cursor-pointer select-none transition-colors ${
                           isSelected
-                            ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 shadow-xs z-1'
+                            ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 shadow-2xs z-1'
                             : isHovered
                             ? 'ring-2 ring-indigo-500 text-indigo-950 font-bold z-1'
                             : byteVal === 0
@@ -1333,7 +1333,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
                             ? '#0f172a'
                             : '#64748b',
                         }}
-                        className={`inline-block px-[1px] rounded-xs cursor-pointer select-none transition-colors ${
+                        className={`inline-block px-px rounded-xs cursor-pointer select-none transition-colors ${
                           isSelected
                             ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 z-1'
                             : isHovered
@@ -1434,7 +1434,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
                           }}
                           className={`inline-block px-0.5 rounded cursor-pointer select-none transition-colors ${
                             isSelected
-                              ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 shadow-xs z-1'
+                              ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 shadow-2xs z-1'
                               : isHovered
                               ? 'ring-2 ring-indigo-500 text-indigo-950 font-bold z-1'
                               : byteVal === 0
@@ -1509,7 +1509,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
                           }}
                           className={`inline-block px-0.5 rounded cursor-pointer select-none transition-colors ${
                             isSelected
-                              ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 shadow-xs z-1'
+                              ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 shadow-2xs z-1'
                               : isHovered
                               ? 'ring-2 ring-indigo-500 text-indigo-950 font-bold z-1'
                               : byteVal === 0
@@ -1582,7 +1582,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
                             ? '#0f172a'
                             : '#64748b',
                         }}
-                        className={`inline-block px-[1px] rounded-xs cursor-pointer select-none transition-colors ${
+                        className={`inline-block px-px rounded-xs cursor-pointer select-none transition-colors ${
                           isSelected
                             ? 'bg-blue-600 text-white font-bold ring-1 ring-blue-400 z-1'
                             : isHovered
@@ -1626,7 +1626,7 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
               </span>
             </div>
             <span
-              className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-white shrink-0"
+              className="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wider text-white shrink-0"
               style={{ backgroundColor: hoveredPattern.pattern.color }}
             >
               {hoveredPattern.pattern.structure_type || 'structure'}
@@ -1634,14 +1634,14 @@ export const HexRawInspector: React.FC<HexRawInspectorProps> = ({
           </div>
 
           <div className="flex items-center gap-2 text-[10px] font-mono text-slate-300 mb-1.5">
-            <span className="bg-slate-800 px-1.5 py-0.5 rounded text-amber-300">
+            <span className="bg-slate-800 px-1.5 py-0.5 rounded-sm text-amber-300">
               Offset: 0x{hoveredPattern.start.toString(16).padStart(8, '0').toUpperCase()}
               {hoveredPattern.end - hoveredPattern.start > 1 && ` - 0x${(hoveredPattern.end - 1).toString(16).padStart(8, '0').toUpperCase()}`}
             </span>
-            <span className="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">
+            <span className="bg-slate-800 px-1.5 py-0.5 rounded-sm text-slate-300">
               Length: {hoveredPattern.end - hoveredPattern.start}B
             </span>
-            <span className="bg-slate-800 px-1.5 py-0.5 rounded text-indigo-300 truncate">
+            <span className="bg-slate-800 px-1.5 py-0.5 rounded-sm text-indigo-300 truncate">
               {hoveredPattern.pattern.category}
             </span>
           </div>

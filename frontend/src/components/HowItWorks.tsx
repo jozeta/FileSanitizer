@@ -109,7 +109,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
       </div>
 
       {/* Philosophy Card: Detection vs CDR */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs">
         <div className="space-y-3 pr-0 md:pr-4 border-b md:border-b-0 md:border-r border-slate-200 pb-6 md:pb-0">
           <div className="flex items-center gap-2 text-rose-600 font-semibold text-sm">
             <AlertTriangle className="w-4 h-4" />
@@ -168,12 +168,12 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
             return (
               <div 
                 key={idx}
-                className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-300 transition-all shadow-sm flex flex-col justify-between"
+                className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-300 transition-all shadow-xs flex flex-col justify-between"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-sm">
                         {s.num}
                       </span>
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${s.tagColor}`}>
@@ -200,7 +200,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
       </div>
 
       {/* Security Architecture Guarantees */}
-      <div className="bg-slate-50 border border-slate-200 text-slate-800 rounded-3xl p-8 sm:p-10 shadow-sm space-y-6">
+      <div className="bg-slate-50 border border-slate-200 text-slate-800 rounded-3xl p-8 sm:p-10 shadow-xs space-y-6">
         <div className="max-w-2xl space-y-2">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-white border border-slate-200 rounded-full text-xs font-mono text-slate-600">
             <Lock className="w-3.5 h-3.5 text-blue-600" />
@@ -213,17 +213,17 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-2xs">
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <Server className="w-4 h-4" />
             </div>
             <h4 className="text-sm font-semibold text-slate-900">Non-Root & Zero Caps</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Containers run under unprivileged UIDs (1001) with Linux capabilities dropped (<code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">cap_drop: ALL</code>).
+              Containers run under unprivileged UIDs (1001) with Linux capabilities dropped (<code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded-sm">cap_drop: ALL</code>).
             </p>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-2xs">
             <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <Laptop className="w-4 h-4" />
             </div>
@@ -233,7 +233,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
             </p>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-2xs">
             <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
               <GlobeLock className="w-4 h-4" />
             </div>
@@ -243,7 +243,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
             </p>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-2xs">
             <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <Clock className="w-4 h-4" />
             </div>
@@ -259,7 +259,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
         <button
           onClick={onGoToSanitizer}
-          className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-blue-600 text-white font-medium text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-blue-600 text-white font-medium text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           <span>Start Sanitizing Files</span>
           <ArrowRight className="w-4 h-4" />
@@ -267,7 +267,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onGoToSanitizer, onGoToF
 
         <button
           onClick={onGoToFormats}
-          className="w-full sm:w-auto px-6 py-3 bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl border border-slate-200 shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full sm:w-auto px-6 py-3 bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl border border-slate-200 shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
         >
           <span>View Supported Formats & Checks</span>
           <FileText className="w-4 h-4 text-slate-400" />

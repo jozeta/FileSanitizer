@@ -109,10 +109,10 @@ export const JavaBehavioralForensics: React.FC<JavaBehavioralForensicsProps> = (
     <div className="space-y-6">
       {/* 1. STRRAT Case Study Match Alert Banner */}
       {strrat_heuristics && strrat_heuristics.is_strrat_candidate && (
-        <div className="p-5 bg-gradient-to-r from-rose-50 via-purple-50 to-rose-50 border-2 border-rose-300 rounded-3xl shadow-sm space-y-3">
+        <div className="p-5 bg-linear-to-r from-rose-50 via-purple-50 to-rose-50 border-2 border-rose-300 rounded-3xl shadow-xs space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-rose-600 text-white rounded-xl shadow-sm">
+              <div className="p-2 bg-rose-600 text-white rounded-xl shadow-xs">
                 <Bug className="w-5 h-5" />
               </div>
               <div>
@@ -177,7 +177,7 @@ export const JavaBehavioralForensics: React.FC<JavaBehavioralForensicsProps> = (
             onClick={() => setSelectedPillar('internet')}
             className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
               selectedPillar === 'internet'
-                ? 'bg-sky-50/70 border-sky-300 shadow-sm ring-2 ring-sky-400/20'
+                ? 'bg-sky-50/70 border-sky-300 shadow-xs ring-2 ring-sky-400/20'
                 : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
             }`}
           >
@@ -204,7 +204,7 @@ export const JavaBehavioralForensics: React.FC<JavaBehavioralForensicsProps> = (
             onClick={() => setSelectedPillar('file')}
             className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
               selectedPillar === 'file'
-                ? 'bg-amber-50/70 border-amber-300 shadow-sm ring-2 ring-amber-400/20'
+                ? 'bg-amber-50/70 border-amber-300 shadow-xs ring-2 ring-amber-400/20'
                 : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
             }`}
           >
@@ -231,7 +231,7 @@ export const JavaBehavioralForensics: React.FC<JavaBehavioralForensicsProps> = (
             onClick={() => setSelectedPillar('command')}
             className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
               selectedPillar === 'command'
-                ? 'bg-rose-50/70 border-rose-300 shadow-sm ring-2 ring-rose-400/20'
+                ? 'bg-rose-50/70 border-rose-300 shadow-xs ring-2 ring-rose-400/20'
                 : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
             }`}
           >
@@ -258,7 +258,7 @@ export const JavaBehavioralForensics: React.FC<JavaBehavioralForensicsProps> = (
             onClick={() => setSelectedPillar('obfuscation')}
             className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
               selectedPillar === 'obfuscation'
-                ? 'bg-purple-50/70 border-purple-300 shadow-sm ring-2 ring-purple-400/20'
+                ? 'bg-purple-50/70 border-purple-300 shadow-xs ring-2 ring-purple-400/20'
                 : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
             }`}
           >

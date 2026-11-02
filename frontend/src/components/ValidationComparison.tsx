@@ -24,7 +24,7 @@ export const ValidationComparison: React.FC<ValidationComparisonProps> = ({
   const clean = validation.sanitized;
 
   return (
-    <div className="bg-white rounded-3xl border border-emerald-200/80 p-6 sm:p-8 shadow-sm">
+    <div className="bg-white rounded-3xl border border-emerald-200/80 p-6 sm:p-8 shadow-xs">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
         <div className="flex items-center gap-3">
@@ -53,7 +53,7 @@ export const ValidationComparison: React.FC<ValidationComparisonProps> = ({
 
           <button
             onClick={onDownload}
-            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>Download Clean File</span>

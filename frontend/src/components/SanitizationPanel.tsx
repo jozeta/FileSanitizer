@@ -581,7 +581,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
   ];
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
         <div>
           <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -614,7 +614,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
               onClick={() => handleProfileSelect(p.id)}
               className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
                 isSelected
-                  ? 'border-indigo-600 bg-indigo-50/40 shadow-sm'
+                  ? 'border-indigo-600 bg-indigo-50/40 shadow-xs'
                   : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
               }`}
             >
@@ -674,7 +674,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                   type="checkbox"
                   checked={options.remove_metadata}
                   onChange={() => handleToggle('remove_metadata')}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="font-medium text-slate-800">Remove All Metadata</span>
               </div>
@@ -687,7 +687,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                   type="checkbox"
                   checked={options.remove_gps}
                   onChange={() => handleToggle('remove_gps')}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="font-medium text-slate-800">Remove GPS Coordinates</span>
               </div>
@@ -700,7 +700,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                   type="checkbox"
                   checked={options.remove_author}
                   onChange={() => handleToggle('remove_author')}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="font-medium text-slate-800">Remove Author Information</span>
               </div>
@@ -713,7 +713,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                   type="checkbox"
                   checked={options.remove_comments}
                   onChange={() => handleToggle('remove_comments')}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="font-medium text-slate-800">Remove Comments</span>
               </div>
@@ -727,7 +727,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                   type="checkbox"
                   checked={options.remove_macros}
                   onChange={() => handleToggle('remove_macros')}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="font-medium text-slate-800">Remove VBA Macros</span>
               </div>
@@ -740,7 +740,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                   type="checkbox"
                   checked={options.remove_javascript}
                   onChange={() => handleToggle('remove_javascript')}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="font-medium text-slate-800">Remove JavaScript</span>
               </div>
@@ -753,7 +753,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                   type="checkbox"
                   checked={options.remove_embedded_files}
                   onChange={() => handleToggle('remove_embedded_files')}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="font-medium text-slate-800">Remove Embedded Files & OLE</span>
               </div>
@@ -766,7 +766,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                   type="checkbox"
                   checked={options.remove_external_links}
                   onChange={() => handleToggle('remove_external_links')}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="font-medium text-slate-800">Remove External Links / URIs</span>
               </div>
@@ -782,7 +782,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                       type="checkbox"
                       checked={options.flatten_document}
                       onChange={() => handleToggle('flatten_document')}
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="font-medium text-slate-800">Flatten Forms & Annotations</span>
                   </div>
@@ -795,7 +795,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                       type="checkbox"
                       checked={options.rasterize_pages}
                       onChange={() => handleToggle('rasterize_pages')}
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="font-medium text-indigo-900 font-bold">Rasterize PDF Pages (Image PDF CDR)</span>
                   </div>
@@ -812,7 +812,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                       type="checkbox"
                       checked={options.reencode_image}
                       onChange={() => handleToggle('reencode_image')}
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="font-medium text-slate-800">Re-encode Image Pixels</span>
                   </div>
@@ -825,7 +825,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                       type="checkbox"
                       checked={options.flatten_image}
                       onChange={() => handleToggle('flatten_image')}
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="font-medium text-slate-800">Flatten Transparency</span>
                   </div>
@@ -838,7 +838,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
                       type="checkbox"
                       checked={options.convert_to_png}
                       onChange={() => handleToggle('convert_to_png')}
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded-sm border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="font-medium text-slate-800">Convert to PNG</span>
                   </div>
@@ -877,13 +877,13 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
               onClick={() => handleFormatSelect(opt.id)}
               className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                 outputFormat === opt.id
-                  ? 'bg-white border-blue-600 ring-2 ring-blue-500/20 shadow-xs'
+                  ? 'bg-white border-blue-600 ring-2 ring-blue-500/20 shadow-2xs'
                   : 'bg-white/80 border-slate-200 hover:border-slate-300'
               }`}
             >
               <div className="font-bold text-xs text-slate-900 mb-1 flex items-center justify-between gap-2">
                 <span>{opt.title}</span>
-                <span className={`text-[10px] ${opt.badgeBg} ${opt.badgeText} px-1.5 py-0.2 rounded font-mono font-bold shrink-0`}>
+                <span className={`text-[10px] ${opt.badgeBg} ${opt.badgeText} px-1.5 py-0.2 rounded-sm font-mono font-bold shrink-0`}>
                   {opt.badge}
                 </span>
               </div>
@@ -925,7 +925,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
               <button
                 type="button"
                 onClick={onDownload}
-                className="w-full sm:w-auto px-6 py-3.5 font-bold text-sm rounded-xl shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3.5 font-bold text-sm rounded-xl shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 <span>Download Clean File</span>
@@ -936,7 +936,7 @@ export const SanitizationPanel: React.FC<SanitizationPanelProps> = ({
               type="button"
               onClick={() => onSanitize(selectedProfile, options)}
               disabled={isProcessing}
-              className={`w-full sm:w-auto px-8 py-3.5 font-semibold text-sm rounded-xl shadow-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+              className={`w-full sm:w-auto px-8 py-3.5 font-semibold text-sm rounded-xl shadow-xs transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
                 isProcessing
                   ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                   : isMalicious

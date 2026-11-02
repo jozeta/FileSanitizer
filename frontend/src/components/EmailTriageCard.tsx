@@ -228,7 +228,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
 
   if (!emailInfo) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <Mail className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">No email metadata available for this job.</p>
       </div>
@@ -440,7 +440,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
   return (
     <div className="space-y-6">
       {actionNotice && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs flex items-center justify-between animate-in fade-in duration-200 shadow-sm">
+        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs flex items-center justify-between animate-in fade-in duration-200 shadow-xs">
           <span className="font-medium">{actionNotice}</span>
           <button
             onClick={() => setActionNotice(null)}
@@ -453,7 +453,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
 
       {/* 1. EXECUTIVE EMAIL SECURITY VERDICT BANNER */}
       <div
-        className={`p-6 rounded-3xl border shadow-sm transition-all ${
+        className={`p-6 rounded-3xl border shadow-xs transition-all ${
           verdict.severity === 'critical'
             ? 'bg-rose-50/80 border-rose-300 text-rose-950'
             : verdict.severity === 'high'
@@ -466,7 +466,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-black/10">
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="text-[10px] font-mono uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-black/10 text-slate-800">
+              <span className="text-[10px] font-mono uppercase tracking-wider font-bold px-2 py-0.5 rounded-sm bg-black/10 text-slate-800">
                 Executive Email Security Verdict
               </span>
               <span
@@ -541,7 +541,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                 {verdict.mitre_attack_techniques.map((t, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-800 font-mono text-[10px] font-bold shadow-2xs"
+                    className="px-2 py-0.5 rounded-sm bg-white border border-slate-300 text-slate-800 font-mono text-[10px] font-bold shadow-2xs"
                   >
                     {t}
                   </span>
@@ -568,7 +568,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
       </div>
 
       {/* 2. TOP METADATA & ENVELOPE SUMMARY CARD */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
         <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100 text-lg">
@@ -618,7 +618,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
             <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold mb-1">
               Subject
             </span>
-            <span className="text-slate-900 font-bold break-words">
+            <span className="text-slate-900 font-bold wrap-break-word">
               {emailInfo.subject || '(No Subject)'}
             </span>
           </div>
@@ -1079,7 +1079,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                   <div className="space-y-1.5 font-mono text-[11px]">
                     <div>
                       <span className="text-slate-500 block text-[10px]">Header Display Name:</span>
-                      <span className="font-bold text-slate-900 break-words">{lookalike.display_name || '(Empty)'}</span>
+                      <span className="font-bold text-slate-900 wrap-break-word">{lookalike.display_name || '(Empty)'}</span>
                     </div>
                     <div>
                       <span className="text-slate-500 block text-[10px]">Actual Address:</span>
@@ -1292,27 +1292,27 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                           <td className="py-2 px-3">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {item.is_deceptive && (
-                                <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded-sm bg-rose-100 text-rose-800 text-[10px] font-bold">
                                   Deceptive
                                 </span>
                               )}
                               {item.is_ip_host && (
-                                <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-800 text-[10px] font-bold">
                                   IP Host
                                 </span>
                               )}
                               {item.has_userinfo && (
-                                <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded-sm bg-rose-100 text-rose-800 text-[10px] font-bold">
                                   Userinfo @
                                 </span>
                               )}
                               {item.is_shortener && (
-                                <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded-sm bg-indigo-100 text-indigo-800 text-[10px] font-bold">
                                   Shortener
                                 </span>
                               )}
                               {item.is_credential_target && (
-                                <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded-sm bg-orange-100 text-orange-800 text-[10px] font-bold">
                                   Auth/Login Path
                                 </span>
                               )}
@@ -1517,22 +1517,22 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                           <td className="py-2 px-3">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {att.is_dangerous && (
-                                <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded-sm bg-rose-100 text-rose-800 text-[10px] font-bold">
                                   Dangerous
                                 </span>
                               )}
                               {att.has_macros && (
-                                <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-800 text-[10px] font-bold">
                                   VBA Macros
                                 </span>
                               )}
                               {att.has_double_extension && (
-                                <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded-sm bg-rose-100 text-rose-800 text-[10px] font-bold">
                                   Double Ext (.pdf.exe)
                                 </span>
                               )}
                               {att.is_mismatch && (
-                                <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-800 text-[10px] font-bold">
+                                <span className="px-1.5 py-0.5 rounded-sm bg-red-100 text-red-800 text-[10px] font-bold">
                                   Type Mismatch
                                 </span>
                               )}
@@ -1792,7 +1792,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                 <span>{copiedText ? 'Copied to Clipboard' : 'Copy Text'}</span>
               </button>
             </div>
-            <div className="p-4 bg-slate-50 text-slate-800 rounded-2xl border border-slate-200 text-xs font-mono whitespace-pre-wrap max-h-[500px] overflow-y-auto leading-relaxed shadow-xs">
+            <div className="p-4 bg-slate-50 text-slate-800 rounded-2xl border border-slate-200 text-xs font-mono whitespace-pre-wrap max-h-[500px] overflow-y-auto leading-relaxed shadow-2xs">
               {emailInfo.body_plain || '(Empty Message Body)'}
             </div>
           </div>
@@ -1810,7 +1810,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                 value={headerSearch}
                 onChange={(e) => setHeaderSearch(e.target.value)}
                 placeholder="Filter headers by key or value..."
-                className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div className="p-4 bg-slate-50 text-slate-800 rounded-2xl border border-slate-200 text-xs font-mono max-h-96 overflow-y-auto space-y-1.5 shadow-inner">
@@ -1840,7 +1840,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                   value={rawSearch}
                   onChange={(e) => setRawSearch(e.target.value)}
                   placeholder="Search raw email headers or body..."
-                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-sans"
+                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-sans"
                 />
                 {rawSearch && (
                   <span className="absolute right-3 top-2 text-[10px] font-mono text-slate-400">
@@ -1890,7 +1890,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                 <button
                   type="button"
                   onClick={handleDownloadRawEml}
-                  className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
                   title="Download unmodified .eml file"
                 >
                   <Download className="w-3.5 h-3.5 text-white" />
@@ -1899,7 +1899,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
               </div>
             </div>
 
-            <div className="bg-slate-50 text-slate-800 rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col max-h-[620px]">
+            <div className="bg-slate-50 text-slate-800 rounded-2xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col max-h-[620px]">
               <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-[11px] font-mono text-slate-500 flex items-center justify-between select-none">
                 <span>RFC 822 / RFC 5322 Raw Stream Content</span>
                 <span>UTF-8 / Plain Text</span>
@@ -1960,14 +1960,14 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
               Email Hierarchy &amp; Artifact Network
             </span>
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-mono space-y-2">
-              <div className="p-3 bg-white rounded-xl border border-indigo-200 shadow-xs">
+              <div className="p-3 bg-white rounded-xl border border-indigo-200 shadow-2xs">
                 <span className="text-indigo-600 font-bold block mb-1">Root Email Message</span>
                 <div className="text-slate-800">Subject: {emailInfo.subject || '(No Subject)'}</div>
                 <div className="text-slate-600">From: {emailInfo.from}</div>
               </div>
               <div className="pl-6 space-y-2 border-l-2 border-dashed border-indigo-200 ml-4">
                 {emailInfo.attachments.map((att, idx) => (
-                  <div key={idx} className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
+                  <div key={idx} className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
                     <span className="text-indigo-600 font-bold flex items-center gap-2 mb-1">
                       <span>↳</span>
                       <span>{att.filename}</span>
@@ -2003,7 +2003,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
 
             <div className="space-y-3">
               {Object.entries(offlineTools).map(([toolKey, toolInfo]) => (
-                <div key={toolKey} className="p-4 bg-slate-900 text-slate-100 rounded-2xl shadow-sm border border-slate-800 space-y-2">
+                <div key={toolKey} className="p-4 bg-slate-900 text-slate-100 rounded-2xl shadow-xs border border-slate-800 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-indigo-400 font-mono flex items-center gap-2">
                       <Terminal className="w-3.5 h-3.5 text-indigo-400" />
@@ -2042,7 +2042,7 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
 
       {/* 4. ATTACHMENTS SECTION WITH DEEP ANALYZE & WORKSPACE ACTIONS */}
       {emailInfo.attachments && emailInfo.attachments.length > 0 && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
@@ -2091,17 +2091,17 @@ export const EmailTriageCard: React.FC<EmailTriageCardProps> = ({
                           </span>
                         )}
                         {matchedWorkspaceJob && (
-                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[10px] font-bold uppercase tracking-wider shrink-0 border border-indigo-200">
+                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-sm text-[10px] font-bold uppercase tracking-wider shrink-0 border border-indigo-200">
                             Workspace Artifact
                           </span>
                         )}
                         {att.is_dangerous && (
-                          <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-bold uppercase tracking-wider shrink-0">
+                          <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-sm text-[10px] font-bold uppercase tracking-wider shrink-0">
                             Dangerous Executable
                           </span>
                         )}
                         {att.has_macros && (
-                          <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold uppercase tracking-wider shrink-0">
+                          <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-sm text-[10px] font-bold uppercase tracking-wider shrink-0">
                             VBA Macros
                           </span>
                         )}

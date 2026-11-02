@@ -564,10 +564,10 @@ export const App: React.FC = () => {
         <div className="fixed top-20 right-6 z-50 max-w-md animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`p-4 rounded-2xl shadow-xl border flex items-start gap-3 ${
             duplicateNotice.type === 'error'
-              ? 'bg-rose-50/95 border-rose-200 text-rose-900 backdrop-blur-sm'
+              ? 'bg-rose-50/95 border-rose-200 text-rose-900 backdrop-blur-xs'
               : duplicateNotice.type === 'warning'
-              ? 'bg-amber-50/95 border-amber-200 text-amber-900 backdrop-blur-sm'
-              : 'bg-indigo-50/95 border-indigo-200 text-indigo-900 backdrop-blur-sm'
+              ? 'bg-amber-50/95 border-amber-200 text-amber-900 backdrop-blur-xs'
+              : 'bg-indigo-50/95 border-indigo-200 text-indigo-900 backdrop-blur-xs'
           }`}>
             <div className={`p-1.5 rounded-xl shrink-0 ${
               duplicateNotice.type === 'error' ? 'bg-rose-100 text-rose-700' :
@@ -617,7 +617,7 @@ export const App: React.FC = () => {
             }
           >
             {currentView === 'settings' ? (
-              <div className="max-w-[96rem] mx-auto px-4 py-8">
+              <div className="max-w-384 mx-auto px-4 py-8">
                 <SettingsView onBack={() => setCurrentView('sanitizer')} />
               </div>
             ) : currentView === 'decoder' ? (
@@ -671,7 +671,7 @@ export const App: React.FC = () => {
       </main>
 
       <footer className="border-t border-slate-200 bg-white py-6 mt-auto">
-        <div className="max-w-[96rem] mx-auto px-4 text-center text-xs text-slate-500 space-y-1.5 font-mono">
+        <div className="max-w-384 mx-auto px-4 text-center text-xs text-slate-500 space-y-1.5 font-mono">
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <span className="font-semibold text-slate-700">FileSanitizer</span>
             <span className="text-slate-300">•</span>

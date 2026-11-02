@@ -135,7 +135,7 @@ export const SymbolRenameModal: React.FC<SymbolRenameModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 z-9999 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
@@ -194,7 +194,7 @@ export const SymbolRenameModal: React.FC<SymbolRenameModalProps> = ({
                   onClick={() => setCategory('function')}
                   className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1.5 transition-colors ${
                     category === 'function'
-                      ? 'bg-indigo-600 text-white shadow-xs'
+                      ? 'bg-indigo-600 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -206,7 +206,7 @@ export const SymbolRenameModal: React.FC<SymbolRenameModalProps> = ({
                   onClick={() => setCategory('variable')}
                   className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1.5 transition-colors ${
                     category === 'variable'
-                      ? 'bg-blue-600 text-white shadow-xs'
+                      ? 'bg-blue-600 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -218,7 +218,7 @@ export const SymbolRenameModal: React.FC<SymbolRenameModalProps> = ({
                   onClick={() => setCategory('string')}
                   className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1.5 transition-colors ${
                     category === 'string'
-                      ? 'bg-amber-600 text-white shadow-xs'
+                      ? 'bg-amber-600 text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -318,7 +318,7 @@ export const SymbolRenameModal: React.FC<SymbolRenameModalProps> = ({
                     className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 text-slate-900 font-mono text-xs focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-2xs"
                   />
                   {original && (
-                    <span className="absolute right-2 top-2 px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-100 text-slate-500 border border-slate-200">
+                    <span className="absolute right-2 top-2 px-1.5 py-0.5 rounded-sm text-[9px] font-mono bg-slate-100 text-slate-500 border border-slate-200">
                       {countOccurrences(original)} hits
                     </span>
                   )}
@@ -361,7 +361,7 @@ export const SymbolRenameModal: React.FC<SymbolRenameModalProps> = ({
 
               <button
                 type="submit"
-                className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
               >
                 <Check className="w-4 h-4" />
                 <span>Apply Rename Everywhere</span>
@@ -441,7 +441,7 @@ export const SymbolRenameModal: React.FC<SymbolRenameModalProps> = ({
                         <div className="font-mono text-xs truncate">
                           <span className="text-slate-400 line-through mr-1.5">{r.original}</span>
                           <span className="text-slate-300 mr-1.5">➔</span>
-                          <span className="font-bold text-slate-900 bg-indigo-50/70 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200/50">
+                          <span className="font-bold text-slate-900 bg-indigo-50/70 text-indigo-700 px-1.5 py-0.5 rounded-sm border border-indigo-200/50">
                             {r.renamed}
                           </span>
                         </div>

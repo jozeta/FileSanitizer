@@ -81,7 +81,7 @@ const CallGraphMinimap: React.FC<CallGraphMinimapProps> = ({
       <svg
         width={mapW}
         height={mapH}
-        className="cursor-crosshair mt-1 bg-slate-50 rounded border border-slate-200"
+        className="cursor-crosshair mt-1 bg-slate-50 rounded-sm border border-slate-200"
         onClick={handleClick}
       >
         {nodes.map((node) => {
@@ -405,7 +405,7 @@ export const FunctionCallGraphView: React.FC<FunctionCallGraphViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+    <div className="flex flex-col h-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
       {/* Top Toolbar */}
       <div className="p-3 border-b border-slate-200 bg-slate-50/60 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -429,7 +429,7 @@ export const FunctionCallGraphView: React.FC<FunctionCallGraphViewProps> = ({
               placeholder="Search functions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 w-44"
+              className="pl-8 pr-3 py-1 text-xs bg-white border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-blue-500 w-44"
             />
           </div>
 
@@ -457,7 +457,7 @@ export const FunctionCallGraphView: React.FC<FunctionCallGraphViewProps> = ({
           <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5">
             <button
               onClick={() => setZoomLevel((z) => Math.min(2.5, Math.round((z + 0.15) * 100) / 100))}
-              className="p-1 hover:bg-slate-100 rounded text-slate-600"
+              className="p-1 hover:bg-slate-100 rounded-sm text-slate-600"
               title="Zoom in"
             >
               <ZoomIn className="w-3.5 h-3.5" />
@@ -467,21 +467,21 @@ export const FunctionCallGraphView: React.FC<FunctionCallGraphViewProps> = ({
             </span>
             <button
               onClick={() => setZoomLevel((z) => Math.max(0.15, Math.round((z - 0.15) * 100) / 100))}
-              className="p-1 hover:bg-slate-100 rounded text-slate-600"
+              className="p-1 hover:bg-slate-100 rounded-sm text-slate-600"
               title="Zoom out"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={fitToView}
-              className="p-1 hover:bg-slate-100 rounded text-slate-600 ml-0.5"
+              className="p-1 hover:bg-slate-100 rounded-sm text-slate-600 ml-0.5"
               title="Fit to view (center all nodes)"
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={resetView}
-              className="p-1 hover:bg-slate-100 rounded text-slate-600 ml-0.5"
+              className="p-1 hover:bg-slate-100 rounded-sm text-slate-600 ml-0.5"
               title="Reset view"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -659,7 +659,7 @@ export const FunctionCallGraphView: React.FC<FunctionCallGraphViewProps> = ({
                     width="180"
                     height="42"
                     rx="8"
-                    className={`${styling.bg} ${styling.border} stroke-1 transition-all ${ringClass} group-hover:filter group-hover:drop-shadow-sm`}
+                    className={`${styling.bg} ${styling.border} stroke-1 transition-all ${ringClass} group-hover:filter group-hover:drop-shadow-xs`}
                   />
 
                   {/* Left Accent Stripe */}
@@ -731,24 +731,24 @@ export const FunctionCallGraphView: React.FC<FunctionCallGraphViewProps> = ({
 
         {/* Selected Function Details Drawer */}
         {selectedNode && isDrawerOpen && (
-          <div className="w-80 border-l border-slate-200 bg-white p-4 flex flex-col justify-between overflow-y-auto z-10 shadow-sm shrink-0">
+          <div className="w-80 border-l border-slate-200 bg-white p-4 flex flex-col justify-between overflow-y-auto z-10 shadow-xs shrink-0">
             <div className="space-y-4">
               {/* Header */}
               <div className="border-b border-slate-100 pb-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded border ${getNodeColor(selectedNode).badge}`}>
+                  <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-sm border ${getNodeColor(selectedNode).badge}`}>
                     {selectedNode.node_type}
                   </span>
                   <div className="flex items-center gap-1.5">
                     {selectedNode.risk !== 'info' && (
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-sm border border-rose-200">
                         <ShieldAlert className="w-3 h-3" />
                         {selectedNode.risk.toUpperCase()}
                       </span>
                     )}
                     <button
                       onClick={() => setIsDrawerOpen(false)}
-                      className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                      className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-sm transition-colors"
                       title="Close drawer"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -806,7 +806,7 @@ export const FunctionCallGraphView: React.FC<FunctionCallGraphViewProps> = ({
                         <button
                           key={callerId}
                           onClick={() => setSelectedNodeId(callerId)}
-                          className="w-full text-left p-1.5 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded font-mono text-xs truncate transition-colors border border-slate-200/60"
+                          className="w-full text-left p-1.5 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-sm font-mono text-xs truncate transition-colors border border-slate-200/60"
                         >
                           {cNode?.label || callerId}
                         </button>
@@ -832,7 +832,7 @@ export const FunctionCallGraphView: React.FC<FunctionCallGraphViewProps> = ({
                         <button
                           key={calleeId}
                           onClick={() => setSelectedNodeId(calleeId)}
-                          className="w-full text-left p-1.5 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded font-mono text-xs truncate transition-colors border border-slate-200/60"
+                          className="w-full text-left p-1.5 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-sm font-mono text-xs truncate transition-colors border border-slate-200/60"
                         >
                           {cNode?.label || calleeId}
                         </button>
@@ -872,23 +872,23 @@ export const FunctionCallGraphView: React.FC<FunctionCallGraphViewProps> = ({
       <div className="p-2 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-indigo-500 inline-block"></span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block"></span>
             Entry Point
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-blue-400 inline-block"></span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block"></span>
             Internal Subroutine
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>
             Exported Symbol
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-amber-500 inline-block"></span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block"></span>
             Win32 / POSIX API
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-purple-500 inline-block"></span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-purple-500 inline-block"></span>
             Dynamically Resolved Hash
           </span>
         </div>

@@ -171,7 +171,7 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
         "Interactive AcroForms and dynamic XML Forms Architecture (XFA)",
         "External hyperlinks, URI stream actions, and remote document references",
         "Embedded rich media objects (screen annotations, movie clips, 3D streams)",
-        "Multiple incremental updates (revision history masking shadow attacks)",
+        "Multiple incremental updates (revision history masking shadow-sm attacks)",
         "Password protection, encryption markers, and exploit structural tokens"
       ],
       sanitizations: [
@@ -587,7 +587,7 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
       </div>
 
       {/* Integrated Analysis Engines Bar */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-6 text-white shadow-md">
+      <div className="bg-linear-to-r from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-6 text-white shadow-md">
         <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-blue-300">
           <Cpu className="w-4 h-4 text-blue-400" />
           <span>Integrated Security Engines & Threat Intelligence Services</span>
@@ -606,7 +606,7 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
           {/* Category Tabs */}
           <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
@@ -614,7 +614,7 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
               onClick={() => setActiveCategory('all')}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                 activeCategory === 'all'
-                  ? 'bg-slate-900 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -643,7 +643,7 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
                   onClick={() => setActiveCategory(c.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                     activeCategory === c.id
-                      ? 'bg-slate-900 text-white shadow-sm'
+                      ? 'bg-slate-900 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -661,7 +661,7 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
               placeholder="Search checks, threats, ext..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white"
             />
           </div>
         </div>
@@ -685,12 +685,12 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
             return (
               <div 
                 key={c.id}
-                className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 hover:border-slate-300 transition-all"
+                className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6 hover:border-slate-300 transition-all"
               >
                 {/* Header row */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
                   <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-xs ${c.iconColor}`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-2xs ${c.iconColor}`}>
                       <Icon className="w-6 h-6" />
                     </div>
                     <div>
@@ -774,7 +774,7 @@ export const SupportedFormats: React.FC<SupportedFormatsProps> = ({ onGoToSaniti
       <div className="text-center pt-4">
         <button
           onClick={onGoToSanitizer}
-          className="px-6 py-3 bg-slate-900 hover:bg-blue-600 text-white font-medium text-sm rounded-xl shadow-sm transition-all inline-flex items-center gap-2 cursor-pointer"
+          className="px-6 py-3 bg-slate-900 hover:bg-blue-600 text-white font-medium text-sm rounded-xl shadow-xs transition-all inline-flex items-center gap-2 cursor-pointer"
         >
           <span>Return to File Sanitizer</span>
           <ArrowRight className="w-4 h-4" />

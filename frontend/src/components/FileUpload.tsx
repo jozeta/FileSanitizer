@@ -143,13 +143,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         </p>
 
         {/* Ingestion Mode Toggle */}
-        <div className="inline-flex p-1 bg-slate-100 rounded-2xl border border-slate-200 mt-6 shadow-xs">
+        <div className="inline-flex p-1 bg-slate-100 rounded-2xl border border-slate-200 mt-6 shadow-2xs">
           <button
             type="button"
             onClick={() => { setMode('upload'); setError(null); }}
             className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               mode === 'upload'
-                ? 'bg-white text-slate-900 shadow-sm'
+                ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -162,7 +162,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             onClick={() => { setMode('url'); setUrlError(null); }}
             className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               mode === 'url'
-                ? 'bg-white text-slate-900 shadow-sm'
+                ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -183,7 +183,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             className={`relative border-2 border-dashed rounded-3xl p-10 sm:p-14 text-center cursor-pointer transition-all duration-200 bg-white ${
               isDragOver
                 ? 'border-blue-500 bg-blue-50/50 scale-[1.01]'
-                : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50/50 shadow-sm'
+                : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50/50 shadow-xs'
             }`}
           >
             <input
@@ -227,7 +227,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
           {/* Staged File Card */}
           {selectedFiles.length > 0 && (
-            <div className="mt-8 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <div className="mt-8 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
                 <h4 className="text-sm font-semibold text-slate-800">
                   File queued for analysis
@@ -307,7 +307,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 <button
                   onClick={handleStartUpload}
                   disabled={isUploading}
-                  className="px-6 py-2.5 bg-slate-900 hover:bg-blue-600 text-white font-medium text-sm rounded-xl shadow-sm transition-all duration-200 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="px-6 py-2.5 bg-slate-900 hover:bg-blue-600 text-white font-medium text-sm rounded-xl shadow-xs transition-all duration-200 flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isUploading ? (
                     <>
@@ -327,7 +327,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         </>
       ) : (
         /* ================= MODE: REMOTE URL FILE FETCHER ================= */
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xs space-y-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
               <Globe className="w-6 h-6" />
@@ -352,7 +352,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                   value={inputUrl}
                   onChange={(e) => setInputUrl(e.target.value)}
                   disabled={isFetchingUrl}
-                  className="w-full pl-4 pr-32 py-3 text-sm bg-slate-50 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white font-mono text-slate-800 disabled:opacity-50"
+                  className="w-full pl-4 pr-32 py-3 text-sm bg-slate-50 border border-slate-300 rounded-2xl focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:bg-white font-mono text-slate-800 disabled:opacity-50"
                 />
                 <button
                   type="submit"

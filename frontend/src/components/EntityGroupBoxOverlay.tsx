@@ -110,7 +110,7 @@ export const EntityGroupBoxOverlay: React.FC<EntityGroupBoxOverlayProps> = ({
             >
               <div
                 style={{ backgroundColor: palette.headerBg }}
-                className="w-full h-9 rounded-xl text-white px-3 flex items-center justify-between shadow-sm cursor-move gap-2"
+                className="w-full h-9 rounded-xl text-white px-3 flex items-center justify-between shadow-xs cursor-move gap-2"
                 onMouseDown={(e) => onStartMoveBox(e, box.id)}
               >
                 {/* Left: Drag grip & Title */}
@@ -131,12 +131,12 @@ export const EntityGroupBoxOverlay: React.FC<EntityGroupBoxOverlayProps> = ({
                           if (e.key === 'Escape') setEditingBoxId(null);
                         }}
                         autoFocus
-                        className="bg-white/20 text-white placeholder-white/60 text-xs px-1.5 py-0.5 rounded outline-none border border-white/40 w-full min-w-[70px] max-w-[130px] font-semibold"
+                        className="bg-white/20 text-white placeholder-white/60 text-xs px-1.5 py-0.5 rounded-sm outline-hidden border border-white/40 w-full min-w-[70px] max-w-[130px] font-semibold"
                       />
                       <button
                         type="button"
                         onClick={(e) => handleSaveRename(box.id, e)}
-                        className="p-1 hover:bg-white/20 rounded cursor-pointer"
+                        className="p-1 hover:bg-white/20 rounded-sm cursor-pointer"
                         title="Save name"
                       >
                         <Check className="w-3 h-3 text-white" />
@@ -144,7 +144,7 @@ export const EntityGroupBoxOverlay: React.FC<EntityGroupBoxOverlayProps> = ({
                       <button
                         type="button"
                         onClick={handleCancelRename}
-                        className="p-1 hover:bg-white/20 rounded cursor-pointer"
+                        className="p-1 hover:bg-white/20 rounded-sm cursor-pointer"
                         title="Cancel"
                       >
                         <X className="w-3 h-3 text-white/80" />

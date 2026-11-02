@@ -29,7 +29,7 @@ export const UploadProgressModal: React.FC<UploadProgressModalProps> = ({ files,
             <div className="absolute -inset-1.5 rounded-full bg-linear-to-tr from-blue-100 to-indigo-100 animate-pulse" />
             
             {/* Core icon container */}
-            <div className="relative w-16 h-16 rounded-2xl bg-linear-to-b from-blue-50 to-indigo-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-sm">
+            <div className="relative w-16 h-16 rounded-2xl bg-linear-to-b from-blue-50 to-indigo-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
               {isComplete ? (
                 <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
               ) : (
@@ -92,7 +92,7 @@ export const UploadProgressModal: React.FC<UploadProgressModalProps> = ({ files,
           {/* Progress Bar Track */}
           <div className="w-full bg-slate-100 h-3 rounded-full border border-slate-200/80 overflow-hidden p-0.5 shadow-inner">
             <div
-              className="h-full rounded-full bg-linear-to-r from-blue-600 via-indigo-600 to-blue-500 transition-all duration-150 ease-out shadow-xs"
+              className="h-full rounded-full bg-linear-to-r from-blue-600 via-indigo-600 to-blue-500 transition-all duration-150 ease-out shadow-2xs"
               style={{ width: `${Math.max(percentage, 4)}%` }}
             />
           </div>

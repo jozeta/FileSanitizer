@@ -39,7 +39,7 @@ export const EntropyProfileCard: React.FC<EntropyProfileCardProps> = ({ jobId, e
 
   if (loading && (!currentEntropy || !currentEntropy.profile || currentEntropy.profile.length === 0)) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-12 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-12 shadow-xs text-center">
         <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3" />
         <h3 className="text-base font-bold text-slate-800 mb-1">Computing Shannon Entropy Profile...</h3>
         <p className="text-xs text-slate-500 max-w-md mx-auto">
@@ -51,7 +51,7 @@ export const EntropyProfileCard: React.FC<EntropyProfileCardProps> = ({ jobId, e
 
   if (!currentEntropy || !currentEntropy.profile || currentEntropy.profile.length === 0) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <Activity className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <h3 className="text-base font-bold text-slate-800 mb-1">Shannon Entropy Profile</h3>
         <p className="text-sm text-slate-500 max-w-md mx-auto mb-4">
@@ -76,7 +76,7 @@ export const EntropyProfileCard: React.FC<EntropyProfileCardProps> = ({ jobId, e
   return (
     <div className="space-y-6">
       {/* Header and Summary Banner */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -191,16 +191,16 @@ export const EntropyProfileCard: React.FC<EntropyProfileCardProps> = ({ jobId, e
             </h4>
             <div className="flex items-center gap-3 text-[11px] font-mono text-slate-500">
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded bg-rose-500" /> High (≥7.1)
+                <span className="w-2.5 h-2.5 rounded-sm bg-rose-500" /> High (≥7.1)
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded bg-amber-400" /> Code (5.8–7.0)
+                <span className="w-2.5 h-2.5 rounded-sm bg-amber-400" /> Code (5.8–7.0)
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded bg-blue-400" /> Plain (3.2–5.7)
+                <span className="w-2.5 h-2.5 rounded-sm bg-blue-400" /> Plain (3.2–5.7)
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded bg-slate-300" /> Sparse (&lt;3.2)
+                <span className="w-2.5 h-2.5 rounded-sm bg-slate-300" /> Sparse (&lt;3.2)
               </span>
             </div>
           </div>
@@ -266,7 +266,7 @@ export const EntropyProfileCard: React.FC<EntropyProfileCardProps> = ({ jobId, e
 
       {/* High Entropy Regions Table */}
       {highChunks.length > 0 && (
-        <div className="bg-white rounded-3xl border border-rose-200 p-6 sm:p-8 shadow-sm">
+        <div className="bg-white rounded-3xl border border-rose-200 p-6 sm:p-8 shadow-xs">
           <div className="flex items-center gap-2 mb-3">
             <span className="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
               <Binary className="w-5 h-5" />
@@ -298,7 +298,7 @@ export const EntropyProfileCard: React.FC<EntropyProfileCardProps> = ({ jobId, e
                     <td className="py-2.5 px-4 text-slate-600">{chunk.chunk_size} bytes</td>
                     <td className="py-2.5 px-4 font-extrabold text-rose-600">{chunk.entropy.toFixed(3)} / 8.00</td>
                     <td className="py-2.5 px-4">
-                      <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-bold">
+                      <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-sm text-[10px] font-bold">
                         Packed / Encrypted Stream
                       </span>
                     </td>

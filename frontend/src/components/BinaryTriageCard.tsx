@@ -303,7 +303,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
 
   if (!binaryInfo || typeof binaryInfo !== 'object') {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
+      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xs text-center">
         <Cpu className="w-10 h-10 text-slate-300 mx-auto mb-3" />
         <p className="text-sm text-slate-500 font-medium">No executable binary data available for this file.</p>
       </div>
@@ -444,10 +444,10 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
         </div>
         {/* Legend */}
         <div className="flex items-center gap-4 mt-2 text-[10px] font-medium">
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-500 inline-block"></span> Low (0–5)</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-400 inline-block"></span> Moderate (5–6.5)</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-orange-500 inline-block"></span> High (6.5–7.2)</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block"></span> Packed/Encrypted (≥7.2)</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span> Low (0–5)</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-amber-400 inline-block"></span> Moderate (5–6.5)</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-orange-500 inline-block"></span> High (6.5–7.2)</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-500 inline-block"></span> Packed/Encrypted (≥7.2)</span>
         </div>
       </div>
     );
@@ -457,7 +457,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
     <div className="space-y-6">
       {/* Executive PE Security Verdict Banner */}
       {binaryInfo?.pe_verdict?.verdict && (
-        <div className={`rounded-3xl border p-5 shadow-sm ${
+        <div className={`rounded-3xl border p-5 shadow-xs ${
           binaryInfo.pe_verdict.verdict === 'Malicious'
             ? 'bg-rose-50/80 border-rose-200 text-rose-950'
             : binaryInfo.pe_verdict.verdict === 'Suspicious'
@@ -551,7 +551,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
       )}
 
       {/* Header Banner */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
         <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 text-lg">
@@ -984,7 +984,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
         {/* Tab: Malware Capabilities (ATT&CK aligned) */}
         {activeTab === 'capabilities' && (
           <div className="pt-4 space-y-4">
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
               <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-5 gap-3">
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1098,7 +1098,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
               )}
 
               {/* Proxy DLL / Forwarded Exports */}
-              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
                 <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-4 gap-3">
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1143,7 +1143,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                             <td className="py-2 px-3 font-bold text-slate-900">{f.name}</td>
                             <td className="py-2 px-3 text-blue-600 font-bold">{f.forwarder}</td>
                             <td className="py-2 px-3">
-                              <span className="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[10px] font-sans font-bold">
+                              <span className="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-sm text-[10px] font-sans font-bold">
                                 Forwarded Proxy Stub
                               </span>
                             </td>
@@ -1156,7 +1156,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
               </div>
 
               {/* TLS Callbacks */}
-              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
                 <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-4 gap-3">
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1198,7 +1198,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                             <td className="py-2 px-3 text-slate-700">{cb.rva}</td>
                             <td className="py-2 px-3 font-bold text-slate-900">{cb.section}</td>
                             <td className="py-2 px-3">
-                              <span className="px-2 py-0.5 bg-rose-50 text-rose-800 border border-rose-200 rounded text-[10px] font-sans font-bold">
+                              <span className="px-2 py-0.5 bg-rose-50 text-rose-800 border border-rose-200 rounded-sm text-[10px] font-sans font-bold">
                                 Pre-Execution Hook (Anti-Debug Risk)
                               </span>
                             </td>
@@ -1223,25 +1223,25 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
             <div className="pt-4 space-y-5">
               {/* CLR Overview Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block mb-1">
                     CLR Runtime Version
                   </span>
                   <span className="text-sm font-bold text-slate-900 font-mono">{dn.runtime_version || 'Unknown'}</span>
                 </div>
-                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block mb-1">
                     Target Framework
                   </span>
                   <span className="text-sm font-bold text-slate-900">{dn.target_framework || 'Desktop CLR'}</span>
                 </div>
-                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block mb-1">
                     Entry Token
                   </span>
                   <span className="text-sm font-bold text-slate-900 font-mono">{dn.entry_point_token || '0x0'}</span>
                 </div>
-                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                <div className="p-4 bg-white rounded-3xl border border-slate-200 shadow-xs">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block mb-1">
                     IL Only / Pure Managed
                   </span>
@@ -1269,7 +1269,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
               )}
 
               {/* Suspicious Managed Features */}
-              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
                 <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-4 gap-3">
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1351,7 +1351,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
               )}
 
               {/* Dangerous Legacy CRT APIs */}
-              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
                 <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-4 gap-3">
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1401,7 +1401,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
 
               {/* Missing Exploit Mitigations */}
               {missing.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
                   <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
                     <ShieldAlert className="w-4 h-4 text-orange-600" />
                     Missing PE Exploit Mitigations
@@ -1495,7 +1495,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                 {fileHeaderCharFlags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {fileHeaderCharFlags.map((c, i) => (
-                      <span key={i} className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-mono">
+                      <span key={i} className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded-sm text-[10px] font-mono">
                         {c}
                       </span>
                     ))}
@@ -1569,7 +1569,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                         {binaryInfo.optional_header.dll_characteristics_flags.map((flag, i) => (
                           <span
                             key={i}
-                            className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded text-[10px] font-mono font-medium"
+                            className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded-sm text-[10px] font-mono font-medium"
                           >
                             {flag}
                           </span>
@@ -1773,12 +1773,12 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                         <td className="py-2.5 px-3 font-bold text-slate-900 flex items-center gap-1.5">
                           <span>{sec.name || `Section_${idx}`}</span>
                           {sec.is_entry_point && (
-                            <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-800 rounded text-[9px] font-sans font-bold">
+                            <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-800 rounded-sm text-[9px] font-sans font-bold">
                               EP
                             </span>
                           )}
                           {sec.is_wx && (
-                            <span className="px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded text-[9px] font-sans font-bold" title="Write+Execute permission violation">
+                            <span className="px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded-sm text-[9px] font-sans font-bold" title="Write+Execute permission violation">
                               W^X
                             </span>
                           )}
@@ -1807,7 +1807,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                           <a
                             href={apiClient.getBinaryDumpSectionUrl(jobId, sec.name)}
                             download
-                            className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition-colors shadow-sm cursor-pointer"
+                            className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition-colors shadow-xs cursor-pointer"
                             title={`Dump raw bytes of section ${sec.name}`}
                           >
                             <Download className="w-3 h-3 text-slate-500" />
@@ -1845,7 +1845,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                     <div key={idx} className="p-2 bg-white rounded-xl border border-rose-200 text-xs">
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-mono font-bold text-rose-900">{s.api || s.syscall || 'Unknown API'}</span>
-                        <span className="px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded text-[9px] font-bold">
+                        <span className="px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded-sm text-[9px] font-bold">
                           {s.severity || 'HIGH'}
                         </span>
                       </div>
@@ -1866,14 +1866,14 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                   value={importSearch}
                   onChange={(e) => setImportSearch(e.target.value)}
                   placeholder="Filter functions by name..."
-                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <select
                 value={selectedDll}
                 onChange={(e) => setSelectedDll(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none"
+                className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-hidden"
               >
                 <option value="all">All Libraries ({dllNames.length})</option>
                 {dllNames.map((dll) => (
@@ -1905,7 +1905,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                       <td className="py-2 px-3 font-semibold text-slate-900">
                         {fn.name}
                         {fn.is_suspicious && (
-                          <span className="ml-1.5 px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded text-[9px] font-sans font-bold">
+                          <span className="ml-1.5 px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-sm text-[9px] font-sans font-bold">
                             Suspicious
                           </span>
                         )}
@@ -2027,17 +2027,17 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                         </td>
                         <td className="py-2.5 px-3">
                           {res.is_embedded_pe && (
-                            <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[10px] font-bold">
+                            <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-sm text-[10px] font-bold">
                               ⚠️ Embedded PE (MZ)
                             </span>
                           )}
                           {res.is_embedded_archive && (
-                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">
+                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-sm text-[10px] font-bold">
                               Embedded Archive
                             </span>
                           )}
                           {!res.is_embedded_pe && !res.is_embedded_archive && res.is_high_entropy && (
-                            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded text-[10px] font-semibold">
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-sm text-[10px] font-semibold">
                               Encrypted / Compressed
                             </span>
                           )}
@@ -2046,7 +2046,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                           <a
                             href={apiClient.getBinaryDumpResourceUrl(jobId, res.type, res.name)}
                             download
-                            className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition-colors shadow-sm cursor-pointer"
+                            className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition-colors shadow-xs cursor-pointer"
                             title={`Dump resource payload (${res.type}/${res.name})`}
                           >
                             <Download className="w-3 h-3 text-slate-500" />
@@ -2080,7 +2080,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                   value={stringSearch}
                   onChange={(e) => setStringSearch(e.target.value)}
                   placeholder="Search ASCII and Unicode strings..."
-                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -2089,7 +2089,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                 <button
                   onClick={() => setStringCategory('all')}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                    stringCategory === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    stringCategory === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   All ({binaryInfo.strings?.total_count || 0})
@@ -2097,7 +2097,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                 <button
                   onClick={() => setStringCategory('network')}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                    stringCategory === 'network' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    stringCategory === 'network' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   Network / IPs ({Array.isArray(binaryInfo.strings?.network) ? binaryInfo.strings.network.length : 0})
@@ -2105,7 +2105,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                 <button
                   onClick={() => setStringCategory('commands')}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                    stringCategory === 'commands' ? 'bg-white text-rose-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    stringCategory === 'commands' ? 'bg-white text-rose-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   Commands / LOLBins ({Array.isArray(binaryInfo.strings?.commands) ? binaryInfo.strings.commands.length : 0})
@@ -2113,7 +2113,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                 <button
                   onClick={() => setStringCategory('file_paths')}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                    stringCategory === 'file_paths' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    stringCategory === 'file_paths' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   File Paths ({Array.isArray(binaryInfo.strings?.file_paths) ? binaryInfo.strings.file_paths.length : 0})
@@ -2121,7 +2121,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                 <button
                   onClick={() => setStringCategory('registry')}
                   className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                    stringCategory === 'registry' ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    stringCategory === 'registry' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   Registry ({Array.isArray(binaryInfo.strings?.registry) ? binaryInfo.strings.registry.length : 0})
@@ -2144,7 +2144,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                     placeholder="Min (e.g. 5)"
                     value={minStrLength}
                     onChange={(e) => setMinStrLength(e.target.value)}
-                    className="w-20 px-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                    className="w-20 px-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-mono"
                     title="Minimum string length in characters"
                   />
                   <span className="text-slate-400 font-mono">–</span>
@@ -2155,7 +2155,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                     placeholder="Max (e.g. 64)"
                     value={maxStrLength}
                     onChange={(e) => setMaxStrLength(e.target.value)}
-                    className="w-20 px-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                    className="w-20 px-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-mono"
                     title="Maximum string length in characters"
                   />
                 </div>
@@ -2226,7 +2226,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                 const renamedVal = getRenamed(s);
                 const hasRename = renamedVal !== s;
                 return (
-                  <div key={idx} className="hover:bg-slate-100/80 py-1 px-1.5 rounded flex items-center justify-between gap-2 break-all group transition-colors">
+                  <div key={idx} className="hover:bg-slate-100/80 py-1 px-1.5 rounded-sm flex items-center justify-between gap-2 break-all group transition-colors">
                     <div className="flex items-start gap-2 flex-1 min-w-0">
                       <span className="text-slate-400 select-none text-[10px] w-8 shrink-0 text-right pt-0.5">
                         {idx + 1}
@@ -2235,7 +2235,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                         <ReferencedText text={s} workspaceJobs={workspaceJobs} onSelectJob={onSelectJob} />
                       </span>
                       {hasRename && (
-                        <span className="text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200 text-[11px] shrink-0">
+                        <span className="text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.2 rounded-sm border border-indigo-200 text-[11px] shrink-0">
                           ➔ {renamedVal}
                         </span>
                       )}
@@ -2243,7 +2243,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenRename(s, 'string')}
-                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all cursor-pointer text-[10px] font-sans flex items-center gap-1 shrink-0"
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 hover:bg-white p-1 rounded-sm border border-transparent hover:border-slate-200 transition-all cursor-pointer text-[10px] font-sans flex items-center gap-1 shrink-0"
                       title="Rename this string symbol"
                     >
                       <Edit3 className="w-3 h-3 text-indigo-600" />
@@ -2618,16 +2618,16 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
 
                               <div className="flex items-center gap-1.5">
                                 {isCertSelfSigned && (
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-amber-100 text-amber-800">
                                     Self-Signed
                                   </span>
                                 )}
                                 {isCertExpired ? (
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
+                                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-rose-100 text-rose-800">
                                     Expired
                                   </span>
                                 ) : (
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-emerald-100 text-emerald-800">
                                     Valid
                                   </span>
                                 )}
@@ -2966,7 +2966,7 @@ export const BinaryTriageCard: React.FC<BinaryTriageCardProps> = ({
                   </h4>
                   <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-2 bg-white rounded-xl border border-slate-200 font-mono text-xs">
                     {sc.stack_strings.map((str: string, i: number) => (
-                      <span key={i} className="px-2 py-0.5 bg-slate-100 rounded text-slate-800 border border-slate-200">
+                      <span key={i} className="px-2 py-0.5 bg-slate-100 rounded-sm text-slate-800 border border-slate-200">
                         {str}
                       </span>
                     ))}
