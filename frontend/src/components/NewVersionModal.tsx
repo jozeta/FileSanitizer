@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sparkles, ExternalLink, X, ArrowRight, BellOff, Github, Calendar, Tag } from 'lucide-react';
+import { Sparkles, ExternalLink, X, ArrowRight, BellOff, Calendar, Tag } from 'lucide-react';
+import { GithubIcon } from './icons/GithubIcon';
 import { UpdateCheckResult } from '../api/client';
 
 interface NewVersionModalProps {
@@ -146,7 +147,7 @@ export const NewVersionModal: React.FC<NewVersionModalProps> = ({
               rel="noopener noreferrer"
               className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-all cursor-pointer group"
             >
-              <Github className="w-4 h-4" />
+              <GithubIcon className="w-4 h-4" />
               <span>View Release &amp; Changelog on GitHub</span>
               <ExternalLink className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
             </a>

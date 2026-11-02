@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { WarningRule, YaraRule, ClamAVInfo, ExternalConnectionPolicy, StatisticsData } from '../types';
 import { apiClient } from '../api/client';
 import { formatBytes, formatTimestamp, setTimeDisplayConfig } from '../utils/formatters';
-import { Sparkles, Github, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sparkles, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { GithubIcon } from './icons/GithubIcon';
 import { NewVersionModal } from './NewVersionModal';
 import { APP_VERSION } from '../version';
 import {
@@ -2009,7 +2010,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
           <div className="flex items-center justify-between gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200 mt-2.5">
             <div className="text-left">
               <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <Github className="w-3.5 h-3.5 text-slate-700" />
+                <GithubIcon className="w-3.5 h-3.5 text-slate-700" />
                 Automatic Update Checks
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
@@ -2640,7 +2641,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                 <div className="space-y-1.5 max-w-2xl">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                      <Github className="w-3.5 h-3.5 text-slate-700" />
+                      <GithubIcon className="w-3.5 h-3.5 text-slate-700" />
                       Automatic GitHub Version &amp; Update Checks
                     </span>
                     <span
