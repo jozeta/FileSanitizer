@@ -1,0 +1,5 @@
+# Known fake keys for claude-audit (tools/audit-all.sh): one <commit>:<path> per reviewed finding.
+# Test fixtures for the secret/DLP and malware-analysis detectors (fake, truncated keys).
+# Reviewed 2026-11-03. Exact entries only, so any new finding is still reported.
+3ac2999:backend/tests/test_forensics_dlp_and_threat_intel.py
+74f4171:backend/tests/test_apk_and_java_analysis.py
