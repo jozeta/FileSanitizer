@@ -8520,7 +8520,7 @@ jobs:
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                     <div className="font-bold text-slate-900 font-sans mb-0.5">String (UTF-8 / ASCII)</div>
-                    <div className="text-indigo-600">e.g. powershell or eval( or /JavaScript or %PDF</div>
+                    <div className="text-indigo-600">{"e.g. powershell or eval( or /JavaScript or %PDF"}</div>
                     <div className="text-slate-500 font-sans mt-0.5 text-[11px]">Matches plain ASCII or UTF-8 string across the file or at an optional exact offset.</div>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">

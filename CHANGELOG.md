@@ -6,6 +6,8 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
 
 ## [Unreleased]
 
+- Self-host the Inter and JetBrains Mono fonts (no more Google Fonts requests); the nginx CSP no
+  longer allows fonts.googleapis.com / fonts.gstatic.com
 - Ignore macOS, Claude Code and secret files; add MIT license
 - Add CLAUDE.md with project guidance for Claude Code
 - Add CI workflow, Dependabot config, security policy
