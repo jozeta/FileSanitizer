@@ -6,6 +6,7 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
 
 ## [Unreleased]
 
+- Animations and transitions respect the system's "Reduce motion" setting
 - Lint clean-up: removed 270 unused imports and the names of 49 unused variables (every call made
   for its effect is kept); `ruff.toml` now enforces unused imports/variables. Backend suite: 311 passed
 - ruff (`ruff.toml`: syntax errors, undefined names and other pyflakes errors) with a CI lint job.
