@@ -331,7 +331,6 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
         "13": "info",
         "21": "info",
         "24": "info",
-        "25": "info",  # noqa: F601 -- also "critical" above; this later entry wins. Sysmon 25 is ProcessTampering: decide which is meant
         "400": "info",
         "600": "info",
         "4624": "info",

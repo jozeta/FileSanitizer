@@ -17,8 +17,9 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
   - the entity graph added a second node for a subdomain already shown by the domain-intel
     attack-surface scan when the text also mentioned it; it now enriches the existing node
   - duplicate keys in the extension analyzer's result; `not in` style
-- Sysmon event 25 (ProcessTampering) is listed as both "critical" and "info" in the default EVTX
-  severity rules; the later "info" wins, as before. Marked in `settings_store.py` for a decision
+- Sysmon event 25 (ProcessTampering: process hollowing, herpaderping) is now **critical** by default,
+  like 8 (CreateRemoteThread) and 10 (ProcessAccess). It was listed twice, and the later "info" entry
+  won. Saved settings that list 25 explicitly keep their own value
 - The API is published on host port 8010 instead of 8000 (Ratatosk uses 8000), so both can run at
   once; inside Docker it still listens on 8000. The Vite dev proxy and the API docs follow
 - Self-host the Inter and JetBrains Mono fonts (no more Google Fonts requests); the nginx CSP no
