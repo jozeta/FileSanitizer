@@ -34,7 +34,7 @@ services:
       - jobs-data:/jobs
       - clamav-db:/var/lib/clamav
     ports:
-      - "8000:8000"
+      - "8010:8000"   # host 8010 (8000 is Ratatosk's); inside Docker the API stays on 8000
     restart: unless-stopped
     cap_drop:
       - ALL

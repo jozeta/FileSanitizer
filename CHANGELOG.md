@@ -6,6 +6,8 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
 
 ## [Unreleased]
 
+- The API is published on host port 8010 instead of 8000 (Ratatosk uses 8000), so both can run at
+  once; inside Docker it still listens on 8000. The Vite dev proxy and the API docs follow
 - Self-host the Inter and JetBrains Mono fonts (no more Google Fonts requests); the nginx CSP no
   longer allows fonts.googleapis.com / fonts.gstatic.com
 - Ignore macOS, Claude Code and secret files; add MIT license

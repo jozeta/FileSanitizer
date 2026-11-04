@@ -220,7 +220,7 @@ The application runs as an isolated multi-container architecture defined in `doc
 | Service Container | Port / Binding | Role & Technology |
 | :--- | :--- | :--- |
 | `filesanitizer-frontend` | `80:80`, `8080:80` | Nginx reverse proxy serving the React 19 + TypeScript + Vite single-page application. |
-| `filesanitizer-api` | `8000:8000` | FastAPI Python 3.11 asynchronous API engine, forensic analyzers, ProjectDiscovery Subfinder (v2.17.0) & dnsx (v1.3.1), Nmap 7.95+ active service scanner, and CDR pipelines (`cap_add: [SETUID, SETGID, NET_RAW, NET_ADMIN, AUDIT_WRITE]`). |
+| `filesanitizer-api` | `8010:8000` | FastAPI Python 3.11 asynchronous API engine, forensic analyzers, ProjectDiscovery Subfinder (v2.17.0) & dnsx (v1.3.1), Nmap 7.95+ active service scanner, and CDR pipelines (`cap_add: [SETUID, SETGID, NET_RAW, NET_ADMIN, AUDIT_WRITE]`). |
 | `filesanitizer-worker` | Internal network | Celery distributed worker executing asynchronous threat analysis, Subfinder & dnsx subdomain reconnaissance, Nmap active reconnaissance, and heavy processing (`cap_add: [SETUID, SETGID, NET_RAW, NET_ADMIN, AUDIT_WRITE]`). |
 | `filesanitizer-redis` | `6379` (Internal) | Redis in-memory message broker, task queue, and intermediate cache. |
 | `filesanitizer-clamav` | `3310` (Internal) | ClamAV antivirus scanner daemon with automatic `freshclam` signature database updates. |
@@ -250,13 +250,13 @@ The application runs as an isolated multi-container architecture defined in `doc
    docker compose ps
 
    # Verify API health check
-   curl http://localhost:8000/api/health
+   curl http://localhost:8010/api/health
    ```
 
 5. Access the application:
    * **Web Interface:** [http://localhost](http://localhost) (or [http://localhost:8080](http://localhost:8080))
-   * **Interactive API Documentation (Swagger / OpenAPI):** [http://localhost:8000/docs](http://localhost:8000/docs)
-   * **Alternative API Documentation (ReDoc):** [http://localhost:8000/redoc](http://localhost:8000/redoc)
+   * **Interactive API Documentation (Swagger / OpenAPI):** [http://localhost:8010/docs](http://localhost:8010/docs)
+   * **Alternative API Documentation (ReDoc):** [http://localhost:8010/redoc](http://localhost:8010/redoc)
 
 ### Running Automated Test Suite
 

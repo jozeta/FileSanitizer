@@ -16,14 +16,15 @@ Compose.
 ```sh
 cp .env.example .env
 docker compose up -d --build
-docker compose ps && curl http://localhost:8000/api/health
+docker compose ps && curl http://localhost:8010/api/health
 
 docker compose exec api pytest tests/ -v          # backend tests
 cd frontend && npm run build                       # frontend type-check + build (tsc && vite build)
 cd frontend && npm run dev                         # frontend dev server
 ```
 
-UI: http://localhost (or :8080). API docs: http://localhost:8000/docs.
+UI: http://localhost (or :8080). API docs: http://localhost:8010/docs (host port 8010; inside Docker
+the API listens on 8000, which nginx proxies to).
 
 ## Layout
 

@@ -6174,7 +6174,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
 {`import time
 import requests
 
-API_BASE = "http://localhost:8000/api"
+API_BASE = "http://localhost:8010/api"
 
 def sanitize_document(filepath: str, output_path: str):
     # 1. Upload file
@@ -6249,7 +6249,7 @@ sanitize_document("contract.docx", "contract_clean.pdf")`}
   formData.append('files', fileBlob, filename);
 
   // 1. Upload
-  const uploadRes = await fetch('http://localhost:8000/api/files', {
+  const uploadRes = await fetch('http://localhost:8010/api/files', {
     method: 'POST',
     body: formData,
   }).then(r => r.json());
@@ -6260,16 +6260,16 @@ sanitize_document("contract.docx", "contract_clean.pdf")`}
   let jobState = 'QUEUED';
   while (jobState !== 'ANALYZED' && jobState !== 'COMPLETED') {
     await new Promise(r => setTimeout(r, 1000));
-    const status = await fetch(\`http://localhost:8000/api/jobs/\${jobId}\`).then(r => r.json());
+    const status = await fetch(\`http://localhost:8010/api/jobs/\${jobId}\`).then(r => r.json());
     jobState = status.state;
   }
 
   // 3. Retrieve findings
-  const analysis = await fetch(\`http://localhost:8000/api/jobs/\${jobId}/analysis\`).then(r => r.json());
+  const analysis = await fetch(\`http://localhost:8010/api/jobs/\${jobId}/analysis\`).then(r => r.json());
   console.log('Risk Level:', analysis.risk.level);
 
   // 4. Download disarmed file directly
-  const downloadUrl = \`http://localhost:8000/api/jobs/\${jobId}/download\`;
+  const downloadUrl = \`http://localhost:8010/api/jobs/\${jobId}/download\`;
   window.open(downloadUrl, '_blank');
 }`}
               </pre>
@@ -6331,14 +6331,14 @@ jobs:
                 <div>
                   <span className="text-[11px] font-mono text-slate-700 font-bold block mb-1">Upload File:</span>
                   <pre className="p-3 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto border border-slate-200 shadow-2xs">
-{`curl -X POST http://localhost:8000/api/files -F "files=@sample.pdf"`}
+{`curl -X POST http://localhost:8010/api/files -F "files=@sample.pdf"`}
                   </pre>
                 </div>
 
                 <div>
                   <span className="text-[11px] font-mono text-slate-700 font-bold block mb-1">Trigger Disarm with Custom Options:</span>
                   <pre className="p-3 bg-white text-slate-800 rounded-xl font-mono text-xs overflow-x-auto border border-slate-200 shadow-2xs">
-{`curl -X POST http://localhost:8000/api/jobs/<JOB_ID>/sanitize \\
+{`curl -X POST http://localhost:8010/api/jobs/<JOB_ID>/sanitize \\
   -H "Content-Type: application/json" \\
   -d '{
     "profile": "maximum",
