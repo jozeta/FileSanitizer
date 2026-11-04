@@ -145,10 +145,7 @@ class ExtensionAnalyzer:
                 "allows_unsafe_inline": False,
                 "allows_remote_scripts": False
             },
-            "author": "",
             "developer_url": "",
-            "homepage_url": "",
-            "update_url": "",
             "is_webstore_signed": False,
             "package_signatures_count": 0,
             "verified_item_id": None,

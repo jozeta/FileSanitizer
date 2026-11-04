@@ -62,3 +62,9 @@ Services: `frontend` (nginx), `api`, `worker`, `redis`, `clamav`, `browser`.
   `.env.example` must hold placeholders only.
 - `test-files/` contents can trip antivirus on a dev machine. That's expected; don't "fix" them.
 - Bump `frontend/src/version.ts` and the README release badge together when releasing.
+
+## App standards
+
+This repo follows the app standards in `~/Desktop/code/tools/standards/STANDARDS.md` (rule IDs,
+severities; decisions and waivers in `.claude-standards`). `claude-check --repo .` checks it.
+Lint the backend with `uvx ruff check .` (settings in `ruff.toml`; CI runs it).

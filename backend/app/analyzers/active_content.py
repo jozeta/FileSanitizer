@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Set
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
 from bs4 import BeautifulSoup
 import defusedxml.minidom as safe_minidom
+from app.core.logging_config import logger
 
 # Common HTML/SVG inline event handler attributes
 EVENT_HANDLERS = [

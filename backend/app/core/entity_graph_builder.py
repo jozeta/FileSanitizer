@@ -1708,7 +1708,11 @@ class EntityGraphBuilder:
             for dom in extracted.get("domains", [])[:12]:
                 d_val = dom["value"]
                 d_clean = d_val.strip().lower()
-                if d_clean in seen_domains:
+                # Also a duplicate when another part of the graph (e.g. the domain-intel subdomains)
+                # already has a node for this domain: enrich that node instead of adding a second one.
+                if d_clean in seen_domains or any(
+                    n["type"] == "domain" and (n.get("full_label") or "").lower() == d_clean for n in nodes
+                ):
                     # Enrich existing domain node with extraction sources
                     for n in nodes:
                         if n["type"] == "domain" and (n["details"].get("domain", "").lower() == d_clean or n["full_label"].lower() == d_clean):

@@ -153,7 +153,7 @@ class UniversalInputNormalizer:
                 pass
 
         # 5. Check for Email Address
-        if "@" in clean and not ("://" in clean):
+        if "@" in clean and "://" not in clean:
             email_match = re.fullmatch(r'^[a-zA-Z0-9_.+-]+@([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)$', clean)
             if email_match:
                 domain_part = email_match.group(1).lower().rstrip(".")

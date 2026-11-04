@@ -28,6 +28,7 @@ class EmailSanitizer(BaseSanitizer):
         original_filename: str = ""
     ) -> SanitizationResult:
         removed_items = []
+        warnings = []
         original_size = input_path.stat().st_size
 
         try:
@@ -240,7 +241,7 @@ class EmailSanitizer(BaseSanitizer):
             sanitized_filename=f"sanitized_{original_filename}" if original_filename else output_path.name,
             target_extension=".eml",
             removed_items=removed_items,
-            warnings=[],
+            warnings=warnings,
             details={
                 "original_size": original_size,
                 "sanitized_size": sanitized_size,

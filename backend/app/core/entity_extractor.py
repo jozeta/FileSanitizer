@@ -12,6 +12,7 @@ Extracts the 7 core analytical entity types across any analyzed artifact:
 """
 
 import ipaddress
+import os
 import re
 from typing import Dict, Any, List, Optional, Set, Tuple
 from urllib.parse import urlparse
@@ -96,7 +97,7 @@ class EntityExtractor:
 
         # File on disk reading for small text / log / script files
         fpath = getattr(job, "file_path", None)
-        if fpath and os.path.exists(fpath):
+        if isinstance(fpath, str) and fpath and os.path.exists(fpath):
             try:
                 sz = os.path.getsize(fpath)
                 if sz < 1000000:

@@ -406,7 +406,7 @@ def audit_authentication_posture(
     elif "dkim=fail" in auth_results_raw.lower():
         dkim_status = "fail"
     elif dkim_domain and dkim_status == "none":
-        dkim_status = "pass" if not ("dkim=fail" in auth_results_raw.lower()) else "fail"
+        dkim_status = "pass" if "dkim=fail" not in auth_results_raw.lower() else "fail"
 
     # 3. Evaluate DMARC & Alignment
     dmarc_status = "none"

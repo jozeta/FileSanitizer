@@ -9,7 +9,7 @@ STRICT CONSTRAINT: Supports ONLY Microsoft Sentinel KQL and YARA rules.
 
 import re
 import datetime
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional, Set, Tuple
 
 
 class DetectionRuleGenerator:

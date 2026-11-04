@@ -6,6 +6,19 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
 
 ## [Unreleased]
 
+- ruff (`ruff.toml`: syntax errors, undefined names and other pyflakes errors) with a CI lint job.
+  It found real bugs, now fixed:
+  - the byte-level analyses (entropy profile, anti-analysis detection) never ran: `file_bytes` was
+    undefined, and the error was swallowed. They now get the uploaded file's bytes
+  - reading a job's file for entity extraction always failed (`os` not imported)
+  - an HTML parse error in the active-content analyzer crashed its own error handler (`logger`)
+  - a failed email-to-PDF conversion crashed its fallback (`warnings` undefined); the warning is
+    now returned with the .eml result
+  - the entity graph added a second node for a subdomain already shown by the domain-intel
+    attack-surface scan when the text also mentioned it; it now enriches the existing node
+  - duplicate keys in the extension analyzer's result; `not in` style
+- Sysmon event 25 (ProcessTampering) is listed as both "critical" and "info" in the default EVTX
+  severity rules; the later "info" wins, as before. Marked in `settings_store.py` for a decision
 - The API is published on host port 8010 instead of 8000 (Ratatosk uses 8000), so both can run at
   once; inside Docker it still listens on 8000. The Vite dev proxy and the API docs follow
 - Self-host the Inter and JetBrains Mono fonts (no more Google Fonts requests); the nginx CSP no

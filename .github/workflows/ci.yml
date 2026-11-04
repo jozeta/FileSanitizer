@@ -9,6 +9,14 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: ruff (Python; settings in ruff.toml)
+        run: pipx run ruff==0.17.3 check .
+
   backend:
     runs-on: ubuntu-latest
     timeout-minutes: 40

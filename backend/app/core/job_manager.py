@@ -1542,6 +1542,13 @@ class JobManager:
             except Exception as e:
                 logger.debug(f"Watchlist scan error: {e}")
 
+            # The raw upload, for the byte-level analyses below (size-capped by MAX_FILE_SIZE_MB).
+            try:
+                file_bytes = original_path.read_bytes() if original_path.exists() else b""
+            except OSError as read_err:
+                logger.debug(f"Could not read the upload for byte analysis: {read_err}")
+                file_bytes = b""
+
             # Shannon Entropy & Byte Distribution Analysis
             try:
                 from app.analyzers.entropy_analyzer import EntropyAnalyzer

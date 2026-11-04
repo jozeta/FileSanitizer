@@ -1,7 +1,7 @@
 import os
 import zipfile
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from PIL.TiffImagePlugin import IFDRational
 import fitz
 

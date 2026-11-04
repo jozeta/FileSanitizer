@@ -1,0 +1,9 @@
+# ruff (app standards QA-LINT-1). Ruff 0.17+ turns on a very broad rule set by default, so this
+# picks the checks that find real bugs: syntax errors, undefined names, redefinitions and other
+# pyflakes errors. Existing-code style findings are ignored for now; see them with
+#   uvx ruff check --select F401,F841,F541,E701,E741,E402,E401 .
+target-version = "py311"
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+ignore = ["F401", "F841", "F541", "E701", "E741", "E402", "E401"]
