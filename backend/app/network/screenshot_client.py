@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 import httpx
 from app.config import settings
 from app.network.ssrf import validate_url_for_ssrf

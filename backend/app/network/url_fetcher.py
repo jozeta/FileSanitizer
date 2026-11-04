@@ -11,9 +11,7 @@ from app.network.ssrf import validate_url_for_ssrf
 from app.analyzers.url_analyzer import URLAnalyzer
 from app.analyzers.identification import (
     categorize_mime,
-    FILE_SIGNATURES,
-    inspect_text_type,
-    inspect_zip_type
+    inspect_text_type
 )
 
 from app.analyzers.domain_analyzer import DomainAnalyzer
@@ -119,7 +117,7 @@ class URLFileFetcher:
         dns_recs = domain_info.get("dns_records", {})
         whois_data = domain_info.get("whois", {})
         punycode = domain_info.get("punycode_analysis", {})
-        co_hosted = domain_info.get("co_hosted_domains", [])
+        domain_info.get("co_hosted_domains", [])
         
         doc = f"""<!DOCTYPE html>
 <html lang="en">
@@ -265,7 +263,7 @@ class URLFileFetcher:
                                 )
 
                         break
-                except httpx.RequestError as e:
+                except httpx.RequestError:
                     # On network error downloading remote file, provide domain report
                     report_bytes = cls._build_domain_report_html(domain_name, domain_info)
                     target_name = sanitize_filename(domain_name) if domain_name else "network_target"

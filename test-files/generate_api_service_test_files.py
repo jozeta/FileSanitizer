@@ -8,8 +8,6 @@ Generator script for external API service test files:
 5. pdf_url_screenshot_and_redirect_test.pdf -> Headless Browser Screenshot & Redirection Service
 """
 
-import io
-import math
 from pathlib import Path
 import fitz
 from PIL import Image, ImageDraw, ImageFont

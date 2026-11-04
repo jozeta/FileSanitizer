@@ -122,7 +122,9 @@ def _run_checksec(file_path: Path) -> Optional[Dict[str, Any]]:
     checksec must be installed at /usr/local/bin/checksec (or anywhere on PATH).
     Returns a dict of check results, or None if checksec is not available or fails.
     """
-    import subprocess, json, shutil
+    import subprocess
+    import json
+    import shutil
     checksec_bin = shutil.which("checksec")
     if not checksec_bin:
         return None
@@ -325,7 +327,7 @@ class ExecutableAnalyzer(BaseAnalyzer):
         # 1. DOS / MZ Header
         # ---------------------------------------------------------------------
         try:
-            dos_dict = pe.DOS_HEADER.dump_dict()
+            pe.DOS_HEADER.dump_dict()
             dos_stub = b""
             if hasattr(pe, "DOS_HEADER") and pe.DOS_HEADER.e_lfanew > 64:
                 dos_stub = file_bytes[64 : min(len(file_bytes), pe.DOS_HEADER.e_lfanew)]
@@ -1331,7 +1333,6 @@ class ExecutableAnalyzer(BaseAnalyzer):
                 has_nx = True
                 has_relro = False
                 has_canary = False
-                rpath_entries = []
 
                 for seg in elf.iter_segments():
                     if seg['p_type'] == 'PT_GNU_STACK':
@@ -1506,12 +1507,12 @@ class ExecutableAnalyzer(BaseAnalyzer):
 
                     # SafeStack
                     ss_val = checks.get("safestack", {}).get("value", "")
-                    ss_status = checks.get("safestack", {}).get("status", "")
+                    checks.get("safestack", {}).get("status", "")
                     data["elf_mitigations"]["has_safestack"] = "found" in ss_val.lower()
                     # SafeStack absence is informational only (not a finding by default)
 
                     # Stack Clash Protection
-                    sc_val = checks.get("stack_clash", {}).get("value", "")
+                    checks.get("stack_clash", {}).get("value", "")
                     sc_status = checks.get("stack_clash", {}).get("status", "")
                     data["elf_mitigations"]["has_stack_clash_protection"] = sc_status == "green"
 

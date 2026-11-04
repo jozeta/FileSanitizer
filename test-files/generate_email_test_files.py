@@ -11,8 +11,6 @@ import os
 import struct
 from pathlib import Path
 import email.message
-from email import policy
-import olefile
 
 
 OUT_DIR = Path(__file__).resolve().parent
@@ -28,8 +26,6 @@ def build_ole_msg(out_path: Path, subject: str, from_addr: str, body_text: str, 
     - __substg1.0_007D001F (Transport headers)
     - __substg1.0_0050001F (Reply-To)
     """
-    import tempfile
-    import struct
 
     # Transport headers string
     extra_headers = f"Reply-To: {reply_to}\r\n" if reply_to else ""
@@ -52,7 +48,6 @@ def _write_compound_msg(out_path: Path, subject: str, from_addr: str, body_text:
     Writes a valid OLE Compound Binary File with Outlook streams:
     - Directory entries for Root, Subject, Sender, Body, HTML Body, Transport Headers, and Attachments.
     """
-    sector_size = 512
     # Prepare streams (name, data_bytes)
     streams = [
         ("__substg1.0_0037001F", subject.encode('utf-16le')),
@@ -79,7 +74,7 @@ def _write_compound_msg(out_path: Path, subject: str, from_addr: str, body_text:
     # Offset 44: Number of FAT sectors
     # Offset 48: First Directory sector
     # Offset 76: First 109 FAT sector locations
-    raw = bytearray()
+    bytearray()
     hdr = bytearray(512)
     hdr[0:8] = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"
     hdr[28:30] = struct.pack("<H", 0xFFFE)

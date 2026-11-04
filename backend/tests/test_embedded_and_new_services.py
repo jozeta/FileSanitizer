@@ -1,5 +1,3 @@
-import io
-import pytest
 from pathlib import Path
 from fastapi.testclient import TestClient
 
@@ -14,8 +12,6 @@ from app.core.embedded_extractor import (
     calculate_hashes,
 )
 from app.analyzers.reputation_client import (
-    HybridAnalysisClient,
-    MXToolboxClient,
     RdapClient,
     IPinfoClient,
 )

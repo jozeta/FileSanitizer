@@ -17,10 +17,8 @@ against the then-deployed container. Re-run inside the actually deployed
 image to prove the running service is fixed, not just the source tree.
 """
 
-import ipaddress
 from pathlib import Path
 
-import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +74,7 @@ class TestFsSec001CommandInjection:
             if "shell=True" in ln and not ln.lstrip().startswith("#")
             and "NO shell=True" not in ln and "without shell=True" not in ln
         ]
-        assert offending == [], f"shell=True used as argument:\n" + "\n".join(offending)
+        assert offending == [], "shell=True used as argument:\n" + "\n".join(offending)
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,3 @@
-import pytest
 import zipfile
 from app.analyzers.archive_analyzer import ArchiveAnalyzer
 from app.sanitizers.archive_sanitizer import ArchiveSanitizer

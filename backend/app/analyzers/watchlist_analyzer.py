@@ -1,5 +1,5 @@
 import re
-from typing import List, Dict, Any, Optional
+from typing import List
 from app.analyzers.base import Finding
 from app.core.settings_store import settings_store
 from app.core.logging_config import logger

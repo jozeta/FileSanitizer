@@ -94,7 +94,6 @@ class EmailAnalyzer(BaseAnalyzer):
 
         if is_ole_msg:
             try:
-                import olefile
                 msg = self._parse_ole_msg(file_path, raw_bytes)
             except Exception as oe:
                 logger.debug(f"OLE MSG parsing attempt note: {oe}")
@@ -1211,7 +1210,8 @@ class EmailAnalyzer(BaseAnalyzer):
             inner_members = []
             if att_ext in [".zip", ".tar", ".gz", ".7z"] and payload:
                 try:
-                    import zipfile, io
+                    import zipfile
+                    import io
                     if att_ext == ".zip":
                         with zipfile.ZipFile(io.BytesIO(payload)) as zf:
                             for zinfo in zf.infolist():

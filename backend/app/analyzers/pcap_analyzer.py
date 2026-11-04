@@ -9,7 +9,6 @@ Gantt timeline visualization data.
 
 import base64
 import hashlib
-import ipaddress
 import re
 import socket
 import struct
@@ -19,7 +18,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Set, Tuple
 from urllib.parse import unquote
 
-from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
+from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
 from app.core.file_isolation import sanitize_filename
 from app.core.logging_config import logger
 from app.network.geo_resolver import GeoResolver
@@ -1577,7 +1576,7 @@ class PcapAnalyzer(BaseAnalyzer):
             offset += 2
 
             if offset < len(payload):
-                comp_method = payload[offset]
+                payload[offset]
                 offset += 1
 
             s_extensions: List[int] = []
@@ -2311,7 +2310,7 @@ class PcapAnalyzer(BaseAnalyzer):
                     # Minimum size sanity check
                     candidate_data = stream_bytes[idx:idx + 1048576]
                     if len(candidate_data) >= 32:
-                        md5_chk = hashlib.md5(candidate_data).hexdigest()
+                        hashlib.md5(candidate_data).hexdigest()
                         sha256_chk = hashlib.sha256(candidate_data).hexdigest()
                         if sha256_chk not in seen_hashes:
                             carved_name = f"carved_artifact_{next_id}{default_ext}"

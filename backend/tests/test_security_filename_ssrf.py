@@ -1,6 +1,5 @@
-import pytest
 import ipaddress
-from app.core.file_isolation import sanitize_filename, JobWorkspace
+from app.core.file_isolation import sanitize_filename
 from app.network.ssrf import validate_url_for_ssrf, is_ip_blocked
 
 def test_filename_sanitization_path_traversal():

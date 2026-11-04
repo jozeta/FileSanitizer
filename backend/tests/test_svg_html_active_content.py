@@ -1,4 +1,3 @@
-import pytest
 from app.analyzers.active_content import ActiveContentAnalyzer
 from app.sanitizers.svg_sanitizer import SVGSanitizer
 from app.sanitizers.html_sanitizer import HTMLSanitizer

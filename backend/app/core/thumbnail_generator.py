@@ -1,8 +1,6 @@
-import io
 import zipfile
 from pathlib import Path
-from typing import Optional
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import fitz
 
 from app.core.logging_config import logger

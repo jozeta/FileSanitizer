@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Tuple
 import httpx
 
 from app.core.logging_config import logger

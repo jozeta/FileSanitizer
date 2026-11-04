@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from app.analyzers.didier_oledump import DidierOledumpAnalyzer

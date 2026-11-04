@@ -586,7 +586,7 @@ class TLSInspector:
 
                     server_name = None if cls._is_ip(host) else host
                     with socket.create_connection((target_ip, port), timeout=0.8) as sock:
-                        with ctx.wrap_socket(sock, server_hostname=server_name) as ssock:
+                        with ctx.wrap_socket(sock, server_hostname=server_name):
                             return c_name, True
                 except Exception:
                     return c_name, False

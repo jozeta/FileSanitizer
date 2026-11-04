@@ -1,4 +1,3 @@
-import os
 import zipfile
 import fitz  # PyMuPDF
 from pathlib import Path

@@ -1,7 +1,3 @@
-import pytest
-import os
-import re
-import socket
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
@@ -51,7 +47,8 @@ def test_fs_sec_001_no_shell_true_in_ip_domain_forensics():
 
 def test_fs_sec_002_admin_forged_token_rejected_in_prod(monkeypatch):
     """Verify that tokens forged with known public defaults are rejected in production."""
-    import jwt, time
+    import jwt
+    import time
     insecure_public_default = "filesanitizer-jwt-secret-key-32byte-minimum-secure-2026"
 
     # Mint token offline using the public default string

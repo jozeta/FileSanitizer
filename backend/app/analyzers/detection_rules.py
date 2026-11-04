@@ -9,7 +9,7 @@ STRICT CONSTRAINT: Supports ONLY Microsoft Sentinel KQL and YARA rules.
 
 import re
 import datetime
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Dict, Any, List, Tuple
 
 
 class DetectionRuleGenerator:
@@ -189,7 +189,7 @@ class DetectionRuleGenerator:
 
         # Size condition
         if file_size > 0:
-            min_size = max(50, int(file_size * 0.4))
+            max(50, int(file_size * 0.4))
             max_size = int(file_size * 3.5)
             conditions.append(f"filesize < {max_size}")
 
@@ -205,28 +205,28 @@ class DetectionRuleGenerator:
         cond_str = " and\n        ".join(conditions) if conditions else "any of them"
 
         rule_body = [
-            f"/*",
-            f"   YARA Automated Threat Signature",
+            "/*",
+            "   YARA Automated Threat Signature",
             f"   Target: {filename}",
             f"   Category: {category} ({mime})",
             f"   SHA-256: {sha256 or 'N/A'}",
             f"   ATT&CK: {mitre_str}",
             f"   Generated: {date_str} by FileSanitizer Defense Platform",
-            f"*/",
-            f"",
+            "*/",
+            "",
             f"rule Detect_{clean_name}",
-            f"{{",
-            f"    meta:",
+            "{",
+            "    meta:",
             f'        description = "Automated detection signature for {filename}"',
-            f'        author = "FileSanitizer Autonomous Threat Analysis"',
+            '        author = "FileSanitizer Autonomous Threat Analysis"',
             f'        date = "{date_str}"',
             f'        hash_sha256 = "{sha256}"',
             f'        hash_md5 = "{md5}"',
             f'        category = "{category}"',
             f'        mitre_attck = "{mitre_str}"',
-            f'        tlp = "TLP:AMBER"',
-            f"",
-            f"    strings:"
+            '        tlp = "TLP:AMBER"',
+            "",
+            "    strings:"
         ]
 
         for vname, spec, comm in unique_strings:
@@ -236,10 +236,10 @@ class DetectionRuleGenerator:
             rule_body.append(f'        $dummy_sig = "{sha256[:16]}" ascii')
 
         rule_body.extend([
-            f"",
-            f"    condition:",
+            "",
+            "    condition:",
             f"        {cond_str}",
-            f"}}"
+            "}"
         ])
 
         return "\n".join(rule_body)
@@ -254,13 +254,13 @@ class DetectionRuleGenerator:
         hashes = data.get("hashes", {}) or {}
         sha256 = hashes.get("sha256", "")
         md5 = hashes.get("md5", "")
-        sha1 = hashes.get("sha1", "")
-        category = data.get("category", "unknown")
+        hashes.get("sha1", "")
+        data.get("category", "unknown")
 
         iocs = cls._collect_summary_indicators(data)
         domains = iocs.get("domains", [])
         ips = iocs.get("ips", [])
-        urls = iocs.get("urls", [])
+        iocs.get("urls", [])
 
         # Process Creation (DeviceProcessEvents / SecurityEvent 4688)
         proc_clauses = []

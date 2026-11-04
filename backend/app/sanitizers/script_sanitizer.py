@@ -6,7 +6,7 @@ strips auto-execution commands, and exports to safe non-executable formats (disa
 
 import re
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import List
 import fitz  # PyMuPDF
 from app.sanitizers.base import BaseSanitizer, SanitizationResult, SanitizationOptions
 

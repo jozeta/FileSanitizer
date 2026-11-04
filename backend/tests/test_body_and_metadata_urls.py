@@ -7,7 +7,6 @@ import fitz
 from app.analyzers.pdf_analyzer import PDFAnalyzer
 from app.analyzers.office_analyzer import OfficeAnalyzer
 from app.analyzers.image_analyzer import ImageAnalyzer
-from app.analyzers.metadata_extractor import MetadataExtractor
 
 def test_pdf_body_and_metadata_url_extraction(temp_dir):
     pdf_path = temp_dir / "pdf_links_body_meta.pdf"

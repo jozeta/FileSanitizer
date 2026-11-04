@@ -1,16 +1,12 @@
-import io
 import email
 from email.message import EmailMessage
 from pathlib import Path
-import pytest
 import fitz
-import zipfile
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.core.job_manager import job_manager
 from app.core.settings_store import create_admin_token
-from app.core.forensic_report import ForensicReportGenerator
 from app.analyzers.email_analyzer import EmailAnalyzer
 from app.sanitizers.email_sanitizer import EmailSanitizer
 from app.sanitizers.base import SanitizationOptions

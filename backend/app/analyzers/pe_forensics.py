@@ -1,6 +1,6 @@
 import math
 import re
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Dict, Any, List, Set
 
 def calculate_shannon_entropy(data: bytes) -> float:
     """Calculate Shannon entropy (0.0 to 8.0) of a byte sequence."""
@@ -267,14 +267,11 @@ def inspect_dll_forensics(pe: Any, file_bytes: bytes, filename: str) -> Dict[str
 
     # 2. TLS Callbacks Inspection
     tls_callbacks: List[Dict[str, Any]] = []
-    has_tls = False
-    tls_dir = None
     if hasattr(pe, "OPTIONAL_HEADER") and hasattr(pe.OPTIONAL_HEADER, "DATA_DIRECTORY"):
         if len(pe.OPTIONAL_HEADER.DATA_DIRECTORY) > 9:
-            tls_dir = pe.OPTIONAL_HEADER.DATA_DIRECTORY[9]
+            pe.OPTIONAL_HEADER.DATA_DIRECTORY[9]
 
     if hasattr(pe, "DIRECTORY_ENTRY_TLS") and pe.DIRECTORY_ENTRY_TLS:
-        has_tls = True
         try:
             tls_struct = pe.DIRECTORY_ENTRY_TLS.struct
             callbacks_va = getattr(tls_struct, "AddressOfCallBacks", 0)

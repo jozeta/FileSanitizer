@@ -20,11 +20,9 @@ import datetime
 import re
 import hashlib
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple, Set
+from typing import List, Optional, Tuple, Set
 
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
-from app.analyzers.deobfuscator import Deobfuscator
-from app.core.logging_config import logger
 
 
 # Windows FILETIME epoch is Jan 1, 1601. Unix epoch is Jan 1, 1970.
@@ -133,7 +131,7 @@ class LnkAnalyzer(BaseAnalyzer):
         has_arguments = bool(link_flags & 0x00000020)
         has_icon_location = bool(link_flags & 0x00000040)
         is_unicode = bool(link_flags & 0x00000080)
-        has_exp_string = bool(link_flags & 0x00000200)
+        bool(link_flags & 0x00000200)
 
         show_command_map = {
             1: "SW_SHOWNORMAL (Normal Window)",

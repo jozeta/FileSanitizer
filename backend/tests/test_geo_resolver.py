@@ -1,4 +1,3 @@
-import pytest
 from app.network.geo_resolver import GeoResolver, haversine_distance_km
 
 def test_haversine_distance():

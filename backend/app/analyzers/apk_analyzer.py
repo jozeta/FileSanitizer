@@ -3423,7 +3423,7 @@ class ApkAnalyzer(BaseAnalyzer):
             "status": "FAIL" if sec_count > 0 else ("WARN" if flags_count > 0 else "PASS"),
             "severity": "critical" if sec_count > 0 else ("high" if flags_count > 0 else "info"),
             "title": f"Hardcoded Secrets ({sec_count} Secrets, {flags_count} CTF Flags)" if has_secrets else "No Static Credentials Discovered",
-            "description": f"Found embedded sensitive API keys, cloud tokens, or CTF flags in Dalvik bytecode string pool or assets." if has_secrets else "No hardcoded AWS, Google Cloud, private keys, or tokens identified in bytecode strings.",
+            "description": "Found embedded sensitive API keys, cloud tokens, or CTF flags in Dalvik bytecode string pool or assets." if has_secrets else "No hardcoded AWS, Google Cloud, private keys, or tokens identified in bytecode strings.",
             "recommendation": "Store sensitive API secrets securely in Android Keystore or fetch dynamically via authenticated backend."
         })
 

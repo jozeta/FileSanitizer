@@ -1,4 +1,3 @@
-import pytest
 from app.analyzers.risk_engine import RiskEngine
 from app.analyzers.base import Finding
 from app.analyzers.text_analyzer import TextAnalyzer

@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 from typing import List
 from app.sanitizers.base import BaseSanitizer, SanitizationOptions, SanitizationResult

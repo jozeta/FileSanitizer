@@ -6,7 +6,7 @@ Analyzes: Low TTL / fast-flux rotation, wildcard DNS, SPF anomalies, and danglin
 
 import uuid
 import socket
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from concurrent.futures import ThreadPoolExecutor
 import httpx
 
@@ -402,11 +402,9 @@ class AdvancedDNSInspector:
     def _analyze_txt_spf(cls, result: Dict[str, Any]) -> None:
         """Inspects TXT records for SPF policy weaknesses and unusual verification tokens."""
         txt_records = result["records"]["txt"]
-        spf_found = False
 
         for txt in txt_records:
             if txt.startswith("v=spf1"):
-                spf_found = True
                 result["heuristics"]["spf_details"] = txt
 
                 if "+all" in txt:

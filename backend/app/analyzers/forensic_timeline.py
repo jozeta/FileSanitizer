@@ -1,6 +1,5 @@
 import csv
 import io
-import json
 import re
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
@@ -241,7 +240,7 @@ class ForensicTimelineBuilder:
                         "severity": sev,
                         "is_anomaly": False
                     })
-        except Exception as he:
+        except Exception:
             pass
 
         # 2. Filesystem & General Metadata Timestamps (for all file formats EXCEPT msg and eml)
@@ -689,7 +688,7 @@ class ForensicTimelineBuilder:
                         "source": "WHOIS / RDAP Registrar",
                         "event_type": "URL_DOMAIN_UPDATED",
                         "title": f"Discovered Domain Renewed: {dom}",
-                        "description": f"Registrar record last updated.",
+                        "description": "Registrar record last updated.",
                         "severity": "info",
                         "is_anomaly": False
                     })
@@ -1353,7 +1352,7 @@ class ForensicTimelineBuilder:
                     "source": "LNK Shell Link Target",
                     "event_type": "LNK_TARGET_MODIFIED",
                     "title": f"LNK Target File Last Modified: {lnk_info.get('target_path', 'target')}",
-                    "description": f"Target file modification recorded inside LNK header.",
+                    "description": "Target file modification recorded inside LNK header.",
                     "severity": "info",
                     "is_anomaly": False
                 })

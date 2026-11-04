@@ -45,7 +45,7 @@ class OfficeSanitizer(BaseSanitizer):
 
             with zipfile.ZipFile(input_path, 'r') as zin:
                 with zipfile.ZipFile(temp_output, 'w', compression=zipfile.ZIP_DEFLATED) as zout:
-                    namelist = zin.namelist()
+                    zin.namelist()
 
                     # Files/paths to exclude completely
                     exclude_patterns = []

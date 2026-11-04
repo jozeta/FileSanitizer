@@ -6,7 +6,7 @@ and MITRE ATT&CK tactics into standardized STIX 2.1 JSON.
 
 import uuid
 import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 
 class Stix21Exporter:
@@ -113,7 +113,7 @@ class Stix21Exporter:
                 "modified": now_iso,
                 "created_by_ref": identity_id,
                 "name": f"Embedded URL: {target_url[:60]}",
-                "description": f"URL extracted from document content or metadata",
+                "description": "URL extracted from document content or metadata",
                 "indicator_types": ["malicious-activity" if is_bad else "anomalous-activity"],
                 "pattern": f"[url:value = '{safe_url_pattern}']",
                 "pattern_type": "stix",

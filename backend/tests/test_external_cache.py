@@ -1,5 +1,3 @@
-import pytest
-import time
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
@@ -7,7 +5,6 @@ from app.main import app
 from app.core.settings_store import settings_store
 from app.core.external_cache import external_api_cache, format_age_human
 from app.network.shodan_client import ShodanClient
-from app.network.threat_intelligence import ThreatIntelligenceAggregator
 from app.core.job_manager import job_manager
 
 

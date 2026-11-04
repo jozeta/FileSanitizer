@@ -4,8 +4,7 @@ Computes Context Triggered Piecewise Hashes (CTPH) and byte-distribution localit
 to cluster malware variants and identify code reuse / similar samples across previous submissions.
 """
 
-from typing import Dict, Any, List, Optional
-from pathlib import Path
+from typing import Dict, Any, List
 
 # Base64-like alphabet used by standard SSDEEP / SpamSum
 B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"

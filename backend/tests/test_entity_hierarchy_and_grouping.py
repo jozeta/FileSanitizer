@@ -1,4 +1,3 @@
-import pytest
 from types import SimpleNamespace
 from app.core.entity_graph_builder import EntityGraphBuilder
 from app.core.incident_correlator import IncidentCorrelator
@@ -20,7 +19,7 @@ def test_entity_graph_builder_domain_url_hierarchy():
     )
 
     graph = EntityGraphBuilder.build(job)
-    nodes = {n["id"]: n for n in graph["nodes"]}
+    {n["id"]: n for n in graph["nodes"]}
 
     # Check evil-c2.com domain node
     c2_domains = [n for n in graph["nodes"] if n["type"] == "domain" and "evil-c2.com" in n["label"]]
@@ -71,7 +70,7 @@ def test_incident_correlator_campaign_graph_domain_url_hierarchy():
     }
 
     graph = IncidentCorrelator._build_campaign_graph([job], ioc_data)
-    nodes = {n["id"]: n for n in graph["nodes"]}
+    {n["id"]: n for n in graph["nodes"]}
 
     dom_node = next((n for n in graph["nodes"] if n["type"] == "domain" and "target-corp.com" in n["label"]), None)
     assert dom_node is not None, "Domain target-corp.com must exist in campaign graph"

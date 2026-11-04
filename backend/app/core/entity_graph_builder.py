@@ -1093,7 +1093,6 @@ class EntityGraphBuilder:
             # Find member file IDs for cross-linking
             cred_mem_id = None
             topo_mem_id = None
-            pay_mem_id = None
             for e_idx, ef in enumerate(emb_list[:8]):
                 name_l = str(ef.get("name", "")).lower()
                 if any(k in name_l for k in ("ntds", "credential", "password", "audit")):
@@ -1101,7 +1100,7 @@ class EntityGraphBuilder:
                 elif any(k in name_l for k in ("topology", "network", "architecture")):
                     topo_mem_id = f"emb_{e_idx}"
                 elif any(k in name_l for k in ("payroll", "salary", "bonus")):
-                    pay_mem_id = f"emb_{e_idx}"
+                    pass
 
             # Dumped User Accounts (NTDS / active directory secrets dump)
             for u_idx, u in enumerate(ext_iocs.get("users", [])[:8]):
@@ -1806,7 +1805,7 @@ class EntityGraphBuilder:
                     details={"name": n_val, "role": n_item.get("role", "Author"), "sources": list(n_item.get("sources", []))}
                 )
                 _add_edge("root", n_id, n_item.get("role", "author"), "attribution")
-        except Exception as e:
+        except Exception:
             # Non-blocking entity extraction fallback
             pass
 

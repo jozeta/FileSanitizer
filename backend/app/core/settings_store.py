@@ -7,7 +7,6 @@ from typing import Dict, Any, Optional, List
 import jwt
 import secrets
 import hashlib
-from pydantic import BaseModel, Field
 
 from app.config import settings, get_effective_jobs_dir
 from app.core.logging_config import logger

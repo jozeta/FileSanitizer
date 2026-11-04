@@ -10,10 +10,9 @@ import socket
 import ipaddress
 import urllib.parse
 import unicodedata
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple
 
 from app.network.ssrf import is_ip_blocked, validate_url_for_ssrf
-from app.core.logging_config import logger
 
 
 class InputType:

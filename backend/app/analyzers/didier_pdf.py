@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Dict, Any, List, Tuple, Set, Optional
+from typing import Dict, Any, List
 import fitz
 
 from app.core.logging_config import logger
@@ -136,7 +136,7 @@ class DidierPDFAnalyzer:
         colors_vuln = bool(re.search(r'/Colors\s+([0-9]{8,})', raw_text))
 
         # Check for suspicious stream filters
-        has_jbig2 = tag_counts.get("/JBIG2Decode", 0) > 0
+        tag_counts.get("/JBIG2Decode", 0) > 0
         has_launch = tag_counts.get("/Launch", 0) > 0
         has_aa = tag_counts.get("/AA", 0) > 0
         has_openaction = tag_counts.get("/OpenAction", 0) > 0

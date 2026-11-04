@@ -6,7 +6,6 @@ certificate renewals, newly observed subdomains, and risk posture changes.
 """
 
 from typing import Dict, Any, List, Optional
-from datetime import datetime
 
 
 class InvestigationSnapshotDiffer:

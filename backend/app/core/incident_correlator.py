@@ -1,8 +1,6 @@
 import difflib
-import math
 import re
 from collections import Counter
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Set, Tuple
 from urllib.parse import urlparse
@@ -186,7 +184,7 @@ class IncidentCorrelator:
             else:
                 code = str(code_raw)
 
-            findings = getattr(job, "findings", []) or []
+            getattr(job, "findings", []) or []
             found_urls: List[str] = re.findall(r'https?://[^\s\'"<>]+', code)
 
             # Metadata URLs & Authors

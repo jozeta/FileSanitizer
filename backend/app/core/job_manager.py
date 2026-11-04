@@ -24,7 +24,6 @@ from app.analyzers.metadata_extractor import MetadataExtractor, StructuredMetada
 from app.analyzers.risk_engine import RiskEngine, RiskAssessment
 
 from app.sanitizers.base import SanitizationOptions, SanitizationResult
-from app.sanitizers.profiles import get_profile_options
 from app.sanitizers.image_sanitizer import ImageSanitizer
 from app.sanitizers.pdf_sanitizer import PDFSanitizer
 from app.sanitizers.office_sanitizer import OfficeSanitizer

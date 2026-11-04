@@ -1,6 +1,4 @@
 import socket
-import os
-import shutil
 import time
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +6,7 @@ from typing import Dict, Any, Optional, Tuple
 import threading
 import httpx
 
-from app.config import settings, get_effective_jobs_dir
+from app.config import settings
 from app.core.logging_config import logger
 
 class ClamAVManager:

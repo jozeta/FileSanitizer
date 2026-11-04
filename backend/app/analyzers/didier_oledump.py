@@ -1,7 +1,7 @@
 import re
 import zipfile
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import olefile
 
 from app.core.logging_config import logger

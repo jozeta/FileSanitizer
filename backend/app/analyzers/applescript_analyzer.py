@@ -12,12 +12,11 @@ Detects macOS malware behaviors:
 - Defense evasion via Quarantine removal (xattr -d com.apple.quarantine)
 """
 
-import base64
 import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List
 
 from app.core.logging_config import logger
 

@@ -6,7 +6,7 @@ inter-procedural function calls, Win32/POSIX API leaf invocations,
 and dynamically resolved API calls.
 """
 
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Dict, Any, List, Optional, Tuple
 
 
 class CallGraphEngine:

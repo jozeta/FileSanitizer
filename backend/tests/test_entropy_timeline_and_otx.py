@@ -1,15 +1,11 @@
 import os
 import io
-import json
-import pytest
-from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.core.job_manager import JobManager, JobModel
+from app.core.job_manager import JobManager
 from app.analyzers.entropy_analyzer import EntropyAnalyzer
 from app.analyzers.forensic_timeline import ForensicTimelineBuilder
-from app.analyzers.reputation_client import AlienVaultOTXClient
 from app.analyzers.metadata_extractor import StructuredMetadata, MetadataField
 
 

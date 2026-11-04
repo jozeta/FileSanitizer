@@ -6,6 +6,8 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
 
 ## [Unreleased]
 
+- Lint clean-up: removed 270 unused imports and the names of 49 unused variables (every call made
+  for its effect is kept); `ruff.toml` now enforces unused imports/variables. Backend suite: 311 passed
 - ruff (`ruff.toml`: syntax errors, undefined names and other pyflakes errors) with a CI lint job.
   It found real bugs, now fixed:
   - the byte-level analyses (entropy profile, anti-analysis detection) never ran: `file_bytes` was

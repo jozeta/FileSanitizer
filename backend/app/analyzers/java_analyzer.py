@@ -711,14 +711,14 @@ class JavaClassParser:
 
         slash_cls = (self.class_name or "AnonymousClass").replace(".", "/")
         lines = [
-            f"// ==========================================================================",
+            "// ==========================================================================",
             f"// Disassembled Entry / Target Class: {slash_cls}.class",
             f"// Decompiled Java Bytecode: {full_cls}",
             f"// Target Platform: {self.java_version_name} (Major: {self.major_version})",
             f"// Superclass: {self.super_class_name.replace('/', '.')}",
             f"// Interfaces: {', '.join([i.replace('/', '.') for i in self.interfaces]) if self.interfaces else 'None'}",
             f"// Constant Pool Symbols: {len(self.constant_pool)} entries | Methods: {len(self.methods)}",
-            f"// ==========================================================================",
+            "// ==========================================================================",
             ""
         ]
         if pkg:
@@ -1930,7 +1930,7 @@ class JavaAnalyzer(BaseAnalyzer):
                         category="signature",
                         severity="medium",
                         title=f"Self-Signed JAR Digital Certificate ('{signer_cn}')",
-                        description=f"JAR is signed by a self-issued certificate rather than a trusted public Certificate Authority (CA).",
+                        description="JAR is signed by a self-issued certificate rather than a trusted public Certificate Authority (CA).",
                         details=sig_info
                     ))
                 else:
@@ -2334,7 +2334,7 @@ class JavaAnalyzer(BaseAnalyzer):
                 severity="high" if has_polyglot else "medium",
                 title=title,
                 description=(
-                    f"Archive exhibits anomalous structure: "
+                    "Archive exhibits anomalous structure: "
                     + (f"starts with {leading_magic} instead of standard ZIP header. " if has_polyglot else "")
                     + (f"Contains {trailing_bytes} trailing bytes after the End of Central Directory record." if has_trailing else "")
                 ),

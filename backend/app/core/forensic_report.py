@@ -1,7 +1,6 @@
 import html
-import json
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 class ForensicReportGenerator:
     """Generates structured incident JSON and printable, styled HTML forensic triage reports."""
@@ -169,7 +168,7 @@ class ForensicReportGenerator:
             vt = rep.get("virus_total", "NOT_CONFIGURED")
             uh = rep.get("urlhaus", "NOT_CONFIGURED")
             abuse = rep.get("abuseipdb", "NOT_CONFIGURED")
-            sb = rep.get("safe_browsing", "NOT_CONFIGURED")
+            rep.get("safe_browsing", "NOT_CONFIGURED")
 
             url_rows += f"""
             <tr style="border-bottom: 1px solid #e2e8f0; font-size: 12px;">

@@ -7,7 +7,7 @@ Enables reverse engineers to track execution flow, data dependencies, and parame
 """
 
 import re
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Dict, Any, List, Optional, Set
 
 
 class XrefEngine:
@@ -46,7 +46,7 @@ class XrefEngine:
             }
 
         # Build address and string lookup maps
-        addr_to_inst = {inst.get("address", ""): inst for inst in instructions}
+        {inst.get("address", ""): inst for inst in instructions}
         
         string_map: Dict[str, str] = {}
         if known_strings:

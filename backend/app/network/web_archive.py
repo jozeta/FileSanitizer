@@ -5,7 +5,7 @@ domain snapshots, first/last seen timelines, status codes, and detect dormant do
 """
 
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import httpx
 from app.core.logging_config import logger
 
@@ -72,7 +72,6 @@ class WebArchiveInspector:
         elif host_target.startswith("www."):
             candidates.append(host_target[4:])
 
-        matched_target = host_target
         cdx_queried_successfully = False
         cdx_clean_empty = False
         api_error_code = None
@@ -96,7 +95,6 @@ class WebArchiveInspector:
                             closest = (avail_data.get("archived_snapshots") or {}).get("closest") or {}
                             if closest.get("available"):
                                 result["archived"] = True
-                                matched_target = cand_url
                                 closest_ts = closest.get("timestamp")
                                 parsed_dt = None
                                 if closest_ts and len(closest_ts) >= 8:

@@ -2,7 +2,7 @@ import hashlib
 import mimetypes
 import struct
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Tuple, Optional
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
 import puremagic
 

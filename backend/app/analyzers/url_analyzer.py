@@ -3,7 +3,7 @@ import ssl
 import socket
 import datetime
 import urllib.parse
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, Optional
 from app.config import settings
 from app.core.logging_config import logger
 from app.network.ssrf import validate_url_for_ssrf, is_ip_blocked

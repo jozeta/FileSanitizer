@@ -7,12 +7,12 @@ weak signature algorithms, and timestamp counter-signatures.
 
 import struct
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from app.core.logging_config import logger
 from app.analyzers.base import Finding
 
 try:
-    from cryptography import x509
+    from cryptography import x509  # noqa: F401 -- part of the availability check below
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.serialization.pkcs7 import load_der_pkcs7_certificates
     from cryptography.x509.oid import NameOID

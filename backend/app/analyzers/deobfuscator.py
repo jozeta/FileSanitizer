@@ -11,8 +11,7 @@ Supports Security Decoder operations for Malware Research, CTF, Incident Respons
 import base64
 import re
 import urllib.parse
-from typing import Dict, Any, List, Optional, Tuple
-from app.core.logging_config import logger
+from typing import Dict, Any, List, Optional
 
 # Common plaintext anchors used to identify valid single-byte XOR keys
 XOR_PLAINTEXT_ANCHORS = [

@@ -11,7 +11,6 @@ Integrates with the official Shodan API to perform automated reconnaissance on I
 """
 
 from typing import Dict, Any, List, Optional, Tuple, Set
-import urllib.parse
 import httpx
 
 from app.core.settings_store import settings_store

@@ -1,7 +1,5 @@
-import pytest
 from pathlib import Path
 from fastapi.testclient import TestClient
-import email
 from email.message import EmailMessage
 
 from app.main import app

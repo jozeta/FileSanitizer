@@ -19,11 +19,10 @@ Covers:
 import re
 import email
 import email.utils
-from email import policy
 import hashlib
 import datetime
 import urllib.parse
-from typing import Dict, Any, List, Set, Optional, Tuple
+from typing import Dict, Any, List, Set
 from bs4 import BeautifulSoup
 
 
@@ -205,7 +204,6 @@ def audit_email_file_integrity(
     # 3. MIME Part Tree Traversal & Parser Defects
     parts_tree: List[Dict[str, Any]] = []
     parser_defects: List[str] = []
-    max_depth = 1
     total_parts = 0
     is_multipart = False
 
@@ -1111,7 +1109,7 @@ def calculate_email_verdict(
         mitre_set.add("T1656")
 
     if has_dmarc_fail:
-        rationale.append(f"Email Authentication Failure: DMARC validation failed (SPF & DKIM do not authenticate sender domain).")
+        rationale.append("Email Authentication Failure: DMARC validation failed (SPF & DKIM do not authenticate sender domain).")
         categories_set.add("Auth Failure")
 
     if has_bec:
@@ -1210,7 +1208,7 @@ def get_email_offline_tools_guide(filename: str) -> Dict[str, Any]:
         },
         "oletools": {
             "tool": "oletools (olevba / oleid)",
-            "command": f"olevba ./quarantine/* || oleid ./quarantine/*",
+            "command": "olevba ./quarantine/* || oleid ./quarantine/*",
             "notes": "Scans extracted Office attachments for obfuscated VBA macros, XLM 4.0 macros, and remote templates."
         },
         "yara_scan": {

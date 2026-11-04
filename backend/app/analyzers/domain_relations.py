@@ -23,7 +23,6 @@ import ipaddress
 import re
 import socket
 import time
-import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, wait
 from typing import Any, Callable, Dict, List, Optional, Tuple
 

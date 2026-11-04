@@ -5,7 +5,7 @@ cloud tokens, private cryptographic keys, and sensitive financial/PII records.
 """
 
 import re
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List
 from app.analyzers.base import Finding
 
 
@@ -140,7 +140,6 @@ class DLPAnalyzer:
             return []
 
         findings: List[Finding] = []
-        found_types: Dict[str, List[str]] = {}
 
         # 1. Regex Rule Matching
         for rule_id, (pattern, severity, title, desc) in cls.PATTERNS.items():

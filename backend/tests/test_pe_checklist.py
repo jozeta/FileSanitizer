@@ -1,6 +1,4 @@
-import pytest
 from pathlib import Path
-from typing import Dict, Any
 
 from app.analyzers.executable_analyzer import ExecutableAnalyzer
 from app.analyzers.pe_forensics import (

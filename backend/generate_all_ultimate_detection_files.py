@@ -32,8 +32,6 @@ import io
 import os
 import sys
 import struct
-import zlib
-import base64
 import zipfile
 import shutil
 from pathlib import Path

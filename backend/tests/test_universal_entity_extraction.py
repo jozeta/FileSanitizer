@@ -1,4 +1,3 @@
-import pytest
 from app.core.job_manager import job_manager
 from app.core.entity_extractor import EntityExtractor
 from app.core.entity_graph_builder import EntityGraphBuilder

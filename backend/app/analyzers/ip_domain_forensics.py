@@ -17,8 +17,7 @@ import subprocess
 import time
 import shutil
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Tuple, Set
+from typing import Dict, Any, List, Optional, Tuple
 
 
 # ============================================================================
@@ -1444,7 +1443,7 @@ def _execute_cli_tool(tool_info: Dict[str, Any], target: str, is_ip: bool, prima
     as argv lists without shell invocation.
     """
     name = tool_info["name"]
-    command_str = tool_info["command"]
+    tool_info["command"]
     t0 = time.time()
 
     # 1. Strict indicator validation against command injection
@@ -1492,7 +1491,8 @@ def _execute_cli_tool(tool_info: Dict[str, Any], target: str, is_ip: bool, prima
     try:
         if name == "dig":
             # Use pure Python dnspython for 100% safe, injection-immune, authentic dig output
-            import dns.resolver, dns.reversename
+            import dns.resolver
+            import dns.reversename
             dig_lines = [f";; <<>> DiG-Py 9.18 <<>> {clean_target} A", ";; ANSWER SECTION:"]
             try:
                 ans_a = dns.resolver.resolve(clean_target, "A", lifetime=2.5)
@@ -1546,7 +1546,8 @@ def _execute_cli_tool(tool_info: Dict[str, Any], target: str, is_ip: bool, prima
 
         elif name == "openssl":
             # Establish safe TLS connection in pure Python or safe argv openssl without shell invocation
-            import ssl, socket
+            import ssl
+            import socket
             ssl_success = False
             try:
                 ctx = ssl.create_default_context()
@@ -1734,7 +1735,7 @@ def generate_ip_domain_offline_tools_guide(target: str, is_ip: bool, primary_ip:
         for f in futures:
             try:
                 executed_tools.append(f.result(timeout=6.0))
-            except Exception as e:
+            except Exception:
                 pass
 
     dns_findings = []

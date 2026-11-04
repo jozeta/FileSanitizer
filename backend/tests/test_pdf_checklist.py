@@ -1,14 +1,8 @@
-import io
-import os
 import fitz
-import pytest
-from pathlib import Path
 from app.analyzers.pdf_forensics import (
     calculate_shannon_entropy,
-    format_hex_preview,
     deobfuscate_and_analyze_javascript,
     inspect_pdf_structure_and_overlay,
-    inspect_digital_signatures,
     inspect_concealed_content,
     inspect_action_chains,
     carve_and_inspect_attachments,

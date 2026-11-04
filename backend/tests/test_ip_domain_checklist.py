@@ -1,4 +1,3 @@
-import pytest
 from app.analyzers.ip_domain_forensics import (
     normalize_and_classify_indicator,
     analyze_dns_configuration,

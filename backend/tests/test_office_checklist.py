@@ -1,9 +1,8 @@
 import struct
 import tempfile
 from pathlib import Path
-import pytest
 from app.analyzers.office_analyzer import OfficeAnalyzer
-from app.analyzers.identification import detect_file_type, categorize_mime
+from app.analyzers.identification import detect_file_type
 
 
 def test_mraptor_macro_heuristics():

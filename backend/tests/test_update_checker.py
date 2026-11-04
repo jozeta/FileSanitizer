@@ -1,4 +1,3 @@
-import pytest
 from app.core.settings_store import settings_store
 from app.api.settings import _parse_semver, check_for_updates
 

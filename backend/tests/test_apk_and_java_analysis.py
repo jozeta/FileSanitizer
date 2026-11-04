@@ -3,15 +3,13 @@ Unit tests for Android APK & Dalvik DEX analysis, Java source/bytecode/JAR analy
 identification disambiguation, and sanitization (CDR).
 """
 
-import io
 import struct
 import zipfile
-import pytest
 from pathlib import Path
 
 from app.analyzers.identification import IdentificationAnalyzer
-from app.analyzers.apk_analyzer import ApkAnalyzer, AxmlDecoder, DexParser
-from app.analyzers.java_analyzer import JavaAnalyzer, JavaClassParser
+from app.analyzers.apk_analyzer import ApkAnalyzer
+from app.analyzers.java_analyzer import JavaAnalyzer
 from app.sanitizers.apk_sanitizer import ApkSanitizer
 from app.sanitizers.java_sanitizer import JavaSanitizer
 from app.sanitizers.base import SanitizationOptions
@@ -1263,8 +1261,6 @@ def test_apk_java_lnk_format_checks_disabled(tmp_path: Path):
     When one or more checks are unchecked (disabled), the app must NOT perform that check,
     and must suppress corresponding data and findings.
     """
-    from app.analyzers.lnk_analyzer import LnkAnalyzer
-    from app.core.job_manager import JobManager
 
     # 1. Test ApkAnalyzer with disabled checks
     apk_file = tmp_path / "disabled_checks.apk"

@@ -4,7 +4,6 @@ Performs SYN stealth and service-version scanning with strict timeouts,
 rate limits, and pre-scan anti-SSRF verification.
 """
 
-import os
 import shutil
 import socket
 import subprocess

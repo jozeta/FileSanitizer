@@ -31,8 +31,6 @@ import socket
 import hashlib
 import zipfile
 import io
-import time
-from datetime import datetime, timezone
 
 OUT_DIR = "test-files/correlated_investigation"
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -597,7 +595,7 @@ def generate_phishing_msg(docm_bytes: bytes, docm_name: str = "02_weaponized_doc
     num_fat_secs = 1
     while (sec_fat_start + num_fat_secs + 127) // 128 > num_fat_secs:
         num_fat_secs += 1
-    total_secs = sec_fat_start + num_fat_secs
+    sec_fat_start + num_fat_secs
 
     fat = [0xFFFFFFFF] * (num_fat_secs * 128)
     for i in range(num_dir_secs - 1):

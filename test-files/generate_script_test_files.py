@@ -8,7 +8,6 @@ Generate realistic test scripts and command files for:
 - VBScript (.vbs)
 """
 
-import os
 from pathlib import Path
 
 DIR = Path(__file__).resolve().parent

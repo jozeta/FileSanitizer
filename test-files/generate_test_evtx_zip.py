@@ -1,4 +1,3 @@
-import os
 import zipfile
 
 security_xml = """<Events>

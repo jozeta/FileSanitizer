@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Dict, Any, List, Set, Optional
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
 from app.analyzers.didier_pdf import DidierPDFAnalyzer, PDFID_TAGS
-from app.core.settings_store import settings_store
 from app.core.logging_config import logger
 import fitz
 from app.analyzers.pdf_forensics import (
@@ -446,7 +445,7 @@ class PDFAnalyzer(BaseAnalyzer):
                     category="metadata",
                     severity="low",
                     title=f"Document Metadata Present ({meta_count} fields)",
-                    description=f"PDF contains author, creator, or timestamp metadata.",
+                    description="PDF contains author, creator, or timestamp metadata.",
                     details=metadata
                 ))
 

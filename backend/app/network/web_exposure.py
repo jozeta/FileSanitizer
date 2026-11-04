@@ -6,8 +6,7 @@ and security contact policies without intrusive directory brute-forcing.
 """
 
 import re
-import urllib.parse
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Set
 import httpx
 import xml.etree.ElementTree as ET
 

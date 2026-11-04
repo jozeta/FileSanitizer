@@ -1,10 +1,7 @@
 import re
 import math
 import hashlib
-import binascii
-from typing import Dict, Any, List, Optional, Tuple, Set
-from pathlib import Path
-from app.analyzers.base import Finding
+from typing import Dict, Any, List
 
 
 def calculate_shannon_entropy(data: bytes) -> float:

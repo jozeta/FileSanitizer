@@ -1,4 +1,3 @@
-import pytest
 import zipfile
 from app.analyzers.office_analyzer import OfficeAnalyzer
 from app.sanitizers.office_sanitizer import OfficeSanitizer

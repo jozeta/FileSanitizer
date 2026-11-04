@@ -14,7 +14,7 @@ Extracts the 7 core analytical entity types across any analyzed artifact:
 import ipaddress
 import os
 import re
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Dict, Any, List, Set
 from urllib.parse import urlparse
 
 from app.core.settings_store import settings_store

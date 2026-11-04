@@ -138,7 +138,7 @@ class QRScanner:
         for qr in qr_results:
             text = qr["decoded_text"]
             is_quishing = qr.get("is_quishing_suspect", False)
-            url = qr.get("url")
+            qr.get("url")
 
             if is_quishing:
                 findings.append(Finding(

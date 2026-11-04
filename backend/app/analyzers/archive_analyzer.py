@@ -1,11 +1,10 @@
-import os
 import tarfile
 import zipfile
 import gzip
 import hashlib
 import re
 from pathlib import Path
-from typing import Dict, Any, List, Set, Optional
+from typing import Dict, Any, List, Optional
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
 from app.config import settings
 from app.core.logging_config import logger
@@ -823,7 +822,7 @@ class ArchiveAnalyzer(BaseAnalyzer):
                         findings.append(Finding(
                             category="exfiltration",
                             severity="high",
-                            title=f"Staged Confidential Executive Payroll & Financial Exfiltration (T1048)",
+                            title="Staged Confidential Executive Payroll & Financial Exfiltration (T1048)",
                             description=(
                                 f"Archive member '{fname}' contains staged corporate executive payroll data, employee SSNs, "
                                 f"bank routing coordinates, and salary compensation tables, indicative of data exfiltration."
@@ -845,7 +844,7 @@ class ArchiveAnalyzer(BaseAnalyzer):
                         findings.append(Finding(
                             category="discovery",
                             severity="medium",
-                            title=f"Confidential Internal Network Topology & Architecture Map (T1016)",
+                            title="Confidential Internal Network Topology & Architecture Map (T1016)",
                             description=(
                                 f"Archive member '{fname}' outlines internal enterprise network topology, subnet addressing, "
                                 f"domain controller mappings, and workstation asset locations."

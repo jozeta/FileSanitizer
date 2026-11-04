@@ -1,11 +1,9 @@
-import pytest
 import socket
-import datetime
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.network.input_normalizer import UniversalInputNormalizer, InputType, NormalizedIndicator
+from app.network.input_normalizer import UniversalInputNormalizer, InputType
 from app.network.advanced_dns import AdvancedDNSInspector
 from app.network.tls_inspector import TLSInspector
 from app.network.web_fingerprinter import WebFingerprinter, murmurhash3_32
@@ -649,7 +647,6 @@ def test_active_security_prober_opt_in():
 
 def test_restored_domain_relation_discovery_with_pdns():
     from app.analyzers.domain_relations import DomainRelationDiscovery
-    from app.network.passive_dns import PassiveDnsClient
 
     # Test that DomainRelationDiscovery ingests pdns_domains and adds them as relations
     with patch("app.core.settings_store.settings_store.is_external_allowed", return_value=True):

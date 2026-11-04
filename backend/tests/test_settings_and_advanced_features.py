@@ -1,6 +1,4 @@
 import io
-import pytest
-from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -375,7 +373,6 @@ def test_statistics_30_day_timeline_and_bytes():
     assert "severity_distribution" in stats
 
 def test_clamav_days_old_and_update_check():
-    from app.core.clamav_manager import clamav_manager
     token = create_admin_token("admin")
     headers = {"Authorization": f"Bearer {token}"}
 

@@ -3,7 +3,7 @@ import re
 import struct
 import zipfile
 from pathlib import Path
-from typing import Dict, Any, List, Set, Optional
+from typing import Dict, Any, List, Set
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
 from app.core.logging_config import logger
 from oletools.olevba import VBA_Parser

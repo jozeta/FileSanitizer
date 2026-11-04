@@ -41,7 +41,6 @@ def test_entropy_and_string_calculations():
     assert calculate_shannon_entropy(null_bytes) == 0.0
 
     # High entropy DGA domain
-    dga_domain = "x8k2lm9pq7wz3rt1.attacker-c2.net"
     sub_ent = calculate_string_entropy("x8k2lm9pq7wz3rt1")
     assert sub_ent >= 3.6
 

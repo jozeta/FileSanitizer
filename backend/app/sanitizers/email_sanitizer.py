@@ -2,9 +2,7 @@ import email
 from email import policy
 from email.message import EmailMessage
 from pathlib import Path
-from typing import Dict, Any, List, Optional
 from bs4 import BeautifulSoup
-import re
 
 from app.sanitizers.base import BaseSanitizer, SanitizationOptions, SanitizationResult
 from app.core.logging_config import logger

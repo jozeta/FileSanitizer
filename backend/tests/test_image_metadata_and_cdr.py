@@ -1,5 +1,5 @@
 import pytest
-from PIL import Image, ExifTags
+from PIL import Image
 from app.analyzers.image_analyzer import ImageAnalyzer
 from app.sanitizers.image_sanitizer import ImageSanitizer
 from app.sanitizers.base import SanitizationOptions

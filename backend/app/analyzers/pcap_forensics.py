@@ -19,7 +19,7 @@ import math
 import re
 import struct
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Dict, Any, List, Set, Tuple
 
 
 # =============================================================================
@@ -669,7 +669,7 @@ def analyze_dns_forensics(
             sld = d_name
 
         sub_entropy = calculate_string_entropy(subdomain)
-        d_entropy = calculate_string_entropy(d_name)
+        calculate_string_entropy(d_name)
 
         # A. DGA Detection Heuristic
         # High entropy label with length >= 12 or low vowel count typical of algorithmic generators
@@ -1005,7 +1005,7 @@ def analyze_recon_and_lateral_movement(
 
             # TCP Flag tracking
             elif l4 == 6 and cap_len >= 54:
-                s_port = struct.unpack("!H", data[34:36])[0]
+                struct.unpack("!H", data[34:36])[0]
                 d_port = struct.unpack("!H", data[36:38])[0]
                 tcp_flags_byte = data[47]
                 is_syn = bool(tcp_flags_byte & 0x02)

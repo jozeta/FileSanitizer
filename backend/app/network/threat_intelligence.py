@@ -6,7 +6,7 @@ Profiles Autonomous Systems: ASN numbers, BGP prefixes, organization, hosting cl
 """
 
 import socket
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import httpx
 
 from app.core.logging_config import logger

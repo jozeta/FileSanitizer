@@ -1,9 +1,6 @@
-import pytest
-import os
-import json
 from fastapi.testclient import TestClient
 from app.main import app
-from app.core.job_manager import JobManager, JobModel
+from app.core.job_manager import JobManager
 from app.analyzers.deobfuscator import Deobfuscator
 from app.analyzers.stix_exporter import Stix21Exporter
 from app.core.yara_manager import yara_manager

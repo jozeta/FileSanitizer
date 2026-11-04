@@ -1,4 +1,3 @@
-import pytest
 import fitz
 from app.analyzers.pdf_analyzer import PDFAnalyzer
 from app.sanitizers.pdf_sanitizer import PDFSanitizer

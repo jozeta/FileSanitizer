@@ -2,7 +2,7 @@ import socket
 import struct
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, Tuple
+from typing import Optional, Tuple
 from app.config import settings
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
 from app.core.logging_config import logger

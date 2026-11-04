@@ -1,6 +1,6 @@
 import base64
 import urllib.parse
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import httpx
 
 from app.core.settings_store import settings_store

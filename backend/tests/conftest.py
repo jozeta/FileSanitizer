@@ -20,7 +20,7 @@ def isolate_test_environment(monkeypatch, tmp_path):
     import copy
     import json
     from app.core.settings_store import settings_store, DEFAULT_SETTINGS
-    from app.core.yara_manager import yara_manager, DEFAULT_RULES
+    from app.core.yara_manager import yara_manager
 
     # 1. Isolate SettingsStore
     original_settings_data = copy.deepcopy(settings_store._data)

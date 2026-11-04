@@ -1,8 +1,6 @@
-import pytest
 from app.analyzers.dlp_analyzer import DLPAnalyzer, _luhn_check, _iban_check
-from app.analyzers.metadata_extractor import detect_metadata_anomalies, MetadataExtractor
+from app.analyzers.metadata_extractor import detect_metadata_anomalies
 from app.analyzers.mitre_attack import MitreAttackMapper
-from app.analyzers.reputation_client import MalwareBazaarClient
 from app.core.job_manager import JobManager
 from fastapi.testclient import TestClient
 from app.main import app

@@ -112,11 +112,11 @@ class ActiveSecurityProber:
         try:
             with httpx.Client(timeout=1.0, follow_redirects=True, headers={"User-Agent": "FileSanitizer-Auditor/1.0"}) as client:
                 try:
-                    resp = client.get(base_https)
+                    client.get(base_https)
                     working_base = base_https
                 except Exception:
                     try:
-                        resp = client.get(base_http)
+                        client.get(base_http)
                         working_base = base_http
                     except Exception:
                         working_base = None
@@ -303,7 +303,7 @@ class ActiveSecurityProber:
         try:
             # First fast check: is port 443 even accepting TCP connections?
             try:
-                with socket.create_connection((host, 443), timeout=0.8) as test_sock:
+                with socket.create_connection((host, 443), timeout=0.8):
                     pass
             except Exception:
                 # Port 443 not open, skip
@@ -330,7 +330,7 @@ class ActiveSecurityProber:
                     ctx.minimum_version = ver_const
                     ctx.maximum_version = ver_const
                     with socket.create_connection((host, 443), timeout=1.0) as sock:
-                        with ctx.wrap_socket(sock, server_hostname=host) as ssock:
+                        with ctx.wrap_socket(sock, server_hostname=host):
                             protocols_supported[name] = True
                             if is_dep:
                                 deprecated.append(name)
@@ -445,7 +445,7 @@ class ActiveSecurityProber:
                     smtp_info["starttls_supported"] = True
 
                 sock.sendall(b"MAIL FROM:<test-audit@filesanitizer.test>\r\n")
-                mail_resp = sock.recv(512).decode("utf-8", errors="ignore")
+                sock.recv(512).decode("utf-8", errors="ignore")
 
                 sock.sendall(b"RCPT TO:<relay-check-nonexistent@example.org>\r\n")
                 rcpt_resp = sock.recv(512).decode("utf-8", errors="ignore")

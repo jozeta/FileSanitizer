@@ -1,5 +1,3 @@
-import pytest
-from pathlib import Path
 from app.analyzers.identification import IdentificationAnalyzer, calculate_hashes, detect_file_type
 
 def test_hash_calculation(temp_dir):

@@ -4,7 +4,7 @@ Queries AlienVault OTX and HackerTarget to discover historical DNS resolutions,
 sibling hosts, co-located infrastructure, and resolution change timelines.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import httpx
 from app.core.logging_config import logger
 

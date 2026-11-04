@@ -16,8 +16,6 @@ Verifies:
 """
 
 import struct
-from pathlib import Path
-import pytest
 
 from app.analyzers.evtx_forensics import (
     audit_evtx_capture_integrity,
@@ -30,8 +28,6 @@ from app.analyzers.evtx_forensics import (
     analyze_log_tampering_and_anti_forensics,
     get_offline_analysis_tools_guide,
     calculate_evtx_verdict,
-    WELL_KNOWN_SIDS,
-    AUTH_STATUS_CODES,
 )
 from app.analyzers.evtx_analyzer import EvtxAnalyzer
 

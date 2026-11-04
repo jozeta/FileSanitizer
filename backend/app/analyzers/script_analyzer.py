@@ -15,7 +15,7 @@ import re
 import math
 import base64
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding
 from app.core.logging_config import logger
 

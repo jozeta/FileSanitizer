@@ -4,7 +4,7 @@ Maps static file findings, behavioral indicators, YARA rules, and extracted capa
 to MITRE ATT&CK Tactics and Techniques.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 TACTIC_NAMES = {
     "TA0001": "Initial Access",

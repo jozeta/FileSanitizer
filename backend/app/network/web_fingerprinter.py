@@ -9,7 +9,7 @@ import re
 import codecs
 import urllib.parse
 from bs4 import BeautifulSoup
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 import httpx
 
 from app.core.logging_config import logger

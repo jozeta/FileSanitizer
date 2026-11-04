@@ -1,7 +1,6 @@
 import email
 from email import policy
 from pathlib import Path
-import pytest
 
 from app.analyzers.email_forensics import (
     audit_email_file_integrity,

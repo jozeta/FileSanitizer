@@ -1,4 +1,3 @@
-import os
 from celery import Celery
 from app.config import settings
 from app.core.job_manager import job_manager

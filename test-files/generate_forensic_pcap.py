@@ -1,5 +1,4 @@
 import struct
-import time
 import socket
 
 def build_pcap():

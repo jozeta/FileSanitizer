@@ -13,12 +13,10 @@ Disassembles and heuristically inspects raw binary shellcode (x86 and x86_64) us
 - Multi-architecture disassembly listing with highlighted forensic indicators
 """
 
-import re
 import struct
 import capstone
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any
 from app.analyzers.base import Finding
-from app.core.logging_config import logger
 
 # Metasploit, Cobalt Strike, and common malware ROR-13 API hashes
 KNOWN_ROR13_HASHES = {

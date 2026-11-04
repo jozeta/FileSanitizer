@@ -5,7 +5,7 @@ Evaluates email spoofability posture and CEO fraud / BEC exposure.
 """
 
 import re
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 import dns.resolver
 from app.core.logging_config import logger
 

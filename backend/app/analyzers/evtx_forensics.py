@@ -18,11 +18,10 @@ Implements the complete 'Windows Event Logs (EVTX) — Security Analysis Checkli
 """
 
 import hashlib
-import re
 import struct
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Dict, Any, List, Set
 from collections import Counter
 
 # --- Well-Known Sensitive SIDs and Security Groups ---

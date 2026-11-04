@@ -4,7 +4,6 @@ Automated Google Dorks & Sensitive Artifact Scanner.
 """
 
 from unittest.mock import patch, MagicMock
-import pytest
 from app.network.shodan_client import ShodanClient
 from app.network.dork_scanner import DorkArtifactScanner
 from app.analyzers.domain_analyzer import DomainAnalyzer

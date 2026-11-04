@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-import os, sys, time, json, urllib.request, urllib.error
+import time
+import json
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 BASE_URL = "http://localhost:8000"
@@ -38,7 +41,7 @@ def get_json(url):
 
 for fpath in test_files:
     fname = fpath.name
-    print(f"\n==================================================")
+    print("\n==================================================")
     print(f"[*] Uploading and Analyzing: {fname}")
     try:
         upload_data = upload_file(fpath)

@@ -1,9 +1,8 @@
-import os
 import re
 import uuid
 import unicodedata
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 from app.config import settings
 from app.core.logging_config import logger
 

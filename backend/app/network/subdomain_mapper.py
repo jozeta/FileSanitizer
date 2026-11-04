@@ -9,7 +9,6 @@ import socket
 import concurrent.futures
 from typing import Dict, Any, List, Set, Optional
 
-from app.core.logging_config import logger
 
 
 class SubdomainMapper:

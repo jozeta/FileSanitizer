@@ -2,7 +2,7 @@ import io
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Dict, Any, List, Set, Optional
+from typing import Dict, Any, List, Set
 from PIL import Image
 import fitz
 

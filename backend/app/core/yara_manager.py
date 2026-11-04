@@ -1,5 +1,4 @@
 import json
-import re
 import time
 import uuid
 from pathlib import Path
@@ -551,7 +550,7 @@ class YaraManager:
 
         # Validate YARA rule compilation
         try:
-            compiled = yara.compile(source=rule_text)
+            yara.compile(source=rule_text)
         except yara.SyntaxError as e:
             raise ValueError(f"YARA Syntax Error: {e}")
         except Exception as e:

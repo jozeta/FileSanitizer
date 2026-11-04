@@ -1,16 +1,9 @@
-import os
-import io
 import struct
 import zipfile
-import pytest
 from app.analyzers.lnk_analyzer import LnkAnalyzer
 from app.analyzers.qr_scanner import QRScanner
 from app.analyzers.office_analyzer import OfficeAnalyzer
-from app.analyzers.pcap_analyzer import PcapAnalyzer
-from app.analyzers.executable_analyzer import ExecutableAnalyzer
 from app.analyzers.detection_rules import DetectionRuleGenerator
-from app.analyzers.identification import IdentificationAnalyzer
-from app.core.job_manager import job_manager, JobModel
 import yara
 
 def test_lnk_dissection(tmp_path):
@@ -30,7 +23,6 @@ def test_lnk_dissection(tmp_path):
     icon_index = 0
     show_command = 7 # SW_SHOWMINNOACTIVE
     hotkey = 0
-    reserved = b"\x00" * 10
     
     header = struct.pack("<I16sIIQQQIIIH2s4s4s",
         header_size, clsid, link_flags, file_attributes,
@@ -96,7 +88,6 @@ def test_lnk_dissection(tmp_path):
 
 def test_qr_scanner_quishing(tmp_path):
     import qrcode
-    from PIL import Image
 
     # Generate QR Code image
     qr = qrcode.QRCode(box_size=10, border=4)

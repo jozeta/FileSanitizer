@@ -8,7 +8,6 @@ Office documents (VBA Macros, XLM 4.0), PDF JavaScript, Windows Event Logs (EVTX
 
 import re
 from typing import Dict, Any, List, Optional
-from app.analyzers.base import Finding
 
 
 class AntiAnalysisDetector:

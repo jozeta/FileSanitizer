@@ -2,7 +2,7 @@ import re
 import math
 import struct
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple, Set
+from typing import Dict, Any, List, Optional, Set
 from app.analyzers.base import BaseAnalyzer, AnalyzerResult, Finding, extract_clean_urls
 from app.core.logging_config import logger
 from PIL import Image, ExifTags

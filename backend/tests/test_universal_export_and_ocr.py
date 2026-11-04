@@ -7,7 +7,6 @@ from app.sanitizers.pdf_sanitizer import PDFSanitizer
 from app.sanitizers.image_sanitizer import ImageSanitizer
 from app.sanitizers.office_sanitizer import OfficeSanitizer
 from app.sanitizers.text_sanitizer import TextSanitizer
-from app.sanitizers.svg_sanitizer import SVGSanitizer
 from app.analyzers.watchlist_analyzer import WatchlistAnalyzer
 from app.core.thumbnail_generator import ThumbnailGenerator
 from app.core.settings_store import settings_store

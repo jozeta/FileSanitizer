@@ -9,19 +9,14 @@ Unit and integration tests for:
 - In-depth Email analysis (Homoglyphs, VIP impersonation, thread hijacking, HTML smuggling)
 """
 
-import os
 import io
-import pytest
-from pathlib import Path
 from app.analyzers.mitre_attack import MitreAttackMapper
-from app.analyzers.script_analyzer import ScriptAnalyzer, calculate_shannon_entropy
+from app.analyzers.script_analyzer import ScriptAnalyzer
 from app.sanitizers.script_sanitizer import ScriptSanitizer
 from app.sanitizers.base import SanitizationOptions
 from app.analyzers.base import Finding
 from app.analyzers.image_analyzer import ImageAnalyzer
 from app.analyzers.email_analyzer import EmailAnalyzer
-from app.analyzers.office_analyzer import OfficeAnalyzer
-from app.analyzers.executable_analyzer import ExecutableAnalyzer
 from PIL import Image
 
 def test_mitre_attack_mapper_rules():

@@ -1,5 +1,3 @@
-import pytest
-import io
 from fastapi.testclient import TestClient
 from app.main import app
 from app.core.job_manager import job_manager

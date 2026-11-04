@@ -2,7 +2,6 @@ import ipaddress
 import socket
 import urllib.parse
 from typing import Tuple, List, Optional
-from app.core.logging_config import logger
 
 # Blocked IP networks
 BLOCKED_NETWORKS = [

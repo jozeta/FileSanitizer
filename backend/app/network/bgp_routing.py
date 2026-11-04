@@ -4,7 +4,7 @@ Queries BGP route announcements, RPKI validation status (valid/invalid/not-found
 and detects Anycast infrastructure and route anomalies via RIPE Stat APIs.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 import httpx
 from app.core.logging_config import logger
 

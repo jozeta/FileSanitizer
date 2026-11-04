@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Optional
 from app.analyzers.base import Finding
 from pydantic import BaseModel, Field
 
@@ -33,7 +33,6 @@ class RiskEngine:
         is_mismatch: bool = False
     ) -> RiskAssessment:
         reasons = []
-        score = 0
         breakdown: List[Dict[str, Any]] = []
 
         # 1. Check for Active Malware (Definite Malicious Signature)

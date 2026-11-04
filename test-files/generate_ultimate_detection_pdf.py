@@ -13,8 +13,6 @@ capability in FileSanitizer:
 """
 
 import io
-import os
-import re
 import sys
 from pathlib import Path
 import fitz

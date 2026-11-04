@@ -4,7 +4,7 @@ Queries public paste indices and OSINT leak repositories for mentions of the tar
 evaluates credential leak exposure, database dumps, and code leaks.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 import httpx
 from app.core.logging_config import logger
 

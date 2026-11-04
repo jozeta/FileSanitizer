@@ -17,8 +17,8 @@ Detects whether an image is AI-generated, AI-edited, or authentic camera media:
 import io
 import re
 from pathlib import Path
-from typing import Dict, Any, List, Optional
-from PIL import Image, ExifTags
+from typing import Dict, Any
+from PIL import Image
 
 from app.core.logging_config import logger
 

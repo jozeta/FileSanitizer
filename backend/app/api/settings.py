@@ -2,7 +2,7 @@ import re
 import time
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Header, UploadFile, File, status, Response, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.config import settings as app_settings
 from app.core.settings_store import (
@@ -778,7 +778,7 @@ def update_custom_pattern(pattern_id: str, req: CustomPatternRequest, admin=Depe
 @router.post("/custom-patterns/{pattern_id}/reset")
 def reset_custom_pattern(pattern_id: str, admin=Depends(require_admin)):
     """Reset a modified built-in pattern back to its factory default."""
-    ok = settings_store.reset_custom_hex_pattern(pattern_id)
+    settings_store.reset_custom_hex_pattern(pattern_id)
     return {"success": True, "message": "Pattern reset to default."}
 
 @router.delete("/custom-patterns/{pattern_id}")

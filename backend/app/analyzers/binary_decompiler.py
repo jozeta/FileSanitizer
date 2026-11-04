@@ -6,7 +6,7 @@ control flow structuring (if/else, loops, switch), and Win32/POSIX API resolutio
 """
 
 import re
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Dict, Any, List, Optional
 
 
 def demangle_symbol(name: str) -> str:
@@ -196,10 +196,8 @@ class BinaryDecompiler:
         suspicious_constructs = []
         has_loops = False
         has_conditionals = False
-        lines = []
 
         # Analyze stack frame and calling conventions
-        is_64bit = "64" in architecture
         ret_type = "int"
         params = [
             {"type": "int", "name": "argc"},
@@ -407,19 +405,19 @@ class BinaryDecompiler:
         signature = f"{ret_type} {function_name}({param_str})"
         
         full_code_lines = [
-            f"/**",
+            "/**",
             f" * Decompiled Function: {function_name}",
             f" * Virtual Address:     {entry_point}",
             f" * Architecture:        {architecture}",
             f" * Instructions Parsed: {len(instructions)}",
-            f" * Reconstructed by:    FileSanitizer High-Level Binary Decompiler",
-            f" */",
-            f"#include <stdint.h>",
-            f"#include <stdbool.h>",
-            f"#include <windows.h>",
-            f"",
+            " * Reconstructed by:    FileSanitizer High-Level Binary Decompiler",
+            " */",
+            "#include <stdint.h>",
+            "#include <stdbool.h>",
+            "#include <windows.h>",
+            "",
             f"{signature}",
-            f"{{"
+            "{"
         ]
 
         # Declare local variables
