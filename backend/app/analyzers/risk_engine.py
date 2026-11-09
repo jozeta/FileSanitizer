@@ -274,8 +274,28 @@ class RiskEngine:
                 seen.add(clean_r)
                 deduped_reasons.append(clean_r)
 
+        # A critical reputation finding is an authoritative confirmation of malice
+        # (multi-vendor VirusTotal detections, a ThreatFox/MalwareBazaar hit, or an OTX
+        # pulse). Like the ClamAV path above, that warrants a MALICIOUS verdict rather than
+        # merely HIGH RISK, so a known-bad file is not understated.
+        malware_confirmed = any(
+            (f.category or "").lower() == "reputation" and (f.severity or "").lower() == "critical"
+            for f in findings
+        )
+
         # 4. Determine Level and Recommendations
-        if total_score >= 65 or critical_reasons:
+        if malware_confirmed:
+            level = "MALICIOUS"
+            total_score = max(total_score, 90)
+            rec = (
+                "The file was confirmed malicious by external threat intelligence. Do not "
+                "distribute the original file. Treat it as live malware; if a derived artifact "
+                "is required, use Maximum Sanitization (Content Disarm and Reconstruction)."
+            )
+            suggested = "maximum"
+            reasons = deduped_reasons[:6] if deduped_reasons else ["⚠ Confirmed malicious by threat intelligence"]
+
+        elif total_score >= 65 or critical_reasons:
             level = "HIGH RISK"
             total_score = max(total_score, 65)
             rec = (
