@@ -87,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-3 text-left focus:outline-hidden group cursor-pointer"
           >
             <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs group-hover:bg-blue-600 transition-colors">
-              <ShieldCheck className="w-6 h-6" />
+              <ShieldCheck aria-hidden="true" className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -121,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Shield className="w-3.5 h-3.5" />
+            <Shield aria-hidden="true" className="w-3.5 h-3.5" />
             <span>Sanitizer</span>
           </button>
 
@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Binary className="w-3.5 h-3.5" />
+            <Binary aria-hidden="true" className="w-3.5 h-3.5" />
             <span>Decoder</span>
           </button>
 
@@ -145,7 +145,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
+            <BookOpen aria-hidden="true" className="w-3.5 h-3.5" />
             <span>How It Works</span>
           </button>
 
@@ -157,7 +157,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <FileCheck2 className="w-3.5 h-3.5" />
+            <FileCheck2 aria-hidden="true" className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Supported Formats</span>
             <span className="sm:hidden">Formats</span>
           </button>
@@ -172,12 +172,12 @@ export const Header: React.FC<HeaderProps> = ({
           >
             {isLoggedIn ? (
               <>
-                <Settings className="w-3.5 h-3.5" />
+                <Settings aria-hidden="true" className="w-3.5 h-3.5" />
                 <span>Settings</span>
               </>
             ) : (
               <>
-                <Lock className="w-3.5 h-3.5" />
+                <Lock aria-hidden="true" className="w-3.5 h-3.5" />
                 <span>Login</span>
               </>
             )}
@@ -194,7 +194,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Retention Notice */}
           <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-slate-50 border-slate-200 text-slate-600" title="Files are automatically purged after 30 minutes">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
+            <Clock aria-hidden="true" className="w-3.5 h-3.5 text-slate-400" />
             <span>30m Retention</span>
           </div>
 
@@ -204,7 +204,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
             title="Security Disclaimer"
           >
-            <Info className="w-4 h-4 text-slate-400" />
+            <Info aria-hidden="true" className="w-4 h-4 text-slate-400" />
             <span className="hidden xl:inline">Security Disclaimer</span>
           </button>
         </div>

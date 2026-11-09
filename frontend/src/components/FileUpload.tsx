@@ -153,7 +153,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <UploadCloud className="w-4 h-4" />
+            <UploadCloud aria-hidden="true" className="w-4 h-4" />
             <span>Upload Local Files</span>
           </button>
 
@@ -166,7 +166,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Globe className="w-4 h-4 text-blue-600" />
+            <Globe aria-hidden="true" className="w-4 h-4 text-blue-600" />
             <span>Check Domain or IP</span>
           </button>
         </div>
@@ -195,7 +195,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             />
 
             <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 mx-auto flex items-center justify-center mb-5">
-              <UploadCloud className="w-8 h-8" />
+              <UploadCloud aria-hidden="true" className="w-8 h-8" />
             </div>
 
             <h2 className="text-lg font-semibold text-slate-900 mb-1">
@@ -206,7 +206,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             </p>
 
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-600">
-              <Shield className="w-3.5 h-3.5 text-slate-400" />
+              <Shield aria-hidden="true" className="w-3.5 h-3.5 text-slate-400" />
               <span>Max 100 MB · Single file isolation · Auto-purged</span>
             </div>
           </div>
@@ -220,7 +220,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           {/* Upload Error */}
           {error && (
             <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <AlertCircle aria-hidden="true" className="w-4 h-4 shrink-0 text-rose-600" />
               <span>{error}</span>
             </div>
           )}
@@ -248,7 +248,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                        <File className="w-5 h-5" />
+                        <File aria-hidden="true" className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-900 truncate max-w-xs sm:max-w-md">
@@ -268,7 +268,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                       className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
                       title="Remove file"
                     >
-                      <X className="w-4 h-4" />
+                      <X aria-hidden="true" className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
@@ -279,7 +279,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 animate-overlay-fade">
                   <div className="flex items-center justify-between text-xs font-mono">
                     <span className="font-semibold text-slate-700 flex items-center gap-2">
-                      <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                      <Loader2 aria-hidden="true" className="w-3.5 h-3.5 text-blue-600 animate-spin" />
                       <span>Uploading File to Isolated Workspace...</span>
                     </span>
                     <span className="font-bold text-blue-600">
@@ -311,13 +311,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 >
                   {isUploading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />
                       <span>{uploadProgress && uploadProgress.total > 0 ? `Uploading (${uploadProgress.percentage}%)` : 'Uploading...'}</span>
                     </>
                   ) : (
                     <>
                       <span>Analyze File</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <ArrowRight aria-hidden="true" className="w-4 h-4" />
                     </>
                   )}
                 </button>
@@ -330,7 +330,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xs space-y-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-              <Globe className="w-6 h-6" />
+              <Globe aria-hidden="true" className="w-6 h-6" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-900">Fetch File, Inspect Domain or Analyze IP</h3>
@@ -361,13 +361,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 >
                   {isFetchingUrl ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 aria-hidden="true" className="w-3.5 h-3.5 animate-spin" />
                       <span>Fetching...</span>
                     </>
                   ) : (
                     <>
                       <span>Fetch & Inspect</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight aria-hidden="true" className="w-3.5 h-3.5" />
                     </>
                   )}
                 </button>
@@ -377,7 +377,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             {/* Fetch Status Notice */}
             {urlFetchStatus && (
               <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-blue-900 text-xs flex items-center gap-2 font-medium">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 shrink-0" />
+                <Loader2 aria-hidden="true" className="w-3.5 h-3.5 animate-spin text-blue-600 shrink-0" />
                 <span>{urlFetchStatus}</span>
               </div>
             )}
@@ -385,7 +385,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             {/* URL Error Alert */}
             {urlError && (
               <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-xs flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <AlertCircle aria-hidden="true" className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold">Security / Fetch Error:</span> {urlError}
                 </div>
@@ -396,7 +396,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
-                  <Lock className="w-3.5 h-3.5 text-blue-600" />
+                  <Lock aria-hidden="true" className="w-3.5 h-3.5 text-blue-600" />
                   <span>Anti-SSRF Protection</span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -406,7 +406,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
-                  <ShieldAlert className="w-3.5 h-3.5 text-emerald-600" />
+                  <ShieldAlert aria-hidden="true" className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Watchlist Screening</span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -416,7 +416,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                  <CheckCircle2 aria-hidden="true" className="w-3.5 h-3.5 text-purple-600" />
                   <span>Format Verification</span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-relaxed">

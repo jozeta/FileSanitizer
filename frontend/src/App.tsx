@@ -573,7 +573,7 @@ export const App: React.FC = () => {
               duplicateNotice.type === 'error' ? 'bg-rose-100 text-rose-700' :
               duplicateNotice.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'
             }`}>
-              {duplicateNotice.type === 'error' || duplicateNotice.type === 'warning' ? <AlertTriangle className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+              {duplicateNotice.type === 'error' || duplicateNotice.type === 'warning' ? <AlertTriangle aria-hidden="true" className="w-5 h-5" /> : <Info aria-hidden="true" className="w-5 h-5" />}
             </div>
             <div className="flex-1 text-xs">
               <strong className="block font-bold mb-0.5">
