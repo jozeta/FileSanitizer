@@ -546,6 +546,44 @@ export const App: React.FC = () => {
     handleClearWorkspace();
   };
 
+  // Accessibility (A11Y-02): mark decorative lucide icons aria-hidden app-wide, including the
+  // dynamically-rendered analysis cards, so screen readers skip them. An icon is treated as
+  // decorative when its control already has an accessible name (text/aria-label/title) or it
+  // has no interactive ancestor; an icon that is the SOLE content of an unlabelled control is
+  // left visible to AT so it is not stripped of its only name. Runs on mount and, debounced
+  // via rAF, whenever new nodes are added, processing only not-yet-marked SVGs.
+  useEffect(() => {
+    const SEL = 'svg:not([aria-hidden]):not([aria-label]):not([aria-labelledby]):not([role])';
+    const mark = () => {
+      document.querySelectorAll<SVGElement>(SEL).forEach((svg) => {
+        const ctrl = svg.closest('button, a, [role="button"], [role="tab"], [role="menuitem"]');
+        if (!ctrl) {
+          svg.setAttribute('aria-hidden', 'true');
+          return;
+        }
+        const named =
+          ctrl.getAttribute('aria-label') ||
+          ctrl.getAttribute('title') ||
+          (ctrl.textContent || '').trim();
+        if (named) svg.setAttribute('aria-hidden', 'true');
+      });
+    };
+    mark();
+    let scheduled = 0;
+    const observer = new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = window.requestAnimationFrame(() => {
+        scheduled = 0;
+        mark();
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      if (scheduled) window.cancelAnimationFrame(scheduled);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
       <Header

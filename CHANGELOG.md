@@ -14,8 +14,9 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
     and scrolls within its own bounds (WCAG 1.4.10 reflow)
   - the analysis splash status is a polite live region (`role="status"`), so screen readers
     announce when analysis starts and completes
-  - decorative icons in the header, upload panel and app chrome are now `aria-hidden`, so screen
-    readers no longer announce them as unlabeled graphics (icon-only controls keep their labels)
+  - decorative icons are now `aria-hidden` app-wide (chrome markup plus a runtime pass that covers
+    the dynamically-rendered analysis cards), so screen readers no longer announce them as
+    unlabeled graphics; an icon that is a control's only content is left labelled, not hidden
 - Security hardening from the 2026-10 audit, each guarded by a regression test in
   `backend/tests/test_audit_regressions.py`:
   - the IP/domain forensic tool runner no longer builds shell command strings (`shell=True`
