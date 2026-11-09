@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     API_PREFIX: str = "/api"
 
+    # Where file analysis runs: "celery" dispatches to the worker (off the API
+    # process); "inprocess" runs it in-process via BackgroundTasks (used by the
+    # test suite / CI, which have no running worker).
+    ANALYSIS_DISPATCH: str = "celery"
+
     # Storage and Job Isolation
     JOBS_DIR: str = Field(default_factory=lambda: "/jobs" if os.path.exists("/jobs") and os.access("/jobs", os.W_OK) else "/tmp/filesanitizer/jobs")
     MAX_FILE_SIZE_MB: int = 100

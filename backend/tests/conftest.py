@@ -41,6 +41,11 @@ def isolate_test_environment(monkeypatch, tmp_path):
     monkeypatch.setattr(yara_manager, "_get_rules_dir", lambda: test_yara_dir)
     yara_manager._init_storage()
 
+    # 3. Run analysis in-process under tests/CI (no Celery worker is running), so
+    #    endpoint uploads complete synchronously via BackgroundTasks as before.
+    from app.config import settings as app_settings
+    monkeypatch.setattr(app_settings, "ANALYSIS_DISPATCH", "inprocess")
+
     yield
 
     # Restore SettingsStore

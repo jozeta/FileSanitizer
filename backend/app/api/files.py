@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 
 from app.config import settings
-from app.core.job_manager import job_manager
+from app.core.job_manager import job_manager, dispatch_analysis
 from app.core.logging_config import logger
 from app.network.url_fetcher import URLFileFetcher, URLFetcherException
 from app.network.input_normalizer import UniversalInputNormalizer
@@ -319,7 +319,7 @@ async def upload_files(
             "state": job.state
         })
 
-        background_tasks.add_task(job_manager.execute_analysis_pipeline, job.job_id)
+        dispatch_analysis(job.job_id, background_tasks)
 
     return {"uploaded": len(created_jobs), "jobs": created_jobs}
 
@@ -374,7 +374,7 @@ def fetch_file_from_url(
         job.urls.append(reputation)
 
     # Queue background analysis execution
-    background_tasks.add_task(job_manager.execute_analysis_pipeline, job.job_id)
+    dispatch_analysis(job.job_id, background_tasks)
 
     return {
         "uploaded": 1,
@@ -462,7 +462,7 @@ def investigate_ioc(
     if reputation:
         job.urls.append(reputation)
 
-    background_tasks.add_task(job_manager.execute_analysis_pipeline, job.job_id)
+    dispatch_analysis(job.job_id, background_tasks)
 
     return {
         "already_analyzed": False,

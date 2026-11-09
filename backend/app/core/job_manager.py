@@ -529,6 +529,10 @@ class JobManager:
         job.progress = 5
         job.current_step = 1
         job.current_step_label = "File Identification & Cryptographic Hashing"
+        # Persist the ANALYZING transition so a poller in another process (the API,
+        # once analysis is dispatched to the Celery worker) sees that processing has
+        # started rather than the stale QUEUED snapshot written at job creation.
+        self._save_job_to_disk(job)
 
         try:
             original_path = ws.original_file_path(job.filename)
@@ -2354,3 +2358,26 @@ class JobManager:
         return self.execute_analysis_pipeline(job_id)
 
 job_manager = JobManager()
+
+
+def dispatch_analysis(job_id: str, background_tasks) -> str:
+    """Dispatch a job's analysis pipeline.
+
+    Prefers the Celery worker so heavy analysis runs off the API process. Falls
+    back to running in-process via FastAPI BackgroundTasks if the task cannot be
+    enqueued (e.g. the broker is unreachable) or when settings.ANALYSIS_DISPATCH
+    is "inprocess" (tests/CI, which run no worker), so an upload is never silently
+    stuck. Returns "celery" or "inprocess" for observability.
+    """
+    if getattr(settings, "ANALYSIS_DISPATCH", "celery") == "inprocess":
+        background_tasks.add_task(job_manager.execute_analysis_pipeline, job_id)
+        return "inprocess"
+    try:
+        from app.workers.celery_worker import celery_app
+        celery_app.send_task("tasks.analyze_job", args=[job_id])
+        logger.info(f"Dispatched analysis for job {job_id} to Celery worker")
+        return "celery"
+    except Exception as e:
+        logger.warning(f"Celery dispatch failed for job {job_id} ({e}); running analysis in-process")
+        background_tasks.add_task(job_manager.execute_analysis_pipeline, job_id)
+        return "inprocess"
