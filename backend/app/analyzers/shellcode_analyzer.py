@@ -54,13 +54,15 @@ class ShellcodeAnalyzer:
     @staticmethod
     def is_likely_shellcode(data: bytes, filename: str = "") -> bool:
         """Determines if a raw buffer or file likely represents position-independent shellcode."""
+        # Length guard first: an empty or tiny buffer cannot be meaningful shellcode, so it
+        # must not be classified as such even when it carries a raw extension (.bin/.dat/...).
+        if len(data) < 16 or len(data) > 50 * 1024 * 1024:
+            return False
+
         fn_lower = filename.lower()
         if any(fn_lower.endswith(ext) for ext in [".sc", ".shellcode", ".bin", ".raw", ".dat"]):
             if not data.startswith((b"MZ", b"\x7fELF", b"\xfe\xed\xfa", b"\xcf\xfa\xed", b"PK", b"%PDF")):
                 return True
-
-        if len(data) < 16 or len(data) > 50 * 1024 * 1024:
-            return False
 
         # If data starts with common shellcode signatures
         # 1. NOP Sled
