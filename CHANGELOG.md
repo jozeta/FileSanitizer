@@ -6,6 +6,22 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
 
 ## [Unreleased]
 
+- Accessibility: the footer disclaimer now meets WCAG AA contrast (slate-400 → slate-500 at
+  11px), and the upload prompt is an `<h2>` under the page `<h1>` instead of an `<h3>`, fixing the
+  skipped heading level on the landing page
+- Security hardening from the 2026-10 audit, each guarded by a regression test in
+  `backend/tests/test_audit_regressions.py`:
+  - the IP/domain forensic tool runner no longer builds shell command strings (`shell=True`
+    removed); indicators are validated against an allowlist and commands run as argv lists, closing
+    the unauthenticated command-injection path
+  - the backend image no longer installs `sudo` or grants passwordless `sudo nmap`, removing the
+    container-root privilege-escalation leg
+  - CORS uses an explicit origin allowlist instead of `*` with credentials
+  - in production the admin JWT secret is generated randomly when the shipped placeholder value is
+    detected, and admin login compares credentials in constant time
+  - email / HTML / SVG identification precedence was fixed so an email whose body starts with
+    markup is still classified as an email (previously it was mis-typed as HTML/SVG and its active
+    content skipped the email sanitizer)
 - Animations and transitions respect the system's "Reduce motion" setting
 - Lint clean-up: removed 270 unused imports and the names of 49 unused variables (every call made
   for its effect is kept); `ruff.toml` now enforces unused imports/variables. Backend suite: 311 passed

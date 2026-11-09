@@ -17,6 +17,7 @@ against the then-deployed container. Re-run inside the actually deployed
 image to prove the running service is fixed, not just the source tree.
 """
 
+import shutil
 from pathlib import Path
 
 
@@ -81,11 +82,19 @@ class TestFsSec001CommandInjection:
 # FS-SEC-001 (privesc leg) -- passwordless sudo nmap in the image
 # ---------------------------------------------------------------------------
 
-def test_fs_sec_001_dockerfile_has_no_passwordless_sudo():
+def test_fs_sec_001_no_passwordless_sudo():
+    """On the source tree, assert the Dockerfile grants no passwordless sudo.
+    Inside the built image (where the Dockerfile is not shipped under /app),
+    assert the privesc path is actually gone: no sudo binary present."""
     dockerfile = Path(__file__).resolve().parents[1] / "Dockerfile"
-    text = dockerfile.read_text()
-    assert "NOPASSWD" not in text, "Dockerfile grants passwordless sudo (privilege escalation)"
-    assert "/etc/sudoers.d/appuser" not in text, "Dockerfile writes a sudoers rule for appuser"
+    if dockerfile.exists():
+        text = dockerfile.read_text()
+        assert "NOPASSWD" not in text, "Dockerfile grants passwordless sudo (privilege escalation)"
+        assert "/etc/sudoers.d/appuser" not in text, "Dockerfile writes a sudoers rule for appuser"
+    else:
+        assert shutil.which("sudo") is None, (
+            "sudo binary present in the deployed image (privilege-escalation surface for FS-SEC-001)"
+        )
 
 
 # ---------------------------------------------------------------------------

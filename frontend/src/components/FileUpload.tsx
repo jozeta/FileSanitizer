@@ -198,9 +198,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               <UploadCloud className="w-8 h-8" />
             </div>
 
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1">
               Drop file(s) here to analyze immediately
-            </h3>
+            </h2>
             <p className="text-sm text-slate-500 mb-4">
               or click to browse • supports single files or multiple EVTX logs for unified timeline
             </p>

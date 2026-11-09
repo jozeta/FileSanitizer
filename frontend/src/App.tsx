@@ -682,7 +682,7 @@ export const App: React.FC = () => {
               v{APP_VERSION}
             </span>
           </div>
-          <p className="text-slate-400 text-[11px]">
+          <p className="text-slate-500 text-[11px]">
             Automated analysis and sanitization reduce threat surface. Never execute untrusted files.
           </p>
         </div>
