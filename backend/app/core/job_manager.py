@@ -448,6 +448,62 @@ class JobManager:
                 ws.cleanup()
             return job is not None
 
+    def _fetch_hash_reputations(self, sha256: str, fmt_key: str) -> Dict[str, Any]:
+        """Run the enabled, independent hash-reputation lookups concurrently.
+
+        Each lookup is keyed on the same sha256 and the clients are internally
+        defensive (they catch their own errors and return a dict, never raising),
+        so overlapping the network I/O changes no verdict or finding logic -- only
+        the wall-clock latency, which drops from the sum of the enabled lookups to
+        their max. The enable conditions mirror the per-service blocks in
+        execute_analysis_pipeline exactly, so a result is present whenever a block
+        will consume it. Returns {key: result_dict}.
+        """
+        from concurrent.futures import ThreadPoolExecutor
+        from app.analyzers.reputation_client import (
+            CirclHashlookupClient,
+            ThreatFoxClient,
+            MalwareBazaarClient,
+            HybridAnalysisClient,
+            AlienVaultOTXClient,
+        )
+
+        rep: Dict[str, Any] = {}
+        if not sha256:
+            return rep
+
+        tasks: Dict[str, Any] = {}
+        if (settings_store.is_global_enabled("virustotal_enabled")
+                and settings_store.is_check_enabled(fmt_key, "check_virustotal")):
+            tasks["vt"] = lambda: VirusTotalClient.lookup_file_hash(sha256)
+
+        if settings_store.is_external_allowed("allow_threat_intel_lookups"):
+            if settings_store.is_global_enabled("circl_hashlookup_enabled"):
+                tasks["circl"] = lambda: CirclHashlookupClient.check_hash(sha256)
+            tasks["threatfox"] = lambda: ThreatFoxClient.check_hash(sha256)
+            if settings_store.is_global_enabled("malwarebazaar_enabled"):
+                tasks["malwarebazaar"] = lambda: MalwareBazaarClient.check_hash(sha256)
+            ha_key = settings_store.get_api_key("hybrid_analysis_api_key")
+            ha_enabled = (settings_store.is_global_enabled("hybrid_analysis_enabled")
+                          or settings_store.is_global_enabled("crowdstrike_enabled"))
+            if (ha_enabled or ha_key) and settings_store.is_check_enabled(fmt_key, "check_crowdstrike"):
+                tasks["hybrid_analysis"] = lambda: HybridAnalysisClient.check_hash(sha256)
+            if settings_store.is_global_enabled("alienvault_otx_enabled"):
+                tasks["alienvault_otx"] = lambda: AlienVaultOTXClient.check_indicator("FileHash-SHA256", sha256)
+
+        if not tasks:
+            return rep
+
+        with ThreadPoolExecutor(max_workers=min(6, len(tasks))) as pool:
+            futures = {key: pool.submit(fn) for key, fn in tasks.items()}
+            for key, fut in futures.items():
+                try:
+                    rep[key] = fut.result()
+                except Exception as e:  # clients are defensive; this is a last-resort guard
+                    logger.debug(f"Concurrent reputation lookup '{key}' failed: {e}")
+                    rep[key] = {}
+        return rep
+
     def execute_analysis_pipeline(self, job_id: str) -> JobModel:
         """
         Complete analysis pipeline:
@@ -1182,8 +1238,12 @@ class JobManager:
             # VirusTotal File Hash Check & Direct Link Generation
             sha256 = job.hashes.get("sha256", "")
             vt_for_format = settings_store.is_check_enabled(fmt_key, "check_virustotal")
+            # Fetch all enabled, independent hash-reputation lookups concurrently; the
+            # per-service blocks below consume these cached results instead of each
+            # issuing its own blocking network call in sequence.
+            rep = self._fetch_hash_reputations(sha256, fmt_key)
             if sha256 and settings_store.is_global_enabled("virustotal_enabled") and vt_for_format:
-                vt_res = VirusTotalClient.lookup_file_hash(sha256)
+                vt_res = rep.get("vt") or {}
                 job.virustotal = vt_res
                 checks_executed.append("VirusTotal Hash Intelligence")
                 network_lookups_count += 1
@@ -1208,8 +1268,7 @@ class JobManager:
             if sha256 and settings_store.is_external_allowed("allow_threat_intel_lookups"):
                 try:
                     if settings_store.is_global_enabled("circl_hashlookup_enabled"):
-                        from app.analyzers.reputation_client import CirclHashlookupClient
-                        circl_res = CirclHashlookupClient.check_hash(sha256)
+                        circl_res = rep.get("circl") or {}
                         circl_res["search_url"] = f"https://hashlookup.circl.lu/search/{sha256}"
                         job.circl = circl_res
                         checks_executed.append("CIRCL Hashlookup (NSRL)")
@@ -1227,8 +1286,7 @@ class JobManager:
                                 details=circl_res.get("details", {})
                             ))
 
-                    from app.analyzers.reputation_client import ThreatFoxClient
-                    tf_hash_res = ThreatFoxClient.check_hash(sha256)
+                    tf_hash_res = rep.get("threatfox") or {}
                     tf_hash_res["search_url"] = f"https://threatfox.abuse.ch/browse.php?search=ioc%3A{sha256}"
                     job.threatfox = tf_hash_res
                     checks_executed.append("ThreatFox Abuse.ch IOCs")
@@ -1245,8 +1303,7 @@ class JobManager:
 
                     # Abuse.ch MalwareBazaar Hash Check
                     if settings_store.is_global_enabled("malwarebazaar_enabled"):
-                        from app.analyzers.reputation_client import MalwareBazaarClient
-                        mb_res = MalwareBazaarClient.check_hash(sha256)
+                        mb_res = rep.get("malwarebazaar") or {}
                         job.malwarebazaar = mb_res
                         checks_executed.append("MalwareBazaar Abuse.ch Samples")
                         network_lookups_count += 1
@@ -1269,8 +1326,7 @@ class JobManager:
                     ha_enabled = settings_store.is_global_enabled("hybrid_analysis_enabled") or settings_store.is_global_enabled("crowdstrike_enabled")
                     cs_for_format = settings_store.is_check_enabled(fmt_key, "check_crowdstrike")
                     if (ha_enabled or ha_key) and cs_for_format:
-                        from app.analyzers.reputation_client import HybridAnalysisClient
-                        ha_res = HybridAnalysisClient.check_hash(sha256)
+                        ha_res = rep.get("hybrid_analysis") or {}
                         job.hybrid_analysis = ha_res
                         checks_executed.append("CrowdStrike Falcon / Hybrid Analysis")
                         network_lookups_count += 1
@@ -1291,8 +1347,7 @@ class JobManager:
 
                     # AlienVault OTX (Open Threat Exchange) Pulse Check
                     if settings_store.is_global_enabled("alienvault_otx_enabled"):
-                        from app.analyzers.reputation_client import AlienVaultOTXClient
-                        otx_res = AlienVaultOTXClient.check_indicator("FileHash-SHA256", sha256)
+                        otx_res = rep.get("alienvault_otx") or {}
                         job.alienvault_otx = otx_res
                         checks_executed.append("AlienVault OTX Pulse Intelligence")
                         network_lookups_count += 1
