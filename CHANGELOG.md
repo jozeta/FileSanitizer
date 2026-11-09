@@ -6,9 +6,14 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
 
 ## [Unreleased]
 
-- Accessibility: the footer disclaimer now meets WCAG AA contrast (slate-400 → slate-500 at
-  11px), and the upload prompt is an `<h2>` under the page `<h1>` instead of an `<h3>`, fixing the
-  skipped heading level on the landing page
+- Accessibility:
+  - the footer disclaimer now meets WCAG AA contrast (slate-400 → slate-500 at 11px), and the
+    upload prompt is an `<h2>` under the page `<h1>` instead of an `<h3>`, fixing the skipped
+    heading level on the landing page
+  - the header nav no longer forces page-level horizontal scrolling on small screens; it shrinks
+    and scrolls within its own bounds (WCAG 1.4.10 reflow)
+  - the analysis splash status is a polite live region (`role="status"`), so screen readers
+    announce when analysis starts and completes
 - Security hardening from the 2026-10 audit, each guarded by a regression test in
   `backend/tests/test_audit_regressions.py`:
   - the IP/domain forensic tool runner no longer builds shell command strings (`shell=True`
