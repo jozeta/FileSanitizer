@@ -88,8 +88,15 @@ export const AnalyzingSplashscreen: React.FC<AnalyzingSplashscreenProps> = ({
         </div>
       </div>
 
-      {/* Headline & File Details */}
-      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2">
+      {/* Headline & File Details.
+          role=status + aria-live announces the start and completion of analysis to
+          screen-reader users, who otherwise get no feedback during the async poll. */}
+      <h2
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2"
+      >
         {allDone ? '✓ Security Analysis Complete' : 'Analyzing File Security...'}
       </h2>
       <p className="text-xs text-slate-500 font-mono mb-6">
