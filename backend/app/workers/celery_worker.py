@@ -18,6 +18,15 @@ celery_app.conf.update(
     enable_utc=True,
     worker_concurrency=4,
     task_track_started=True,
+    # Per-job wall-clock ceiling: the soft limit raises SoftTimeLimitExceeded inside the
+    # task, which the pipeline's except handler turns into a FAILED job (visible to the
+    # API); the hard limit then force-kills a truly wedged worker process.
+    task_soft_time_limit=600,   # 10 minutes
+    task_time_limit=660,        # 11 minutes hard kill
+    # Fairness: take one job at a time so a large APK/PCAP does not reserve a backlog and
+    # starve other uploads; re-queue a job if a worker dies mid-task (pipeline is idempotent).
+    worker_prefetch_multiplier=1,
+    task_acks_late=True,
 )
 
 @celery_app.task(name="tasks.analyze_job")
