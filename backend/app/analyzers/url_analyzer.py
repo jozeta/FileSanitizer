@@ -255,7 +255,10 @@ class URLAnalyzer:
                         result["indicators"].append(f"Obfuscated Address: {tech.get('name')}")
 
                 if include_deep_domain:
-                    domain_intel = DomainAnalyzer.analyze(domain)
+                    # Deep domain intel is for whois/age/CT; active subdomain enumeration is
+                    # handled by the dedicated resolve_subdomains block below, so disable it
+                    # here to avoid running Subfinder/dnsx twice (and the latency it costs).
+                    domain_intel = DomainAnalyzer.analyze(domain, enable_subdomain_recon=False)
                     result["domain_intelligence"] = domain_intel
                     whois_age = domain_intel.get("whois", {}).get("domain_age_days")
                     if whois_age is not None and whois_age < 30:

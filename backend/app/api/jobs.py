@@ -46,6 +46,12 @@ def correlate_jobs(req: CorrelateJobsRequest):
         raise HTTPException(status_code=400, detail=result.get("error", "Correlation failed."))
     return result
 
+# Access-control model for the by-id job routes (decision 2026-11-09, see .claude-standards
+# job_access=capability-url): job_id is a 128-bit uuid4().hex, i.e. an unguessable capability
+# token, and jobs auto-purge after the retention window. Enumeration is already locked
+# (GET /api/files requires admin), so these routes stay unauthenticated by design to keep the
+# public upload -> poll flow working. Revisit with a per-job bearer token if jobs ever need to
+# be shared across trust boundaries.
 @router.get("/{job_id}")
 def get_job_status(job_id: str):
     """Retrieve top-level job status and progression."""

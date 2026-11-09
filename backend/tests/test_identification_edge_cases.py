@@ -72,8 +72,17 @@ def test_nop_sled_is_shellcode():
 
 
 def test_raw_extension_with_real_body_is_shellcode():
-    # >=16 bytes, raw extension, no known container/exe magic -> treated as raw shellcode.
-    assert ShellcodeAnalyzer.is_likely_shellcode(b"\x41" * 32, "x.bin") is True
+    # >=16 bytes, raw extension, no known container/exe magic, and real byte variety
+    # (instructions, not uniform padding) -> treated as raw shellcode.
+    assert ShellcodeAnalyzer.is_likely_shellcode(bytes(range(32, 96)), "x.bin") is True
+
+
+def test_uniform_buffer_with_raw_extension_is_not_shellcode():
+    # A single repeated non-NOP byte carries no instructions -> not shellcode.
+    assert ShellcodeAnalyzer.is_likely_shellcode(b"\x41" * 4096, "x.bin") is False
+    assert ShellcodeAnalyzer.is_likely_shellcode(b"\x00" * 4096, "x.dat") is False
+    # A genuine NOP sled is still shellcode.
+    assert ShellcodeAnalyzer.is_likely_shellcode(b"\x90" * 64, "x.bin") is True
 
 
 def test_container_magic_in_raw_extension_is_not_shellcode():

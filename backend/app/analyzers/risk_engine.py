@@ -274,12 +274,15 @@ class RiskEngine:
                 seen.add(clean_r)
                 deduped_reasons.append(clean_r)
 
-        # A critical reputation finding is an authoritative confirmation of malice
-        # (multi-vendor VirusTotal detections, a ThreatFox/MalwareBazaar hit, or an OTX
-        # pulse). Like the ClamAV path above, that warrants a MALICIOUS verdict rather than
-        # merely HIGH RISK, so a known-bad file is not understated.
+        # A critical reputation finding (multi-vendor VirusTotal detections, a
+        # ThreatFox/MalwareBazaar hit, an OTX pulse) or a critical YARA / malware-signature
+        # match is an authoritative confirmation of malice. Like the ClamAV path above, that
+        # warrants a MALICIOUS verdict rather than merely HIGH RISK, so a known-bad file is
+        # not understated. Heuristic buckets (watchlist, active_content, etc.) still cap at
+        # HIGH RISK.
         malware_confirmed = any(
-            (f.category or "").lower() == "reputation" and (f.severity or "").lower() == "critical"
+            (f.category or "").lower() in ("reputation", "malware", "yara")
+            and (f.severity or "").lower() == "critical"
             for f in findings
         )
 

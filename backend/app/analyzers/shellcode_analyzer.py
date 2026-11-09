@@ -62,7 +62,11 @@ class ShellcodeAnalyzer:
         fn_lower = filename.lower()
         if any(fn_lower.endswith(ext) for ext in [".sc", ".shellcode", ".bin", ".raw", ".dat"]):
             if not data.startswith((b"MZ", b"\x7fELF", b"\xfe\xed\xfa", b"\xcf\xfa\xed", b"PK", b"%PDF")):
-                return True
+                # A buffer that is a single repeated non-NOP byte (e.g. all-zero padding)
+                # carries no instructions and is not shellcode. A genuine 0x90 NOP sled still
+                # is, and is also confirmed by the signature checks below.
+                if len(set(data[:4096])) > 1 or data[:1] == b"\x90":
+                    return True
 
         # If data starts with common shellcode signatures
         # 1. NOP Sled
