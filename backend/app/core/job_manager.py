@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import threading
 import time
@@ -210,6 +211,10 @@ class JobModel(BaseModel):
     created_at: str
     state: str = "QUEUED"  # QUEUED, ANALYZING, ANALYZED, SANITIZING, VALIDATING, COMPLETED, FAILED
     progress: int = 0
+    # Monotonic write stamp, bumped on every persisted save. Lets a reader in another
+    # process (e.g. the API polling a job the Celery worker is processing) tell whether
+    # the on-disk state is newer than its own cached copy. See get_job / _save_job_to_disk.
+    updated_at: float = 0.0
     current_step: int = 0
     current_step_label: str = "Queued for analysis..."
     file_size: int = 0
@@ -342,12 +347,20 @@ class JobManager:
         return job
 
     def _save_job_to_disk(self, job: JobModel) -> None:
-        """Persist serialized job state to disk in the job workspace directory."""
+        """Persist serialized job state to disk atomically in the job workspace directory.
+
+        Writes to a per-writer temp file and atomically renames it into place, so a reader
+        in another process never observes a torn JSON file. Bumps updated_at so such a
+        reader can detect that the on-disk state is newer than its cached copy.
+        """
         try:
             ws = self._workspaces.get(job.job_id) or JobWorkspace(job.job_id)
             if ws and ws.base_dir.exists():
+                job.updated_at = time.time()
                 state_file = ws.base_dir / "job_state.json"
-                state_file.write_text(job.model_dump_json())
+                tmp_file = ws.base_dir / f".job_state.{os.getpid()}.{threading.get_ident()}.tmp"
+                tmp_file.write_text(job.model_dump_json())
+                tmp_file.replace(state_file)  # atomic rename
         except Exception as e:
             logger.debug(f"Job disk save note for {job.job_id}: {e}")
 
@@ -368,12 +381,33 @@ class JobManager:
             logger.debug(f"Job disk restore note for {job_id}: {e}")
         return None
 
+    def _read_job_state_file(self, job_id: str) -> Optional[JobModel]:
+        """Read and deserialize the on-disk job state without mutating the in-memory cache."""
+        try:
+            ws = self._workspaces.get(job_id) or JobWorkspace(job_id)
+            state_file = ws.base_dir / "job_state.json"
+            if state_file.exists():
+                return JobModel.model_validate(json.loads(state_file.read_text()))
+        except Exception as e:
+            logger.debug(f"Job disk peek note for {job_id}: {e}")
+        return None
+
     def get_job(self, job_id: str) -> Optional[JobModel]:
         with self._lock:
-            job = self._jobs.get(job_id)
-            if job:
-                return job
-        return self._load_job_from_disk(job_id)
+            cached = self._jobs.get(job_id)
+        if cached is None:
+            return self._load_job_from_disk(job_id)
+        # While a job is still progressing it may be driven by another process (the Celery
+        # worker), which writes fresher state to disk than this process's cached copy. For
+        # non-final jobs, adopt the on-disk copy when it is strictly newer so the API reflects
+        # live worker progress. COMPLETED/FAILED are final, so the cache is authoritative.
+        if cached.state not in ("COMPLETED", "FAILED"):
+            disk = self._read_job_state_file(job_id)
+            if disk is not None and disk.updated_at > cached.updated_at:
+                with self._lock:
+                    self._jobs[job_id] = disk
+                return disk
+        return cached
 
     def get_workspace(self, job_id: str) -> Optional[JobWorkspace]:
         with self._lock:
