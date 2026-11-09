@@ -664,6 +664,7 @@ class JobManager:
             job.current_step = 2
             job.current_step_label = "Antivirus Engine Inspection (ClamAV)"
             job.progress = 30
+            self._save_job_to_disk(job)
             clamav_for_format = settings_store.is_check_enabled(fmt_key, "check_clamav")
             if settings_store.is_global_enabled("clamav_enabled") and clamav_for_format:
                 clamav_scanner = ClamAVScanner()
@@ -687,6 +688,7 @@ class JobManager:
             job.current_step = 3
             job.current_step_label = "Container Dissection & Structure Verification"
             job.progress = 45
+            self._save_job_to_disk(job)
             has_macros = False
             has_javascript = False
             has_path_traversal = False
@@ -1177,6 +1179,7 @@ class JobManager:
             job.current_step = 4
             job.current_step_label = "Optical Character Recognition (OCR) on Visual Content"
             job.progress = 55
+            self._save_job_to_disk(job)
             ocr_text = ""
             try:
                 ocr_res = OCRAnalyzer.scan_file(original_path, job.category)
@@ -1213,6 +1216,7 @@ class JobManager:
             job.current_step = 5
             job.current_step_label = "YARA Pattern Matching & Heuristic Detection"
             job.progress = 65
+            self._save_job_to_disk(job)
             yara_for_format = settings_store.is_check_enabled(fmt_key, "check_yara")
             if settings_store.is_global_enabled("yara_enabled") and settings.YARA_ENABLED and yara_for_format:
                 try:
@@ -1418,6 +1422,7 @@ class JobManager:
             job.current_step = 6
             job.current_step_label = "URL Extraction & HTTPS Certificate Analysis"
             job.progress = 75
+            self._save_job_to_disk(job)
             analyzed_urls = []
             for existing in job.urls:
                 if isinstance(existing, dict) and existing.get("url"):
@@ -1495,6 +1500,7 @@ class JobManager:
             job.current_step = 7
             job.current_step_label = "Metadata & Admin Threat Watchlist Scanning"
             job.progress = 90
+            self._save_job_to_disk(job)
             job.metadata = MetadataExtractor.consolidate(
                 filename=job.filename,
                 file_size=job.file_size,
