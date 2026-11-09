@@ -6,7 +6,7 @@ from datetime import datetime
 import re
 from pydantic import BaseModel
 
-from app.core.job_manager import job_manager
+from app.core.job_manager import job_manager, dispatch_sanitization
 from app.sanitizers.base import SanitizationOptions
 from app.sanitizers.profiles import get_profile_options
 from app.core.logging_config import logger
@@ -251,8 +251,8 @@ def start_sanitization(
     else:
         opts = get_profile_options("privacy")
 
-    # Queue background sanitization
-    background_tasks.add_task(job_manager.execute_sanitization_pipeline, job_id, opts)
+    # Queue sanitization on the Celery worker (falls back to in-process)
+    dispatch_sanitization(job_id, opts, background_tasks)
 
     return {
         "job_id": job_id,

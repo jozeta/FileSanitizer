@@ -2104,6 +2104,7 @@ class JobManager:
             job.state = "SANITIZING"
             job.progress = 20
             job.sanitization_options = options
+            self._save_job_to_disk(job)  # persist so the API reflects sanitization start
 
             original_path = ws.original_file_path(job.filename)
 
@@ -2112,6 +2113,7 @@ class JobManager:
             if not sanitizer:
                 job.state = "FAILED"
                 job.error_message = f"No sanitizer available for category '{job.category}'"
+                self._save_job_to_disk(job)
                 return job
 
             target_ext = None
@@ -2135,6 +2137,7 @@ class JobManager:
             if not sanitization_res.success:
                 job.state = "FAILED"
                 job.error_message = "\n".join(sanitization_res.warnings)
+                self._save_job_to_disk(job)
                 return job
 
             job.sanitized_file_path = str(sanitization_res.output_path or output_path)
@@ -2146,6 +2149,7 @@ class JobManager:
             logger.error(f"Sanitization failed for job {job_id}: {e}", exc_info=True)
             job.state = "FAILED"
             job.error_message = f"Sanitization error: {str(e)}"
+            self._save_job_to_disk(job)
             return job
 
     def execute_post_sanitization_validation(self, job_id: str) -> JobModel:
@@ -2386,4 +2390,25 @@ def dispatch_analysis(job_id: str, background_tasks) -> str:
     except Exception as e:
         logger.warning(f"Celery dispatch failed for job {job_id} ({e}); running analysis in-process")
         background_tasks.add_task(job_manager.execute_analysis_pipeline, job_id)
+        return "inprocess"
+
+
+def dispatch_sanitization(job_id: str, options, background_tasks) -> str:
+    """Dispatch a job's sanitization (CDR) pipeline to the Celery worker.
+
+    Mirrors dispatch_analysis: honours settings.ANALYSIS_DISPATCH, and falls back to
+    in-process BackgroundTasks on broker failure. The Celery task reconstructs the
+    options from their serialized form, so options are sent as a plain dict.
+    """
+    if getattr(settings, "ANALYSIS_DISPATCH", "celery") == "inprocess":
+        background_tasks.add_task(job_manager.execute_sanitization_pipeline, job_id, options)
+        return "inprocess"
+    try:
+        from app.workers.celery_worker import celery_app
+        celery_app.send_task("tasks.sanitize_job", args=[job_id, options.model_dump()])
+        logger.info(f"Dispatched sanitization for job {job_id} to Celery worker")
+        return "celery"
+    except Exception as e:
+        logger.warning(f"Celery sanitize dispatch failed for job {job_id} ({e}); running in-process")
+        background_tasks.add_task(job_manager.execute_sanitization_pipeline, job_id, options)
         return "inprocess"
