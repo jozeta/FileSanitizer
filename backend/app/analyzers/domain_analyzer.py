@@ -84,7 +84,8 @@ class DomainAnalyzer:
         active_recon: bool = False,
         force_refresh: bool = False,
         job_id: Optional[str] = None,
-        run_subfinder_in_background: bool = True
+        run_subfinder_in_background: bool = True,
+        enable_subdomain_recon: bool = True
     ) -> Dict[str, Any]:
         """
         Analyze a domain or IP address with full multi-dimensional intelligence:
@@ -454,7 +455,30 @@ class DomainAnalyzer:
             tls_sans = (tls_data.get("live_cert") or {}).get("sans", [])
             dns_cnames = adv_dns.get("records", {}).get("cname", [])
 
-            if run_subfinder_in_background and job_id:
+            if not enable_subdomain_recon:
+                # Passive context (e.g. email triage): skip active Subfinder/dnsx subdomain
+                # enumeration entirely. It is slow (tens of seconds) and constitutes active
+                # reconnaissance of a third-party domain, which must stay opt-in. Passive
+                # attack-surface signals (CT logs, TLS SANs, DNS CNAMEs) are still mapped.
+                subfinder_res = {
+                    "status": "skipped",
+                    "subdomains": [],
+                    "total_discovered": 0,
+                    "reason": "active subdomain recon disabled for passive analysis",
+                }
+                res["subfinder_dnsx"] = subfinder_res
+
+                surface_map = SubdomainMapper.map_surface(
+                    clean_target,
+                    ct_subs,
+                    tls_sans,
+                    dns_cnames,
+                    sibling_domains,
+                    subfinder_results=[]
+                )
+                surface_map["subfinder_status"] = "skipped"
+                res["attack_surface"] = surface_map
+            elif run_subfinder_in_background and job_id:
                 # Fast return: initialize state as "running" and dispatch background thread
                 subfinder_res = SubfinderDnsxScanner.get_initial_running_state(clean_target)
                 res["subfinder_dnsx"] = subfinder_res

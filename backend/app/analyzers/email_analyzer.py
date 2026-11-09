@@ -878,7 +878,7 @@ class EmailAnalyzer(BaseAnalyzer):
             "impersonated_brand": impersonated_brand,
             "rdap": rdap_data,
             "mxtoolbox": mxtoolbox_data,
-            "sender_domain_intelligence": DomainAnalyzer.analyze(from_domain) if from_domain else {}
+            "sender_domain_intelligence": DomainAnalyzer.analyze(from_domain, enable_subdomain_recon=False) if from_domain else {}
         }
 
     # -------------------------------------------------------------------------
