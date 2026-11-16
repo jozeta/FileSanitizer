@@ -6,6 +6,9 @@ Releases follow the project's git tags. Entries were reconstructed from the comm
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-11-12
+
+- Versioning: a root `VERSION` file is now the version the repo reports; the README, `frontend/package.json`, `frontend/src/version.ts` and `backend/app/config.py` must match it (a backend test checks this). The README now has a version line and a "What's new" section.
 - Accessibility:
   - the footer disclaimer now meets WCAG AA contrast (slate-400 → slate-500 at 11px), and the
     upload prompt is an `<h2>` under the page `<h1>` instead of an `<h3>`, fixing the skipped

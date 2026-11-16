@@ -2,7 +2,7 @@
 
 > **"Don't trust the file. Wash it first."** *(featuring 30+ dynamic cybersecurity slogans rotating on every reload)*
 
-[![Release](https://img.shields.io/badge/release-v2.7.0-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
+[![Release](https://img.shields.io/badge/release-v2.7.1-blue.svg)](https://github.com/jozeta/FileSanitizer/releases)
 [![Python](https://img.shields.io/badge/python-3.11-brightgreen.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
@@ -15,6 +15,16 @@
 FileSanitizer is a modern, security-focused web application and API platform for **file sanitization, malware analysis, metadata removal, and Content Disarm and Reconstruction (CDR)**.
 
 Designed as a self-hosted Docker application, FileSanitizer allows users to upload untrusted files, inspect them across deep static and behavioral analyzers, review explainable risk reports, disarm potential exploit payloads, and download verified clean reconstructions.
+
+Version: **2.7.1**
+
+## What's new in 2.7.1
+
+- Accessibility fixes: footer contrast, heading levels, header nav reflow on small screens, live-region analysis status, decorative icons hidden from screen readers.
+- Security hardening from the 2026-10 audit (no `shell=True` in the forensic tool runner, no `sudo` in the backend image, and more), each guarded by a regression test.
+- A root `VERSION` file and a test that keeps the version in the README, frontend and backend in sync.
+
+Older versions are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
